@@ -1,0 +1,20 @@
+﻿<AML>
+ <Item type="Method" id="EF301F1F098443269D8E8F1C628DFECC" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const gridData = inArgs.contextParams.tgvContext.getGridData();
+
+//gridData.focus is an array for multiselect, but it is not allowed in TGV yet
+const contextRow = gridData.focus[0].row;
+const dataObject = JSON.parse(contextRow.cells[0].data);
+const partItemNumber = contextRow.cells[0].text;
+const partName = contextRow.cells[6].text;
+
+aras.evalMethod('effs_viewEffectivityInRelshipTab', '', {
+	relationshipItemTypeId: '5E9C5A12CC58413A8670CF4003C57848',
+	relationshipItemId: dataObject.rid,
+	title: partItemNumber + (partItemNumber && partName ? ' ' : '') + partName
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_bomStructureViewEffCtxHandl</name>
+ </Item>
+</AML>

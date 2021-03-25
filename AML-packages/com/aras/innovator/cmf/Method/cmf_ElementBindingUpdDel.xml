@@ -1,0 +1,25 @@
+﻿<AML>
+ <Item type="Method" id="6648C8C7E74F460585AEC5A88975D335" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Item elementQuery = this.newItem("cmf_ElementBinding", "get");
+elementQuery.setID(this.getID());
+elementQuery.setAttribute("select", "source_id");
+elementQuery = elementQuery.apply();
+string documentElementTypeId = elementQuery.getProperty("source_id");
+
+Item documentTypeQuery = this.newItem("cmf_ElementType", "get");
+documentTypeQuery.setID(documentElementTypeId);
+documentTypeQuery.setAttribute("select", "source_id");
+documentTypeQuery = documentTypeQuery.apply();
+string documentTypeId = documentTypeQuery.getProperty("source_id");
+
+if (!RequestState.Contains(documentTypeId))
+{
+    return this.getInnovator().newError("It's impossible to save certain Element Type or Property Type. Instead save entire Content Type item.");
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_ElementBindingUpdDel</name>
+ </Item>
+</AML>

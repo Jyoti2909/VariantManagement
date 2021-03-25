@@ -1,0 +1,285 @@
+﻿<AML>
+ <Item type="Method" id="3330B9E48DD24A79B5B0F4C04FCA0BC8" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.Public.Events.EventHandler<Aras.DerivedRelationships.Api.PersistRelationshipsEventArgs>;
+	switch (eventArgs.PersistenceKind)
+	{
+		case Aras.DerivedRelationships.Api.PersistenceKind.AddSystemTemporary:
+			var newVersionItemIdByOldVersionItemId =
+				eventArgs.SystemTemporaryRelationshipsInfo.NewVersionItemIdByOldVersionItemId;
+			if (newVersionItemIdByOldVersionItemId == null)
+			{
+				return;
+			}
+
+			var itemTypeId = eventArgs.SystemTemporaryRelationshipsInfo.ItemTypeId;
+
+			var alreadyAdded =
+				(HashSet<string>)CCO.RequestState["alreadyAddedB047E62E6F3243748A08C8EEA86F3007"] ??
+				new HashSet<string>();
+
+			var newVersionIds = newVersionItemIdByOldVersionItemId.Values.ToArray();
+			var needReset = NeedToCreateTemporaryUnidrRelationships(itemTypeId, newVersionIds);
+			if (needReset)
+			{
+				foreach (var kv in newVersionItemIdByOldVersionItemId)
+				{
+					var oldId = kv.Key;
+					var newId = kv.Value;
+					const string destinationOldIdParamName = "@destinationOldId";
+					const string destinationNewIdParamName = "@destinationNewId";
+					if (alreadyAdded.Contains(newId))
+					{
+						continue;
+					}
+
+					alreadyAdded.Add(newId);
+					System.Reflection.Assembly targetAssembly =
+						System.Reflection.Assembly.Load("Aras.Server.Core");
+					Type innovatorDbCommandParameterCollectionType = targetAssembly.GetTypes()
+						.Single(t => t.Name == "InnovatorDBCommandParameterCollection");
+					Type innovatorDataTypeType =
+						targetAssembly.GetTypes().Single(t => t.Name == "InnovatorDataType");
+					System.Reflection.ConstructorInfo innovatorDbCommandParameterCollectionCtor =
+						innovatorDbCommandParameterCollectionType.GetConstructor(
+							System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+							null,
+							Type.EmptyTypes,
+							null);
+					if (innovatorDbCommandParameterCollectionCtor == null)
+					{
+						throw new Aras.Server.Core.InnovatorServerException();
+					}
+
+					var parametersInstance =
+						(Aras.Server.Core.InnovatorDBCommandParameterCollection)
+						innovatorDbCommandParameterCollectionCtor.Invoke(new object[] { });
+					System.Reflection.MethodInfo addMethodInfo =
+						innovatorDbCommandParameterCollectionType.GetMethod(
+							"Add",
+							System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+							null,
+							new[]
+							{
+								typeof(string), innovatorDataTypeType, typeof(object)
+							},
+							null);
+					if (addMethodInfo == null)
+					{
+						throw new Aras.Server.Core.InnovatorServerException();
+					}
+
+					addMethodInfo.Invoke(
+						parametersInstance,
+						new object[]
+						{
+							destinationOldIdParamName, 1024, oldId
+						});
+					addMethodInfo.Invoke(
+						parametersInstance,
+						new object[]
+						{
+							destinationNewIdParamName, 1024, newId
+						});
+					var selectStatementByPropertyName = new Dictionary<string,
+						string>
+					{
+						{
+							"ID", "{0}"
+						},
+						{
+							"CONFIG_ID", "{0}"
+						},
+						{
+							"DESTINATION_ID", destinationNewIdParamName
+						}
+					};
+					var insertStatements = new List<string>();
+					var selectStatements = new List<string>();
+					foreach (var property in GetPropertyList())
+					{
+						insertStatements.Add(CCO.DB.InnDatabase.QuoteName(property));
+
+						if (!selectStatementByPropertyName.TryGetValue(
+							property.ToUpperInvariant(),
+							out string selectStatement))
+						{
+							selectStatement = CCO.DB.InnDatabase.QuoteName(property);
+						}
+
+						selectStatements.Add(selectStatement);
+					}
+
+					var unidrRelationshipTableName = CCO.DB.InnDatabase.GetTableName(UnidrTableName);
+					var insertSql = @"INSERT INTO {0} ({1})
+SELECT {2}
+FROM {0}
+WHERE destination_id = " + destinationOldIdParamName;
+					insertSql = string.Format(
+						CultureInfo.InvariantCulture,
+						string.Format(
+							CultureInfo.InvariantCulture,
+							insertSql,
+							unidrRelationshipTableName,
+							CCO.DB.InnDatabase.QuoteValue(string.Join(",", insertStatements.ToArray())),
+							CCO.DB.InnDatabase.QuoteValue(string.Join(",", selectStatements.ToArray()))),
+						CCO.DB.InnDatabase.sqlNewId());
+					CCO.DB.InnDatabase.ExecuteSQL(insertSql, parametersInstance);
+				}
+			}
+
+			CCO.RequestState["alreadyAddedB047E62E6F3243748A08C8EEA86F3007"] = alreadyAdded;
+			break;
+		case Aras.DerivedRelationships.Api.PersistenceKind.DeleteSystemTemporary:
+			var idsToDelete = eventArgs.SystemTemporaryRelationshipsInfo.NewVersionItemIdByOldVersionItemId
+				.Values.ToList();
+			string unidrRelationshipTableNameQuoted = CCO.DB.InnDatabase.GetTableName("unidr_Relationship");
+
+			System.Reflection.Assembly targetAssmbl = System.Reflection.Assembly.Load("Aras.Server.Core");
+			Type errorLookupInterfaceType = targetAssmbl.GetTypes().Single(t => t.FullName == "Aras.Server.Core.Abstractions.Internal.IErrorLookup");
+			Type itemCriteriaType = targetAssmbl.GetTypes().Single(t => t.Name == "ItemCriteria");
+			System.Reflection.ConstructorInfo itemCriteriaCtor = itemCriteriaType.GetConstructor(
+				System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+				null,
+				new[]
+				{
+					errorLookupInterfaceType,
+					typeof(string),
+					typeof(IList<string>)
+				},
+				null);
+			if (itemCriteriaCtor == null)
+			{
+				throw new Aras.Server.Core.InnovatorServerException();
+			}
+
+			var itemCriteria = itemCriteriaCtor.Invoke(new object[]
+			{
+				null, "[destination_id]", idsToDelete
+			});
+			string sql = @"DELETE FROM {0} WHERE {1}";
+			sql = string.Format(CultureInfo.InvariantCulture, sql, unidrRelationshipTableNameQuoted,
+				CCO.DB.InnDatabase.QuoteValue((string)itemCriteria.GetType()
+					.GetProperty(
+						"SqlClause",
+						System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+					.GetValue(itemCriteria, null)));
+			Type innovatorDBCommandParameterCollectionType = targetAssmbl.GetTypes()
+				.Single(t => t.Name == "InnovatorDBCommandParameterCollection");
+			System.Reflection.ConstructorInfo innovatorDBCommandParameterCollectionCtor =
+				innovatorDBCommandParameterCollectionType.GetConstructor(
+					System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
+					null,
+					new[]
+					{
+						itemCriteria.GetType()
+					},
+					null);
+			if (innovatorDBCommandParameterCollectionCtor == null)
+			{
+				throw new Aras.Server.Core.InnovatorServerException();
+			}
+
+			var pars =
+				(Aras.Server.Core.InnovatorDBCommandParameterCollection)
+				innovatorDBCommandParameterCollectionCtor.Invoke(
+					new[]
+					{
+						itemCriteria
+					});
+			CCO.DB.InnDatabase.ExecuteSQL(sql, pars);
+			break;
+	}
+}
+
+private const string UnidrTableName = "unidr_Relationship";
+private const string UnidrItemTypeId = "40666E5FD62040CAB736877464255C5B";
+
+private const string FindItemTypesUnderDacQuery = @"SELECT DISTINCT 
+derivedRelationship.DESTINATION_ITEMTYPE_ID
+FROM innovator.DAC_DOMAINDEFINITION AS domainDefinition
+JOIN innovator.DAC_SUBDOMAINPOLICY AS subdomainPolicy ON subdomainPolicy.SOURCE_ID = domainDefinition.ID
+JOIN innovator.DR_RELATIONSHIP AS derivedRelationship ON derivedRelationship.ID = subdomainPolicy.DR_RELATIONSHIP_ID
+WHERE domainDefinition.STATE = N'Active'";
+
+private List<string> GetPropertyList()
+{
+	var resultList = (List<string>)CCO.RequestState["unidrProperties97A249B7FBE24040877642E2B3E04EF6"] ?? new List<string>();
+	if (!resultList.Any())
+	{
+		var properties = Innovator.newItem("Property", "get");
+		properties.setProperty("source_id", UnidrItemTypeId);
+		properties.setAttribute("select", "name");
+		properties = properties.apply();
+		if (properties.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(properties.ToString());
+		}
+
+		int count = properties.getItemCount();
+		for (int i = 0; i < count; i++)
+		{
+			var property = properties.getItemByIndex(i);
+			resultList.Add(property.getProperty("name"));
+		}
+		CCO.RequestState["unidrProperties97A249B7FBE24040877642E2B3E04EF6"] = resultList;
+	}
+	return resultList;
+}
+
+private bool NeedToCreateTemporaryUnidrRelationships(string itemTypeId, string[] newVersionIds)
+{
+	var itemTypeIdsUnderDac =
+		(HashSet<string>)CCO.RequestState["itemTypeIdsUnderDacCache97A249B7FBE24040877642E2B3E04EF6"];
+	if (itemTypeIdsUnderDac == null)
+	{
+		itemTypeIdsUnderDac = new HashSet<string>();
+		Aras.Server.Core.InnovatorDataSet rs = CCO.DB.InnDatabase.ExecuteSelectCommand(
+			FindItemTypesUnderDacQuery);
+		while (!rs.Eof)
+		{
+			string destinationItemTypeId = (string)rs["DESTINATION_ITEMTYPE_ID"];
+			itemTypeIdsUnderDac.Add(destinationItemTypeId);
+			rs.MoveNext();
+		}
+
+		CCO.RequestState["itemTypeIdsUnderDacCache97A249B7FBE24040877642E2B3E04EF6"] = itemTypeIdsUnderDac;
+	}
+
+	if (itemTypeIdsUnderDac.Contains(itemTypeId))
+	{
+		var itemType = Innovator.newItem("itemType", "get");
+		itemType.setID(itemTypeId);
+		itemType.setAttribute("select", "id");
+		itemType = itemType.apply();
+		if (itemType.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(itemType.ToString());
+		}
+
+		Item query = Innovator.newItem(itemType.getType(), "getPermissions");
+		query.setAttribute("access_type", "can_update");
+		query.setAttribute("idlist", string.Join(",", newVersionIds));
+		Item result = query.apply();
+		if (result.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(result.ToString());
+		}
+
+		int count = result.getItemCount();
+		for (int i = 0; i < count; i++)
+		{
+			var targetItem = result.getItemByIndex(i);
+			if (!string.Equals(targetItem.getProperty("can_update"), "1"))
+			{
+				return true;
+			}
+		}
+	}
+
+	return false;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_HandleItemVersion</name>
+ </Item>
+</AML>

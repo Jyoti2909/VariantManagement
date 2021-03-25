@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Instance configVersion="1.0">
+  <components>
+    <database id="Database" depends="Innovator SelfServiceReporting Vault Conversion Agent OAuth">
+      <SqlServer>${MSSQL.Server}</SqlServer>
+      <DatabaseName>${MSSQL.Database.Name}</DatabaseName>
+      <InnovatorLogin>${MSSQL.Innovator.User}</InnovatorLogin>
+      <InnovatorPassword type="EnvironmentVariable">MSSQL.Innovator.Password</InnovatorPassword>
+      <InnovatorUrl>${Innovator.Load.Balancer.Url}/${Name.Of.Innovator.Instance}</InnovatorUrl>
+    </database>
+    <innovator id="Innovator">
+      <ServerName>${Innovator.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\Innovator</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}</VirtualDirectoryPath>
+      <Protocol>${Innovator.Web.Protocol}</Protocol>
+      <Url>${Innovator.Load.Balancer.Url}/${Name.Of.Innovator.Instance}</Url>
+    </innovator>
+    <ssr id="SelfServiceReporting">
+      <ServerName>${Innovator.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\SelfServiceReporting</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/SelfServiceReporting</VirtualDirectoryPath>
+      <Protocol>${Innovator.Web.Protocol}</Protocol>
+      <Url>${Innovator.Load.Balancer.Url}/${Name.Of.Innovator.Instance}/SelfServiceReporting</Url>
+    </ssr>
+    <vault id="Vault">
+      <ServerName>${Vault.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Vault}\VaultServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/Vault</VirtualDirectoryPath>
+      <Protocol>${Vault.Web.Protocol}</Protocol>
+      <Url>${Vault.Load.Balancer.Url}/${Name.Of.Innovator.Instance}/Vault</Url>
+    </vault>
+    <conversion id="Conversion">
+      <ServerName>${Conversion.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Conversion}\ConversionServer</InstallationPath>
+      <Protocol>${Conversion.Web.Protocol}</Protocol>
+      <Url>${Conversion.Load.Balancer.Url}/${Name.Of.Innovator.Instance}/ConversionServer</Url>
+    </conversion>
+    <agent id="Agent">
+      <ServerName>${Agent.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Agent}\AgentService</InstallationPath>
+      <ServiceName>${Agent.Service.Name}</ServiceName>
+    </agent>
+    <oauth id="OAuth">
+      <ServerName>${OAuth.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.OAuth}\OAuthServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/OAuthServer</VirtualDirectoryPath>
+      <Protocol>${OAuth.Web.Protocol}</Protocol>
+      <Url>${OAuth.Load.Balancer.Url}/${Name.Of.Innovator.Instance}/OAuthServer</Url>
+    </oauth>
+  </components>
+  <apply>
+    <package>
+      <PathToDeploymentPackage>${Path.To.Deployment.Package.Dir}</PathToDeploymentPackage>
+    </package>
+    <package>
+      <PathToDeploymentPackage>${Path.To.Deployment.Package.Dir}\Sample Data</PathToDeploymentPackage>
+    </package>
+  </apply>
+</Instance>

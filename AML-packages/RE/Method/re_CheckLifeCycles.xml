@@ -1,0 +1,47 @@
+﻿<AML>
+ <Item type="Method" id="D75D2EFD00374381BA800442F8D8EF35" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string states = this.getProperty("state");
+	if (string.IsNullOrEmpty(states))
+	{
+		return this.getInnovator().newError("'state' is required parameter");
+	}
+
+	Item reqDocument = this.newItem("re_Requirement_Document", "get");
+	reqDocument.setID(this.getID());
+	reqDocument.setAttribute("select", "id");
+
+	Item reqDocContent = this.newItem("re_Req_Doc_Content", "get");
+	reqDocContent.setAttribute("select", "related_id(state, item_number)");
+
+	Item requirement = this.newItem("re_Requirement", "get");
+	requirement.setAttribute("where", string.Format(CultureInfo.InvariantCulture, "[RE_REQUIREMENT].[STATE] not in ({0})", states));
+	reqDocContent.setRelatedItem(requirement);
+	reqDocument.addRelationship(reqDocContent);
+	reqDocument = reqDocument.apply();
+
+	if (!reqDocument.isError())
+	{
+		Item reqDocContentItems = reqDocument.getRelationships();
+		int itemsCount = reqDocContentItems.getItemCount();
+		if (itemsCount != 0)
+		{
+			List<string> itemNumbers = new List<string>();
+			for (int contentIndex = 0; contentIndex < itemsCount; contentIndex++)
+			{
+				Item reqDocContentItem = reqDocContentItems.getItemByIndex(contentIndex);
+				Item req = reqDocContentItem.getRelatedItem();
+				itemNumbers.Add(req.getProperty("item_number"));
+			}
+
+			return this.getInnovator()
+				.newError(string.Format(CultureInfo.InvariantCulture, "The state of the requirement(s) {0} is not set to {1}",
+				string.Join(", ", itemNumbers), states));
+		}
+	}
+
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_CheckLifeCycles</name>
+ </Item>
+</AML>

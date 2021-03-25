@@ -1,0 +1,52 @@
+﻿<AML>
+ <Item type="Method" id="31B8610FFBA14A60B9059A00C9597F16" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var sourceId = this.getProperty("source_id");
+if (string.IsNullOrEmpty(sourceId))
+{
+	var id = this.getID();
+	if (string.IsNullOrEmpty(id))
+	{
+		throw new ArgumentException(CCO.ErrorLookup.Lookup("SourceIdShouldNotBeEmpty"));
+	}
+	var ssrSharedWith = this.newItem("SelfServiceReportSharedWith", "get");
+	ssrSharedWith.setID(id);
+	ssrSharedWith.setAttribute("select", "source_id");
+	ssrSharedWith = ssrSharedWith.apply();
+	if (ssrSharedWith.isError())
+	{
+		return ssrSharedWith;
+	}
+	sourceId = ssrSharedWith.getProperty("source_id");
+
+	if (string.IsNullOrEmpty(sourceId))
+	{
+		throw new ArgumentException(CCO.ErrorLookup.Lookup("SourceIdShouldNotBeEmpty"));
+	}
+	this.setProperty("source_id", sourceId);
+}
+
+var report = this.newItem("SelfServiceReport", "get");
+report.setID(sourceId);
+report.setAttribute("select", "created_by_id, owned_by_id");
+report = report.apply();
+if (report.isError())
+{
+	return report;
+}
+
+var userIdetities = Aras.Server.Security.Permissions.Current.IdentitiesList;
+var currentUserId = this.getInnovator().getUserID();
+
+var createdById = report.getProperty("created_by_id");
+var ownedById = report.getProperty("owned_by_id");
+if (string.Compare(createdById, currentUserId, StringComparison.OrdinalIgnoreCase) != 0 && userIdetities.IndexOf(ownedById, StringComparison.OrdinalIgnoreCase) < 0 && !CCO.Permissions.UserHasRootOrAdminIdentity())
+{
+	throw new ArgumentException(CCO.ErrorLookup.Lookup("SharingOptionsForSelfServiceReports"));
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>ValidateSelfServiceSharedWith</name>
+ </Item>
+</AML>

@@ -1,0 +1,628 @@
+﻿<TestCase author="pponkrashov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../TestCase.xsd">
+	<Description>Setup for GECO affected items tests</Description>
+	<Request name="PartPreReleaseTransitionChecksCommon.AddPartBOMs">
+		<Comments>
+			<![CDATA[
+			Given:
+				root and parent Part
+			When:
+				Add Part BOM
+			Then:
+				Should add Part BOM
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[1]/@id" />
+			<Variable id="Part.Parent.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Part.10.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][1]/related_id" />
+			<Variable id="Part.25.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][2]/related_id" />
+			<Variable id="Part.35.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][3]/related_id" />
+			<Variable id="Part.45.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][4]/related_id" />
+			<Variable id="Part.28.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][5]/related_id" />
+			<Variable id="Part.29.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][6]/related_id" />
+			<Variable id="Part.30.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][7]/related_id" />
+			<Variable id="Part.50.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][8]/related_id" />
+			<Variable id="Part.60.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][9]/related_id" />
+			<Variable id="Part.90.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][10]/related_id" />
+			<Variable id="Part.19.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][11]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item action="edit" type="Part" id="" doGetItem="0">
+					<Relationships>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.10.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.25.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.35.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.45.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.28.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.29.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.30.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.50.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.60.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.90.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.19.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="{Part.Parent.Id}" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/related_id" />
+		</Comparison>
+	</Request>
+	<Request name="PartPreReleaseTransitionChecksCommon.GetPartBOMs">
+		<Comments>
+			<![CDATA[
+			Given:
+				root and parent Part
+			When:
+				Add Part BOM
+			Then:
+				Should add Part BOM
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[1]/source_id" />
+			<Variable id="Part.BOM1" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][1]/@id" />
+			<Variable id="Part.BOM2" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][2]/@id" />
+			<Variable id="Part.BOM3" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][3]/@id" />
+			<Variable id="Part.BOM4" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][4]/@id" />
+			<Variable id="Part.BOM5" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][5]/@id" />
+			<Variable id="Part.BOM6" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][6]/@id" />
+			<Variable id="Part.BOM7" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][7]/@id" />
+			<Variable id="Part.BOM8" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][8]/@id" />
+			<Variable id="Part.BOM9" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][9]/@id" />
+			<Variable id="Part.BOM10" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][10]/@id" />
+			<Variable id="Part.BOM11" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][11]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part BOM" action="get" select="id">
+					<source_id>{Part.Parent.Id}</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part BOM" typeId="" id="id">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request name="PartPreReleaseTransitionChecksCommon.RemovePartBOMs">
+		<Comments></Comments>
+		<Variables>
+			<Variable id="Part.BOM1" action="apply" xpath="Query/AML/Item[@type='Part BOM'][1]/@id" />
+			<Variable id="Part.BOM2" action="apply" xpath="Query/AML/Item[@type='Part BOM'][2]/@id" />
+			<Variable id="Part.BOM3" action="apply" xpath="Query/AML/Item[@type='Part BOM'][3]/@id" />
+			<Variable id="Part.BOM4" action="apply" xpath="Query/AML/Item[@type='Part BOM'][4]/@id" />
+			<Variable id="Part.BOM5" action="apply" xpath="Query/AML/Item[@type='Part BOM'][5]/@id" />
+			<Variable id="Part.BOM6" action="apply" xpath="Query/AML/Item[@type='Part BOM'][6]/@id" />
+			<Variable id="Part.BOM7" action="apply" xpath="Query/AML/Item[@type='Part BOM'][7]/@id" />
+			<Variable id="Part.BOM8" action="apply" xpath="Query/AML/Item[@type='Part BOM'][8]/@id" />
+			<Variable id="Part.BOM9" action="apply" xpath="Query/AML/Item[@type='Part BOM'][9]/@id" />
+			<Variable id="Part.BOM10" action="apply" xpath="Query/AML/Item[@type='Part BOM'][10]/@id" />
+			<Variable id="Part.BOM11" action="apply" xpath="Query/AML/Item[@type='Part BOM'][11]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part BOM" action="delete" id="{Part.BOM1}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM2}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM3}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM4}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM5}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM6}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM7}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM8}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM9}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM10}" />
+				<Item type="Part BOM" action="delete" id="{Part.BOM11}" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="PartPreReleaseTransitionChecksCommon.AddPartCADs">
+		<Comments>
+			<![CDATA[
+			Given:
+				root and parent Part
+			When:
+				Add Part CAD
+			Then:
+				Should add Part CAD
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[1]/@id" />
+			<Variable id="Part.Parent.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="CAD.10.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part CAD'][1]/related_id" />
+			<Variable id="CAD.25.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part CAD'][2]/related_id" />
+			<Variable id="CAD.28.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part CAD'][3]/related_id" />
+			<Variable id="CAD.29.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part CAD'][4]/related_id" />
+			<Variable id="CAD.30.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part CAD'][5]/related_id" />
+			<Variable id="CAD.50.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part CAD'][6]/related_id" />
+			<Variable id="CAD.60.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part CAD'][7]/related_id" />
+			<Variable id="CAD.90.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part CAD'][8]/related_id" />
+			<Variable id="CAD.19.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part CAD'][9]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item action="edit" type="Part" id="" doGetItem="0">
+					<Relationships>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>{CAD.10.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>{CAD.25.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>{CAD.28.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>{CAD.29.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>{CAD.30.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>{CAD.50.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>{CAD.60.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>{CAD.90.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>{CAD.19.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="{Part.Parent.Id}" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/related_id" />
+		</Comparison>
+	</Request>
+	<Request name="PartPreReleaseTransitionChecksCommon.GetPartCADs">
+		<Comments>
+			<![CDATA[
+			Given:
+				root and parent Part
+			When:
+				Add Part CAD
+			Then:
+				Should add Part CAD
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[1]/source_id" />
+			<Variable id="Part.CAD1" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][1]/@id" />
+			<Variable id="Part.CAD2" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][2]/@id" />
+			<Variable id="Part.CAD3" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][3]/@id" />
+			<Variable id="Part.CAD4" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][4]/@id" />
+			<Variable id="Part.CAD5" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][5]/@id" />
+			<Variable id="Part.CAD6" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][6]/@id" />
+			<Variable id="Part.CAD7" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][7]/@id" />
+			<Variable id="Part.CAD8" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][8]/@id" />
+			<Variable id="Part.CAD9" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][9]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part CAD" action="get" select="id">
+					<source_id>{Part.Parent.Id}</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part CAD" typeId="" id="id">
+							<id keyed_name="B8065C4C0BBE4AF284AE921F2C07556D" type="Part CAD">B8065C4C0BBE4AF284AE921F2C07556D</id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="" id="3ED49EF0CFCB4F9389A80C6186A361EC">
+							<id keyed_name="3ED49EF0CFCB4F9389A80C6186A361EC" type="Part CAD">3ED49EF0CFCB4F9389A80C6186A361EC</id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="" id="C536FD249DDF420E8F89AD398DCD140F">
+							<id keyed_name="C536FD249DDF420E8F89AD398DCD140F" type="Part CAD">C536FD249DDF420E8F89AD398DCD140F</id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="" id="B9FC33600294454CA99E42C9A03EF009">
+							<id keyed_name="B9FC33600294454CA99E42C9A03EF009" type="Part CAD">B9FC33600294454CA99E42C9A03EF009</id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="" id="">
+							<id keyed_name="" type="Part CAD">BF3C882CD85542B1B936B1EBF7BB1729</id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="" id="">
+							<id keyed_name="" type="Part CAD">BF3C882CD85542B1B936B1EBF7BB1729</id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="" id="">
+							<id keyed_name="" type="Part CAD">BF3C882CD85542B1B936B1EBF7BB1729</id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="" id="">
+							<id keyed_name="" type="Part CAD">BF3C882CD85542B1B936B1EBF7BB1729</id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="" id="">
+							<id keyed_name="" type="Part CAD">BF3C882CD85542B1B936B1EBF7BB1729</id>
+							<itemtype></itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request name="PartPreReleaseTransitionChecksCommon.RemovePartCADs">
+		<Comments></Comments>
+		<Variables>
+			<Variable id="Part.CAD1" action="apply" xpath="Query/AML/Item[@type='Part CAD'][1]/@id" />
+			<Variable id="Part.CAD2" action="apply" xpath="Query/AML/Item[@type='Part CAD'][2]/@id" />
+			<Variable id="Part.CAD3" action="apply" xpath="Query/AML/Item[@type='Part CAD'][3]/@id" />
+			<Variable id="Part.CAD4" action="apply" xpath="Query/AML/Item[@type='Part CAD'][4]/@id" />
+			<Variable id="Part.CAD5" action="apply" xpath="Query/AML/Item[@type='Part CAD'][5]/@id" />
+			<Variable id="Part.CAD6" action="apply" xpath="Query/AML/Item[@type='Part CAD'][6]/@id" />
+			<Variable id="Part.CAD7" action="apply" xpath="Query/AML/Item[@type='Part CAD'][7]/@id" />
+			<Variable id="Part.CAD8" action="apply" xpath="Query/AML/Item[@type='Part CAD'][8]/@id" />
+			<Variable id="Part.CAD9" action="apply" xpath="Query/AML/Item[@type='Part CAD'][9]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part CAD" action="delete" id="{Part.CAD1}" />
+				<Item type="Part CAD" action="delete" id="{Part.CAD2}" />
+				<Item type="Part CAD" action="delete" id="{Part.CAD3}" />
+				<Item type="Part CAD" action="delete" id="{Part.CAD4}" />
+				<Item type="Part CAD" action="delete" id="{Part.CAD5}" />
+				<Item type="Part CAD" action="delete" id="{Part.CAD6}" />
+				<Item type="Part CAD" action="delete" id="{Part.CAD7}" />
+				<Item type="Part CAD" action="delete" id="{Part.CAD8}" />
+				<Item type="Part CAD" action="delete" id="{Part.CAD9}" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="TransitionChecksCommon.Bug32974.AddPartBOMs">
+		<Comments>
+			<![CDATA[
+			Given:
+				root and parent Part
+			When:
+				Add Part BOM
+			Then:
+				Should add Part BOM
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[1]/@id" />
+			<Variable id="Part.Parent.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Part.28.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][1]/related_id" />
+			<Variable id="Part.29.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][2]/related_id" />
+			<Variable id="Part.30.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][3]/related_id" />
+			<Variable id="Part.19.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][4]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item action="edit" type="Part" id="" doGetItem="0">
+					<Relationships>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.10.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.25.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.35.Id}</related_id>
+						</Item>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.45.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="{Part.Parent.Id}" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/related_id" />
+		</Comparison>
+	</Request>
+	<Request name="TransitionChecksCommon.Bug32974.GetPartBOMs">
+		<Comments>
+			<![CDATA[
+			Given:
+				root and parent Part
+			When:
+				Add Part BOM
+			Then:
+				Should add Part BOM
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[1]/source_id" />
+			<Variable id="Part.BOM1" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][1]/@id" />
+			<Variable id="Part.BOM2" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][2]/@id" />
+			<Variable id="Part.BOM3" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][3]/@id" />
+			<Variable id="Part.BOM4" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][4]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part BOM" action="get" select="id">
+					<source_id>{Part.Parent.Id}</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part BOM" typeId="" id="id">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+						<Item type="Part BOM" typeId="" id="">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="TransitionChecksCommon.Bug32985.AddPartBOMs">
+		<Comments>
+			<![CDATA[
+			Given:
+				root and parent Part
+			When:
+				Add Part BOM
+			Then:
+				Should add Part BOM
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[1]/@id" />
+			<Variable id="Part.Parent.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Part.35.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[@type='Part BOM'][1]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item action="edit" type="Part" id="" doGetItem="0">
+					<Relationships>
+						<Item type="Part BOM" action="add" doGetItem="0">
+							<related_id type="Part">{Part.35.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="{Part.Parent.Id}" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/related_id" />
+		</Comparison>
+	</Request>
+	<Request name="TransitionChecksCommon.Bug32985.GetPartBOMs">
+		<Comments>
+			<![CDATA[
+			Given:
+				root and parent Part
+			When:
+				Add Part BOM
+			Then:
+				Should add Part BOM
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[1]/source_id" />
+			<Variable id="Part.BOM1" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part BOM'][1]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part BOM" action="get" select="id">
+					<source_id>{Part.Parent.Id}</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part BOM" typeId="" id="id">
+							<id keyed_name="" type="Part BOM"></id>
+							<itemtype></itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+</TestCase>

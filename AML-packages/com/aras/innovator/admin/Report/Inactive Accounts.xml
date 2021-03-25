@@ -1,0 +1,64 @@
+﻿<AML>
+ <Item type="Report" id="B7A146F714D249009152932B59C71486" action="add">
+  <location>client</location>
+  <method keyed_name="Core_GetInactiveAccounts" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>Core_GetInactiveAccounts</name>
+   </Item>
+  </method>
+  <report_query />
+  <target>window</target>
+  <type>itemtype</type>
+  <xsl_stylesheet><![CDATA[<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:user="urn:user-scripts" xmlns:aras="http://www.aras-corp.com">
+	<xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes" cdata-section-elements="script msxsl:script"/>
+	<xsl:template match="/Result">
+		<xsl:variable name="blank" select="'&#160;'"/>
+		<html>
+			<body topmargin="0" leftmargin="0">
+			<center><h3>Inactive Accounts Report</h3></center>
+				<table cellspacing="0" cellpadding="0" style="width:expression(document.body.clientWidth);" border="1" align="center">
+					<tr width="100%" bgcolor="buttonface">
+						<td align="center">Login Name</td>
+						<td align="center">First Name</td>
+						<td align="center">Last Name</td>
+						<td align="center">Last Login Date<br/>(Created On if empty)</td>
+					</tr>
+					<xsl:for-each select="Item">
+						<xsl:call-template name="row"/>
+					</xsl:for-each>
+				</table>
+			</body>
+		</html>
+	</xsl:template>
+	<xsl:template name="row" match="Item">
+		<xsl:variable name="last_login_date">
+			<xsl:choose>
+				<xsl:when test="string(last_login_date)=''">
+					<xsl:value-of select="created_on"/>(Created On)
+			</xsl:when>
+				<xsl:otherwise>
+					<xsl:value-of select="last_login_date"/>
+				</xsl:otherwise>
+			</xsl:choose>
+		</xsl:variable>
+		<tr>
+			<td align="center">
+				<xsl:value-of select="login_name"/>
+			</td>
+			<td align="center">
+				<xsl:value-of select="first_name"/>
+			</td>
+			<td align="center">
+				<xsl:value-of select="last_name"/>
+			</td>
+			<td align="center">
+				<xsl:value-of select="$last_login_date"/>
+			</td>
+		</tr>
+	</xsl:template>
+</xsl:stylesheet>
+]]></xsl_stylesheet>
+  <name>Inactive Accounts</name>
+ </Item>
+</AML>

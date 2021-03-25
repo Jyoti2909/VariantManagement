@@ -1,0 +1,66 @@
+﻿<AML>
+ <Item type="Method" id="11D51087EF8D41D5A00D7011982DE674" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Aras.Server.Security.Identity mpIdentity = Aras.Server.Security.Identity.GetByName("mp_AccessControlDaemon");
+	bool permissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(mpIdentity);
+
+	try {
+		Item item = this.newItem("mp_MacPolicy", "get");
+		item.setID(this.getID());
+		item = IsCurrent(item, CCO);
+		if (item.isError())
+		{
+			return item;
+		}
+		Item resItem = this.newItem("mp_MacPolicy", "version");
+		resItem.setID(this.getID());
+		RequestState.Add("notPreventReset", true);
+		RequestState.Add("skip_property_validation", true);
+		resItem = resItem.apply();
+		resItem = RemoveCopyOf(resItem);
+		return resItem;
+	} finally {
+		if (permissionWasSet) {
+			Aras.Server.Security.Permissions.RevokeIdentity(mpIdentity);
+		}
+	}
+}
+
+private static Item IsCurrent(Item item, Aras.Server.Core.CallContext CCO) 
+{
+	Innovator inn = item.getInnovator();
+	item = item.apply();
+	if (item.isError())
+	{
+		return item;
+	}
+	if (!string.Equals(item.getProperty("is_current"), "1", StringComparison.Ordinal))
+	{
+		string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("mp_NewVersionNotCurrentItem"));
+		return inn.newError(message);
+	}
+	return item;
+}
+
+private static Item RemoveCopyOf(Item policyItem) 
+{
+	policyItem.fetchRelationships("mp_MacCondition");
+	Item conditions = policyItem.getRelationships("mp_MacCondition");
+	for (var i = 0; i < conditions.getItemCount(); i++) {
+		Item condition = conditions.getItemByIndex(i);
+		string name = condition.getProperty("name");
+		if (name.StartsWith("Copy of", StringComparison.Ordinal)) {
+			condition.setAction("edit");
+			var regex = new System.Text.RegularExpressions.Regex(System.Text.RegularExpressions.Regex.Escape("Copy of "));
+			condition.setProperty("name", regex.Replace(name, "", 1));
+		} else {
+			condition.setAction("skip");
+		}
+	}
+	policyItem.setAction("update");
+	policyItem = policyItem.apply();
+	return policyItem;]]></method_code>
+  <method_type>C#</method_type>
+  <name>mp_NewVersion</name>
+ </Item>
+</AML>

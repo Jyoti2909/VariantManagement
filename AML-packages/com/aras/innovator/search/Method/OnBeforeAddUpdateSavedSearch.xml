@@ -1,0 +1,20 @@
+﻿<AML>
+ <Item type="Method" id="B959C0434FAB41F1ADAFEF58A2B500BE" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[if ("Main Grid" != this.getProperty("location"))
+  this.setProperty("show_on_toc", "0");
+var savedSearchCriteria = this.getProperty("criteria");
+if (!string.IsNullOrEmpty(savedSearchCriteria))
+{
+  var savedSearchCriteriaItem = this.newItem();
+  savedSearchCriteriaItem.loadAML(savedSearchCriteria);
+  savedSearchCriteriaItem.removeAttribute("order_by");
+
+  this.setProperty("criteria", savedSearchCriteriaItem.ToString());
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>OnBeforeAddUpdateSavedSearch</name>
+ </Item>
+</AML>

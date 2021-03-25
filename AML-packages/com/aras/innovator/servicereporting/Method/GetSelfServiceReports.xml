@@ -1,0 +1,106 @@
+﻿<AML>
+ <Item type="Method" id="9A508EDADB924191B37977744AA72733" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	var baseIT = this.getProperty("base_item_type");
+	var selfServiceReports = this.newItem("SelfServiceReport", "get");
+	if (!string.IsNullOrEmpty(baseIT))
+	{
+		selfServiceReports.setProperty("base_item_type", baseIT);
+	}
+
+	var userIdentities = Aras.Server.Security.Permissions.Current.IdentitiesList;
+
+	var selfServiceReportSharedWith = this.newItem("SelfServiceReportSharedWith", "get");
+	selfServiceReportSharedWith.setAttribute("select", "related_id,access_rights");
+	selfServiceReportSharedWith.setAttribute("where", string.Format(CultureInfo.InvariantCulture, "[SELFSERVICEREPORTSHAREDWITH].RELATED_ID in ({0})", userIdentities));
+
+	var recentReports = this.newItem("RunReportByUser", "get");
+	recentReports.setAttribute("where", string.Format(CultureInfo.InvariantCulture, "[RUNREPORTBYUSER].RELATED_ID='{0}'", 
+        CCO.DB.InnDatabase.QuoteValue(this.getInnovator().getUserID())));
+
+	selfServiceReports.addRelationship(selfServiceReportSharedWith);
+	selfServiceReports.addRelationship(recentReports);
+	selfServiceReports.setAttribute("orderBy", "name");
+
+	var items = selfServiceReports.apply();
+	if (items.isError()) {
+		return items;
+	}
+
+	if (items.getItemCount() > 1) {
+		for (var i = 0; i < items.getItemCount(); i++) {
+			PrepareRemove(items.getItemByIndex(i));
+		}
+	} else {
+		PrepareRemove(items);
+	}
+
+	return items;
+}
+
+private void PrepareRemove(Item item)
+{
+	var shared = item.getRelationships("SelfServiceReportSharedWith");
+	if (shared.getItemCount() > 0)
+	{
+		string mostRateId = null;
+		var currentWeight = -1;
+		for (var i = 0; i < shared.getItemCount(); i++)
+		{
+			var currentShared = shared.getItemByIndex(i);
+			var weight = getWeight(currentShared.getProperty("access_rights"));
+			if (weight > currentWeight)
+			{
+				mostRateId = currentShared.getID();
+				currentWeight = weight;
+			}
+		}
+
+		if (!string.IsNullOrEmpty(mostRateId))
+		{
+			RemoveShared(item, shared, mostRateId);
+		}
+	}
+}
+
+private int getWeight(string value)
+{
+	switch (value)
+	{
+		case "locked":
+		{
+			return 0;
+		}
+		case "viewonly":
+		{
+			return 1;
+		}
+		case "readonly":
+		{
+			return 2;
+		}
+		case "full":
+		{
+			return 3;
+		}
+		default:
+		{
+			return -1;
+		}
+	}
+}
+
+private void RemoveShared(Item mainItem, Item shared, string skipItemId)
+{
+	for (var i = 0; i < shared.getItemCount(); i++)
+	{
+		var current = shared.getItemByIndex(i);
+		if (string.Compare(skipItemId, current.getID(), StringComparison.OrdinalIgnoreCase) != 0)
+		{
+			mainItem.removeRelationship(current);
+		}
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetSelfServiceReports</name>
+ </Item>
+</AML>

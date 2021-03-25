@@ -1,0 +1,103 @@
+﻿<AML>
+ <Item type="Method" id="680924D610994AE2BE9E0C94FF637A0E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//function User_pwd_checkPolicy(plainPwd, variablesXML[optional])
+
+return standardCheckPlainPwdPolicy(plainPwd, variablesXML);
+
+function standardCheckPlainPwdPolicy(plainPwd, variablesXML) {
+	var varMinNumberNm = 'User_pwd_symbols_min_number';
+	var varMinDigitsNm = 'User_pwd_digits_min_number';
+	var failedSymbolTests = {};
+	var failedDigitsTests = {};
+	var valuesHash = {};
+	var resXml;
+	var wrongSymbolsVar = false;
+	var wrongDigitsVar = false;
+
+	if (variablesXML === undefined) {
+		var conditionStr = '\'' + varMinNumberNm + '\',\'' + varMinDigitsNm + '\'';
+		var aml = '<Item type=\'Variable\' action=\'get\' select=\'name,value\'><name condition=\'in\'>' + conditionStr + '</name></Item>';
+		var res = aras.soapSend('ApplyItem', aml);
+		if (res.getFaultCode() !== 0) {
+			return res.getFaultString();
+		}
+		resXml = res.getResultsBody();
+	} else {
+		resXml = variablesXML;
+	}
+
+	if (resXml.indexOf('<Result') < 0) {
+		resXml = '<Result>' + resXml + '</Result>';
+	}
+
+	var d = aras.createXMLDocument();
+	d.loadXML(resXml);
+
+	var nd = d.selectSingleNode('//Item[name=\'' + varMinNumberNm + '\']/value');
+	var val = (nd) ? parseInt(nd.text) : '';
+	valuesHash[varMinNumberNm] = val;
+	if (val && (!plainPwd || plainPwd.length < val)) {
+		failedSymbolTests[varMinNumberNm] = true;
+	} else {
+		wrongSymbolsVar = true;
+	}
+
+	nd = d.selectSingleNode('//Item[name=\'' + varMinDigitsNm + '\']/value');
+	val = (nd) ? parseInt(nd.text) : '';
+	valuesHash[varMinDigitsNm] = val;
+	if (val && val > 0) {
+		failedDigitsTests[varMinDigitsNm] = testStr(plainPwd, /[0-9]{1}/g, val);
+	} else {
+		wrongDigitsVar = true;
+	}
+
+	var retVal = '';
+	var k;
+	for (k in failedDigitsTests) {
+		if (failedDigitsTests[k]) {
+			if (!wrongSymbolsVar) {
+				retVal = aras.getResource('', 'imports_core.password_policy_requirements_missed', valuesHash[varMinNumberNm], valuesHash[varMinDigitsNm]);
+				return retVal;
+			} else {
+				retVal = aras.getResource('', 'imports_core.password_policy_requirements_missed2', valuesHash[varMinDigitsNm]);
+				return retVal;
+			}
+		}
+	}
+
+	for (k in failedSymbolTests) {
+		if (failedSymbolTests[k]) {
+			if (!wrongDigitsVar) {
+				retVal = aras.getResource('', 'imports_core.password_policy_requirements_missed', valuesHash[varMinNumberNm], valuesHash[varMinDigitsNm]);
+				return retVal;
+			} else {
+				retVal = aras.getResource('', 'imports_core.password_policy_requirements_missed2', valuesHash[varMinNumberNm]);
+				return retVal;
+			}
+		}
+	}
+	return retVal;
+
+	function testStr(s, re4s, cnts) {
+		var retVal = false;
+		var arr = s.match(re4s);
+		var i = 0;
+
+		while (arr && arr[i] && cnts > 0) {
+			i++;
+			cnts--;
+		}
+
+		if (cnts > 0) {
+			retVal = true;
+		}
+
+		return retVal;
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>User_pwd_checkPolicy</name>
+ </Item>
+</AML>

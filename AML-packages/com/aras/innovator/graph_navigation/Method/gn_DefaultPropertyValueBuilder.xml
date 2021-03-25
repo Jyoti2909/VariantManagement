@@ -1,0 +1,73 @@
+﻿<AML>
+ <Item type="Method" id="929BA8299FD14C2B8881370A54B204E4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.Server.Core.GraphNavigation.PropertyGetter;
+public override string GetValue(IList<Item> items, string propertyName, string valueTemplate, ItemTypeInfo itemType)
+{
+	Item firstItem = items.FirstOrDefault();
+	string formatString = valueTemplate ?? "{" + propertyName + "}";
+	List<string> parameterNames = new List<string>();
+	List<object> parameterValues = new List<object>();
+	Dictionary<string, Item> typedItems = items.ToDictionary(item => GetTypeOrAlias(item), item => item);
+
+	int propertyNameStartIndex = formatString.IndexOf("{", StringComparison.Ordinal),
+		propertyNameEndIndex = formatString.IndexOf("}", StringComparison.Ordinal);
+	while (propertyNameStartIndex >= 0 && propertyNameEndIndex >= 0 && propertyNameEndIndex > propertyNameStartIndex)
+	{
+		string specifier = formatString.Substring(propertyNameStartIndex + 1, propertyNameEndIndex - propertyNameStartIndex - 1);
+		parameterNames.Add(specifier);
+		string typeName, parameterName;
+		string[] parsedSpecifier = specifier.Split('\\');
+		if (parsedSpecifier.Length > 1)
+		{
+			typeName = parsedSpecifier[0];
+			parameterName = parsedSpecifier[1];
+		}
+		else
+		{
+			typeName = null;
+			parameterName = parsedSpecifier[0];
+		}
+
+		Item sourceItem;
+		if (!string.IsNullOrEmpty(typeName))
+		{
+			typedItems.TryGetValue(typeName, out sourceItem);
+		}
+		else
+		{
+			sourceItem = firstItem;
+		}
+		string parameterValue = null;
+		if (sourceItem != null)
+		{
+			switch (parameterName)
+			{
+				case "@id":
+					parameterValue = sourceItem.getID();
+					break;
+				case "@icon":
+					parameterValue = GetItemIcon(sourceItem, itemType);
+					break;
+				case "@type":
+					parameterValue = GetItemTypeName(sourceItem, itemType);
+					break;
+				default:
+					parameterValue = sourceItem.getProperty(parameterName);
+					break;
+			}
+		}
+		parameterValues.Add(parameterValue);
+		propertyNameStartIndex = formatString.IndexOf("{", propertyNameStartIndex + 1, StringComparison.Ordinal);
+		propertyNameEndIndex = formatString.IndexOf("}", propertyNameEndIndex + 1, StringComparison.Ordinal);
+	}
+	for (int parameterIndex = 0; parameterIndex < parameterNames.Count; parameterIndex++)
+	{
+		formatString = formatString.Replace("{" + parameterNames[parameterIndex] + "}", "{" + parameterIndex + "}");
+	}
+	return string.Format(CultureInfo.InvariantCulture, formatString, parameterValues.ToArray());
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>gn_DefaultPropertyValueBuilder</name>
+ </Item>
+</AML>

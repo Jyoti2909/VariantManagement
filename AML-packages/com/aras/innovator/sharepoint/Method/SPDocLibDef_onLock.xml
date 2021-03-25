@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="18E150515921466BB4108B0C6AB75EA8" action="add">
+  <comments>Handle changes in UI of SPDocLib form depends on authentication type</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var refreshButton = document.forms.MainDataForm.elements['refresh_button'];
+refreshButton.disabled = !document.isEditMode;
+
+var authNode = document.item.selectSingleNode('authentication_type');
+var userField = document.forms.MainDataForm.elements['sp_user'];
+var passField = document.forms.MainDataForm.elements['sp_password'];
+var domainField = document.forms.MainDataForm.elements['sp_domain'];
+
+if (document.isEditMode) {
+	if (authNode.text === 'WindowsAuthenticationPreferred' ||
+		authNode.text === 'DedicatedUserOnly') {
+		userField.disabled = false;
+		passField.disabled = false;
+		domainField.disabled = false;
+	} else {
+		userField.disabled = true;
+		passField.disabled = true;
+		domainField.disabled = true;
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>SPDocLibDef_onLock</name>
+ </Item>
+</AML>

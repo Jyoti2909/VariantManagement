@@ -1,0 +1,66 @@
+﻿<AML>
+ <Item type="Method" id="4C3D13E07F474CD9975ABA4358FE9015" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[bool permsWasSet = false;
+Aras.Server.Security.Identity admin = null;
+try
+{
+	admin = Aras.Server.Security.Identity.GetByName("Innovator Admin");
+	permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(admin);
+	var id = this.getID();
+	Item forumSW = this.newItem("ForumSharedWith", "get");
+	forumSW.setID(id);
+	forumSW.setAttribute("select", "shared_with_id, team_id");
+
+	forumSW = forumSW.apply();
+	if (forumSW.isError())
+	{
+		return forumSW;
+	}
+
+	var sharedWithId = forumSW.getProperty("shared_with_id");
+	var teamId = forumSW.getProperty("team_id");
+	Item teamIdentity = this.newItem("Team Identity", "get");
+	teamIdentity.setProperty("source_id", teamId);
+	teamIdentity.setProperty("team_role", "D8A0A5EA402541ABA632475CCEC2BAE5");
+	teamIdentity.setProperty("related_id", sharedWithId);
+	teamIdentity.setAttribute("select", "id");
+	teamIdentity = teamIdentity.apply();
+
+	if (!teamIdentity.isError())
+	{
+		var teamIdentityId = teamIdentity.getID();
+		Item updatedTeam = this.newItem("Team Identity", "edit");
+		updatedTeam.setID(teamIdentityId);
+
+		var newSharedWithId = this.getProperty("shared_with_id");
+		if (!string.IsNullOrEmpty(newSharedWithId))
+		{
+			updatedTeam.setProperty("related_id", newSharedWithId);
+		}
+		else
+		{
+			Item sharedIden = this.getPropertyItem("shared_with_id");
+			updatedTeam.setPropertyItem("related_id", sharedIden);
+		}
+
+		updatedTeam = updatedTeam.apply();
+		if (updatedTeam.isError())
+		{
+			return updatedTeam;
+		}
+	}
+
+	return this;
+}
+finally
+{
+	if (permsWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(admin);
+	}
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_UpdateTeamIdentity</name>
+ </Item>
+</AML>

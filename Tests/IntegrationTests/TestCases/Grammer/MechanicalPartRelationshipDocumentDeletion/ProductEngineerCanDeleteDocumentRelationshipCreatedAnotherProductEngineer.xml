@@ -1,0 +1,91 @@
+﻿<TestCase author='pponkrashov@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>Create Mechanical Part with Mechanical Part/Component classification as Product Engineer, and delete relationship as Product Engineer</Description>
+	<Request runAs='petestuser1:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer identity
+			When:
+				The user tries to create part with Mechanical Part/Component classification and related document.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='3DACF97A25AC45C187975C3EE2E1E34C' doGetItem='0'>
+					<classification>Mechanical Part/Component</classification>
+					<name>Deleting by ProdEng</name>
+					<Relationships>
+						<Item type='Part Document' action='add' id='8DDCF05ABCCD43D2B61AD4EB4950441A'>
+							<related_id>
+								<Item type='Document' action='get' id='05B2CC634952431EB8C3C76C5804B15E'></Item>
+							</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='3DACF97A25AC45C187975C3EE2E1E34C'/>
+					</Result>
+					<Message>
+						<event name='ids_modified' value=''/>
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='petestuser2:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer identity
+			When:
+				The user tries to remove document relationship from part with Mechanical Part/Component classification.
+			Then:
+				The user should remove document relationship successfully.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part Document' action='delete' id='8DDCF05ABCCD43D2B61AD4EB4950441A' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name='ids_modified' value=''/>
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+ <TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='Part' id='3DACF97A25AC45C187975C3EE2E1E34C' action='delete' />
+			</AML>
+		</Query>
+	 <Baseline>
+		 <SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+			 <SOAP-ENV:Body>
+				 <ApplyItemResponse>
+					 <Result>Ok</Result>
+				 </ApplyItemResponse>
+			 </SOAP-ENV:Body>
+		 </SOAP-ENV:Envelope>
+	 </Baseline>
+	</TestCaseCleanUp>
+</TestCase>

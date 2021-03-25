@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="DE25FE4BD8B04FDAA5353C6206755F9A" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[ // must return AML ready for applyAml to add/update items in DB; input param itemids accepts SelfServiceReport.IDs for IN condition
+// this.setProperty("itemids", "'728BCBE127084EE794668FAEAC962E5F','E217792E7E554E14B992246A2EE46194'"); // test data
+string[] itemIds = this.getProperty("itemids").Split(',');
+var secureItemIds = new List<string>();
+foreach (string itemId in itemIds)
+{
+	string secureItemId = System.Security.SecurityElement.Escape(itemId);
+	secureItemId = CCO.DB.InnDatabase.QuoteValue(secureItemId.Trim('\''));
+	secureItemId = "'" + secureItemId + "'";
+	secureItemIds.Add(secureItemId);
+}
+
+var ssrQueryItem = this.newItem("SelfServiceReport", "get");
+ssrQueryItem.setProperty("id", String.Join(",", secureItemIds));
+ssrQueryItem.setPropertyCondition("id", "in");
+var reports = ssrQueryItem.apply();
+for (var i = 0; i < reports.getItemCount(); ++i)
+{
+    reports.getItemByIndex(i).node.SetAttribute("action", "add");
+}
+return reports;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetReportsForExport</name>
+ </Item>
+</AML>

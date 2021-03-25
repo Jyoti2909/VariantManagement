@@ -1,0 +1,141 @@
+﻿@{
+	Layout = "_baseLayout.cshtml";
+}
+@section init_window
+{
+	@if (IsSectionDefined("init_window"))
+	{
+		@RenderSection("init_window")
+	}
+	else
+	{
+		<script type="text/javascript" src="@Url.ContentWithSalt("~/Modules/aras.innovator.core.ItemWindow/Scripts/_cuiLayout.js")"></script>
+		<script>
+			window.initializeCuiLayoutFunctions(window);
+
+			var nativeFocus = window.focus;
+			var paramObjectName = window.name + '_params';
+			const nativeParent = window.parent;
+			var parent = window;
+
+			if (window.frameElement) {
+				if (!window.opener) {
+					window.opener = nativeParent;
+				}
+
+				var arasTabsobj = window.opener.arasTabs;
+				arasTabsobj.setTitleTabWithFrame(window);
+
+				window.focus = cuiWindowFocusHandler;
+				window.close = cuiWindowCloseHandler;
+			}
+
+			window.addEventListener('beforeunload', cuiWindowBeforeUnloadHandler);
+			window.addEventListener('unload', cuiWindowUnloadHandler);
+		</script>
+		if (IsSectionDefined("style"))
+		{
+			@RenderSection("style")
+		}
+		else
+		{
+			<style type="text/css">
+				@@import "@Url.ContentWithSalt("~/javascript/include.aspx?classes=arasClaro.css,discussion.css,common.min.css,cuiLayout.css")";
+			</style>
+		}
+		<script type="text/javascript" id="ScriptSet1" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=ArasModules,ScriptSet1,TearOffMenuControllerNoCUI,pageReturnBlocker")"></script>
+		<script>
+			var aras = new Aras(window.opener[paramObjectName].aras);
+			var viewType = window.opener[paramObjectName].viewType;
+			var windowReadyObjectResolve = window.opener[paramObjectName].windowReadyObjectResolve;
+			ArasModules.intl.locale = aras.getSessionContextLocale();
+			aras.setWindowLangAttribute(window);
+			aras.setWindowTitle(window, window.opener[paramObjectName].title);
+		</script>
+		<script type="text/javascript" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=/dojo.js")" data-dojo-config="@(ViewBag.syncMode == null ? "async: true," : "") baseUrl:'@Url.ContentWithSalt("~/javascript/dojo")'"></script>
+		<script type="text/javascript" src="@Url.ContentWithSalt("~/javascript/dojo/layout.js")"></script>
+		<script type="text/javascript" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=ItemViewWrappers,arasInnovatorCUI")"></script>
+		<script>
+				window.cui = new CUI_ConfigurableUI();
+		</script>
+	}
+}
+@section init_widgets
+{
+	@if (IsSectionDefined("init_widgets"))
+	{
+		@RenderSection("init_widgets")
+	}
+	else
+	{
+		<script type="text/javascript" src="@Url.ContentWithSalt("~/jsBundles/cui.js")"></script>
+		<script type="text/javascript" src="@Url.ContentWithSalt("~/Modules/aras.innovator.core.EffectivityServices/Scripts/ExtendRelationshipsControlAndCuiWindowHandlers.js")"></script>
+		<script type="text/javascript">
+			require(['dojo/parser', 'Controls/Tab', 'dijit/dijit', 'dojo/domReady!'],
+				function (parser) {
+					dispatchCustomEvent('beforeLoadWidgets');
+
+					initRelationshipsControl();
+
+					return Promise.all([
+						parseDojoLayout(parser).then(initTabContainer).then(initTearOffMenuController),
+						initCuiLayout().then(getRelationshipPromise)
+					])
+					.then(function() {
+						dispatchCustomEvent('loadWidgets');
+					});
+				});
+		</script>
+	}
+}
+@section header
+{
+		@RenderSection("header", false)
+}
+@section load_widgets
+{
+	@if (IsSectionDefined("load_widgets"))
+	{
+		@RenderSection("load_widgets")
+	}
+	else
+	{
+		<script type="text/javascript">
+			(function () {
+				var loadWidgetsListener = function () {
+					window.windowReadyObjectResolve(window);
+					var widgets = dijit.findWidgets(document.getElementById('BorderContainer'));
+					widgets.forEach(function(widget) {
+						if (widget.startup && !widget.isLoaded) {
+							widget.startup();
+						}
+					});
+				};
+
+				document.addEventListener("loadWidgets", loadWidgetsListener);
+			})();
+		</script>
+		<base href="@Url.ContentWithSalt("~/scripts/")">
+	}
+}
+@section body
+{
+	@if (IsSectionDefined("body"))
+	{
+		@RenderSection("body")
+	}
+	else
+	{
+		<iframe id="dimmer_spinner" src="@Url.ContentWithSalt("~/scripts/spinner.html")"></iframe>
+		<div id="top" class="aras-item-view__toolbars">
+			<div id="top-toolbars"></div>
+		</div>
+		<div id="BorderContainer" class="aras-flex aras-item-view__container">
+			<div id="center" class="aras-flex-grow" style="overflow: auto;">
+				@RenderSection("center", false)
+			</div>
+			<aras-splitter id="ssvc-splitter" class="aras-hide"></aras-splitter>
+			<div id="rightSidebarContentPane" class="aras-item-view__right-sidebar aras-hide"></div>
+		</div>
+	}
+}

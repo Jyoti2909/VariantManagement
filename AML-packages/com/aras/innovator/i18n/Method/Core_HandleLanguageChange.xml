@@ -1,0 +1,171 @@
+﻿<AML>
+ <Item type="Method" id="71C41EAD7C0140CCBCD46C22D4CF8B96" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Dim i As Integer
+Dim s As String
+Dim tmpInn As Innovator = Me.getInnovator()
+Dim q As Item = tmpInn.newItem("tmp", "tmp")
+
+Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+Dim rs As Aras.Server.Core.InnovatorDataSet
+Dim sql, sql2 As String
+
+CCO.Cache.ClearAllServerCaches()
+
+Dim isUpdate As Boolean = (Me.getAttribute("action") = "update" OrElse Me.getAttribute("action") = "edit")
+
+If Me.getAttribute("action") = "delete" OrElse isUpdate Then 'delete or update
+	Dim id As String = conn.QuoteValue(Me.getAttribute("id"))
+	sql = String.Format("SELECT [SUFFIX] FROM " + conn.GetTableName("Language") + " WHERE [ID]='{0}' /*(IR-012353) Core_HandleLanguageChange marker*/", id)
+	rs = conn.ExecuteSelect(sql)
+	If rs.EoF Then Return tmpInn.newError("Cannot get Language item with id='" + Me.getAttribute("id") + "'.")
+	Dim sufx As String = CStr(rs.Value("suffix", Nothing))
+	Dim newSufx As String = sufx
+	Dim tmpNd As XmlElement = Me.node.SelectSingleNode("suffix")
+	If Not IsNothing(tmpNd) AndAlso tmpNd.getAttribute("is_null") <> "1" Then
+		newSufx = tmpNd.innerText
+	End If
+
+	If Me.getAttribute("action") = "delete" OrElse newSufx <> sufx Then
+		sql = "SELECT [p].[name] AS [name], [it].[instance_data] AS [table_name] FROM " + _
+		conn.GetTableName("Property") + " AS [p] INNER JOIN " + _
+		conn.GetTableName("ItemType") + " AS [it] ON [p].[source_id]=[it].[id] " + _
+		"WHERE [p].[data_type]=N'ml_string' /*(IR-012353) Core_HandlelanguageChange marker*/"
+		rs = conn.ExecuteSelect(sql)
+		While Not rs.EoF
+			s = String.Format("{0}{1}", rs.Value("name"), sufx)
+			If conn.TableColumnExists(rs.Value("table_name"), s) Then
+				If Me.getAttribute("action") = "delete" Then
+					conn.DropColumn(rs.Value("table_name"), s)
+				Else
+					conn.RenameColumn(rs.Value("table_name"), s, String.Format("{0}{1}", rs.Value("name"), newSufx))
+				End If
+				If conn.TableExists(rs.Value("table_name")) Then
+					conn.RebuildSqlModule(rs.Value("table_name"), "secured")
+				End If
+			End If
+			rs.MoveNext()
+		End While
+	End If
+ElseIf Not isUpdate Then 'if add
+
+	Dim token as String = CCO.TokenProtectedFunctions.FunctionProtectionToken
+	Dim curUsrId As String = tmpInn.getUserID()
+	Dim languageId As String = conn.QuoteValue(Me.getAttribute("id"))
+
+	sql = String.Format("EXEC [innovator].[AddMultiLingualColumns] '{0}', '{1}', '{2}' /*(IR-012353) Core_HandlelanguageChange marker*/", token, languageId, curUsrId)
+	conn.ExecuteSql(sql)
+
+	sql = "SELECT [p].[id] AS [id], [it].[id] AS [it_id], [it].[locked_by_id] AS [it_locked_by_id], [it].[permission_id] AS [it_permission_id] FROM " + _
+	conn.GetTableName("Property") + " AS [p] INNER JOIN " + _
+	conn.GetTableName("ItemType") + " AS [it] ON [p].[source_id]=[it].[id] " + _
+	"WHERE [p].[data_type]=N'ml_string' AND " + _
+	conn.sqlNull() + "(it.implementation_type, 'table') IN ('table', 'polymorphic') " + _
+	"ORDER BY [it].[implementation_type] DESC, [it_id] /*(IR-012353) Core_handleLanguageChange marker*/"
+	rs = conn.ExecuteSelect(sql)
+
+	'+++++ Fake the ItemTypes permission_id, locked_by_id if need
+	Dim itemTypePermId As String = "102D29B8CD9948BFB5F558341DF4C0F9"
+	Dim changedPerms As New Hashtable()
+	Dim changedLockedByIds As New Hashtable()
+	Dim curItemTypeId, curPermId, curLockedById As String
+	While Not rs.EoF
+		curItemTypeId = rs.Value("it_id")
+		curPermId = rs.Value("it_permission_id", "")
+		curLockedById = rs.Value("it_locked_by_id", "")
+		If curPermId <> itemTypePermId AndAlso Not changedPerms.ContainsKey(curItemTypeId) Then
+			changedPerms.Add(curItemTypeId, curPermId)
+		End If
+		If curLockedById <> curUsrId AndAlso curLockedById <> "" AndAlso Not changedLockedByIds.ContainsKey(curItemTypeId) Then
+			changedLockedByIds.Add(curItemTypeId, curLockedById)
+		End If
+		rs.MoveNext()
+	End While
+
+	Dim columnNm2Update, newValue As String
+	Dim tmpHash As Hashtable
+	For i = 1 To 2
+		If i = 1 Then
+			columnNm2Update = "permission_id"
+			newValue = itemTypePermId
+			tmpHash = changedPerms
+		Else
+			columnNm2Update = "locked_by_id"
+			newValue = curUsrId
+			tmpHash = changedLockedByIds
+		End If
+		If tmpHash.Count > 0 Then
+			Dim tmpSql As New StringBuilder()
+			tmpSql.Append("UPDATE " + conn.GetTableName("ItemType") + " SET ")
+			tmpSql.Append(conn.QuoteName(columnNm2Update))
+			tmpSql.Append("='")
+			tmpSql.Append(conn.QuoteValue(newValue))
+			tmpSql.Append("' WHERE [ID] IN (")
+			For Each curItemTypeId In tmpHash.Keys
+				tmpSql.Append("'")
+				tmpSql.Append(conn.QuoteValue(curItemTypeId))
+				tmpSql.Append("'")
+				tmpSql.Append(",")
+			Next
+			sql2 = tmpSql.ToString()
+			sql2 = sql2.Substring(0, sql2.Length - 1)
+			sql2 = sql2 + ") /*(IR-012353) Core_handleLanguageChange marker*/"
+			conn.ExecuteSQL(sql2)
+		End If
+	Next
+	'----- Fake the ItemTypes permission_id, locked_by_id if need
+
+	rs = conn.ExecuteSelect(sql)
+	Dim ITId As String = ""
+	Dim stringBuilder As New StringBuilder()
+
+	While Not rs.EoF
+		ITId = rs.Value("it_id")
+		stringBuilder.Clear()
+		stringBuilder.Append("<Item")
+		stringBuilder.Append(" type='ItemType' id='")
+		stringBuilder.Append(System.Security.SecurityElement.Escape(ITId))
+		stringBuilder.Append("' action='")
+
+		If CStr(rs.Value("it_locked_by_id", "")) = "" Then
+			stringBuilder.Append("edit")
+		Else
+			stringBuilder.Append("update")
+		End If
+		stringBuilder.Append("' />")
+		q.loadAML(stringBuilder.ToString())
+		q = q.apply()
+
+		rs.MoveNext()
+	End While
+
+	'+++++ Restore the faked permission_ids, locked_by_ids
+	For i = 1 To 2
+		
+		If i = 1 Then
+			columnNm2Update = "permission_id"
+			tmpHash = changedPerms
+		Else
+			columnNm2Update = "locked_by_id"
+			tmpHash = changedLockedByIds
+		End If
+
+		If tmpHash.Count > 0 Then
+			For Each curItemTypeId In tmpHash.Keys
+				Dim escapedTmpHashItemValue As String = conn.QuoteValue(CStr(tmpHash.Item(curItemTypeId)))
+				Dim escapedCurItemTypeId As String = conn.QuoteValue(curItemTypeId)
+				sql2 = String.Format("UPDATE " + conn.GetTableName("Language") + _
+				" SET {0}='{1}' WHERE [ID]='{2}' /*(IR-012353) Core_HandleLanguageChange marker*/", conn.QuoteName(columnNm2Update), escapedTmpHashItemValue, escapedCurItemTypeId)
+				conn.ExecuteSQL(sql2)
+			Next
+		End If
+	Next
+	'----- Restore the faked permission_ids, locked_by_ids
+End If
+
+Return Me
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>Core_HandleLanguageChange</name>
+ </Item>
+</AML>

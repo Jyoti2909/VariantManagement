@@ -1,0 +1,206 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+<head>
+	<style type="text/css">
+		@import "../../../../styles/default.css";
+
+		html, body {
+			position: relative;
+			overflow: hidden;
+			width   : 100%;
+			height  : 100%;
+			margin  : 0px;
+			padding : 0px;
+		}
+
+		#formContainer {
+			width: 100%;
+			height: 100%;
+			border: none;
+		}
+		#formOverlay {
+			z-index: 100;
+			position: absolute;
+			left: 0px;
+			right: 0px;
+			top: 0px;
+			bottom: 0px;
+			background-color: #FFFFFF;
+		}
+		#panelTitle {
+			height: 40px;
+			margin: 0px 15px 0px 15px;
+			line-height: 36px;
+			font-size: 18px;
+			vertical-align: middle;
+			border-bottom: 1px solid #CCCCCC;
+		}
+		#titleText {
+			vertical-align:middle;
+		}
+	</style>
+	<script type="text/javascript">
+	// === varibles section =======
+	var aras = parent.aras,
+		viewController = parent.projectView,
+		viewPanel = viewController.getPanelById(window.frameElement.getAttribute("panelid")),
+		viewShare = viewController.share,
+		formOverlay,
+		formItemType = "",
+		prevIsEditMode = false,
+		viewItem = null,
+		isFormLoaded = false,
+		isFormVisible = false,
+		formContentNode,
+		formsCache = {};
+
+	attachViewEventListeners = function () {
+		viewPanel.addControllerEventListener(window, "onSelectItemChanged", onSelectItemChanged);
+		viewPanel.addControllerEventListener(window, "onItemPropertyChanged", onItemPropertyChanged);
+		viewPanel.addControllerEventListener(window, 'onProjectItemChanged', onProjectItemChanged);
+		viewPanel.addControllerEventListener(window, "onPanelShow", onPanelShow);
+	}
+
+	window.onload = function () {
+		formContentNode = document.getElementById("formContainer");
+		formOverlay = document.getElementById("formOverlay");
+
+		attachViewEventListeners();
+	}
+
+	populateForm = function (itemNode, currentIsEditMode) {
+		if (itemNode) {
+			var itemType = itemNode.getAttribute("type"),
+				formNode = getItemTypeFormNode(itemType);
+
+			if (formItemType !== itemType || prevIsEditMode !== currentIsEditMode || !isFormLoaded) {
+				aras.uiShowItemInFrameEx(formContentNode.contentWindow, itemNode, currentIsEditMode ? 'edit' : 'view', undefined, formNode, undefined, onChangeHandler.bind(this));
+
+				formItemType = itemType;
+				prevIsEditMode = currentIsEditMode;
+				isFormLoaded = true;
+			}
+			else {
+				aras.uiPopulateFormWithItemEx(formContentNode.contentDocument.forms.MainDataForm, itemNode, '', prevIsEditMode);
+			}
+
+			viewItem = itemNode;
+			setFormVisibility(true);
+		}
+	}
+
+	getItemTypeFormNode = function (itemType) {
+		if (formsCache[itemType]) {
+			var selectedIndex = formsCache[itemType].selectedIndex;
+
+			return formsCache[itemType].forms[selectedIndex];
+		}
+		else {
+			var formItem, formNode, formName;
+
+			switch (itemType) {
+				case "Activity2":
+					formName = "Activity2 [PanelForm]";
+					break;
+				case "WBS Element":
+					formName = "WBS Element [PanelForm]";
+					break;
+			}
+
+			if (formName) {
+				formItem = aras.getFormForDisplay(formName, "by-name");
+
+				if (formItem && !formItem.isError() && !formItem.isCollection()) {
+					formNode = formItem.node;
+
+					addFormToCache(itemType, formNode);
+				}
+			}
+
+			return formNode;
+		}
+	}
+
+	addFormToCache = function (itemType, formNode) {
+		var itemTypeFormCache = formsCache[itemType];
+
+		if (!itemTypeFormCache) {
+			itemTypeFormCache = { selectedIndex: -1, forms: [] };
+			formsCache[itemType] = itemTypeFormCache;
+		}
+
+		itemTypeFormCache.forms.push(formNode);
+
+		if (itemTypeFormCache.forms.length === 1) {
+			itemTypeFormCache.selectedIndex = 0;
+		}
+	}
+
+	onSelectItemChanged = function (itemIds) {
+		var isSingleItem = (itemIds.length === 1);
+
+		if (isSingleItem) {
+			populateForm(viewShare.functions.getItemNodeById(itemIds[0]), viewShare.properties.isEditMode);
+		}
+		else {
+			viewItem = null;
+			setFormVisibility(false);
+		}
+	}
+
+	setFormVisibility = function (doVisible) {
+		if (isFormLoaded && formOverlay && isFormVisible !== doVisible) {
+			formOverlay.style.display = doVisible ? "none" : "";
+			isFormVisible = doVisible;
+		}
+	}
+
+	onProjectItemChanged = function(wbsId, changeAction) {
+		if (changeAction !== 'modechange') {
+			return;
+		}
+
+		const itemId = viewItem ? viewItem.getAttribute('id') : '';
+
+		if (itemId) {
+			populateForm(viewShare.functions.getItemNodeById(itemId), viewShare.properties.isEditMode);
+		}
+		else {
+			setFormVisibility(false);
+		}
+	}
+
+	onItemPropertyChanged = function (itemId, propertyName, propertyValue) {
+		var showedItemId = viewItem ? viewItem.getAttribute("id") : "";
+
+		if (showedItemId === itemId) {
+			populateForm(viewItem, viewShare.properties.isEditMode);
+		}
+	}
+
+	onChangeHandler = function (propertyName, propertyValue, updateMenu) {
+		viewPanel.raiseEvent("onItemPropertyChanged", viewItem.getAttribute("id"), propertyName, propertyValue);
+	}
+
+	onPanelShow = function () {
+		var selectedIds = viewShare.properties.selectedItemIds;
+
+		if (selectedIds && selectedIds.length === 1) {
+			populateForm(viewShare.functions.getItemNodeById(selectedIds[0]), viewShare.properties.isEditMode);
+		}
+		else {
+			setFormVisibility(false);
+		}
+	}
+	</script>
+</head>
+<body class="claro">
+	<div id="formOverlay">
+		<div id="panelTitle">
+			<span id="titleText">Item Details</span>
+		</div>
+	</div>
+	<iframe id="formContainer"></iframe>
+</body>
+</html>

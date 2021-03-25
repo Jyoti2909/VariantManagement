@@ -1,0 +1,69 @@
+﻿<AML>
+ <Item type="SecureMessageViewTemplate" id="F1E9620C1AB3408588708B68E18D51DE" action="add">
+  <sketch_tooltip_template xml:lang="en">Sketch from ${ItemType:label} ${Item:keyed_name}</sketch_tooltip_template>
+  <style />
+  <template>
+&lt;div class="ssvc-message-info"&gt;
+	&lt;div class="floatLeft"&gt;
+		&lt;span class="ssvc-message-userName"&gt;{{userName}}&lt;/span&gt;
+		&lt;span class="ssvc-message-time"&gt;{{time}}&lt;/span&gt;
+		&lt;span class="ssvc-message-modified"&gt;&lt;/span&gt;
+	&lt;/div&gt;
+	&lt;div class="floatRight"&gt;
+		{% if actions %}
+		&lt;div class="item-actions-button"&gt;
+			&lt;div class="item-actions-button-icon" title="Actions Menu"&gt;&lt;/div&gt;
+			&lt;div class="item-actions-menu"&gt;
+				{%for action in actions%}
+					&lt;div class="item-actions-menu-node" unselectable="on" data-action-type="{{action.type}}"&gt;{{action.value}}&lt;/div&gt;
+				{% endfor %}
+			&lt;/div&gt;
+		&lt;/div&gt;
+		{% endif %}
+		&lt;img class="floatRight" src="{{sourceDataIconNode}}"/&gt;
+		&lt;a class="ssvc-message-item-keyedName"&gt;{{sourceDataKeyedName}}&lt;/a&gt;
+		&lt;br /&gt;&lt;span&gt;{{itemInfo}}&lt;/span&gt;
+	&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class="ssvc-message-container"&gt;
+	&lt;div id="messageText" class="ssvc-message-text"&gt;{{message}}&lt;/div&gt;&lt;a href="#" class="ssvc-message-toggle"&gt;&lt;/a&gt;
+&lt;/div&gt;
+{% if sourceMessage %}
+{% ifequal type "Markup" %}
+	&lt;div class="ssvc-message-image"&gt;
+		{%if sourceMessage.hasSnapshot %}
+			&lt;div class="ssvc-message-thumbnail-arrow"&gt;&lt;/div&gt;
+		{% endif %}
+		&lt;img class="ssvc-message-thumbnail" src="{{sourceMessage.file}}"/&gt;
+	&lt;/div&gt;
+{% endifequal %}
+{% ifequal type "Media" %}
+	&lt;{{ sourceMessage.sourceType }} controls&gt;
+		&lt;source src={{ sourceMessage.file }} type={{ sourceMessage.type }}&gt;&lt;/source&gt;
+			Your browser does not support the {{ sourceMessage.sourceType }} tag.
+	&lt;/{{ sourceMessage.sourceType }}&gt;
+{% endifequal %}
+{% endif %}
+&lt;div class="ssvc-message-bottom"&gt;
+	&lt;a class="ssvc-message-flag" href="#"&gt;{{flagLabel}}&lt;/a&gt;
+	&lt;span class="ssvc-message-flagging{% if not flagsCount %} ssvc-message-flaggingGray{% endif %}"&gt;{{flagsCount}}&lt;/span&gt;
+	&lt;a class="ssvc-message-edit" href="#"&gt;Edit&lt;/a&gt;
+	&lt;a class="ssvc-message-reply" href="#"&gt;Reply&lt;/a&gt;
+	&lt;a class="ssvc-message-replies" href="#"&gt;&lt;/a&gt;
+	&lt;label class="ssvc-message-labelReplies"&gt;&lt;/label&gt;
+{% ifnotequal type "History" %}
+	&lt;a class="ssvc-message-erase" href="#"&gt;Erase&lt;/a&gt;
+{% endifnotequal %}
+	&lt;div class="ssvc-message-flagging-info"&gt;
+		&lt;label id="FlaggedByNames"&gt;&lt;/label&gt;
+		&lt;a class="ssvc-message-flagging-link" id="FlaggedByShowBtn" href="#"&gt;&lt;/a&gt;
+	&lt;/div&gt;
+{% if not visibleToIdentity.isWorld %}
+	&lt;img class="visibleTo" src="{{visibleToIdentity.src}}"/&gt;
+{% endif %}
+&lt;/div&gt;
+&lt;div class="ssvc-message-type-line" style="{{sourceDataTypeLineStyle}}"&gt;&lt;/div&gt;
+</template>
+  <thumbnail_tooltip_template xml:lang="en">File ${File:filename} ${SecureMessageMarkup:markup_data(//page)} from ${ItemType:label} ${Item:keyed_name}</thumbnail_tooltip_template>
+ </Item>
+</AML>

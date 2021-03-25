@@ -1,0 +1,145 @@
+﻿<!--
+
+Insert this code into the Report Stylesheet between the closing </style> and </html> tags
+replacing any <body> tags that may already exist;
+plus edit the AddReport calls below as required.
+
+-->
+<style type="text/css">
+  @import url(ReportTool/tool_styles.css);
+</style>
+  
+<script>
+  /// The reports container for this dialog do not remove.
+  var reports = opener.parent.parent.myInnovator.newItem();
+  
+  ///
+  /// Set the title for the dialog.
+  ///  
+  var title = "Choose a Report";  
+  
+  ///
+  /// Add your Report Choices here...
+  ///
+  AddReport('Report1', 'Report One', 'rs:Format=Excell');
+  AddReport('Report2', 'Report Two', 'rs:Format=HTML4.0');
+  AddReport('Report3', 'Report Three', 'rs:Format=PDF');
+    
+    
+  ///
+  /// The rest of the code is generic...
+  ///
+  
+  function AddReport(name, label, parameters)
+  {  
+    var report = opener.parent.parent.myInnovator.newItem();
+    report.setProperty('name', name);
+    report.setProperty('label', label);
+    report.setProperty('parameters', parameters);
+    reports.addRelationship(report);
+  }
+  
+  function RunReport(reportName)
+  {
+    // Set the URL to the RSGateway...   
+    var url = opener.parent.parent.aras.getServerBaseURL() +
+      "RSGateway.aspx?irs:Report=" + reportName +     // passing the Report name as the query_string.
+      "&amp;np:id=" + document.forms.ReportForm.itemID.value; // and the Item ID.
+    
+    var report = reports.getItemsByXPath("//Item[name='"+reportName+"']").getItemByIndex(0);    
+    var params = report.getProperty("parameters");
+    if (params != "") url += "&amp;" + params;
+    
+    location = url;
+    window.resizeTo(800,600);
+  }
+
+  function Submit()
+  {
+    var report = "";
+    var elms = document.getElementsByName("report");
+    for (var i=0; i&lt;elms.length; ++i)
+    {
+      var elm = elms[i];
+      if (elm.checked)
+      {
+        report = elm.value;
+        break;
+      }
+    }
+    if (report=="") return;
+    RunReport(report);
+  }
+
+  function Cancel()
+  {
+    returnValue = "";
+    close();
+  }
+  
+  onload = function()
+  {
+    // Need to resize the window based on the number of Report choices...
+    var nodes = reports.getItemsByXPath('Relationships/*');
+    var c = nodes.getItemCount();
+    window.resizeTo(300, c*20 + 160);    
+  }
+</script>
+
+<body topmargin="0" leftmargin="0" bgColor="buttonface">
+  <form id="ReportForm">
+    <!-- The id attribute for the selected context Item is set as a hidden form field. -->
+    <input type="hidden" name="itemID" value="{//Item/@id}"/>
+    
+    <table border="0" cellspacing="0" cellpadding="0" width="100%" style="position:absolute; top:0;">
+      <tr height="60">
+        <td class="header" nowrap="1">
+          <img src="ReportTool/images/32x32_cellValue.gif" hspace="20"/>
+          <span id="title">
+            <script>
+              document.write(title);
+            </script>
+          </span>
+        </td>
+      </tr>
+      
+      <tr>
+        <td align="center">
+          <table border="0" cellspacing="0" cellpadding="0" id="UserInput">
+            <script>
+              var table = document.getElementById('UserInput');
+              var nodes = reports.getItemsByXPath('Relationships/*');
+              var c = nodes.getItemCount();
+              
+              for (var i=0; i&lt;c; ++i)
+              {
+                var report = nodes.getItemByIndex(i);
+                var name   = report.getProperty("name");
+                var label  = report.getProperty("label");
+                var params = report.getProperty("parameters");
+
+                var tr = table.insertRow();
+
+                td = tr.insertCell();
+                td.innerHTML = '&lt;input type="radio" name="report" value="'+name+'"&gt;';
+
+                var td = tr.insertCell();
+                td.setAttribute('nowrap','');
+                td.appendChild(document.createTextNode(label));
+                td.style.cssText = "padding-left:4px;";
+                td.style.textTransform = 'capitalize';
+              }
+            </script>
+          </table>
+        </td>
+      </tr>
+            
+      <tr>
+        <td align="center" class="buttons">
+          <button onclick="Submit()">Submit</button>
+          <button onclick="Cancel()">Canel</button>
+        </td>
+      </tr>
+    </table>
+  </form>
+</body>

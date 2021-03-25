@@ -1,0 +1,116 @@
+﻿<AML>
+ <Item type="Method" id="3D213E1ECCC9471487EDDF17731B695C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	var rels = this.getRelationships();
+	if (rels.getItemCount() == 0)
+	{
+		return this.getInnovator().newError("There is no items to select.");
+	}
+
+	var itemTypes = new List<ItemType>();
+	for (var i = 0; i < rels.getItemCount(); i++)
+	{
+		var currentItemType = rels.getItemByIndex(i);
+		var propsToSelect = currentItemType.getProperty("props_to_select");
+		var properties = new List<string>();
+		if (!string.IsNullOrEmpty(propsToSelect))
+		{
+			properties.AddRange(propsToSelect.Split(','));
+		}
+
+		itemTypes.Add(new ItemType
+		{
+			ItemTypeId = currentItemType.getID(),
+			PropertiesList = properties
+		});
+	}
+
+	if (itemTypes.Count == 0)
+	{
+		return this.getInnovator().newError("There is no items to select.");
+	}
+
+	var skipItemTypeProperties = !string.IsNullOrEmpty(this.getProperty("skipItemTypeProperties"));
+	var settings = this.newItem("Method", "GetSSRSetting");
+	settings = settings.apply();
+	if (settings.isError())
+	{
+		return settings;
+	}
+	var excludedList = new List<Excluded>();
+	var excludedprops = settings.getProperty("excluded_properties");
+	if (!string.IsNullOrEmpty(excludedprops))
+	{
+		var items = excludedprops.Split('|');
+		foreach (var item in items)
+		{
+			var parts = item.Split(':');
+			string propertyId = System.Security.SecurityElement.Escape(parts[1]);
+			var exc = excludedList.FirstOrDefault(x => string.Compare(x.ItemTypeId, parts[0], StringComparison.OrdinalIgnoreCase) == 0);
+			if (exc != null)
+			{
+				exc.PropertiesList.Add(propertyId);
+			}
+			else
+			{
+				excludedList.Add(new Excluded()
+				{
+					ItemTypeId = parts[0], PropertiesList = new List<string>()
+					{
+						propertyId
+					}
+				});
+			}
+		}
+	}
+
+	return GetItemTypeWithProperties(itemTypes, excludedList, skipItemTypeProperties);
+}
+
+private class ItemType
+{
+	public string ItemTypeId { get; set; }
+	public List<string> PropertiesList = new List<string>(); 
+}
+
+private class Excluded : ItemType
+{}
+
+private Item GetItemTypeWithProperties(List<ItemType> itemTypes, List<Excluded> excludedList, bool skipItemTypeProperties = false)
+{
+	var aml = "";
+	var template = "<Item type=\"ItemType\" id=\"{0}\" action=\"get\"><Relationships><Item type=\"Property\" action=\"get\" select=\"config_id, data_source, data_type, is_multi_valued, keyed_name, label, readonly, name, is_hidden\" where=\"[property].data_type != 'md5'" 
+		+ (skipItemTypeProperties ? " AND [property].data_type != 'item'" : "") + "\">{1}{2}</Item></Relationships></Item>";
+	foreach (var item in itemTypes)
+	{
+		var amlPropertyNameConditionOr = "";
+		var ids = "";
+
+		var excluded = excludedList.FirstOrDefault(x => string.Compare(x.ItemTypeId, item.ItemTypeId, StringComparison.OrdinalIgnoreCase) == 0);
+		if (excluded != null && excluded.PropertiesList.Count != 0)
+		{
+			string amlPropertyIdConditionOr = "<OR>";
+			foreach (string propertyId in excluded.PropertiesList)
+			{
+				amlPropertyIdConditionOr += "<id>" + System.Security.SecurityElement.Escape(propertyId) + "</id>";
+			}
+			amlPropertyIdConditionOr += "</OR>";
+			ids = "<not>" + amlPropertyIdConditionOr + "</not>";
+		}
+		if (item.PropertiesList.Count != 0)
+		{
+			amlPropertyNameConditionOr = "<OR>";
+			foreach (string propertyName in item.PropertiesList)
+			{
+				amlPropertyNameConditionOr += "<name>" + System.Security.SecurityElement.Escape(propertyName) + "</name>";
+			}
+			amlPropertyNameConditionOr += "</OR>";
+		}
+		aml += string.Format(template, System.Security.SecurityElement.Escape(item.ItemTypeId), ids, amlPropertyNameConditionOr);
+	}
+	Item result = this.getInnovator().applyAML("<AML>" + aml + "</AML>");
+	return result;]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetItemTypeProperties</name>
+ </Item>
+</AML>

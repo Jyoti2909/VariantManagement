@@ -1,0 +1,68 @@
+﻿<AML>
+ <Item type="Method" id="7809CB905EF14ABEA31186DD599D50DE" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			Innovator innovator = this.getInnovator();
+
+			const string conversionRuleName = "cmf_XpsPrintingRule";
+
+			Item ruleItem = innovator.newItem("ConversionRule", "get");
+			ruleItem.setProperty("name", conversionRuleName);
+			ruleItem.setAttribute("levels", "1");
+			ruleItem = ruleItem.apply();
+
+			if (!ruleItem.isError())
+			{
+				string itemType = getType();
+				string itemId = getID();
+				Item resultItem = innovator.applyAML("<AML><Item action=\"get\" type=\"" 
+                    + System.Security.SecurityElement.Escape(itemType) + "\" id=\"" 
+                    + System.Security.SecurityElement.Escape(itemId) + "\" select=\"id\" /></AML>");
+				if (resultItem.isError())
+				{
+					return resultItem;
+				}
+
+				Dictionary<string, string> dataDict = new Dictionary<string, string>();
+
+				dataDict.Add("type", itemType);
+				dataDict.Add("id", itemId);
+				dataDict.Add("view_id", getProperty("view_id"));
+				dataDict.Add("page_width", getProperty("page_width"));
+				dataDict.Add("page_height", getProperty("page_height"));
+				dataDict.Add("page_padding", getProperty("page_padding"));
+				dataDict.Add("size_type", getProperty("size_type"));
+				dataDict.Add("outer_border_width", getProperty("outer_border_width"));
+				dataDict.Add("inner_border_width", getProperty("inner_border_width"));
+				dataDict.Add("headers_printing_type", getProperty("headers_printing_type"));
+
+				System.Web.Script.Serialization.JavaScriptSerializer serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+				string json = serializer.Serialize(dataDict);
+
+				Aras.ConversionFramework.Models.ConversionRule publishingRule = new Aras.ConversionFramework.Models.ConversionRule { Item = ruleItem };
+				Aras.ConversionFramework.Management.InnovatorConversionManager cm = new Aras.ConversionFramework.Management.InnovatorConversionManager(innovator.getConnection());
+
+				Aras.Server.Security.Identity conversionManagerIdentity = Aras.Server.Security.Identity.GetById("694C8B27E5D940DAA8BD336E45EC3A63");
+				bool conversionManagerPermsWasSet = Aras.Server.Security.Permissions.GrantIdentity(conversionManagerIdentity);
+				string taskId;
+				try
+				{
+					taskId = cm.CreateConversionTask(publishingRule, task => task.UserData = json);
+				}
+				finally
+				{
+					if (conversionManagerPermsWasSet)
+					{
+						Aras.Server.Security.Permissions.RevokeIdentity(conversionManagerIdentity);
+					}
+				}
+
+				return innovator.newResult(taskId);
+			}
+			else
+			{
+				return ruleItem;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_CreatePublishingTask</name>
+ </Item>
+</AML>

@@ -1,0 +1,26 @@
+﻿<AML>
+ <Item type="SQL" id="79226F2DE2FF42A9A6D6D9A7B0D235DD" action="add">
+  <execution_count>3</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>Project_Task_Step04_Create_Trigger</old_name>
+  <sqlserver_body><![CDATA[CREATE TRIGGER [Project_Task_Step04_Create_Trigger] ON [PROJECT_TASK]
+INSTEAD OF UPDATE
+AS
+BEGIN
+  UPDATE Activity2
+  SET locked_by_id = inserted.locked_by_id
+  FROM inserted
+  WHERE Activity2.id = inserted.id
+  
+  UPDATE Activity2_Assignment
+  SET locked_by_id = inserted.locked_by_id
+  FROM inserted
+  WHERE Activity2_Assignment.id = inserted.id
+
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>trigger</type>
+  <name>Project_Task_Step04_Create_Trigger</name>
+ </Item>
+</AML>

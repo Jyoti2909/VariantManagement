@@ -1,0 +1,131 @@
+﻿<AML>
+ <Item type="Method" id="1F9B40A2307B4E4285DF2ADC5F9D4520" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+	}
+
+	//[PartialPath("BusinessLogic/BusinessLogic")]
+	internal class BusinessLogic
+	{
+		private readonly IDataAccessLayer dal;
+		private const string FORCE_LOG_OUT = "Force Logout";
+		private const string LOGIN_OK = "ok";
+
+		public BusinessLogic(IDataAccessLayer dataAccessLayer)
+		{
+			dal = dataAccessLayer;
+		}
+
+		public Item Run(Item contextItem)
+		{
+			Item qryUser = dal.NewItem("User", "get");
+			string userId = contextItem.getProperty("eid_user_id") ?? contextItem.getID();
+			qryUser.setID(userId);
+			qryUser.setAttribute("select", "eid_definition_id,eid_ext_unique_id,logon_enabled");
+			Item user = dal.ApplyItem(qryUser);
+			if (user.isError() ||
+				user.getProperty("logon_enabled").Equals("0", StringComparison.OrdinalIgnoreCase))
+			{
+				return dal.NewError(FORCE_LOG_OUT);
+			}
+			string eidDefinitionId = user.getProperty("eid_definition_id");
+			string extUniqueId = user.getProperty("eid_ext_unique_id");
+			if (string.IsNullOrEmpty(eidDefinitionId) || string.IsNullOrEmpty(extUniqueId))
+			{
+				return dal.NewResult(LOGIN_OK);
+			}
+			Item qryEidDefinition = dal.NewItem("EID_External Identity Def", "get");
+			qryEidDefinition.setID(eidDefinitionId);
+			qryEidDefinition.setAttribute("select", "eid_enable,eid_allow_login_when_syncfail,eid_provider(eid_canuserlogin(keyed_name))");
+			Item eidDefinition = dal.ApplyItem(qryEidDefinition);
+			if (eidDefinition.isError())
+			{
+				return eidDefinition;
+			}
+			
+			string syncError = contextItem.getProperty("eid_sync_error");
+			string enable = eidDefinition.getProperty("eid_enable");
+			string allowLogin = eidDefinition.getProperty("eid_allow_login_when_syncfail");
+
+			if (string.Equals(syncError, "1", StringComparison.Ordinal) &&
+				(string.Equals(enable, "0", StringComparison.Ordinal) || string.Equals(allowLogin, "0", StringComparison.Ordinal)))
+			{
+				return dal.NewError(FORCE_LOG_OUT);
+			}
+
+			Item method =  eidDefinition.getPropertyItem("eid_provider").getPropertyItem("eid_canuserlogin");
+			if (method == null)
+			{
+				return dal.NewResult(LOGIN_OK);
+			}
+			
+			string mtdCanUserLogin = method.getProperty("keyed_name");
+		
+			Item qryCanUserLogin = dal.NewItem("Method", mtdCanUserLogin);
+			qryCanUserLogin.setProperty("eid_unique_id", extUniqueId);
+			qryCanUserLogin.setProperty("eid_definition_id", eidDefinitionId);
+			Item result = dal.ApplyItem(qryCanUserLogin);
+
+			if (!result.isError() && result.getProperty(" eid_allow_login").Equals("1", StringComparison.Ordinal))
+			{
+				return dal.NewResult(LOGIN_OK);
+			}
+
+			return dal.NewError(FORCE_LOG_OUT);			
+		}
+	}
+	
+	//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+	internal interface IDataAccessLayer
+	{
+		Item ApplyItem(Item item);
+		Item NewItem(string type = null, string action = null);
+		Item NewResult(string textMessage);
+		Item NewError(string errorMessage);
+	}
+	
+	//[PartialPath("DataAccessLayer/DataAccessLayer")]
+	internal class DataAccessLayer : IDataAccessLayer
+	{
+		private Innovator innovator;
+		internal DataAccessLayer(Innovator innovator)
+		{
+			this.innovator = innovator;
+		}
+
+		public Item ApplyItem(Item item)
+		{
+			return item.apply();
+		}
+
+		public Item NewItem(string type = null, string action = null)
+		{
+			if (string.IsNullOrEmpty(type))
+			{
+				return innovator.newItem();
+			}
+			if (string.IsNullOrEmpty(action))
+			{
+				return innovator.newItem(type);
+			}
+			return innovator.newItem(type, action);
+		}
+
+		public Item NewResult(string textMessage)
+		{
+			return innovator.newResult(textMessage);
+		}
+
+		public Item NewError(string errorMessage)
+		{
+			return innovator.newError(errorMessage);
+		}
+	//}
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_Check_Force_LogOff</name>
+ </Item>
+</AML>

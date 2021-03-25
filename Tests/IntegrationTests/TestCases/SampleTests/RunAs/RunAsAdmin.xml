@@ -1,0 +1,32 @@
+﻿<TestCase author="Noname" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>Create Item of Item Type ItemTypeForAdmin, created in 'Setup Test.xml' as Innovator Admin</Description>
+	<Request>
+		<Comments>
+			Create a new item of ItemTypeForAdmin item type as Innovator Admin.
+			You can explicitly specify runAs attribute to run as Innovator Admin:
+			<![CDATA[<Request runAs="admin:innovator">]]>
+			Or you can ommit the 'runAs' attribute and leave Request element empty, because request uses Innovator Admin credentials by default.
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="ItemTypeForAdmin" action="add" id="A8094547105240A4AF54263F682C774B" doGetItem="0" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="ItemTypeForAdmin" id="A8094547105240A4AF54263F682C774B" />
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<TestCaseCleanUp>
+		<Query>
+			<AML>
+				<Item type="ItemTypeForAdmin" id="A8094547105240A4AF54263F682C774B" action="delete" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

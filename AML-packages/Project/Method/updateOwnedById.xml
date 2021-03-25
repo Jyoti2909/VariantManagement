@@ -1,0 +1,84 @@
+﻿<AML>
+ <Item type="Method" id="00A357BDC31F45888E3AAA8E54B859F3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' updateOwnedById.vb.txt CVS/Solutions/Solutions/Project/Methods Revision 1.2
+'System.Diagnostics.Debugger.Break()
+
+Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+Dim projectItem As XmlElement = Me.dom.DocumentElement
+
+Dim projectOwnedById As String = CCO.XML.GetItemProperty(projectItem,"owned_by_id")
+Dim wbsId As String = CCO.XML.GetItemProperty(projectItem,"wbs_id")
+
+Dim inDom As XmlDocument = CCO.XML.CreateXMLDocument()
+Dim outDom As XmlDocument = CCO.XML.CreateXMLDocument()
+
+inDom.LoadXML("<Item type='WBS Element' id='" & System.Security.SecurityElement.Escape(wbsId) & "'/>")
+
+CCO.GetItem.GetItem(inDom,outDom)
+
+Dim wbsItem As XmlElement = CCO.XML.GetResponseItem(outDom)
+
+Dim wbsOwnedById As String = CCO.XML.GetItemProperty(wbsItem,"owned_by_id")
+
+Dim WbsElementIDsToUpdate As String = ""
+Dim Activity2IDsToUpdate As String = ""
+
+Dim wbsIDs As ArrayList = New ArrayList()
+
+Dim rs As Aras.Server.Core.InnovatorDataSet
+
+If projectOwnedById<>wbsOwnedById Then
+  Dim tmpWbsId As String
+  Dim sql As String
+  wbsIDs.Add(wbsId)
+  wbsId = If(string.IsNullOrEmpty(wbsId), wbsId, wbsId.Replace("'", "''"))
+  WbsElementIDsToUpdate = "'" & wbsId & "'"
+  Do
+    tmpWbsId = wbsIDs.Item(0)
+    wbsIDs.RemoveAt(0)
+    tmpWbsId = If(string.IsNullOrEmpty(tmpWbsId), tmpWbsId, tmpWbsId.Replace("'", "''"))
+    sql = "SELECT id1 FROM " & _
+          "(SELECT wbs.id id1,sub.id id2 FROM sub_wbs sub LEFT JOIN (SELECT id FROM wbs_element) wbs " & _
+          "ON (wbs.id=sub.related_id) " & _
+          "WHERE sub.source_id = '" & tmpWbsId & "') res"
+    rs = conn.ExecuteSelect(sql)
+
+    While Not rs.Eof()
+      Dim wbsRes As String = rs.Value(0)
+      wbsRes = If(string.IsNullOrEmpty(wbsRes), wbsRes, wbsRes.Replace("'", "''"))
+      WbsElementIDsToUpdate += ",'" & wbsRes & "'"
+      wbsIDs.Add(wbsRes)
+      rs.MoveNext()
+    End While
+
+    sql = "SELECT id1 FROM " & _
+          "(SELECT act.id id1,sub.id id2 FROM wbs_activity2 sub LEFT JOIN (SELECT id FROM activity2) act " & _
+          "ON (act.id=sub.related_id) " & _
+          "WHERE sub.source_id = '" & tmpWbsId & "') res"
+    rs = conn.ExecuteSelect(sql)
+
+    While Not rs.Eof()
+      Dim actRes As String = rs.Value(0)
+      If Activity2IDsToUpdate.Length <> 0 Then Activity2IDsToUpdate += ","
+      actRes = If(string.IsNullOrEmpty(actRes), actRes, actRes.Replace("'", "''"))
+      Activity2IDsToUpdate += "'" & actRes & "'"
+      rs.MoveNext()
+    End While
+
+  Loop While wbsIDs.Count > 0
+  
+  projectOwnedById = If(string.IsNullOrEmpty(projectOwnedById), projectOwnedById, projectOwnedById.Replace("'", "''"))
+  sql = "UPDATE wbs_element SET owned_by_id='" & projectOwnedById & "' WHERE id IN (" & WbsElementIDsToUpdate & ")"
+  conn.ExecuteSQL(sql)
+  
+  If Activity2IDsToUpdate.Length > 0
+    sql = "UPDATE activity2 SET owned_by_id='" & projectOwnedById & "' WHERE id IN (" & Activity2IDsToUpdate & ")"
+    conn.ExecuteSQL(sql)
+  End If
+
+End If]]></method_code>
+  <method_type>VB</method_type>
+  <name>updateOwnedById</name>
+ </Item>
+</AML>

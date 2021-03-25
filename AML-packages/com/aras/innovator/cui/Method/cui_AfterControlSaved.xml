@@ -1,0 +1,136 @@
+﻿<AML>
+ <Item type="Method" id="CC17BCC6F89046B1A655DC549C5B1771" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	HashSet<string> parentsChain = new HashSet<string>();
+	parentsChain.Add(this.getID());
+	string chainMemberId = this.getProperty("parent_control");
+	Item parentControlItem = null;
+	while (!string.IsNullOrEmpty(chainMemberId))
+	{
+		if (parentsChain.Contains(chainMemberId))
+		{
+			throw new Aras.Server.Core.InnovatorServerException(RecursionErrorMessage);
+		}
+		else
+		{
+			parentsChain.Add(chainMemberId);
+		}
+		
+		Item chainMemberItem = this.newItem("cui_Control", "get");
+		chainMemberItem.setID(chainMemberId);
+		chainMemberItem.setAttribute("select", "parent_control,control_type");
+		chainMemberItem = chainMemberItem.apply();
+		if (!chainMemberItem.isError())
+		{
+			chainMemberId = chainMemberItem.getProperty("parent_control");
+			if (parentControlItem == null)
+			{
+				parentControlItem = chainMemberItem;
+			}
+		}
+		else
+		{
+			chainMemberId = null;
+		}
+	}
+
+	Validate(parentControlItem, this);
+
+	return this;
+}
+
+private const string RecursionErrorMessage = "It is forbidden to create cycled Parent-Child relationship for Controls.";
+private const string TabElementErrorMessage = "Tab Element Control must have Tab Container Control as Parent.";
+private const string WrongTypesErrorFormat = "Control of type \"{0}\" cannot be a parent of \"{1}\" control.";
+private const string ChildrenCountErrorFormat = "Control of type \"{0}\" cannot contain more than one child control.";
+
+private static void Validate(Item parentControlItem, Item childControlItem)
+{
+	string error = null;
+	string childControlType = childControlItem.getProperty("control_type");
+
+	if (parentControlItem != null)
+	{
+		string parentControlType = parentControlItem.getProperty("control_type");
+		switch (parentControlType)
+		{
+			case "StackContainerControl":
+				if (childControlType == "TabElementControl")
+				{
+					error = TabElementErrorMessage;
+				}
+				break;
+			case "AccordionElementControl":
+			case "TabElementControl":
+				int parentChildrenCount;
+				if (parentControlItem.getAction() == "add")
+				{
+					parentChildrenCount = 1;
+				}
+				else
+				{
+					Item parentChildrenItem = parentControlItem.newItem("cui_Control", "get");
+					parentChildrenItem.setProperty("parent_control", parentControlItem.getID());
+					parentChildrenItem = parentChildrenItem.apply();
+					List<string> parentChildrenIds = new List<string>();
+					for (int childIndex = 0; childIndex < parentChildrenItem.getItemCount(); childIndex++)
+					{
+						parentChildrenIds.Add(parentChildrenItem.getItemByIndex(childIndex).getID());
+					}
+					string childId = childControlItem.getID();
+					if (!parentChildrenIds.Contains(childId))
+					{
+						parentChildrenIds.Add(childId);
+					}
+					parentChildrenCount = parentChildrenIds.Count;
+				}
+				if (parentChildrenCount > 1)
+				{
+					error = string.Format(
+						CultureInfo.InvariantCulture,
+						ChildrenCountErrorFormat,
+						parentControlType);
+				}
+				break;
+			case "AccordionContainerControl":
+				if (childControlType != "AccordionElementControl")
+				{
+					error = string.Format(
+						CultureInfo.InvariantCulture,
+						WrongTypesErrorFormat,
+						parentControlType,
+						childControlType);
+				}
+				break;
+			case "TabContainerControl":
+				if (childControlType != "TabElementControl")
+				{
+					error = string.Format(
+						CultureInfo.InvariantCulture,
+						WrongTypesErrorFormat,
+						parentControlType,
+						childControlType);
+				}
+				break;
+			default:
+				error = string.Format(  
+					CultureInfo.InvariantCulture,
+					WrongTypesErrorFormat,
+					parentControlType,
+					childControlType);
+				break;
+		}
+	}
+	else if (childControlType == "TabElementControl")
+	{
+		error = TabElementErrorMessage;
+	}
+
+	if (!string.IsNullOrEmpty(error))
+	{
+		throw new Aras.Server.Core.InnovatorServerException(error);
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>cui_AfterControlSaved</name>
+ </Item>
+</AML>

@@ -1,0 +1,105 @@
+﻿<TestCase author="Noname" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description></Description>
+	<Request>
+		<Comments>
+			Create 'ItemTypeForAdmin' Item Type with full Permission for user 'Innovator Admin'. Create user 'Test User' which has no access for the 'ItemTypeForAdmin'.
+			NOTE: 'Password.Hash.Of.1' is a one of four built-in default password hashes that is recomended to use for Integration Tests. There are following password hashes:
+					Password.Hash.Of.1
+					Password.Hash.Of.innovator
+					Password.Hash.Of.jwoods
+					Password.Hash.Of.jcarp
+		</Comments>
+		<Variables>
+			<Variable id="Password.Hash.Of.1" action="apply" xpath="Query/AML/Item[@id='E6D0D073763A4BB29F58110345E113A5']/password | Query/AML/Item[@id='E6D0D073763A4BB29F58110345E113A5']/confirm_password" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="User" id="E6D0D073763A4BB29F58110345E113A5" action="add" doGetItem="0">
+					<first_name>Test</first_name>
+					<last_name>User</last_name>
+					<login_name>testuser</login_name>
+					<password>{applied from variable Password.Hash.Of.1}</password>
+					<confirm_password>{applied from variable Password.Hash.Of.1}</confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type="Permission" id="796B5C3999C745CEAF0579A5F6BDBF6C" action="add" doGetItem="0">
+					<is_private>0</is_private>
+					<name>InnovatorAdminPermissions</name>
+					<Relationships>
+						<Item type="Access" id="4D777294314240E4871F239A4762D3B5" action="add">
+							<related_id keyed_name="Innovator Admin" type="Identity">
+								<Item type="Identity" action="get" select="id" page="1" pagesize="1">
+									<name>Innovator Admin</name>
+								</Item>
+							</related_id>
+							<can_update>1</can_update>
+							<can_get>1</can_get>
+							<can_change_access>1</can_change_access>
+							<source_id keyed_name="InnovatorAdminPermissions" type="Permission">796B5C3999C745CEAF0579A5F6BDBF6C</source_id>
+							<can_delete>1</can_delete>
+							<sort_order>128</sort_order>
+						</Item>>
+					</Relationships>
+				</Item>
+				<Item type="ItemType" id="1E5354DCCA3E4422ACC80B6635156726" action="add" doGetItem="0">
+					<instance_data>ItemTypeForAdmin</instance_data>
+					<name>ItemTypeForAdmin</name>
+					<Relationships>
+						<Item type="Allowed Permission" id="701C577D55964766A8B04109BD07DBF3" action="add">
+							<is_default>1</is_default>
+							<related_id keyed_name="WorldFullPermissions" type="Permission">796B5C3999C745CEAF0579A5F6BDBF6C</related_id>
+							<sort_order>128</sort_order>
+							<source_id keyed_name="ItemTypeForAdmin" type="ItemType" name="ItemTypeForAdmin">1E5354DCCA3E4422ACC80B6635156726</source_id>
+						</Item>
+						<Item type="Can Add" id="4360A2396030455C80CAD82C6A51464B" action="add">
+							<sort_order>128</sort_order>
+							<can_add>1</can_add>
+							<source_id keyed_name="ItemTypeForAdmin" type="ItemType" name="ItemTypeForAdmin">1E5354DCCA3E4422ACC80B6635156726</source_id>
+							<related_id keyed_name="Innovator Admin" type="Identity">
+								<Item type="Identity" action="get" select="id" page="1" pagesize="1">
+									<name>Innovator Admin</name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type="TOC Access" id="4360A2396030455C80CAD82C6A51464B" action="add">
+							<sort_order>128</sort_order>
+							<related_id keyed_name="World" type="Identity">
+								<Item type="Identity" action="get" select="id" page="1" pagesize="1">
+									<name>World</name>
+								</Item>
+							</related_id>
+							<source_id keyed_name="ItemTypeForAdmin" type="ItemType" name="ItemTypeForAdmin">1E5354DCCA3E4422ACC80B6635156726</source_id>
+							<category>Quality Innovator</category>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="User" id="E6D0D073763A4BB29F58110345E113A5" />
+						<Item type="Permission" id="796B5C3999C745CEAF0579A5F6BDBF6C" />
+						<Item type="ItemType" id="1E5354DCCA3E4422ACC80B6635156726" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="796B5C3999C745CEAF0579A5F6BDBF6C|1E5354DCCA3E4422ACC80B6635156726" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp>
+		<Query>
+			<AML>
+				<Item type="User" id="E6D0D073763A4BB29F58110345E113A5" action="delete" />
+				<Item type="ItemType" id="1E5354DCCA3E4422ACC80B6635156726" action="delete" />
+				<Item type="Permission" id="796B5C3999C745CEAF0579A5F6BDBF6C" action="delete" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

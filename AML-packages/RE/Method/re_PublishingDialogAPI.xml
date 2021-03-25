@@ -1,0 +1,261 @@
+﻿<AML>
+ <Item type="Method" id="28D79C04F9FE47F7B3CAC5EDD44769E1" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var PublishingDialog = function() {
+	var topWindow = aras.getMostTopWindowWithAras(window);
+
+	this.dialogArguments = parent.frameElement.dialogArguments;
+	this.documentItem = this.dialogArguments.documentItem;
+	this.settings = {filter: '{}', language: aras.getSessionContextLanguageCode(), conversionType: 'xml'};
+
+	this.initializeControls();
+};
+
+PublishingDialog.prototype.initializeControls = function() {
+	// buttons section
+	var okButton = document.getElementById(document.fieldsTab['convert_button']);
+	okButton.addEventListener('click', function() { this.convertDocument(this.documentItem); }.bind(this));
+
+	var closeButton = document.getElementById(document.fieldsTab['close_button']);
+	closeButton.addEventListener('click', this.Close.bind(this));
+
+	// fill conversion formats: RM supports only PDF
+	this.fillSelectByValues('conversion_format_list', [{label: 'PDF', value: 'pdf'}], 'pdf');
+
+	// input section
+	var fileExtensionInput = document.querySelector('[id="' + document.fieldsTab['file_extension_input'] + '"] input');
+	fileExtensionInput.value = this.getConversionType();
+
+	// fill conversion results
+	this.fillSelectFromList('conversion_result_list', 'tp_PublishingConversionResult');
+
+	// fill linked document allocation types
+	this.fillSelectByValues('linked_documents_list', [{label: 'Join', value: 'join'}], 'join');
+
+	// fill resource allocation types
+	this.fillSelectByValues('resource_allocation_list', [{label: 'Link to Server', value: 'source'}], 'source');
+
+	// fill language select
+	var serverResponce = aras.soapSend('ApplyItem', '<Item type="Language" action="get" select="name,code"></Item>');
+	if (!serverResponce.isFault()) {
+		var systemLanguages = serverResponce.getResult().selectNodes('Item');
+		var itemNode;
+		var languageIndex;
+		var languageValues = [];
+		for (languageIndex = 0; languageIndex < systemLanguages.length; languageIndex++) {
+			itemNode = systemLanguages[languageIndex];
+			languageValues.push({label: aras.getItemProperty(itemNode, 'name'), value: aras.getItemProperty(itemNode, 'code')});		
+		}
+
+	} else {
+		aras.AlertError(serverResponce);
+	}
+
+	// disable unchangeable dropdowns
+	this.disableUnchangeableControls(['conversion_format_list', 'linked_documents_list', 'resource_allocation_list']);
+	fileExtensionInput.disabled = true;
+	document.getElementById(document.fieldsTab['filter_button']).disabled = true;;
+	document.getElementById(document.fieldsTab['clear_filter_button']).disabled = true;;
+	document.querySelector('[id="' + document.fieldsTab['filter_condition'] + '"] textarea').disabled = true;;
+};
+
+PublishingDialog.prototype.getField = function(fieldName) {
+	var field = getFieldByName(fieldName);
+	var fieldId = field.id.replace('span', '');
+	var fieldComponentId = 'field' + fieldId + 'Component';
+
+	return window[fieldComponentId];
+};
+
+PublishingDialog.prototype.getFieldComponent = function(fieldName) {
+	var field = this.getField(fieldName);
+	return field ? field.component : null;
+};
+
+PublishingDialog.prototype.disableUnchangeableControls = function(fieldNames) {
+	var field;
+	var nameIndex;
+	var fieldName;
+	for (nameIndex = 0; nameIndex < fieldNames.length; nameIndex++) {
+		fieldName = fieldNames[nameIndex];
+		field = this.getField(fieldName);
+		if (field) {
+			field.setDisabled(true);
+		}
+	}
+};
+
+PublishingDialog.prototype.fillSelectByValues = function(fieldName, values, defaultValue) {
+	var fieldComponent = this.getFieldComponent(fieldName);
+	if (fieldComponent) {
+		fieldComponent.setState({
+			list: values
+		});
+
+		if (defaultValue) {
+			fieldComponent.setState({value: defaultValue})
+		}
+	}
+};
+
+PublishingDialog.prototype.fillSelectFromList = function(fieldName, listName) {
+	var listItem = aras.getItemByName('List', listName);
+	var values = [];
+	if (listItem) {
+		var listValueNodes = listItem.selectNodes('Relationships/Item[@type="Value"]');
+		var itemNode;
+		var nodeIndex;
+
+		for (nodeIndex = 0; nodeIndex < listValueNodes.length; nodeIndex++) {
+			itemNode = listValueNodes[nodeIndex];
+			values.push({label: aras.getItemProperty(itemNode, 'label'), value: aras.getItemProperty(itemNode, 'value')});
+		}
+	}
+	var defaultValue = values[0] ? values[0].value : '';
+	this.fillSelectByValues(fieldName, values, defaultValue);
+};
+
+PublishingDialog.prototype.getConversionType = function() {
+	// RE supports only PDF
+	return 'pdf';
+};
+
+PublishingDialog.prototype.getFieldValue = function(fieldName, defaultValue) {
+	var fieldComponent = this.getFieldComponent(fieldName);
+	return fieldComponent && fieldComponent.state.value ? fieldComponent.state.value : defaultValue;
+};
+
+PublishingDialog.prototype.getFileExtension = function() {
+	// RE supports only PDF
+	return 'pdf';
+};
+
+PublishingDialog.prototype.getFilterCondition = function() {
+	return this.settings.filter;
+};
+
+PublishingDialog.prototype.convertDocument = function(targetDocumentItem) {
+	var spinner = parent.document.getElementById('dimmer_spinner');
+	spinner.style.display = 'block';
+
+	var documentItem = aras.newIOMItem();
+	var mainWindow = aras.getMainWindow();
+
+	var consumeLicenseResult = aras.ConsumeLicense('Aras.HTMLtoPDFConverter');
+	if (consumeLicenseResult.isError) {
+		if (consumeLicenseResult.errorMessage.indexOf('FeatureHasNoLicensesException') > -1 ||
+			consumeLicenseResult.errorMessage.indexOf('FeatureLicenseValidationException') > -1) {
+			aras.AlertWarning(aras.getResource('../Modules/aras.innovator.TDF', 'helper.feature_has_no_license', 'Aras.HTMLtoPDFConverter'));
+		} else {
+			aras.AlertError(consumeLicenseResult.errorMessage);
+		}
+		spinner.style.display = 'none';
+		return;
+	}
+
+	// create Conversion task with appropriate CoversionRule
+	documentItem.loadAML(targetDocumentItem.node.xml);
+	documentItem.setProperty('publishing_language', 'en');
+	documentItem.setProperty('publishing_filters', this.getFilterCondition());
+	documentItem.setProperty('publishing_rule_name', 'tp_PdfPublishingRule');
+	documentItem.setProperty('publishing_file_extension', this.getFileExtension());
+	documentItem.setProperty('publishing_document_allocation', this.getFieldValue('linked_documents_list', 'join'));
+	documentItem.setProperty('publishing_resource_allocation', 'source');
+	documentItem.setProperty('publishing_content_builder_method', 're_GetRequirementContent');
+	documentItem.setProperty('publishing_document_with_schema_builder_method', 're_GetDocumentWithSchemaSettings');
+
+	var actualDocumentItem = aras.newIOMItem();
+	actualDocumentItem.loadAML('<AML><Item action="get" type="' + documentItem.getType() + '"><config_id>' + documentItem.getProperty('config_id') + '</config_id></Item></AML>');
+	actualDocumentItem = actualDocumentItem.apply();
+	documentItem.setID(actualDocumentItem.getID());
+	var taskId = documentItem.apply('tp_CreatePublishingTask').getResult();
+
+	// if task was created
+	if (taskId) {
+		var targetWindow = window === mainWindow ? mainWindow.main : window;
+		var self = this;
+		var dialogParameters = {
+			dialogWidth: 300, dialogHeight: 160, resizable: false,
+			aras: aras,
+			itemType: 'ConversionTask',
+			itemId: taskId,
+			propertyName: 'status',
+			propertyState: ['Succeeded', 'Failed', 'Discarded'],
+			title: aras.getResource('../Modules/aras.innovator.TDF', 'includes.waitfortaskcompletion'),
+			timeout: 300000, //5 min
+			content: 'waitPropertyStatusDialog.html',
+			hideSpinner: function() {
+				spinner.style.display = 'none';
+			}
+		};
+
+		targetWindow.ArasModules.Dialog.show('iframe', dialogParameters).promise.then(function(taskState) {
+			if (taskState === 'Succeeded') {
+				setTimeout(function() {
+					self.processConversionResult(taskId);
+				}, 0);
+			} else if (taskState === '_timeout') {
+				aras.AlertError(aras.getResource('../Modules/aras.innovator.TDF', 'publishing.timeout_reached'));
+			} else if (taskState === 'Failed') {
+				 aras.AlertError(aras.getResource('../Solutions/RE', 'publishing.failed_status_message'));
+			}
+		});
+	}
+};
+
+PublishingDialog.prototype.processConversionResult = function(taskId) {
+	var conversionResult = aras.soapSend('ApplyItem', '<Item type="ConversionTaskResult" action="get" select="file_id"><source_id>' +
+		taskId + '</source_id></Item>');
+
+	if (!conversionResult.isFault()) {
+		var resultItem = conversionResult.getResult().selectSingleNode('Item');
+		var fileId = aras.getItemProperty(resultItem, 'file_id');
+		var fileItem = aras.soapSend('ApplyItem', '<Item type="File" action="get" id="' + fileId + '"></Item>');
+
+		if (!fileItem.isFault()) {
+			var resultAction = this.getFieldValue('conversion_result_list', 'window');
+			var fileNode = fileItem.getResult().selectSingleNode('Item');
+
+			switch (resultAction) {
+				case 'window':
+					this.showConvertedFile(fileNode);
+					break;
+				case 'file':
+					var documentName = this.documentItem.getProperty('item_number') + '.' + this.getFileExtension();
+
+					this.downloadConvertedFile(fileNode, documentName);
+					break;
+			}
+		}
+	}
+};
+
+PublishingDialog.prototype.showConvertedFile = function(fileNode) {
+	if (fileNode) {
+		aras.uiShowItemEx(fileNode, undefined);
+	}
+};
+
+PublishingDialog.prototype.downloadConvertedFile = function(fileNode, preferedFileName) {
+	if (fileNode) {
+		var fileName = preferedFileName || aras.getItemProperty(fileNode, 'filename');
+		var downloadResult = aras.downloadFile(fileNode, fileName);
+
+		if (downloadResult) {
+			aras.AlertSuccess(aras.getResource('', 'file_management.file_succesfully_downloaded', fileName), aras.getMostTopWindowWithAras(window));
+		}
+	}
+};
+
+PublishingDialog.prototype.Close = function() {
+	this.dialogArguments.dialog.close();
+};
+
+aras.ConsumeLicense('Aras.PublishingService');
+// Create instance
+PublishingDialog = new PublishingDialog();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>re_PublishingDialogAPI</name>
+ </Item>
+</AML>

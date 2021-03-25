@@ -1,0 +1,44 @@
+﻿<AML>
+ <Item type="ConversionRule" id="EF627773E7394B989A5FEDD64F20045C" action="add">
+  <converter_type keyed_name="tp_XmlPublishingConverter" type="ConverterType">A767880D49804315A4954AA764170240</converter_type>
+  <cutoff>1</cutoff>
+  <delay>1</delay>
+  <enabled>1</enabled>
+  <timeout>2</timeout>
+  <name>tp_XmlPublishingRule</name>
+  <Relationships>
+   <Item type="ConversionRuleEventHandler" id="1FA9416A0C9C4642AF6E066172758449" action="add">
+    <event_type>OnTaskAfterCreate</event_type>
+    <related_id keyed_name="SendOnCreateTaskNotification" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>SendOnCreateTaskNotification</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="tp_XmlPublishingRule" type="ConversionRule">EF627773E7394B989A5FEDD64F20045C</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="CCC7CCB095774B04955E99A4C308FD22" action="add">
+    <event_type>OnConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="InvokeStandardConverterAsCreator" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>InvokeStandardConverterAsCreator</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="tp_XmlPublishingRule" type="ConversionRule">EF627773E7394B989A5FEDD64F20045C</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="5CCEA57E5D2B4FFAAD5716FE83673088" action="add">
+    <event_type>OnAfterConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="SetFilesToFileGroup" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>SetFilesToFileGroup</name>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="tp_XmlPublishingRule" type="ConversionRule">EF627773E7394B989A5FEDD64F20045C</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

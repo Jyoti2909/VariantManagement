@@ -1,0 +1,79 @@
+﻿<AML>
+ <Item type="Method" id="9A7E1B286CA040AAA20E538E25F35A45" action="add">
+  <comments>Method to Check SAP credentials</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			Innovator innovator = this.getInnovator();
+			string userName = this.getProperty("user_name");
+			string password = this.getProperty("user_password");
+			Item error;
+
+			//Get SAP Connection details....
+			Item queryPart = innovator.newItem();
+			queryPart = innovator.newItem("GAG_SAPInterfaceSettings", "get");
+			queryPart.setProperty("gag_active", "Yes");
+			Item queryResult = queryPart.apply();
+			if (queryResult.getItemCount() == 0)
+			{
+				error = innovator.newError("No SAP Connection Found. Contact Admin");
+				return error;
+			}
+			else
+			{
+
+				try
+				{
+					using (RfcConfigParameters parameters = new RfcConfigParameters())
+					{
+						Item sapResult = queryResult.getItemByIndex(0);
+						parameters[RfcConfigParameters.Name] = sapResult.getProperty("gag_name");
+						parameters[RfcConfigParameters.User] = userName;
+						parameters[RfcConfigParameters.Password] = password;
+						parameters[RfcConfigParameters.PeakConnectionsLimit] = sapResult.getProperty("gag_peak_connection_limit");
+						parameters[RfcConfigParameters.ConnectionIdleTimeout] = sapResult.getProperty("gag_connection_idle_time_out");
+						parameters[RfcConfigParameters.Language] = sapResult.getProperty("gag_language");
+						parameters[RfcConfigParameters.AppServerHost] = sapResult.getProperty("gag_app_server_host");
+						parameters[RfcConfigParameters.SystemNumber] = sapResult.getProperty("gag_system_number");
+						parameters[RfcConfigParameters.Client] = sapResult.getProperty("gag_client");
+
+						RfcDestination destination = RfcDestinationManager.GetDestination(parameters);
+						RfcSessionManager.BeginContext(destination);
+
+						destination.Ping();
+						RfcSystemAttributes attr = destination.SystemAttributes;
+						Item result = innovator.newResult("Connection Successful");
+
+						return result;
+					}
+
+				}
+
+				catch (RfcCommunicationException)
+				{
+					error = innovator.newError("Server communication error");
+					return error;
+				}
+
+				catch (RfcLogonException)
+				{
+					error = innovator.newError("SAP Username or Password is incorrect");
+					return error;
+				}
+
+				catch (RfcAbapRuntimeException)
+				{
+					error = innovator.newError("Authorisation Error");
+					return error;
+				}
+
+				catch (RfcAbapBaseException)
+				{
+					error = innovator.newError("Authorisation Error");
+					return error;
+				}
+			}
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_CheckSAP</name>
+ </Item>
+</AML>

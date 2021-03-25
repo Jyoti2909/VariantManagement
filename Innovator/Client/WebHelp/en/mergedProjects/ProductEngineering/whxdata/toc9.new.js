@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Create Manufacturers","type":"item","url":"plm_create_manufacturers.htm"},{"name":"Create Manufacturer Parts","type":"item","url":"plm_create_manufacturer_parts.htm"},{"name":"Create Vendors","type":"item","url":"plm_create_vendors.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

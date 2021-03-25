@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="199BBEBAE73641899647525858E6D71B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const innovator = aras.IomInnovator;
+
+const userID = innovator.getUserID();
+const sapChangeNumber = this.getProperty('gag_sap_change_number');
+const body =
+	'<user_id>' +
+	userID +
+	'</user_id><sap_changeNumber>' +
+	sapChangeNumber +
+	'</sap_changeNumber>';
+if (!sapChangeNumber) {
+	aras.AlertError('Change Number is empty');
+} else {
+	const result = innovator.applyMethod('GAG_VerifySAPChangeNumber', body);
+
+	if (!result.isError()) {
+		aras.AlertSuccess(result.getResult());
+	} else {
+		aras.AlertError(result.getErrorString());
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_CheckSAPChangeNumber</name>
+ </Item>
+</AML>

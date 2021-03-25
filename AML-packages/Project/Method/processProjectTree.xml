@@ -1,0 +1,207 @@
+﻿<AML>
+ <Item type="Method" id="8C2D1A5EB2B5442BACB9E727E13A1A8B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' name: processProjectTree
+' purpose: APQP
+' created: 30-JUN-2005 Yuri Delyamba
+' (c) Copyright by Aras Corporation, 2005-2007.
+' MethodTemplateName=VBScriptMainUpgrade;
+
+Function processDelete(ByRef delList As XmlNodeList, ByVal isFirstTime As Boolean) As Boolean
+	Dim i As Integer
+	For i = 0 To delList.Count - 1
+		Dim delItem As XmlElement = CType(delList.Item(i), XmlElement)
+
+		If Not isFirstTime Then
+			inDom.LoadXml(delItem.OuterXml)
+
+			CCO.ItemMethods.PurgeItem(inDom, outDom)
+			If (CCO.XML.HasFault(outDom, True)) Then
+
+				Return True
+			End If
+		End If
+
+		Dim delType As String = delItem.GetAttribute("type")
+		Dim xPath As String = ""
+
+		If delType = "WBS Element" Then
+			xPath = "Relationships/Item/related_id/Item"
+		ElseIf delType = "Sub WBS" Or delType = "WBS Activity2" Then
+			xPath = "related_id/Item"
+		End If
+
+		If xPath <> "" Then
+			Dim paramDelList As XmlNodeList = delItem.SelectNodes(xPath)
+			If processDelete(paramDelList, False) Then
+				Return True
+			End If
+		End If
+	Next
+	Return False
+End Function
+
+Function getActivitiesWithChangedLeader(ByVal sourceD As XmlDocument) As ArrayList
+	Return getNdsWithChangedProp(sourceD, "//Item[@type='Activity2'][@action='edit' or @action='update'][state='Active'][managed_by_id]", "managed_by_id")
+End Function
+
+Function getAsmntsWithChangedRelated(ByVal sourceD As XmlDocument) As ArrayList
+	Return getNdsWithChangedProp(sourceD, "//Item[@type='Activity2'][state='Active']/Relationships/Item[@type='Activity2 Assignment'][@action='edit' or @action='add'][related_id]", "related_id")
+End Function
+
+Function getNdsWithChangedProp(ByVal sourceD As XmlDocument, ByVal xp2nds As String, ByVal changedPropNm As String) As ArrayList
+	Dim asmnts2HaveEmail As XmlNodeList = sourceD.SelectNodes(xp2nds)
+	Dim retVal As New ArrayList
+	Dim asmnt_id As String 'assigment or activity id
+	Dim related_id As String 'related_id or managed_by_id
+	Dim elem As XmlElement
+	Dim elem2 As XmlElement
+	Dim asmnt2identity As New Hashtable	'key is asmnt id, value is related_id OR key is activity id, value is managed_by_id
+	For Each elem In asmnts2HaveEmail
+		elem2 = CType(elem.SelectSingleNode(changedPropNm + "/Item"), XmlElement)
+		If elem2 Is Nothing Then
+			related_id = elem.SelectSingleNode(changedPropNm).InnerText
+		Else
+			related_id = elem2.GetAttribute("id")
+		End If
+		asmnt_id = elem.GetAttribute("id")
+		If elem.GetAttribute("action") = "add" Then
+			retVal.Add(elem)
+		Else
+			asmnt2identity.Add(asmnt_id, related_id)
+		End If
+	Next elem
+	Dim sb As New StringBuilder
+	If changedPropNm = "related_id" Then
+		sb.Append("SELECT id FROM [Activity2_Assignment] WHERE ")
+	Else
+		sb.Append("SELECT id FROM [Activity2] WHERE ")
+	End If
+	For Each asmnt_id In asmnt2identity.Keys
+		asmnt_id = If(string.IsNullOrEmpty(asmnt_id), asmnt_id, asmnt_id.Replace("'", "''"))
+		Dim rel_id As String = CStr(asmnt2identity.Item(asmnt_id))
+		rel_id = If(string.IsNullOrEmpty(rel_id), rel_id, rel_id.Replace("'", "''"))
+		sb.Append(String.Format(CultureInfo.InvariantCulture, " (id='{0}' and IsNull({2},'')!='{1}') OR", asmnt_id, rel_id, CCO.Variables.InnDatabase.QuoteName(changedPropNm)))
+	Next asmnt_id
+	Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+	Dim rs As Aras.Server.Core.InnovatorDataSet
+	Dim sql As String = sb.ToString()
+	sql = sql.Substring(0, sql.Length - 3)
+	If asmnt2identity.Keys.Count > 0 Then
+		rs = conn.ExecuteSelect(sql)
+		While Not rs.Eof
+			asmnt_id = CStr(rs.Value(0))
+			For Each elem In asmnts2HaveEmail
+				If asmnt_id = elem.GetAttribute("id") Then
+					retVal.Add(elem)
+					Exit For
+				End If
+			Next elem
+			rs.MoveNext()
+		End While
+	End If
+
+	Return retVal
+End Function
+
+Sub MethodMainSubroutine()
+	Dim inItem As XmlElement = CCO.XML.GetResponseItem(inDom)
+	Dim oldAction As String = inItem.GetAttribute("old_action")
+
+	If oldAction <> "" Then
+		inItem.SetAttribute("action", oldAction)
+		inItem.RemoveAttribute("old_action")
+	Else
+		inItem.RemoveAttribute("action")
+	End If
+
+	inDom.LoadXml(inItem.OuterXml)
+	'+++++ to send email to changed/added assignees, leaders +++++
+	Dim inDom2SendEmails As New XmlDocument
+	inDom2SendEmails.LoadXml("<root/>")
+	inDom2SendEmails.DocumentElement.AppendChild(inDom2SendEmails.ImportNode(inDom.DocumentElement, True))
+	Dim activities4email As ArrayList = getActivitiesWithChangedLeader(inDom2SendEmails)
+	Dim asmnts4email As ArrayList = getAsmntsWithChangedRelated(inDom2SendEmails)
+	'----- to send email to changed/added assignees, leaders -----
+
+	CCO.ApplyItem.ApplyItem(inDom, outDom)
+	If (CCO.XML.HasFault(outDom, True)) Then
+
+		Exit Sub
+	End If
+
+	Dim predecessorsDeleted As XmlNodeList = inItem.SelectNodes("//Item[@type='Predecessor' and @action='delete']")
+
+	If processDelete(predecessorsDeleted, False) Then
+		Exit Sub
+	End If
+
+	Dim i As Integer
+	For i = 0 To predecessorsDeleted.Count - 1
+		predecessorsDeleted.Item(i).ParentNode.RemoveChild(predecessorsDeleted.Item(i))
+	Next
+
+	Dim goodDeleted As XmlNodeList = inItem.SelectNodes("//Item[@action='delete' and not(ancestor::Item[@action='delete'])]")
+
+	If processDelete(goodDeleted, True) Then
+		Exit Sub
+	End If
+
+	'+++++ Send Emails
+	Dim mailInDom As XmlDocument = New XmlDocument()
+	Dim activeAssignment As XmlElement
+	Dim activity As XmlElement
+	Dim elem As XmlElement
+	Dim flagNm As String = "use_identities_from_xml_only"
+	Dim act_asnees_dict As New Hashtable 'key is activity&assignee (indicates that assignee is emailed about the activity)
+	Dim k As String
+
+	For i = 0 To activities4email.Count - 1
+		activity = CType(activities4email.Item(i), XmlElement)
+		mailInDom.LoadXml(activity.OuterXml)
+		elem = CType(mailInDom.SelectSingleNode("Item/Relationships"), XmlElement)
+		If Not elem Is Nothing Then elem.ParentNode.RemoveChild(elem)
+
+		mailInDom.DocumentElement.SetAttribute(flagNm, "1")
+		k = String.Format(CultureInfo.InvariantCulture, "{0};{1}", activity.GetAttribute("id"), CCO.XML.GetItemProperty(activity, "managed_by_id"))
+		act_asnees_dict.Add(k, "")
+		CCO.ApplyItem.ExecuteMethodByName(mailInDom, outDom, "sendEmailToA2Assignee", True)
+		If (CCO.XML.HasFault(outDom, False)) Then
+
+			Exit Sub
+		End If
+	Next
+
+	For i = 0 To asmnts4email.Count - 1
+		activeAssignment = CType(asmnts4email.Item(i), XmlElement)
+		activity = CType(activeAssignment.ParentNode.ParentNode, XmlElement)
+		elem = CType(activeAssignment.SelectSingleNode("related_id/Item"), XmlElement)
+		If elem Is Nothing Then
+			k = activeAssignment.SelectSingleNode("related_id").InnerText
+		Else
+			k = elem.GetAttribute("id")
+		End If
+		k = String.Format("{0};{1}", activity.GetAttribute("id"), k)
+
+		If Not act_asnees_dict.Contains(k) Then
+			mailInDom.LoadXml(activity.OuterXml)
+			For Each elem In mailInDom.SelectNodes(String.Format("Item/Relationships/Item[@id!='{0}']", activeAssignment.GetAttribute("id")))
+				elem.ParentNode.RemoveChild(elem)
+			Next elem
+			mailInDom.DocumentElement.SetAttribute(flagNm, "1")
+			CCO.ApplyItem.ExecuteMethodByName(mailInDom, outDom, "sendEmailToA2Assignee", True)
+			If (CCO.XML.HasFault(outDom, False)) Then
+
+				Exit Sub
+			End If
+			act_asnees_dict.Add(k, "")
+		End If
+	Next
+	'----- Send Emails
+
+	CCO.XML.MakeResponseMessage(outDom, "Method processProjectTree completed sucessfully")
+End Sub]]></method_code>
+  <method_type>VB</method_type>
+  <name>processProjectTree</name>
+ </Item>
+</AML>

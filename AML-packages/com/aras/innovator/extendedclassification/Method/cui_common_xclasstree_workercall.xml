@@ -1,0 +1,22 @@
+﻿<AML>
+ <Item type="Method" id="4475DDDAD2AB46899D8F43D63405A7ED" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const params = inArgs || {};
+const grid = params.grid;
+if (grid) {
+	const itemId = grid.getSelectedId();
+	const item = window.getItem ? window.getItem() : window.item;
+	const selectedItem = item.selectSingleNode('Relationships/Item[@id="' + itemId + '"]/related_id/Item');
+
+	const additionalParameters = {
+		action: params.action,
+		permType: params.permType,
+		xClassItemTypeId: selectedItem ? selectedItem.getAttribute('id') : ''
+	};
+
+	return window.aras.evalItemMethod('xPermissionWorker', null, additionalParameters);
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_common_xclasstree_workercall</name>
+ </Item>
+</AML>

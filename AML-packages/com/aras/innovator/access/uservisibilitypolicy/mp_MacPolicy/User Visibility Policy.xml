@@ -1,0 +1,45 @@
+﻿<AML>
+ <Item type="mp_MacPolicy" id="28DF1660D422498D89E5DA5D9A5BBA8A" action="add">
+  <can_delete>3F0FECC30EBD435AAE04B85E9A072546</can_delete>
+  <can_discover>3F0FECC30EBD435AAE04B85E9A072546</can_discover>
+  <can_get>3F0FECC30EBD435AAE04B85E9A072546</can_get>
+  <can_update>3F0FECC30EBD435AAE04B85E9A072546</can_update>
+  <description>This policy is responsible for restricting access to User, Identity, and Alias items based on defined User Visibility Rules items and should NOT be modified. The User Visibility Policy MAC Policy and User Identities Derived Relationship Family must both be in the Active state in order for User Visibility Rules to be enforced.</description>
+  <show_permissions_warning>3F0FECC30EBD435AAE04B85E9A072546</show_permissions_warning>
+  <name>User Visibility Policy</name>
+  <Relationships>
+   <Item type="mp_MacCondition" action="add">
+    <condition_xml><![CDATA[<Item type="qry_QueryDefinition"><Relationships><Item type="qry_QueryItem"><item_type>D4E6378D54A3427F89BECDC52A0034D5</item_type><alias>CurrentItem</alias><ref_id>89B61DF8C9D04FA689BF3C01E934E0D7</ref_id><filter_xml><![CDATA[<condition><method_call><method_name>MacPolicy.CurrentItem.HasUserVisibilityPolicyAccess</method_name><params/></method_call></condition>]]]]><![CDATA[></filter_xml></Item><Item type="qry_QueryItem"><alias>CurrentUser</alias><item_type>45E899CD2859442982EB22BB2DF683E5</item_type><ref_id>11BB8EB866DB47AC858B39845CACC733</ref_id></Item><Item type="qry_QueryReference"><child_ref_id>89B61DF8C9D04FA689BF3C01E934E0D7</child_ref_id></Item><Item type="qry_QueryReference"><child_ref_id>11BB8EB866DB47AC858B39845CACC733</child_ref_id><parent_ref_id>89B61DF8C9D04FA689BF3C01E934E0D7</parent_ref_id><ref_id>87D239DCABEC4BF5B6C6B1FDDEFD6A0C</ref_id></Item></Relationships></Item>]]></condition_xml>
+    <name>User Visibility Policy Rule</name>
+    <ref_id>3F0FECC30EBD435AAE04B85E9A072546</ref_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="User Visibility Policy" type="mp_MacPolicy">28DF1660D422498D89E5DA5D9A5BBA8A</source_id>
+   </Item>
+   <Item type="mp_MacPolicyControlledType" action="add">
+    <related_id keyed_name="User" type="ItemType" name="User">45E899CD2859442982EB22BB2DF683E5</related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="User Visibility Policy" type="mp_MacPolicy">28DF1660D422498D89E5DA5D9A5BBA8A</source_id>
+   </Item>
+   <Item type="mp_MacPolicyControlledType" action="add">
+    <related_id keyed_name="Identity" type="ItemType" name="Identity">E582AB17663F4EF28460015B2BE9E094</related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="User Visibility Policy" type="mp_MacPolicy">28DF1660D422498D89E5DA5D9A5BBA8A</source_id>
+   </Item>
+   <Item type="mp_MacPolicyControlledType" action="add">
+    <related_id keyed_name="Alias" type="ItemType" name="Alias">4E355E04444B4676AE723B43DECA37DC</related_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="User Visibility Policy" type="mp_MacPolicy">28DF1660D422498D89E5DA5D9A5BBA8A</source_id>
+   </Item>
+   <Item type="mp_MacPolicyExemptIdentity" action="add">
+    <related_id keyed_name="User Administrators" type="Identity">9A31744D064D41009A26E458CC7AB874</related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="User Visibility Policy" type="mp_MacPolicy">28DF1660D422498D89E5DA5D9A5BBA8A</source_id>
+   </Item>
+   <Item type="mp_MacPolicyExemptIdentity" action="add">
+    <related_id keyed_name="User Readers" type="Identity">77AAEBCE65A34EEC889DE1327C8AA2FC</related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="User Visibility Policy" type="mp_MacPolicy">28DF1660D422498D89E5DA5D9A5BBA8A</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

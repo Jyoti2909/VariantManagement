@@ -1,0 +1,93 @@
+﻿<AML>
+ <Item type="Method" id="E8230EC81BC84497AF21FEE484BF2CF7" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+XmlElement projectItem = this.node as XmlElement;
+XmlElement wbsParent = projectItem.SelectSingleNode("wbs_id") as XmlElement;
+XmlElement wbs = (wbsParent != null) ? wbsParent.SelectSingleNode("Item") as XmlElement : null;
+
+if (wbs == null)
+{
+  return this;
+}
+
+string wbsId = wbs.GetAttribute("id");
+wbs = wbsParent.RemoveChild(wbs) as XmlElement;
+wbsParent.InnerText = wbsId;
+
+XmlNodeList updates = wbs.SelectNodes("descendant::Item[@action='update']");
+int i;
+for(i=0; i<updates.Count; i++) ((XmlElement) updates[i]).SetAttribute("action","edit");
+
+XmlNodeList addedPredsList = wbs.SelectNodes("descendant::Item[@type='Predecessor'][@action='add']");
+XmlElement pred;
+string srcId;
+string source_id = "source_id";
+ArrayList addedPredecessors = new ArrayList(addedPredsList.Count);
+for(i=0;i<addedPredsList.Count;i++)
+{
+  pred = addedPredsList[i] as XmlElement;
+  if (pred == null) continue;
+  srcId = CCO.XML.GetItemProperty(pred, "source_id");
+  if(srcId==null || srcId=="")
+  {
+    srcId = ((XmlElement) pred.ParentNode.ParentNode).GetAttribute("id");
+    CCO.XML.SetItemProperty(ref pred, ref source_id, ref srcId);
+  }
+  addedPredecessors.Add(pred.ParentNode.RemoveChild(pred));
+}
+
+/// saving WBS tree
+
+string oldAction = wbs.GetAttribute("action");
+
+string projectOwner = CCO.XML.GetItemProperty(projectItem,"owned_by_id");
+XmlNodeList nodes;
+XmlElement e;
+string owned_by_id = "owned_by_id";
+if(projectOwner!=null && projectOwner!=String.Empty)
+{
+  nodes =  wbs.SelectNodes("descendant-or-self::Item[@type='WBS Element' and @action='add']");
+  for (i=0; i<nodes.Count; i++)
+  {
+  	e = nodes[i] as XmlElement;
+  	if (e!=null) CCO.XML.SetItemProperty(ref e, ref owned_by_id, ref projectOwner);
+  }
+  nodes = wbs.SelectNodes("descendant::Item[@type='WBS Activity2']/related_id/Item[@type='Activity2' and @action='add']");
+  for(i=0; i<nodes.Count; i++)
+  {
+  	e = nodes[i] as XmlElement;
+  	CCO.XML.SetItemProperty(ref e, ref owned_by_id, ref projectOwner);
+  }
+}
+  
+if(oldAction != String.Empty) wbs.SetAttribute("old_action", oldAction);
+wbs.SetAttribute("action","processProjectTree");
+
+Innovator inn = this.getInnovator();
+Item qry = inn.newItem("tmp", "tmp");
+qry.loadAML(wbs.OuterXml);
+
+Item res = qry.apply();
+if(res.isError()) return res;
+  
+if (addedPredecessors.Count>0)
+{
+  System.Text.StringBuilder AML = new System.Text.StringBuilder();
+  AML.Append("<AML>");
+  for(i=0;i<addedPredecessors.Count;i++)
+  {
+    pred = addedPredecessors[i] as XmlElement;
+    if (pred != null) AML.Append(pred.OuterXml);
+  }
+  AML.Append("</AML>");
+
+  res = inn.applyAML(AML.ToString());
+  if (res.isError()) return res;
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Project_saveProjectTree</name>
+ </Item>
+</AML>

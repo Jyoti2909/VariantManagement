@@ -1,0 +1,255 @@
+﻿@using System
+@using Models.Helpers
+@model Models.FieldRenderModel
+
+@{
+	var fieldId = Model.FieldNode.Id;
+	var fieldNm = Model.FieldNode.Name;
+	var propNm = String.Empty;
+	if (!Model.PropertyNode.IsNull)
+	{
+		propNm = Model.PropertyNode.Name;
+	}
+
+	// Field attributes generating
+	var fieldSizeInfo = MethodsExUtils.UiGetFieldSizeInfo(Model.FieldNode);
+	var readOnlyProp = MethodsExUtils.UiIsFieldReadOnly(Model.FieldNode, Model.PropertyNode);
+	var isDisabled = Model.Mode != "edit_form" && Model.Mode != "view_form" ? ((readOnlyProp && Model.Mode != "search") ? "disabled" : String.Empty) : String.Empty;
+	var tabIndex = Model.FieldNode.TabStop ? Model.FieldNode.TabIndex.Value : "-1";
+	var maxLength = Model.PropertyNode.StoredLength.IsNull ? String.Empty : "maxlength=\"" + Model.PropertyNode.StoredLength.Value + "\" ";
+	var assignedFieldEvents = String.Empty;
+	var onClickEvent = String.Empty;
+	var userOnClick = String.Empty;
+
+	if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		if (Model.Mode != "search")
+		{
+			assignedFieldEvents = MethodsExUtils.AssignFieldEventEx(Model.FieldNode, "onclick", null);
+		}
+
+		if (!Model.PropertyNode.IsNull && !String.IsNullOrEmpty(propNm))
+		{
+			const string confirmNewClassification = @"
+						function confirmNewClassification(newClassification, oldClassification) {
+						var dialogParams = {
+							buttons: {
+								btnYes: aras.getResource('', 'common.ok'),
+								btnCancel: aras.getResource('', 'common.cancel')
+							},
+							defaultButton: 'btnCancel',
+							aras: aras,
+							dialogWidth: 300,
+							dialogHeight: 200,
+							center: true,
+							content: 'groupChgsDialog.html'
+						};
+						if (!window.document.isFormPopulated || newClassification == oldClassification) {
+							return true;
+						}
+
+						if (!newClassification) {
+							newClassification = '';
+						}
+
+						var itm = window.document.item;
+						var itemType = aras.getItemTypeForClient(itm.getAttribute('type'));
+						var struct = itemType.getProperty('class_structure', '');
+						if (!struct) {
+							return true;
+						}
+
+						var structDom = aras.createXMLDocument();
+						structDom.loadXML(struct);
+
+						var currState = aras.getItemProperty(itm, 'current_state');
+						var currPermID = aras.getItemProperty(itm, 'permission_id');
+						var currLCMapID;
+						if (currState) {
+							var res = aras.soapSend('ApplyItem', '<Item type=\'Life Cycle Map\' action=\'get\' select=\'id\'><start_state>' + currState + '</start_state></Item>');
+							var lcmap = res.getResult().selectSingleNode('Item');
+							if (lcmap) {
+								currLCMapID = lcmap.getAttribute('id');
+							}
+							else {
+								dialogParams.message = aras.getResource('', 'ui_methods_ex.classification_change_for_not_start_state_item');
+								var win = aras.getMostTopWindowWithAras(window);
+								return (win.main || win).ArasModules.Dialog.show('iframe', dialogParams).promise.then(function (res) {
+									return res === 'btnYes';
+								});
+							}
+						}
+
+						var newLCMapID = structDom.selectSingleNode('//*[@full_name=' + aras.EscapeXPathStringCriteria(newClassification) + ']');
+						var newPermID;
+						if (newLCMapID) {
+							newPermID = newLCMapID.getAttribute('permission_id');
+							newLCMapID = newLCMapID.getAttribute('lcmap_id');
+						}
+						// Check that currLCMapID is undefined, it migth be if opened item is just new created temp item
+						var shouldLCMapBeChanged = (currLCMapID && currLCMapID != newLCMapID);
+						var shouldPermsBeChanged = (currPermID != newPermID);
+
+						if (shouldLCMapBeChanged) {
+							var s = (shouldPermsBeChanged ? 'ui_methods_ex.classification_change_lsmap_and_permission_changed' : 'ui_methods_ex.classification_change_lsmap_changed');
+							dialogParams.message = aras.getResource('', s);
+							var win = aras.getMostTopWindowWithAras(window);
+							return (win.main || win).ArasModules.Dialog.show('iframe', dialogParams).promise.then(function (res) {
+								return res === 'btnYes';
+							});
+						}
+						return true;
+					}
+				";
+
+			var correctModeClause = @"((!aras.isTempEx(window.document.item) && '" + Model.Mode + "'=='add') ? 'edit' : (('" + Model.Mode + "'=='add') ? 'add' : 'edit'))";
+
+
+			onClickEvent = @"
+									if (!window.document.isEditMode) return;
+									if (!event.srcElement) event.srcElement = event.target;
+									var input = event.srcElement;
+									var currVal = observersHash.getElementById('" + propNm + @"_system').value;
+									var param = new Object();
+									param.title = '" + propNm + @"';
+									param.isEditMode = true;
+									param.aras = aras;
+									param.class_structure = aras.getItemProperty(window.document.itemType, 'class_structure');
+									param.dialogType = 'classification';
+									param.itemTypeName = aras.getItemProperty(window.document.itemType, 'name');
+									param.selectLeafOnly = true;
+									param.isRootClassSelectForbidden = true;
+									param.dialogWidth = 600;
+									param.dialogHeight = 700;
+									param.resizable = true;
+									if(currVal)
+									{
+										param.expandClassPath = currVal;
+									}
+									var win = aras.getMostTopWindowWithAras(window);
+									param.content = 'ClassStructureDialog.html';
+									var classificationRes;
+									(win.main || win).ArasModules.Dialog.show('iframe', param).promise.then(function (res) {
+										if (window.document.isEditMode && res != undefined && window.handleItemChange)
+										{
+											classificationRes = res;
+											" +
+									(propNm == "classification" ? confirmNewClassification + "\r\n return confirmNewClassification(res, currVal)" : "") +
+										@"}
+										return false;
+									}).then(function (confirm) {
+										if (!confirm) return false;
+										var res = classificationRes;
+										var f1 = (window.document.formID) ? window.document.formID : aras.uiGetFormID4ItemEx(window.document.item, " + (Model.Mode != "edit_form" ? correctModeClause : "edit") + @");
+											handleItemChange('" + propNm + @"',res);
+											var newVal = observersHash.getElementById('" + propNm + @"_system').value;
+											if (newVal != currVal) {
+												if (input.fireEvent) {
+													input.fireEvent('onchange');
+												}
+												else {
+													var eventObj = window.document.createEvent('Event');
+													eventObj.initEvent('change', true, true);
+													input.dispatchEvent(eventObj);
+												}
+											}
+											var f2 = aras.uiGetFormID4ItemEx(window.document.item, " + (Model.Mode != "edit_form" ? correctModeClause : "edit") + @");
+											if (currVal!=res && f1!=f2) aras.uiShowItemInFrameEx(parent.frames['instance'],window.document.item," + correctModeClause + @");
+											input.focus();
+									});
+								";
+		}
+		var onclickMethodCode = MethodsExUtils.GetEventHandlerCode(Model.FieldNode, "onclick", true, "return true;\r\n");
+		if (onclickMethodCode != "return true;\r\n")
+		{
+			var funcName = "user_" + fieldId + "_onclick";
+			userOnClick = @"<!-- code marker for ClassStructureOnclick -->
+							<script type=""text/javascript"">
+								function " + funcName + @"(event) 
+								{" + "\r\n" +
+											onclickMethodCode +
+								@"
+									/*Fix for mistakes with missed closing comments brackets*/
+								}
+							</script>";
+
+			onClickEvent = @"var ures=" + funcName + @"(event);
+								if (ures)
+								{
+									" + onClickEvent + @"
+								}";
+		}
+	}
+
+
+	<input type="text" id="@(fieldId)" name="@(fieldNm)" class="sys_special_readonly_prop @(fieldNm)" @Html.Raw(fieldSizeInfo.Attribute) style="cursor:pointer; @(fieldSizeInfo.Style)" READONLY @isDisabled @Html.Raw(maxLength) @Html.Raw(assignedFieldEvents)
+		@if (!String.IsNullOrEmpty(onClickEvent))
+		{
+			@:onclick="
+			@:@Html.Raw(onClickEvent)
+			@:"	
+		} 
+		tabindex="@Html.Raw(tabIndex)"/>
+
+
+	@Html.Raw(userOnClick)
+
+	if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		@:
+		<script type="text/javascript">
+			function system_@(fieldId)_value(event)
+			{
+				if (event.propertyName != "value") return true;
+				var ctrlElem = event.srcElement;
+				if (!ctrlElem) return true;
+				var input = document.getElementById("@(fieldId)");
+				if (!input) return true;
+				if (input.i_value == ctrlElem.value) return true;
+				var val = ctrlElem.value;
+				input.title = val;
+				input.i_value = val;
+				val = val.split("/");
+				val = val.pop();
+				input.value = val;
+				if (input.canHaveHTML) input.innerHTML = val;
+				@if (propNm == "classification")
+				{
+					<text>
+						var relTabBar = (parent.relationships) ? parent.relationships.relTabbar : null;
+						if (relTabBar) {
+							var isParamTabVisible = aras.uiIsParamTabVisible(parent.item);
+							relTabBar.setTabVisible("Parameters", isParamTabVisible);
+							if (isParamTabVisible) {
+								var firstTabID = parent.relationships.getFirstEnabledTabID(true);
+								if (!firstTabID) { relTabBar.selectTab("Parameters"); }
+							}
+						}
+						if (parent.relationshipsControl && parent.relationshipsControl.try2RefreshParametersTab) try { parent.relationshipsControl.try2RefreshParametersTab();} catch (excep) {}
+					</text>	
+				}
+				return true;
+			}
+			@if (!Model.PropertyNode.IsNull)
+			{
+				@:if (observersHash.getElementById("@(propNm)_system"))
+				@:	observersHash.getElementById("@(propNm)_system").attachEvent("onpropertychange", system_@(fieldId)_value);	
+			}
+		</script>	
+	}
+	
+	@helper ExpressionFunc(string fieldId)
+	{
+		<script type="text/javascript">
+			function expression_@(fieldId)_setExpression(isEditMode)
+			{
+				var field = document.getElementById('@(fieldId)');
+				; 	if (!isEditMode) {field.className = field.className.replace("sys_special_readonly_prop", "sys_special_readonly_prop_disabled");}
+				else {field.className = field.className.replace("sys_special_readonly_prop_disabled", "sys_special_readonly_prop");}
+			}
+			setTimeout('expression_@(fieldId)_setExpression(document.isEditMode)', 1);
+		</script>
+	}
+	//TODO: remove dead code because document.getElementById('@(fieldId)'); does not exist
+	@ExpressionFunc(fieldId)
+}

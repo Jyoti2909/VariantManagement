@@ -1,0 +1,26 @@
+﻿<AML>
+ <Item type="Method" id="7A78088EFBCB4B019F54395A178D747B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[options.selectedRowsIds
+	.filter(
+		rowId => options.rows.get(rowId, '@aras.action') !== 'add'
+	)
+	.forEach(rowId => {
+		const res = aras.resetItemAccess(options.itemTypeName, rowId);
+		if (!res) {
+			aras.AlertError(aras.getResource('', 'mainmenu.reset_access_failed'));
+			return;
+		}
+
+		const wnd = aras.windowsByName[rowId];
+		if (wnd && !aras.isWindowClosed(wnd)) {
+			wnd.document.location.reload();
+		}
+
+		window.updateRow(aras.getItemById('', rowId, 0));
+	});
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_pmig_resetItemAccess</name>
+ </Item>
+</AML>

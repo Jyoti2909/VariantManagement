@@ -1,0 +1,88 @@
+﻿<AML>
+ <Item type="Report" id="EB940D65D28E47618BC9708787223C58" action="add">
+  <description>Find and list circular dependencies between Parts</description>
+  <location>server</location>
+  <method keyed_name="PE_SearchPartCircularReferences" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>PE_SearchPartCircularReferences</name>
+   </Item>
+  </method>
+  <report_query />
+  <target>window</target>
+  <type>itemtype</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:fo="http://www.w3.org/1999/XSL/Format">
+  <xsl:output method="html"/>
+  <xsl:template match="/">
+    <html>
+      <head>
+        <title>List of circular dependencies between Parts</title>
+      </head>
+      <body topmargin="50" leftmargin="50">
+        <div class="print_button_wrapper">
+         <img id="print_button" src="../images/Print.svg" onclick="printReport(window);" />
+         <a href="#" onclick="printReport(window); return false;">Print</a>
+        </div>
+        <div class="table_wrapper">
+          <div class="report_name">
+            List of circular dependencies between Parts
+          </div>
+          <div class="report_generation_time"></div>
+          <xsl:choose>
+          <xsl:when test="not(//Result/Item[loop_number='0'])">
+            <div>No circular dependencies between Parts are found.</div>
+          </xsl:when>
+          <xsl:otherwise>
+            <table border="0" cellpadding="0" cellspacing="0">
+              <tbody>
+                <tr>
+                  <th>Loop #</th>
+                  <th>Source Part</th>
+                  <th>Referenced Part</th>
+                </tr>
+                <xsl:for-each select="//Result/Item">
+                  <tr>
+                    <xsl:variable name="currentLoop" select="loop_number"/>
+                    <xsl:if test="not(preceding-sibling::Item[1]) or preceding-sibling::Item[1]/loop_number != $currentLoop">
+                      <td>
+                        <xsl:attribute name="rowspan"><xsl:value-of select="count(following-sibling::Item[loop_number=$currentLoop]) + 1"/></xsl:attribute>
+                        <xsl:value-of select="$currentLoop + 1"/>
+                      </td>
+                    </xsl:if>
+                    <td>
+                      <strong><xsl:value-of select="source_keyed_name"/></strong> gen.<xsl:value-of select="source_generation"/> (<xsl:value-of select="source_id"/>)
+                    </td>
+                    <td>
+                      <strong><xsl:value-of select="related_keyed_name"/></strong> gen.<xsl:value-of select="related_generation"/> (<xsl:value-of select="related_id"/>)
+                    </td>
+                  </tr>
+                </xsl:for-each>
+              </tbody>
+            </table>
+          </xsl:otherwise>
+          </xsl:choose>
+        </div>
+      </body>
+      <script>
+        function loadScript(url)
+        {
+          const loadedJS = document.createElement('script');
+          loadedJS.src = url;
+          document.getElementsByTagName('head')[0].appendChild(loadedJS);
+        }
+        function loadStyle(url)
+        {
+          const link = document.createElement('link');
+          link.setAttribute('rel', 'stylesheet');
+          link.setAttribute('href', url);
+          document.getElementsByTagName('head')[0].appendChild(link)
+        }
+        loadScript(parent.aras.getBaseURL('/Solutions/PLM/javascript/report.js'));
+        loadStyle(parent.aras.getBaseURL('/Solutions/PLM/styles/report.css'));
+      </script>
+    </html>
+  </xsl:template>
+</xsl:stylesheet>
+]]></xsl_stylesheet>
+  <name>PE_SearchPartCircularReferences</name>
+ </Item>
+</AML>

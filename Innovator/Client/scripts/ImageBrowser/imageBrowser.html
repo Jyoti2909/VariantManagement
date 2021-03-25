@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+	<head>
+	<title>Image Browser</title>
+	<link rel="stylesheet" type="text/css" href="../../styles/common.min.css">
+	<style type="text/css">
+		@import "../../javascript/include.aspx?classes=arasClaro.css";
+		@import "../../styles/default.css";
+		@import "../../javascript/include.aspx?classes=common.css";
+
+		html, body {
+		overflow: hidden;
+			margin: 0px;
+			padding: 0px;
+			width: 100%;
+			height: 100%;
+		}
+		#globalContainer {
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+		}
+		#tabbarArea {
+		border: none;
+		padding: 0px;
+			margin: 0px;
+			overflow: hidden;
+			position: fixed;
+			top: 30px;
+			bottom: 0px;
+			width: 100%;
+		}
+	</style>
+		<script>
+			var imageBrowserParams = window.frameElement.dialogArguments,
+				aras = imageBrowserParams.aras;
+		</script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=ArasModules"></script>
+	<script type="text/javascript" src="../../javascript/dialog.js"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../../javascript/dojo'"></script>
+		<script type="text/javascript">
+		window.closeWindow = function (returnValue) {
+				var dialogArgs = this.imageBrowserParams;
+				if(dialogArgs.dialog) {
+					dialogArgs.dialog.close(returnValue);
+				}
+				else {
+					this.returnValue = returnValue;
+					this.close();
+				}
+			}
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Experimental.SimpleTabbar", undefined, function (control) {
+				var tabbar = control;
+				window.dispatchEvent(new CustomEvent("tabbar_created", {
+					detail: {
+						tabbar: tabbar
+					}
+				}));
+
+				if (imageBrowserParams.showOnlyExternalFile) {
+					tabbar.addTab("1", imageBrowserParams.aras.getResource("", "image_browser.external_file"));
+					tabbarClick("1");
+
+				} else {
+					tabbar.addTab("1", imageBrowserParams.aras.getResource("", "image_browser.innovator"));
+					tabbar.addTab("2", imageBrowserParams.aras.getResource("", "image_browser.external_file"));
+					tabbar.selectTab("1");
+				}
+
+				clientControlsFactory.on(tabbar, {
+					"onClick": tabbarClick
+				});
+			});
+
+			function tabbarClick(tbItem) {
+				var bool = tbItem === "1";
+				if (imageBrowserParams.showOnlyExternalFile) {
+					showTab("imageBrowser", false);
+					showTab("externalFile", true);
+				} else {
+					showTab("imageBrowser", bool);
+					showTab("externalFile", !bool);
+				}
+			}
+
+			function showTab(elementId, doVisible) {
+				var el = document.getElementById(elementId);
+				if (el){
+					el.style.display = doVisible ? "" : "none";
+				}
+			}
+
+			function resize_handler() {
+				document.getElementById("tabs-container").style.width = window.dialogWidth;
+			}
+			window.addEventListener("resize", resize_handler);
+		</script>
+</head>
+<body class="claro">
+	<div id="globalContainer">
+		<aras-tabs movable id="tabs-container" class="aras-flex-grow"></aras-tabs>
+		<div id="tabbarArea">
+			<iframe style="width: 100%; height: 100%" src="innovatorImageBrowser.html" frameborder="0" id="imageBrowser"></iframe>
+			<iframe style="width: 100%; height: 100%;" src="externalImageViewerToolbar.html" frameborder="0" id="externalFile" ></iframe>
+		</div>
+	</div>
+</body>
+</html>

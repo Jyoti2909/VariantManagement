@@ -1,0 +1,97 @@
+﻿<AML>
+ <Item type="Method" id="9E818595BDA34F3E9BA8D940EED8A289" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	var item = document.item;
+	var changeCost = true;
+	if (item && !aras.isTempEx(item)) {
+		//property "cost,cost_basis,weight,weight_basis" must be updated from server (IR-007857)
+		var soapBody =
+   "<Item type=\"Part\" action=\"get\" select=\"cost,cost_basis,weight,weight_basis\">" +
+   "<id>" + item.getAttribute("id") + "</id>" +
+   "</Item>";
+		var soapRes = aras.soapSend('ApplyItem', soapBody, '', false);   //url=='' - use default server url; saveChanges==false - skip client cache  
+		var serverPart;
+		if (soapRes.getFaultCode() === 0) {
+			serverPart = soapRes.getResult().selectSingleNode("Item");
+			var cost = aras.getItemProperty(serverPart, "cost");
+			//fill "cost" field in item's form
+			var fieldCost = getFieldByName("cost");
+			var elements = fieldCost.getElementsByTagName("input");
+			for (var i = 0; i < elements.length; i++) {
+				// Look for a custom attribute named "populate"
+				//if (elements[i].populate == "1") 
+				//{
+				// The property name to use is the input name of the field
+				var propName = elements[i].name;
+				if (propName == "cost") {
+					elements[i].value = cost;
+					changeCost = false;
+					break;
+				}
+				//}
+			}
+		}
+		else {
+			aras.AlertError("Exception in Goal Basis refresh", soapRes.getFaultDetails(), soapRes.getFaultString());
+			return;
+		}
+
+		//Erase "cost" item properties, to avoid unwanted saving (IR-007857)
+		var node = item.selectSingleNode("cost");
+		if (node) {
+			item.removeChild(node);
+		}
+
+		var innovator = new aras.getMostTopWindowWithAras(window).Innovator();
+		var partGoalsListId = aras.getListId("Part Goals");
+		var goalListValues = aras.getListValues(partGoalsListId, false);
+
+		for (var i = 0; i < goalListValues.length; i++) {
+
+			var partGoalsListValue = aras.getItemProperty(goalListValues[i], "value");
+			// See if there is a basis field for this partGoalsListValue
+			var basis_field = document.getElementById(partGoalsListValue.toLowerCase() + "_basis");
+			// If the basis value is not empty, populate the field
+			if (basis_field) {
+				var basis = document.thisItem.getProperty(partGoalsListValue.toLowerCase() + "_basis");
+        var textPropName = aras.browserHelper.getTextContentPropertyName();
+				if (basis !== undefined && basis !== "" && changeCost)
+					basis_field[textPropName] = "(" + basis + ")";
+				else {
+					if (undefined !== serverPart) {
+						basis = aras.getItemProperty(serverPart, partGoalsListValue.toLowerCase() + "_basis");
+						if (undefined !== basis && "" !== basis) {
+							basis_field[textPropName] = "(" + basis + ")";
+						}
+						else {
+							basis_field[textPropName] = "";
+						}
+					}
+					else {
+						basis_field[textPropName] = "";
+					}
+				}
+			}
+			basis_field = null;
+		}
+	}
+
+
+	var functionCode =
+  "// Displays the tab for the Part Goal relationship\n" +
+  "var innovator = new aras.getMostTopWindowWithAras(window).Innovator();\n\n" +
+  "// Get the RelationshipType from the cache\n" +
+  "var rel = innovator.getItemByKeyedName('RelationshipType','Part Goal');\n" +
+  "innovator = null;\n\n" +
+  "if (rel) {\n" +
+  "  // Select the tab with the same ID as the RelationshipType\n" +
+  "  var relId = rel.getID();\n" +
+  "  parent.relationships.relTabbar.selectTab(relId);\n" +
+  "}\n" +
+  "rel = null;\n";
+
+	window.showGoalsTab = new Function(functionCode);]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Show Goal Basis</name>
+ </Item>
+</AML>

@@ -1,0 +1,45 @@
+﻿<AML>
+ <Item type="Method" id="870E2AC2F05E47458259DE50B51267A7" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string relatedId = this.getProperty("related_id");
+const string CmfPropertyItemTypeId = "D003393AB1E447B3A8D3B274CAA70F69";
+string[] prohibitedTypes = new string[] {
+	"File",
+	"SecureMessage",
+	"SecureMessageMarkup",
+	"SecureMessageAudio",
+	"SecureMessageVideo",
+	"SecureMessageFlaggedBy"
+};
+Innovator inn = this.getInnovator();
+Item item = inn.getItemById("ItemType", relatedId);
+if (item.isError()) {
+	return item;
+}
+string name = item.getProperty("name");
+if (!string.IsNullOrEmpty(name) && prohibitedTypes.Contains(name)) {
+	string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("mp_NotSupportedItemType"), name);
+	return inn.newError(message);
+}
+if (string.Equals(item.getProperty("implementation_type"), "polymorphic", StringComparison.Ordinal)) {
+	string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("mp_NotSupportedItemType"), name);
+	return inn.newError(message);
+}
+Item morpItem = this.newItem("Morphae", "get");
+morpItem.setAttribute("select", "id");
+morpItem.setProperty("related_id", item.getID());
+morpItem.setProperty("source_id", CmfPropertyItemTypeId);
+morpItem = morpItem.apply();
+if (!morpItem.isError()) {
+	string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("mp_NotSupportedItemType"), name);
+	return inn.newError(message);
+} else {
+	if (!string.Equals(morpItem.getErrorCode(), "0", StringComparison.Ordinal)) {
+		return morpItem;
+	}
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>mp_OnAfterAddControlledType</name>
+ </Item>
+</AML>

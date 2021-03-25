@@ -1,0 +1,156 @@
+﻿<AML>
+ <Item type="Method" id="F80600FBC3EB485F9AF4F1D2ECB08597" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[    string userId = this.getProperty("user_id");
+    
+    var innovatorInst = this.getInnovator();
+    
+    Item userItem = LoadUserItem(userId);
+    string isUserAdmin = IsUserAdmin(userId);
+    List<Item> vsListsItems = LoadVSLists();
+    Item collaborationIdentitiesItem = LoadCollaborationIdentities();
+    Item ssvcPreferencesItem = LoadUserSSVCPreferences(userItem);
+    string defaultPageSize = GetDefaultPageSize();
+    
+    var resultItem = innovatorInst.newItem();
+    resultItem.setPropertyItem("user_item", userItem);
+    resultItem.setProperty("is_user_admin", isUserAdmin);
+    
+    var listDefinitions = innovatorInst.newItem("ListDefinitions");
+    resultItem.setPropertyItem("list_definitions", listDefinitions);
+    foreach (var vsListItem in vsListsItems)
+    {
+        listDefinitions.addRelationship(vsListItem);
+    }
+    
+    var identitiesItem = innovatorInst.newItem("CollaborationIdentities");
+    resultItem.setPropertyItem("collaboration_identities", identitiesItem);
+    for (int i = 0; i < collaborationIdentitiesItem.getItemCount(); i++)
+    {
+        var collaborationIdentityItem = collaborationIdentitiesItem.getItemByIndex(i);
+        identitiesItem.addRelationship(collaborationIdentityItem);
+    }
+    
+    resultItem.setPropertyItem("ssvs_preferences", ssvcPreferencesItem);
+    resultItem.setProperty("default_page_size", defaultPageSize);
+    return resultItem;
+}
+
+Item LoadUserItem(string userId)
+{
+    var innovatorInst = this.getInnovator();
+    
+    Item userItem = innovatorInst.newItem("User", "get");
+    userItem.setAttribute("id", userId);
+    userItem.setAttribute("levels", "1");
+    userItem.setAttribute("select", "login_name");
+    userItem = userItem.apply();
+    return userItem;
+}
+
+string IsUserAdmin(string userId)
+{
+    var innovatorInst = this.getInnovator();
+    
+    Item isUserAdminItem = innovatorInst.newItem("User", "VC_IsUserAdmin");
+    isUserAdminItem.setID(userId);
+    isUserAdminItem = isUserAdminItem.apply();
+    return isUserAdminItem.getResult();
+}
+
+List<Item> LoadVSLists()
+{
+    var vsLists = new List<string> 
+    {
+        "VC_MessageFilterType",
+        "VC_SourceFilterType",
+        "VC_TimeframeFilterType",
+        "VC_RangeSelector",
+        "VC_MessageDisplayMode",
+        "VC_MessageSortMode"
+    };
+        
+    List<Item> vsListsItems = GetListsByKeyedName(vsLists);
+    return vsListsItems;
+}
+
+List<Item> GetListsByKeyedName(List<string> listsKeyedNames)
+{
+    var innovatorInst = this.getInnovator();
+    var resultList = new List<Item>();
+   
+    foreach (string keyedName in listsKeyedNames)
+    {
+        var listRequest = innovatorInst.newItem("List", "get");
+        listRequest.setAttribute("levels", "2");
+        listRequest.setProperty("keyed_name", keyedName);
+        
+        var listItem = listRequest.apply();
+        resultList.Add(listItem);
+    }
+    
+    return resultList;
+}
+
+Item LoadCollaborationIdentities()
+{
+    var innovatorInst = this.getInnovator();
+    
+    Item collaborationIdentities = innovatorInst.newItem("ItemType", "MSO_CollaborationGetIdentities");
+    collaborationIdentities = collaborationIdentities.apply();
+    return collaborationIdentities;
+}
+
+Item LoadUserSSVCPreferences(Item userItem)
+{
+    var innovatorInst = this.getInnovator();
+    Item result = null;
+
+    string selector = "Relationships/Item[@type=\'Alias\']/related_id/Item[@type=\'Identity\']/id";
+    string identityId = userItem.node.SelectSingleNode(selector).InnerText;
+
+    if (!string.IsNullOrEmpty(identityId))
+    {
+        Item preferencesSSVC = innovatorInst.newItem("SSVC_Preferences", "get");
+
+        Item preference = innovatorInst.newItem("Preference", "get");
+        preference.setProperty("identity_id", identityId);
+        preference.addRelationship(preferencesSSVC);
+        preference = preference.apply();
+
+        if (!preference.isError() && !preference.isEmpty())
+        {
+            Item preferenceRelationship = preference.getRelationships("SSVC_Preferences");
+            if (preferenceRelationship.getItemCount() > 0)
+            {
+                result = preferenceRelationship.getItemByIndex(0);
+            }
+        }
+    }
+
+    if (result == null || result.isError() || result.isEmpty())
+    {
+        // world ssvc preferences
+        result = innovatorInst.newItem("SSVC_Preferences", "get");
+        result.setProperty("source_id", "507A16AA36F94513AD7EC1F948B5B48F");
+        result = result.apply();
+    }
+
+    return result;
+}
+
+string GetDefaultPageSize()
+{
+    var innovatorInst = this.getInnovator();
+    Item itemType = innovatorInst.newItem("ItemType", "get");
+    itemType.setProperty("keyed_name", "SecureMessage");
+    itemType.setAttribute("select", "default_page_size");
+    itemType = itemType.apply();
+
+    string defaultPageSize = "25";
+    string pageSize = itemType.getProperty("default_page_size", defaultPageSize);
+    return pageSize;]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_GetSSVCGeneralInfo</name>
+ </Item>
+</AML>

@@ -1,0 +1,56 @@
+﻿<AML>
+ <Item type="Method" id="A31AE31436894C46B4D339DC7563AFB9" action="add">
+  <comments>Check if TeamRole is Team Identity.</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//Check if related_id is not Team or System Identity
+string relatedIdName = "related_id";
+string related_id = this.getProperty(relatedIdName);
+
+if (!string.IsNullOrEmpty(related_id))
+{
+	Item q = this.newItem("Identity", "get");
+	q.setProperty("id", related_id);
+	q.setProperty("classification", "'System', 'Team'");
+	q.setPropertyAttribute("classification", "condition", "in");
+	q.setAttribute("select", "id, classification");
+	q = q.apply();
+	if (!q.isError())
+	{
+		return this.getInnovator().newError("'" + q.getPropertyAttribute("id", "keyed_name") + "' could not be set as Team Member, because it is " + q.getProperty("classification") + " Identity.");
+	}
+	else if (q.getErrorCode() != "0")
+	{
+		return q;
+	}
+}
+
+// Try to get id of team_role identity
+string teamRoleName = "team_role";
+string team_role_id = this.getProperty(teamRoleName);
+
+// Check if team_role is Team Identity
+if (!string.IsNullOrEmpty(team_role_id))
+{
+	Item q = this.newItem("Identity", "get");
+	q.setProperty("id", team_role_id);
+	q.setAttribute("select", "classification, name");
+	q = q.apply();
+	if (q.isError())
+	{
+		return q;
+	}
+	else
+	{
+		string classification = q.getProperty("classification");
+		if (!string.Equals(classification, "Team", StringComparison.Ordinal) &&
+		!(string.Equals(classification, "System", StringComparison.Ordinal) && string.Equals(q.getProperty("name"), "Team", StringComparison.Ordinal)))
+			return this.getInnovator().newError("'" + q.getPropertyAttribute("id", "keyed_name") + "' Identity could not be set as a Role, because it is not Team Identity.");
+	}
+
+}
+return this;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>TeamIdentity_IsTeamRoleValid</name>
+ </Item>
+</AML>

@@ -1,0 +1,79 @@
+﻿<AML>
+ <Item type="Method" id="C3F8CDB087334D439B7FDE48C294F426" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	HashSet<string> itemPropertiesOfInterest = new HashSet<string>(new[] { "variable_type", "list_id", "itemtype_id" });
+
+	Item existingVariableItem = GetItem(this.getInnovator(), this.getType(), this.getID(), itemPropertiesOfInterest);
+	if (existingVariableItem.isError())
+	{
+		return existingVariableItem;
+	}
+
+	string itemVariableTypePropertyName = "variable_type";
+	string requestVariableItemDataType = this.getProperty(itemVariableTypePropertyName);
+	string existingVariableItemDataType = existingVariableItem.getProperty(itemVariableTypePropertyName);
+	if (!string.IsNullOrEmpty(requestVariableItemDataType) && !existingVariableItemDataType.Equals(requestVariableItemDataType, StringComparison.Ordinal))
+	{
+		RequestState["before_update$prior_variable_type"] = existingVariableItemDataType;
+	}
+
+	Item itemToDoVariableTypeChecks = CopyPropertiesIfNotExist(this, existingVariableItem, itemPropertiesOfInterest);
+	itemToDoVariableTypeChecks = itemToDoVariableTypeChecks.apply("effs_beforeAddVariableTypeChecks");
+	if (itemToDoVariableTypeChecks.isError())
+	{
+		return itemToDoVariableTypeChecks;
+	}
+
+	return this;
+}
+
+/// <summary>
+/// The method clones a target item and copies specified properties <param name="itemPropertiesOfInterest"></param>
+/// from a source item to the cloned target item in case they don't exist there yet, otherwise just ignores them
+/// </summary>
+/// <param name="targetItem"></param>
+/// <param name="sourceItem"></param>
+/// <param name="itemPropertiesOfInterest"></param>
+/// <returns></returns>
+private static Item CopyPropertiesIfNotExist(Item targetItem, Item sourceItem, HashSet<string> itemPropertiesOfInterest)
+{
+	Item clonedTargetItem = targetItem.clone(false);
+
+	//'id' and 'action' get new values during cloning, they are getting restored here
+	clonedTargetItem.setID(targetItem.getID());
+	clonedTargetItem.setAction(targetItem.getAction());
+
+	XmlNode clonedTargetItemNode = clonedTargetItem.node;
+	foreach (string propertyName in itemPropertiesOfInterest)
+	{
+		//There is no other ways to detect an item property exists using either IOM or CCO APIs
+		//Until properties of interest are multilingual, it's safe
+		if (clonedTargetItemNode.SelectSingleNode(propertyName) == null)
+		{
+			clonedTargetItem.setProperty(propertyName, sourceItem.getProperty(propertyName));
+		}
+	}
+
+	return clonedTargetItem;
+}
+
+/// <summary>
+/// The method gets an existing item by the specified <param name="type"></param> and <param name="id"></param>.
+/// The selected item will contain only specified properties <param name="itemPropertiesOfInterest"></param>
+/// </summary>
+/// <param name="inn"></param>
+/// <param name="type"></param>
+/// <param name="id"></param>
+/// <param name="itemPropertiesOfInterest"></param>
+/// <returns></returns>
+private static Item GetItem(Innovator inn, string type, string id, HashSet<string> itemPropertiesOfInterest)
+{
+	Item item = inn.newItem(type, "get");
+	item.setAttribute("select", string.Join(",", itemPropertiesOfInterest));
+	item.setID(id);
+
+	return item.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>effs_beforeUpdVariableTypeChecks</name>
+ </Item>
+</AML>

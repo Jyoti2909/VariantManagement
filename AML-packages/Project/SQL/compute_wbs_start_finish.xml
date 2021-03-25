@@ -1,0 +1,80 @@
+﻿<AML>
+ <Item type="SQL" id="B873C52ECAD54C8FA56B249960A561D2" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>compute_WBS_START_FINISH</old_name>
+  <sqlserver_body><![CDATA[/* Name:    compute_wbs_start_finish.sql
+   Purpose: computing of wbs start and finish dates (rollup_date_sched_start and rollup_date_sched_due)
+   Created: 05-MAR-2007 nap
+   Input:   the ID of root WBS Element in a project (i.e. wbs_id property of project).
+   Output:  SUCCESS or FAILURE status.
+*/
+
+CREATE procedure compute_WBS_START_FINISH(@ROOT_WBS_ID CHAR(32))
+AS
+begin
+ DECLARE @WBS_STACK TABLE(id INT IDENTITY (1, 1) PRIMARY KEY , wbs_id CHAR(32) COLLATE database_default);
+ 
+ DECLARE @ITERATION_FIRST_ID CHAR(32);
+ DECLARE @ITERATION_LAST_ID CHAR(32);
+ SET @ITERATION_LAST_ID = 0;
+
+-- go by all wbs elements of project begin from root wbs and to the deepest wbs elements (like mathematical breadth-first search)
+ INSERT INTO @WBS_STACK VALUES(@ROOT_WBS_ID); 
+ WHILE @@ROWCOUNT>0
+ BEGIN
+   SET @ITERATION_FIRST_ID = @ITERATION_LAST_ID + 1;
+   SET @ITERATION_LAST_ID = (SELECT MAX(id) FROM @WBS_STACK);
+
+   INSERT INTO @WBS_STACK
+   SELECT id FROM [WBS_ELEMENT] as related_wbs
+   WHERE EXISTS(
+           SELECT * FROM [SUB_WBS] 
+           WHERE source_id IN(   
+                   SELECT wbs_id FROM @WBS_STACK
+                   WHERE id>=@ITERATION_FIRST_ID AND id<=@ITERATION_LAST_ID
+                 )
+                 AND related_id=related_wbs.id 
+         );
+ END
+
+ DECLARE @DATE_COLLECTOR TABLE(start DATETIME, finish DATETIME, wbs_id CHAR(32))
+ DECLARE wbs_id_cur CURSOR FOR SELECT wbs_id FROM @WBS_STACK ORDER BY id DESC;
+
+ DECLARE @wbs_id CHAR(32);
+ DECLARE @tmp_date DATETIME
+ DECLARE @result_date DATETIME
+ OPEN wbs_id_cur
+ FETCH NEXT FROM wbs_id_cur INTO @wbs_id;
+ WHILE @@FETCH_STATUS = 0
+ BEGIN
+   -- min start and max finish dates from his child activities
+   INSERT INTO @DATE_COLLECTOR 
+	SELECT MIN(date_start_sched), MAX(date_due_sched), @wbs_id 
+	FROM [ACTIVITY2] 
+	WHERE EXISTS (SELECT * FROM [WBS_ACTIVITY2] WHERE source_id=@wbs_id AND related_id=[ACTIVITY2].id)
+
+   -- min start and max finish dates from his child wbs elements
+   INSERT INTO @DATE_COLLECTOR 
+	SELECT MIN(rollup_date_sched_start), MAX(rollup_date_sched_due), @wbs_id 
+	FROM [WBS_ELEMENT] 
+	WHERE EXISTS(SELECT * FROM [SUB_WBS] WHERE source_id = @wbs_id AND related_id = [WBS_ELEMENT].id)
+
+   UPDATE [WBS_ELEMENT]
+     SET rollup_date_sched_start = (SELECT MIN(start) FROM @DATE_COLLECTOR WHERE wbs_id = @wbs_id),
+     rollup_date_sched_due = (SELECT MAX(finish) FROM @DATE_COLLECTOR WHERE wbs_id = @wbs_id)
+   WHERE id = @wbs_id;
+
+   FETCH NEXT FROM wbs_id_cur INTO @wbs_id;
+ END
+ CLOSE wbs_id_cur;
+ DEALLOCATE wbs_id_cur;
+
+ SELECT 'SUCCESS' as result_text
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>compute_WBS_START_FINISH</name>
+ </Item>
+</AML>

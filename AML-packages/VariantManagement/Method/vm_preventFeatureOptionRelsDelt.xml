@@ -1,0 +1,164 @@
+﻿<AML>
+ <Item type="Method" id="3C3A9C8E688643FE8DDEFE326E0F762F" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	Innovator innovator = this.getInnovator();
+	List<string> expressionDefinitionDictionaryItemRelationshipTypeNames = GetExpressionDefinitionDictionaryItemRelationshipTypeNames(innovator);
+
+	if (!expressionDefinitionDictionaryItemRelationshipTypeNames.Any())
+	{
+		return this;
+	}
+
+	string featureId = this.getProperty("source_id");
+	string optionId = this.getProperty("related_id");
+	string optionKeyedName = this.getPropertyAttribute("related_id", "keyed_name");
+
+	if (string.IsNullOrEmpty(featureId) || string.IsNullOrEmpty(optionId) || string.IsNullOrEmpty(optionKeyedName))
+	{
+		Item missingPropertyItem = this.newItem(this.getType(), "get");
+		missingPropertyItem.setAttribute("id", this.getID());
+		missingPropertyItem.setAttribute("select", "source_id,related_id(id)");
+		missingPropertyItem = missingPropertyItem.apply();
+		if (missingPropertyItem.isError())
+		{
+			return missingPropertyItem;
+		}
+
+		featureId = missingPropertyItem.getProperty("source_id");
+		optionId = missingPropertyItem.getProperty("related_id");
+		optionKeyedName = missingPropertyItem.getPropertyAttribute("related_id", "keyed_name");
+	}
+
+	Item expressionDefinitionsWithFeatureOptionPair = GetExpressionDefinitionWithFeatureOptionPairCandidates(
+		expressionDefinitionDictionaryItemRelationshipTypeNames,
+		innovator,
+		featureId,
+		optionId);
+
+	if (expressionDefinitionsWithFeatureOptionPair.isError())
+	{
+		if (string.Equals(expressionDefinitionsWithFeatureOptionPair.getErrorCode(), "0", StringComparison.Ordinal))
+		{
+			return this;
+		}
+
+		return expressionDefinitionsWithFeatureOptionPair;
+	}
+
+	if (IsFeatureOptionPairIncludedInDefinitions(expressionDefinitionsWithFeatureOptionPair, featureId, optionId))
+	{
+		Aras.Server.Core.ErrorLookup errorLookup = CCO.ErrorLookup;
+		return innovator.newError(errorLookup.Lookup("vm_CantDeleteUsedInExpressionFeatureOptionPair", optionKeyedName));
+	}
+
+	return this;
+}
+
+private List<string> GetExpressionDefinitionDictionaryItemRelationshipTypeNames(Innovator innovator)
+{
+	List<string> expressionDefinitionDictionaryItemRelationshipTypeNames = new List<string>();
+	string expressionDefinitionDictionaryItemRelationshipTypesAml = @"
+		<AML>
+			<Item type=""RelationshipType"" action=""get"" select=""name"">
+				<related_id>
+					<Item type=""ItemType"" action=""get"">
+						<name>vm_DictionaryItem</name>
+					</Item>
+				</related_id>
+				<source_id condition=""in"" by=""related_id"">
+					<Item type=""Morphae"">
+						<source_id>
+							<Item type=""ItemType"">
+								<name>vm_ExpressionDefinition</name>
+							</Item>
+						</source_id>
+					</Item>
+				</source_id>
+			</Item>
+		</AML>";
+
+	Item expressionDefinitionDictionaryItemRelationshipTypes = innovator.applyAML(expressionDefinitionDictionaryItemRelationshipTypesAml);
+
+	if (expressionDefinitionDictionaryItemRelationshipTypes.isError())
+	{
+		if (string.Equals(expressionDefinitionDictionaryItemRelationshipTypes.getErrorCode(), "0", StringComparison.Ordinal))
+		{
+			return expressionDefinitionDictionaryItemRelationshipTypeNames;
+		}
+
+		throw new Aras.Server.Core.InnovatorServerException(expressionDefinitionDictionaryItemRelationshipTypes.dom);
+	}
+
+	int expressionDefinitionDictionaryItemRelationshipTypeCount = expressionDefinitionDictionaryItemRelationshipTypes.getItemCount();
+
+	for (int i = 0; i < expressionDefinitionDictionaryItemRelationshipTypeCount; i++)
+	{
+		Item expressionDefinitionDictionaryItemRelationshipType = expressionDefinitionDictionaryItemRelationshipTypes.getItemByIndex(i);
+		expressionDefinitionDictionaryItemRelationshipTypeNames.Add(expressionDefinitionDictionaryItemRelationshipType.getProperty("name"));
+	}
+
+	return expressionDefinitionDictionaryItemRelationshipTypeNames;
+}
+
+private Item GetExpressionDefinitionWithFeatureOptionPairCandidates(
+	List<string> expressionDefinitionDictionaryItemRelationshipTypeNames,
+	Innovator innovator,
+	string featureId,
+	string optionId)
+{
+	StringBuilder aml = new StringBuilder(@"<AML>
+		<Item type=""vm_ExpressionDefinition"" action=""get"" select=""definition"">
+			<or>");
+
+	expressionDefinitionDictionaryItemRelationshipTypeNames.ForEach(expressionDefinitionDictionaryItemRelationshipTypeName =>
+		aml.AppendFormat(
+			@"<and>
+				<Relationships>
+					<Item type=""{0}"" action=""get"" select=""id"">
+						<related_id>{1}</related_id>
+					</Item>
+				</Relationships>
+				<Relationships>
+					<Item type=""{0}"" action=""get"" select=""id"">
+						<related_id>{2}</related_id>
+					</Item>
+				</Relationships>
+			</and>",
+			System.Security.SecurityElement.Escape(expressionDefinitionDictionaryItemRelationshipTypeName),
+			System.Security.SecurityElement.Escape(featureId),
+			System.Security.SecurityElement.Escape(optionId)
+		)
+	);
+
+	aml.Append(@"</or>
+			</Item>
+		</AML>");
+
+	return innovator.applyAML(aml.ToString());
+}
+
+private bool IsFeatureOptionPairIncludedInDefinitions(
+	Item expressionDefinitionsWithFeatureOptionPair,
+	string featureId,
+	string optionId)
+{
+	int expressionDefinitionWithFeatureOptionPairCount = expressionDefinitionsWithFeatureOptionPair.getItemCount();
+	for (int i = 0; i < expressionDefinitionWithFeatureOptionPairCount; i++)
+	{
+		Item expressionDefinitionWithFeatureOptionPair = expressionDefinitionsWithFeatureOptionPair.getItemByIndex(i);
+		System.Xml.Linq.XElement definitionElement = System.Xml.Linq.XElement.Parse(expressionDefinitionWithFeatureOptionPair.getProperty("definition"));
+		System.Xml.Linq.XElement eqNodeWithFeatureOptionPair = definitionElement.Descendants("EQ").FirstOrDefault(eqElement =>
+			string.Equals(eqElement.Element("variable").Attribute("id").Value, featureId, StringComparison.Ordinal) &&
+				string.Equals(eqElement.Element("named-constant").Attribute("id").Value, optionId, StringComparison.Ordinal));
+
+		if (eqNodeWithFeatureOptionPair != null)
+		{
+			return true;
+		}
+	}
+
+	return false;]]></method_code>
+  <method_type>C#</method_type>
+  <name>vm_preventFeatureOptionRelsDelt</name>
+ </Item>
+</AML>

@@ -1,0 +1,167 @@
+﻿<AML>
+ <Item type="Method" id="973238F7D2684CD6AF2C46811F91E64F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var maxPhases = 12;
+
+function sortItems(parentNode)
+{
+	var relationshipsNode = parentNode.selectSingleNode("Relationships");
+	if (relationshipsNode)
+	{
+		var nextItem = parentNode.selectSingleNode("Relationships/Item[not(@action='delete')]/related_id/Item[not(prev_item) or prev_item='']");
+		var beforeRel = relationshipsNode.firstChild;
+		while (nextItem)
+		{
+			var nextRel = nextItem.parentNode.parentNode;
+			if (nextItem.getAttribute("type") == "WBS Element")
+			{
+				sortItems(nextItem);
+			}
+
+			prevRel = relationshipsNode.insertBefore(nextRel, beforeRel);
+			beforeRel = prevRel.nextSibling;
+			prevItem = prevRel.selectSingleNode("related_id/Item");
+			prevId = prevItem.getAttribute("id");
+			nextItem = parentNode.selectSingleNode("Relationships/Item/related_id/Item[prev_item='" + prevId + "']");
+		}
+	}
+}
+
+
+function initDashboard()
+{
+	var proj = document.item;
+	if (!proj)
+	{
+		return;
+	}
+
+	var wbs = proj.selectSingleNode("wbs_id/Item");
+	if (!wbs)
+	{
+		var wbsId = top.aras.getItemProperty(proj, "wbs_id");
+		if (wbsId === "")
+		{
+			hideAllPhases();
+			return;
+		}
+		var xmldoc = top.aras.createXMLDocument();
+		var queryfile = top.aras.getScriptsURL() + "../Solutions/Project/xml/queryPhases.xml";
+		xmldoc.load(queryfile);
+		var qry = new top.Item();
+		qry.loadAML(xmldoc.xml);
+		qry.setID(wbsId);
+		var results = qry.apply();
+		if (!results.isError())
+		{
+			wbs = results.getItemByIndex(0).node;
+		}
+
+		if (!wbs)
+		{
+			top.aras.AlertError(top.aras.getResource("project", "pr_methods.cannot_get_item_with_id", id));
+			return;
+		}
+	}
+	sortItems(wbs);
+	var allPhases = wbs.selectNodes("Relationships/Item[@type='Sub WBS']/related_id/Item[@type='WBS Element']");
+	if (allPhases.length > maxPhases)
+	{
+		hideAllPhases(wbs);
+	}
+	else
+	{
+		showPhases(proj, allPhases);
+	}
+}
+
+function hideAllPhases(wbs)
+{
+	var fieldNames = document.fieldsTab;
+	for (var fieldName in fieldNames)
+	{
+		var field = getFieldByName(fieldName);
+		if (!field)
+		{
+			continue;
+		}
+
+		if (fieldName == "rollup_percent_compl")
+		{
+			field.style.visibility = "visible";
+			continue;
+		}
+
+		if (fieldName.substr(0, 14) == "percent_compl_")
+		{
+			field.style.visibility = "hidden";
+		}
+	}
+
+
+	field = document.getElementsByTagName("input")["rollup_percent_compl"];
+	field.style.backgroundColor = top.aras.getItemProperty(wbs, "rollup_status");
+	field.value = wbs ? top.aras.getItemProperty(wbs, "rollup_percent_compl") : "";
+	field.readOnly = true;
+
+	return true;
+}
+
+function showPhases(proj, allPhases)
+{
+	var fieldNames = document.fieldsTab;
+	for (var fieldName in fieldNames)
+	{
+		var field = getFieldByName(fieldName);
+		if (!field)
+		{
+			continue;
+		}
+
+		if (fieldName == "rollup_percent_compl")
+		{
+			field.style.visibility = "hidden";
+			continue;
+		}
+
+		if (fieldName.substr(0, 14) == "percent_compl_")
+		{
+			field.style.visibility = "visible";
+			var num = parseInt(fieldName.substr(14));
+			if (isNaN(num))
+			{
+				continue;
+			}
+
+			var phase = allPhases[num - 1];
+			if (!phase)
+			{
+				field.style.visibility = "hidden";
+			}
+
+			field = document.getElementsByTagName("input")[fieldName];
+			field.style.backgroundColor = top.aras.getItemProperty(proj, "status_" + num);
+			field.value = top.aras.getItemProperty(proj, "percent_compl_" + num);
+			field.readOnly = true;
+		}
+	}
+	return true;
+}
+
+function updateStatus()
+{
+	var field = document.getElementById("project_state");
+	if (field)
+	{
+		var textPropName = top.aras.browserHelper.getTextContentPropertyName();
+		field[textPropName] = top.aras.getItemProperty(document.item, "state");
+	}
+}
+
+window.initDashboard = initDashboard;
+updateStatus();
+initDashboard();]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>projectFormOnload</name>
+ </Item>
+</AML>

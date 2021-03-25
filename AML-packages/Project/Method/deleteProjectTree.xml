@@ -1,0 +1,37 @@
+﻿<AML>
+ <Item type="Method" id="62CDB5A79BF5439685EDBE42C4FA7C60" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' name: deleteProjectTree
+' purpose: APQP. Delete project tree.
+' created: 8-JUL-2005 Yuri Delyamba
+' (c) Copyright by Aras Corporation, 2005-2007.
+Dim thisType As String = Me.GetType() 'Project or Project Template supposed
+Dim projectId As String = Me.getID()
+Dim wbsID As String = Me.getProperty("wbs_id")
+
+Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+
+If String.IsNullOrEmpty(wbsID) Then
+	Dim itm As Item = Me.newItem(thisType, "get")
+	itm.setAttribute("select", "wbs_id")
+	itm.setID(projectId)
+	itm = itm.apply()
+	If itm.isError() Then Return itm
+
+	wbsID = itm.getProperty("wbs_id")
+End If
+
+Me.setProperty("wbs_id", wbsID)
+'inDom.LoadXml(String.Format("<Item type='{0}' id='{1}' doGetItem='0'><wbs_id>{2}</wbs_id></Item>", thisType, projectId, wbsID))
+
+'If IsNothing(wbsID) Or wbsID = "" Then
+'	CCO.XML.SetErrorMessage(outDom, 3, "Can not remove root element:'" & wbsID & "' from project:'" & projectId & "'", _
+'	   "deleteProjectTree:MethodMainSubroutine:" & CCO.XML.GetFaultDetails(outDom) & " - " & CCO.XML.GetFaultString(outDom))
+'	Exit Function
+'End If
+
+Return Me]]></method_code>
+  <method_type>VB</method_type>
+  <name>deleteProjectTree</name>
+ </Item>
+</AML>

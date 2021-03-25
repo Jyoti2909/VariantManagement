@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Introduction","type":"item","url":"SimplifiedChangeManagement/Introduction.htm"},{"name":"The ECO","type":"book","key":"toc11"},{"name":"The MCO","type":"book","key":"toc12"},{"name":"The DCO","type":"book","key":"toc13"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

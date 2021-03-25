@@ -1,0 +1,149 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Item type="Method" id="0C6271014A7F42BC9D60E864C5E737B3" action="add">
+  <name>Run Report</name>
+  <method_type>VBScript</method_type>
+
+  <method_code><![CDATA['version:0
+Sub Main(inDom, outDom)
+  Const ScriptName = "Run Report"
+  
+  Dim ClientRequest: Set ClientRequest = GetRequestItem(inDom)
+  If ClientRequest is Nothing Then
+    SetErrorMessage outDom, 1, ScriptName & " failed: invalid request"
+    Exit Sub
+  End If
+  
+  Dim report_name: report_name = GetItemProperty(ClientRequest, "report_name")
+  If IsEmpty(report_name) Or IsNull(report_name) Then report_name = ""
+  If report_name = "" Then
+    SetErrorMessage outDom, 2, ScriptName & " failed: invalid Report name"
+    Exit Sub
+  End If
+  
+  Dim RequestItem: Set RequestItem = ClientRequest.selectSingleNode("AML/Item")
+  Dim ReportRequest
+  
+  Dim tmpDom: Set tmpDom = CreateXMLDocument()
+  tmpDom.loadXML "<Item type=""Report"" />"
+  Set ReportRequest = tmpDom.documentElement
+  SetItemProperty ReportRequest, "name", report_name
+  
+  GetItem tmpDom, outDom
+  
+  If HasFault(outDom, False) Then
+    SetErrorMessage outDom, 3, ScriptName & " failed to get Report """ & report_name & """"
+    Exit Sub
+  End If
+  
+  Set Report = GetResponseItem(outDom)
+  Dim report_type: report_type = GetItemProperty(Report, "type")
+  
+  If report_type <> "generic" Then
+    Dim RequestItemTypeID: RequestItemTypeID = RequestItem.getAttribute("typeId")
+    If IsNull(RequestItemTypeID) Then
+      SetErrorMessage outDom, 4, ScriptName & " failed: invalid typeId for request item"
+      Exit Sub
+    End If
+    tmpDom.loadXML _
+    "<Item type=""Item Report""><related_id><Item type=""Report""/></related_id></Item>"
+    SetItemProperty tmpDom.documentElement, "source_id", RequestItemTypeID
+    Set ReportRequest = tmpDom.selectSingleNode("/Item/related_id/Item")
+    SetItemProperty ReportRequest, "name", report_name
+    
+    GetItem tmpDom, outDom
+    
+    If HasFault(outDom, True) Then
+      SetErrorMessage outDom, 4, ScriptName & " failed to get Report """ & report_name & """(" & GetFaultDetails(outDom) & ")"
+      Exit Sub
+    ElseIf HasFault(outDom, False) Then
+      SetErrorMessage outDom, 5, ScriptName & " failed: Report """ & report_name & """ is not valid for the ItemType (" & RequestItemTypeID & ")"
+      Exit Sub
+    End If
+  End If
+  
+  Dim methodID: methodID = GetItemProperty(Report, "method")
+  
+  If RequestItem is Nothing Then
+    tmpDom.loadXML "<empty />"
+  Else
+    Set tmpDom.documentElement = RequestItem.cloneNode(True)
+  End If
+  
+  If IsEmpty(methodID) Then methodID = ""
+  If methodID <> "" Then
+    ExecuteMethodByID tmpDom, outDom, methodID, True, False
+    Exit Sub
+  End If
+  
+  Dim report_query: report_query = GetItemProperty(Report, "report_query")
+  Dim xsl_stylesheet: xsl_stylesheet = GetItemProperty(Report, "xsl_stylesheet")
+  If IsEmpty(report_query) Or IsNull(report_query) Then report_query = ""
+  If IsEmpty(xsl_stylesheet) Or IsNull(xsl_stylesheet) Then xsl_stylesheet = ""
+  
+  If report_query = "" Then
+    If report_type = "item" Then
+      report_query = "<Item typeId=""{@typeId}"" id=""{@id}"" action=""get"" levels=""1""/>"
+    ElseIf report_type = "itemtype" Then
+      report_query = "<Item typeId=""{@typeId}"" action=""get""/>"
+    ElseIf report_type = "generic" Then
+      If RequestItem is Nothing Then
+        SetErrorMessage outDom, 6, ScriptName & " failed: Request item is missed"
+        Exit Sub
+      End If
+    End If
+  End If
+  
+  Dim AML
+  If report_query <> "" Then
+    Dim xslt1: xslt1 = _
+    "<xsl:stylesheet xmlns:xsl=""http://www.w3.org/1999/XSL/Transform"" version=""1.0"">" &_
+    "<xsl:output method=""xml"" omit-xml-declaration=""yes"" standalone=""yes"" indent=""yes""/>" &_
+    "<xsl:template match=""/""><xsl:apply-templates/></xsl:template><xsl:template match=""Item"">" &_
+    report_query &_
+    "</xsl:template></xsl:stylesheet>"
+    
+    Dim xsltDom: Set xsltDom = CreateXMLDocument()
+    xsltDom.loadXML xslt1
+
+    AML = tmpDom.transformNode(xsltDom)
+    tmpDom.loadXML AML
+
+    Set xsltDom = Nothing
+  End If
+  
+  ApplyItem tmpDom, outDom
+  
+  If HasFault(outDom, True) Then
+    SetErrorMessage outDom, 7, ScriptName & " failed to ApplyItem (" & GetFaultDetails(outDom) & ")"
+    Exit Sub
+  ElseIf HasFault(outDom, False) Then
+    MakeBorders outDom
+  End If
+  
+  Dim ResultTag: Set ResultTag = outDom.selectSingleNode(parent.parent.aras.XPathResult())
+  If ResultTag.selectNodes("Item").length = 1 Then
+    Set outDom.documentElement = ResultTag.selectSingleNode("Item")
+  Else
+    Set outDom.documentElement = ResultTag
+  End If
+  
+  Dim ReportResult
+  If xsl_stylesheet <> "" Then
+    tmpDom.loadXML xsl_stylesheet
+    Dim node: Set node = tmpDom.selectSingleNode("//script[@userData='Tool Logic']")
+    If Not node is Nothing Then
+      node.parentNode.removeChild(node)
+    End If
+    ReportResult = outDom.transformNode(tmpDom)
+  Else
+    ReportResult = outDom.xml
+  End If
+  
+  MakeBorders outDom
+  SetResult outDom, ReportResult
+End Sub
+
+Main inDom, outDom
+]]></method_code>
+
+</Item>

@@ -1,0 +1,149 @@
+﻿<AML>
+ <Item type="Method" id="6787B421E55040648A234B75FBD622BC" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+string itemTypeName = this.getAttribute("type");
+string itemId = this.getID();
+
+Item item = this.newItem(itemTypeName, "get");
+item.setID(itemId);
+item.setAttribute("select", "id, config_id, classification");
+item = item.apply();
+if (item.isError())
+{
+	return item;
+}
+string itemTypeId = item.getAttribute("typeId");
+string itemConfigId = item.getProperty("config_id");
+string itemClassification = item.getProperty("classification");
+
+Item df = this.newItem("DiscussionDefinition", "get");
+df.setProperty("item_type_name", itemTypeName);
+df.setProperty("item_config_id", itemConfigId);
+df = df.apply();
+if (!df.isError()) {
+	return df;
+}
+
+Item disacussionTemplate = this.newItem("DiscussionTemplate", "get");
+disacussionTemplate.setProperty("source_id", itemTypeId);
+disacussionTemplate.setAttribute("levels", "2");
+disacussionTemplate.setAttribute("orderBy", "class_path desc");
+disacussionTemplate.setAttribute("maxRecords", "1");
+Item orItem = disacussionTemplate.newOR();
+orItem.setProperty("class_path", "null");
+orItem.setPropertyCondition("class_path", "is");
+
+var classificationForReq = new List<string>();
+if (!string.IsNullOrEmpty(itemClassification))
+{
+	string[] classArray = itemClassification.Split('/');
+	var count = 0;
+	foreach (var cls in classArray)
+	{
+		if (classificationForReq.Any())
+		{
+			classificationForReq.Add(classificationForReq[count - 1] + "/" + cls);
+		}
+		else
+		{
+			classificationForReq.Add(cls);
+		}
+		orItem.setProperty("class_path", classificationForReq[count]);
+		count += 1;
+	}
+}
+
+disacussionTemplate = disacussionTemplate.apply();
+if (disacussionTemplate.isError())
+{
+	return inn.newError(disacussionTemplate.getErrorString());
+}
+
+Item feedTemplates = disacussionTemplate.getItemsByXPath("Relationships/Item[@type='FeedTemplate']");
+
+df = this.newItem("DiscussionDefinition", "add");
+df.setProperty("template_id", disacussionTemplate.getID());
+df.setProperty("item_type_name", itemTypeName);
+df.setProperty("item_config_id", itemConfigId);
+df.setProperty("file_selection_depth", disacussionTemplate.getProperty("file_selection_depth"));
+df.setProperty("item_selection_depth", disacussionTemplate.getProperty("item_selection_depth"));
+
+string defaultVisibilityIdentity = disacussionTemplate.getProperty("default_visibility_identity");
+if(!String.IsNullOrEmpty(defaultVisibilityIdentity))
+{
+    df.setProperty("default_visibility_identity", defaultVisibilityIdentity);
+}
+
+Item feed, feedTemplate, fileSelector, fileSelectorTemplate;
+for (int i = 0; i < feedTemplates.getItemCount(); i++)
+{
+	feedTemplate = feedTemplates.getItemByIndex(i);
+	feed = this.newItem("Feed", "add");
+	feed.setProperty("feed_type", feedTemplate.getProperty("feed_type"));
+	feed.setProperty("reference", feedTemplate.getProperty("reference"));
+	feed.setProperty("history_events", feedTemplate.getProperty("history_events"));
+	feed.setProperty("polysource_type_name", feedTemplate.getProperty("polysource_type_name"));
+	Item fileSelectorTemplates = feedTemplate.getItemsByXPath("Relationships/Item[@type='FileSelectorTemplate']");
+	for (int j = 0; j < fileSelectorTemplates.getItemCount(); j++)
+	{
+		fileSelectorTemplate = fileSelectorTemplates.getItemByIndex(j);
+		fileSelector = this.newItem("FileSelector", "add");
+		fileSelector.setProperty("filter", fileSelectorTemplate.getProperty("filter"));
+		fileSelector.setProperty("reference", fileSelectorTemplate.getProperty("reference"));
+		fileSelector.setProperty("tooltip_template", fileSelectorTemplate.getProperty("tooltip_template"));
+		feed.addRelationship(fileSelector);
+	}
+	df.addRelationship(feed);
+}
+
+Item disacussionTemplates = disacussionTemplate.getItemsByXPath("Relationships/Item[@type='DiscussionTemplateView']");
+
+for (int i = 0; i < disacussionTemplates.getItemCount(); i++)
+{
+	disacussionTemplate = disacussionTemplates.getItemByIndex(i);
+	var dtRelatedItem = disacussionTemplate.getRelatedItem();
+	Item relatedItem = PrepareItem("SSVCPresentationConfiguration", dtRelatedItem,
+		new string[] {"permission_id", "discussion_panel_behavior", "form_tooltip_template", "major_rev", "style"});
+	relatedItem.setProperty("name", relatedItem.getID());
+
+	var smId = dtRelatedItem.getProperty("sm_template");
+	var smvtItem = this.newItem("SecureMessageViewTemplate", "get");
+	smvtItem.setID(smId);
+	smvtItem.setAttribute("select", "major_rev, permission_id, style, template, css, thumbnail_tooltip_template");
+	smvtItem = smvtItem.apply();
+	if (smvtItem.isError())
+	{
+		return inn.newError(smvtItem.getErrorString());
+	}
+
+	relatedItem.setPropertyItem("sm_template", PrepareItem("SecureMessageViewTemplate", smvtItem,
+		new string[] {"major_rev", "permission_id", "style", "template", "css", "thumbnail_tooltip_template"}));
+
+	Item discussionDefinitionView = this.newItem("DiscussionDefinitionView", "add");
+	discussionDefinitionView.setRelatedItem(relatedItem);
+	df.addRelationship(discussionDefinitionView);
+}
+
+df = df.apply();
+if (df.isError())
+{
+	return inn.newError(df.getErrorString());
+}
+
+return df;
+}
+
+private Item PrepareItem(string itemName, Item source, string[] propsArray)
+{
+	Item destItem = this.newItem(itemName, "add");
+	foreach (var prop in propsArray)
+	{
+		destItem.setProperty(prop, source.getProperty(prop));
+	}
+	destItem.setID(this.getNewID());
+	return destItem;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_GetDiscussionDefinition</name>
+ </Item>
+</AML>

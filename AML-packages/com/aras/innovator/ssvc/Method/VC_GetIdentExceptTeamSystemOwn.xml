@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="09501103BCFA4C91BE3417D88EA7B72E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var userId = CCO.Variables.GetUserID();
+var worldIdentityId = Aras.Server.Security.Identity.GetByName("World").Id;
+var userIdentity = newItem("User", "VC_GetUserIsAliasIdentity");
+userIdentity.setID(userId);
+userIdentity = userIdentity.apply();
+if (userIdentity.isError())
+{
+	return userIdentity;
+}
+
+var idenities = newItem("Identity", "get");
+idenities.setAttribute("orderBy", "name");
+idenities.setAttribute("select", "name, id");
+var not = idenities.newNOT();
+var notOr = not.newOR();
+notOr.setProperty("id", worldIdentityId);
+notOr.setProperty("id", userIdentity.getID());
+var or = idenities.newOR();
+or.setPropertyCondition("classification", "is null");
+var secondOr = or.newOR();
+var secondNot = secondOr.newNOT();
+secondNot.setProperty("classification", "'System','Team'");
+secondNot.setPropertyCondition("classification", "in");
+
+return idenities.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_GetIdentExceptTeamSystemOwn</name>
+ </Item>
+</AML>

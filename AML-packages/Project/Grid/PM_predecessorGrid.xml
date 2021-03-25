@@ -1,0 +1,48 @@
+﻿<AML>
+ <Item type="Grid" id="2B7349E1842542BE87496FE4B6B780AC" action="add">
+  <merge_path>Relationships</merge_path>
+  <method keyed_name="PM_predecessorCGOnload" type="Method">59C89BDDF1304645A34B134449377E6C</method>
+  <query><![CDATA[<Item type="Predecessor" action="GetItemConfig" select="sort_order,precedence_type,lead_lag,related_id">
+  <source_id>{id}</source_id>
+</Item>]]></query>
+  <name>PM_predecessorGrid</name>
+  <Relationships>
+   <Item type="Grid Column" id="95E4A5BF79DD4186903DFDFA22CC2037" action="add">
+    <align>left</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Type</label>
+    <property>precedence_type</property>
+    <sort_order>100</sort_order>
+    <source_id keyed_name="PM_predecessorGrid" type="Grid">2B7349E1842542BE87496FE4B6B780AC</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>100</width>
+    <xpath>self::Item[@type="Predecessor"]</xpath>
+   </Item>
+   <Item type="Grid Column" id="893D6C886A424B1182817089394DF3F7" action="add">
+    <align>center</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Lead/Lag</label>
+    <property>lead_lag</property>
+    <sort_order>200</sort_order>
+    <source_id keyed_name="PM_predecessorGrid" type="Grid">2B7349E1842542BE87496FE4B6B780AC</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>60</width>
+    <xpath>self::Item[@type="Predecessor"]</xpath>
+   </Item>
+   <Item type="Grid Column" id="9EA4D0EC596C48F2BB88A6F2D6161CF2" action="add">
+    <align>left</align>
+    <datatype>federated</datatype>
+    <label xml:lang="en">Activity Name</label>
+    <property>fake_related_name</property>
+    <sort_order>300</sort_order>
+    <source_id keyed_name="PM_predecessorGrid" type="Grid">2B7349E1842542BE87496FE4B6B780AC</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>100</width>
+    <xpath>self::Item[@type="Predecessor"]</xpath>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

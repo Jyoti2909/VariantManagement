@@ -1,0 +1,288 @@
+@import '../mixins/icons';
+
+@arrow-size: 0.42rem;
+@arrow-border-size: 1px;
+@nav-item-height: 2.667rem;
+@nav-img-size: 2rem;
+@nav-icon-size: 1.334rem;
+@margin-size: 2px;
+@padding-size: 12px;
+@button-size: 9px;
+
+@keyframes bgFadeIn {
+	0% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+.highlight(@highlightColor: @color-2) {
+	position: absolute;
+	left: 0;
+	height: @nav-item-height;
+	width: 100%;
+	z-index: -1;
+	background-color: @highlightColor;
+	content: '';
+	animation: 250ms bgFadeIn;
+}
+
+.arrow() {
+	content: '';
+	position: relative;
+	display: inline-block;
+	width: @arrow-size;
+	height: @arrow-size;
+	border-top: @arrow-border-size solid @neutral-3;
+	border-right: @arrow-border-size solid @neutral-3;
+	transform: rotate(45deg);
+}
+
+aras-nav {
+	display: block;
+}
+
+.aras-nav {
+	position: relative;
+	padding: 0;
+	margin: 0;
+
+	span,
+	img {
+		max-height: @nav-item-height;
+		user-select: none;
+	}
+
+	span {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		font-size: 1rem;
+		align-self: center;
+	}
+
+	img,
+	svg {
+		height: @nav-img-size;
+		width: @nav-img-size;
+		user-select: none;
+		margin-right: 6px;
+		align-self: center;
+		flex-shrink: 0;
+	}
+
+	&__parent,
+	&__child {
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		list-style-type: none;
+		cursor: default;
+		line-height: @nav-item-height;
+		color: @neutral-3;
+	}
+
+	&__child {
+		height: @nav-item-height;
+		display: flex;
+
+		& > .aras-nav__label {
+			font-size: 1.167rem;
+		}
+
+		&:hover::after {
+			.highlight;
+		}
+		&_selected::after {
+			.highlight(@color-4);
+		}
+	}
+
+	& .aras-nav__parent {
+		padding: 0;
+		padding-left: @padding-size;
+
+		& > ul {
+			display: none;
+			transition: height 250ms;
+			padding-left: 1.5rem;
+			overflow: hidden;
+			height: 0;
+		}
+
+		& > div {
+			overflow: hidden;
+			height: @nav-item-height;
+			line-height: @nav-item-height;
+			font-size: 0;
+			display: flex;
+			&:hover::after {
+				.highlight;
+			}
+			& > .aras-nav__icon > span:first-child {
+				.arrow;
+				margin-right: @margin-size;
+			}
+		}
+
+		&_expanded {
+			background-color: transparent; // Special for MS Edge 16. It forces the correct .clientHeight value to be returned when node expanded in the nav componet.
+			& > ul {
+				display: block;
+				height: auto;
+				overflow: visible;
+			}
+
+			& > div > .aras-nav__icon > span:first-child {
+				transform: rotate(135deg);
+				margin-right: 0;
+				margin-bottom: @margin-size;
+			}
+		}
+		.aras-nav__icon {
+			width: @nav-icon-size;
+			height: @nav-icon-size;
+			line-height: @nav-icon-size;
+			margin-right: 2px;
+			display: inline-flex;
+			flex-shrink: 0;
+			align-items: center;
+			justify-content: center;
+			position: relative;
+			font-size: 1rem;
+			align-self: center;
+		}
+	}
+
+	&__tree-levelpad {
+		height: 100%;
+		position: relative;
+	}
+
+	&__parent_selected > div::after {
+		.highlight(@color-4);
+	}
+
+	&_tree {
+		& > .aras-nav__child:first-child {
+			& > .aras-nav__label:not(.aras-nav__tree-levelpad) {
+				margin-left: 5px;
+			}
+
+			& .aras-nav__tree-levelpad:before {
+				content: none;
+			}
+		}
+
+		& .aras-nav__child,
+		& .aras-nav__parent > div {
+			display: flex;
+			align-items: flex-start;
+			padding-left: 0;
+		}
+
+		.aras-nav__parent {
+			& > ul {
+				padding-left: 1rem;
+			}
+			&:last-child > div > .aras-nav__icon:before {
+				height: 50%;
+			}
+
+			& > div > .aras-nav__icon > span:first-child {
+				width: @button-size;
+				height: @button-size;
+				cursor: pointer;
+				background-color: white;
+				z-index: 1;
+				.plusIcon();
+				transform: rotate(90deg);
+				margin-right: 3px;
+				margin-bottom: 3px;
+			}
+
+			&_expanded {
+				& > div > .aras-nav__icon > span:first-child {
+					.minusIcon();
+					&::before {
+						content: none;
+					}
+				}
+
+				&:not(:last-child) {
+					& > ul {
+						border-left: 1px dotted #9c9c9c;
+						padding: 0;
+						padding-left: 6px;
+						margin-left: 6px;
+					}
+				}
+			}
+
+			.aras-nav__icon {
+				height: 100%;
+				margin-top: 0;
+				margin-right: 6px;
+				&:before,
+				&:after {
+					content: '';
+					display: block;
+					position: absolute;
+					top: 0;
+					left: 1px;
+					width: 5px;
+					height: 100%;
+					border-right: 1px dotted #9c9c9c;
+				}
+				&:after {
+					top: 1px;
+					left: auto;
+					right: -5px;
+					width: 50%;
+					height: calc(50% - 2px);
+					border-bottom: 1px dotted #9c9c9c;
+					border-right: none;
+				}
+			}
+		}
+
+		& .aras-nav__tree-levelpad {
+			width: 16px;
+			margin-left: 18px;
+			&:before,
+			&:after {
+				content: '';
+				position: absolute;
+				background-image: radial-gradient(
+					circle at 0 0,
+					#9c9c9c 1px,
+					transparent 1px,
+					transparent 100%
+				);
+				background-size: 2px 2px;
+				left: 0;
+				height: 100%;
+				top: 0;
+				width: 1px;
+			}
+			&:after {
+				height: 1px;
+				top: 50%;
+				width: 18px;
+			}
+		}
+		& .aras-nav__child:last-child > .aras-nav__tree-levelpad:before {
+			height: 50%;
+		}
+		& > .aras-nav__parent:first-child {
+			& > div > .aras-nav__icon:before {
+				height: 0;
+			}
+			&:not(:last-child) > div > .aras-nav__icon:before {
+				height: 50%;
+				top: 50%;
+			}
+		}
+	}
+}

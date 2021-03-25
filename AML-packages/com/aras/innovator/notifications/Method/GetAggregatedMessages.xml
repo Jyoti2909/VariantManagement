@@ -1,0 +1,70 @@
+﻿<AML>
+ <Item type="Method" id="D733769DC0BE42A5AB57D0B327F069B7" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[// return Message Notifications for user
+
+string userId = this.getProperty("user_id");
+string expirationDate = this.getProperty("expiration_date");
+
+Aras.Server.Core.InnovatorDatabase conn = CCO.DB.InnDatabase;
+string listOfUserIdentities = Aras.Server.Security.Permissions.GetIdentitiesList(conn, userId);
+
+// this aml was copy from old realization of Notification Messages
+
+string aml = @"<Item type='Message' action='get'>
+          <OR>
+            <Relationships>
+              <Item type='Message Acknowledgement' action='get' select='id,related_id'>
+                <related_id>
+                  <Item type='User' action='get' select='id,keyed_name'>
+                    <NOT>
+                      <id condition='eq'>{0}</id>
+                    </NOT>
+                  </Item>
+                </related_id>
+
+                <NOT>
+                  <source_id>
+                    <Item type='Message' action='get'>
+                      <Relationships>
+                        <Item type='Message Acknowledgement' action='get' select='id,related_id'>
+                          <related_id>{0}</related_id>
+                        </Item>
+                      </Relationships>
+                    </Item>
+                  </source_id>
+                </NOT>
+              </Item>
+            </Relationships>
+
+            <NOT>
+              <Relationships>
+                <Item type='Message Acknowledgement' action='get'>
+                  <source_id condition='is not null'></source_id>
+                </Item>
+              </Relationships>
+            </NOT>
+          </OR>
+          <OR>
+            <expiration_date condition='gt'>{1}</expiration_date>
+            <expiration_date condition='is null'></expiration_date>
+          </OR>
+          <target>
+            <Item type='Identity'>
+              <id condition='in'>{2}</id> 
+            </Item>
+          </target>
+        </Item>";
+
+aml = string.Format(System.Globalization.CultureInfo.InvariantCulture, aml,
+	System.Security.SecurityElement.Escape(userId),
+	System.Security.SecurityElement.Escape(expirationDate),
+	System.Security.SecurityElement.Escape(listOfUserIdentities));
+		 
+var res = this.newItem();
+res.loadAML(aml);
+return res.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetAggregatedNotifications</name>
+ </Item>
+</AML>

@@ -1,0 +1,61 @@
+﻿<AML>
+ <Item type="Method" id="2E258A3DEBAF48D2863529771344EBC6" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[if (this.isCollection())
+{
+	for (int i = 0, count = this.getItemCount(); i < count; i++)
+	{
+		SetKeyedName(this.getItemByIndex(i));
+	}
+}
+else
+{
+	SetKeyedName(this);
+}
+return this;
+}
+
+private void SetKeyedName(Item item)
+{
+	string keyedName = item.getProperty("keyed_name", "");
+	System.Text.RegularExpressions.Regex rgx = new System.Text.RegularExpressions.Regex(@"^[0-9a-fA-F]{32}$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+	if (String.IsNullOrEmpty(keyedName) || rgx.IsMatch(keyedName))
+	{
+		string userId = item.getProperty("flagged_by_id", "");
+		// Attribute is_null="0" when current User doesn't have access to User referred by flagged_by_id.
+		// Attribute is_null="1" when property value isn't set.
+		bool isPropertyNotNullAndHasUserAccess = string.IsNullOrEmpty(item.getPropertyAttribute("flagged_by_id", "is_null"));
+		if (String.IsNullOrEmpty(userId) && isPropertyNotNullAndHasUserAccess)
+		{
+			userId = GetFlaggedByUserId(item.getID());
+		}
+
+		if (!String.IsNullOrEmpty(userId))
+		{
+			Item user = GetItem("User", userId);
+			keyedName = user.getProperty("keyed_name", "");
+			if (String.IsNullOrEmpty(keyedName) || rgx.IsMatch(keyedName))
+			{
+				keyedName = user.getProperty("login_name");
+			}
+		}
+
+		item.setProperty("keyed_name", keyedName);
+	}
+}
+
+private Item GetItem(string type, string id)
+{
+	Item itm = this.newItem(type, "get");
+	itm.setID(id);
+	return itm.apply();
+}
+
+private string GetFlaggedByUserId(string smFlaggedById)
+{
+	Item flaggedBy = GetItem("SecureMessageFlaggedBy", smFlaggedById);
+	return flaggedBy.getProperty("flagged_by_id");]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_FlaggedByKeyedName</name>
+ </Item>
+</AML>

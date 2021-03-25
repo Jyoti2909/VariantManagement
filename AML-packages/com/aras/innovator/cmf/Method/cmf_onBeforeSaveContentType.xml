@@ -1,0 +1,131 @@
+﻿<AML>
+ <Item type="Method" id="75A03BC1C42F49E88C955359B63A3877" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var dataAccessLayer = new DataAccessLayer(this);
+var businessLogic = new BusinessLogic(dataAccessLayer);
+return businessLogic.UpdateItem();
+}
+
+internal class BusinessLogic
+{
+	private IDataAccessLayer dataAccessLayer;
+
+	public BusinessLogic(IDataAccessLayer dataAccessLayer)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+	}
+
+	public Item UpdateItem()
+	{
+		Item currentItem = dataAccessLayer.GetCurrentItem();
+		var rels = currentItem.getRelationships();
+		for (var i = 0; i < rels.getItemCount(); i++)
+		{
+			var relItem = rels.getItemByIndex(i);
+			var action = relItem.getAction();
+			if (action == "delete" || action == "add")
+			{
+				continue;
+			}
+			var type = relItem.getType();
+			if (!String.IsNullOrEmpty(type))
+			{
+				switch (type)
+				{
+					case "cmf_ElementType":
+						break;
+					case "cmf_ContentTypeView":
+						CheckViewNodeOnUpdate(relItem);
+						break;
+					case "cmf_ContentTypeExportRel":
+						var exportElement = relItem.getRelatedItem();
+						if (exportElement != null)
+						{
+							if (exportElement.getAction() == "update")
+							{
+								exportElement.setAction("edit");
+							}
+						}
+						break;
+					default:
+						break;
+				}
+			}
+		}
+		return currentItem;
+	}
+
+	private void CheckViewNodeOnUpdate(Item viewNode)
+	{
+		var baseView = viewNode.getRelatedItem();
+		if (baseView != null)
+		{
+			var baseViewAction = baseView.getAttribute("action");
+			if (baseViewAction != null)
+			{
+				if (baseViewAction == "update")
+				{
+					baseView.setAttribute("action", "edit");
+				}
+			}
+		}
+		else {
+			return;
+		}
+		var viewElements = baseView.getRelationships();
+		for (var m = 0; m < viewElements.getItemCount(); m++)
+		{
+			var viewElement = viewElements.getItemByIndex(m);
+			if (viewElement.getAction() == "update")
+			{
+				viewElement.setAction("edit");
+			}
+			else {
+				var headerRow = viewElement.getRelatedItem();
+				if (headerRow != null && headerRow.getAction() != null && headerRow.getType() == "cmf_TabularViewHeaderRow")
+				{
+					if (viewElement.getAction() != "add")
+					{
+						viewElement.setAction("edit");
+					}
+					if (headerRow.getAction() == "update")
+					{
+						headerRow.setAction("edit");
+					}
+					var columnGroups = headerRow.getRelationships();
+					for (var i = 0; i < columnGroups.getItemCount(); i++)
+					{
+						var group = columnGroups.getItemByIndex(i);
+						if (group.getAction() == "update")
+						{
+							group.setAction("edit");
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+internal interface IDataAccessLayer
+{
+	Item GetCurrentItem();
+}
+
+internal class DataAccessLayer : IDataAccessLayer
+{
+	private Item _currentItem;
+	internal DataAccessLayer(Item currentItem)
+	{
+		_currentItem = currentItem;
+	}
+
+	public Item GetCurrentItem()
+	{
+		return _currentItem;
+	}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_onBeforeSaveContentType</name>
+ </Item>
+</AML>

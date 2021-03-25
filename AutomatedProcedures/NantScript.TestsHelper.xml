@@ -1,0 +1,237 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project name="TestsHelper">
+	<target name="Setup.IntegrationTests">
+		<property name="Path.IntegrationTests.App.Config" value="${path::combine(Path.To.This.Git.Repository, 'Tests\Output\IntegrationTests\IntegrationTests.dll.config ')}" />
+
+		<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Server}" xpath="/configuration/applicationSettings/Aras.IntegrationTests.Framework.Properties.Settings/setting[@name='sql_server']/value" />
+		<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${Url.Of.Installed.Innovator}" xpath="/configuration/applicationSettings/Aras.IntegrationTests.Framework.Properties.Settings/setting[@name='innovator_server_url']/value" />
+		<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.SA.User}" xpath="/configuration/applicationSettings/Aras.IntegrationTests.Framework.Properties.Settings/setting[@name='dba_user']/value" />
+		<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.SA.Password}" xpath="/configuration/applicationSettings/Aras.IntegrationTests.Framework.Properties.Settings/setting[@name='dba_pwd']/value" />
+		<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Database.Name}" xpath="/configuration/applicationSettings/Aras.IntegrationTests.Framework.Properties.Settings/setting[@name='database']/value" />
+		<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Database.Name}" xpath="/configuration/applicationSettings/Aras.IntegrationTests.Framework.Properties.Settings/setting[@name='database_name']/value" />
+
+		<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${path::combine(Path.To.Tests.Output, 'IntegrationTests')}" xpath="/configuration/applicationSettings/Aras.IntegrationTests.Framework.Properties.Settings/setting[@name='output_path']/value" />
+	</target>
+
+	<target name="Run.Pre.Build.Validations" depends="Initialize.Validate.Task" description="Runs validation tasks that should be called before the build">
+		<call target="Validate.Encoding.Of.Source.Code" />
+	</target>
+
+	<target name="Run.Client.Unit.Tests" depends="Run.Java.Script.Validation">
+		<property name="Path.To.Client.Tests.Dir" value="${path::combine(Path.To.This.Git.Repository, 'Tests\ClientTests')}" />
+		<property name="Client.Unit.Tests.Logs" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProceduresOutput\TestsOutput\ClientTests')}" />
+
+		<mkdir dir="${Client.Unit.Tests.Logs}" unless="${directory::exists(Client.Unit.Tests.Logs)}" />
+
+		<property name="Browsers.For.Client.Unit.Tests" value="Firefox,ChromeNoSandbox" />
+		<exec program="cmd.exe" workingdir="${Path.To.Node.Js.Root.Dir}" verbose="true">
+			<arg value="/C npm run test-ci -- --browsers ${Browsers.For.Client.Unit.Tests}" />
+		</exec>
+
+		<property name="Client.Unit.Tests.Logs.Coverage.Path" value="${Client.Unit.Tests.Logs}\CodeCoverage" />
+		<property name="Path.To.Client.Coverage.Dir" value="${path::combine(Path.To.Client.Tests.Dir, 'reporters\coverage')}" />
+		<mkdir dir="${Client.Unit.Tests.Logs.Coverage.Path}" unless="${directory::exists(Client.Unit.Tests.Logs.Coverage.Path)}" />
+		<move todir="${Client.Unit.Tests.Logs.Coverage.Path}" if="${directory::exists(Path.To.Client.Coverage.Dir)}">
+			<fileset basedir="${Path.To.Client.Coverage.Dir}">
+				<include name="**/*" />
+			</fileset>
+		</move>
+
+		<property name="Client.Unit.Tests.Logs.JUnit.Path" value="${Client.Unit.Tests.Logs}\TestResults" />
+		<property name="Path.To.Client.JUnit.Dir" value="${path::combine(Path.To.Client.Tests.Dir, 'reporters\junit')}" />
+		<mkdir dir="${Client.Unit.Tests.Logs.JUnit.Path}" unless="${directory::exists(Client.Unit.Tests.Logs.JUnit.Path)}" />
+		<move todir="${Client.Unit.Tests.Logs.JUnit.Path}" if="${directory::exists(Path.To.Client.JUnit.Dir)}">
+			<fileset basedir="${Path.To.Client.JUnit.Dir}">
+				<include name="**/*" />
+			</fileset>
+		</move>
+	</target>
+
+	<target name="RunUnitTests" depends="Build.Custom.Solutions" description="Run unit tests">
+		<property name="Nunit.Project.Run.Mode" value="CSharpMethods.UnitTests" />
+		<property name="NUnit.Console.Arguments" value="${Nunit.Project.Run.Mode}.nunit --config=${Nunit.Project.Run.Mode} --result=${Path.To.Tests.Output}\nunit.${Nunit.Project.Run.Mode}.results.xml;format=nunit2 --labels=All" />
+		<property name="Get.Code.Coverage" value="true" />
+		<call target="RunNUnit" />
+	</target>
+
+	<target name="RunIntegrationTests" depends="Build.Custom.Solutions Setup.IntegrationTests" description="Run integration tests">
+		<property name="Stop.Integration.Tests.On.Error" overwrite="false" value="false" />
+
+		<property name="Nunit.Project.Run.Mode" value="IntegrationTests" />
+		<property name="NUnit.Console.Arguments" value="${Nunit.Project.Run.Mode}.nunit --config=${Nunit.Project.Run.Mode} --result=${Path.To.Tests.Output}\nunit.${Nunit.Project.Run.Mode}.results.xml;format=nunit2 --labels=All" />
+		<property name="NUnit.Console.Arguments" value="${NUnit.Console.Arguments} --stoponerror" if="${Stop.Integration.Tests.On.Error}" />
+
+		<property name="NUnit.Console.Where.Clause.Argument" overwrite="false" value="" />
+		<if test="${not Nightly.Build and string::get-length(NUnit.Console.Where.Clause.Argument) == 0}">
+			<property name="NUnit.Console.Where.Clause.Argument" value="${string::replace(Excluded.Tests.Categories.For.Not.Nightly.Build, ',', ' &amp;&amp; cat != ')}" />
+			<property name="NUnit.Console.Where.Clause.Argument" value='--where "cat != ${NUnit.Console.Where.Clause.Argument}"' />
+		</if>
+		<property name="NUnit.Console.Arguments" value="${NUnit.Console.Arguments} ${NUnit.Console.Where.Clause.Argument}" />
+
+		<property name="Get.Code.Coverage" value="false" />
+		<call target="RunNUnit" />
+	</target>
+
+	<target name="RunTests" depends="Build.Custom.Solutions Setup.IntegrationTests" description="Run all unit and integration tests">
+		<call target="RunUnitTests" />
+		<call target="RunIntegrationTests" />
+	</target>
+
+	<target name="RunNUnit">
+		<xmlpeek file="${path::combine(Path.To.This.Git.Repository, 'Tests\.nuget\packages.config')}" property="NUnit.Version" xpath="/packages/package[@id='NUnit.ConsoleRunner']/@version" />
+		<property name="NUnit.Console" value="${Path.To.This.Git.Repository}\Tests\packages\NUnit.ConsoleRunner.${NUnit.Version}\tools\nunit3-console.exe" />
+		<xmlpeek file="${path::combine(Path.To.This.Git.Repository, 'Tests\.nuget\packages.config')}" property="OpenCover.Version" xpath="/packages/package[@id='OpenCover']/@version" />
+		<property name="OpenCover.Console" value="${Path.To.This.Git.Repository}\Tests\packages\OpenCover.${OpenCover.Version}\tools\OpenCover.Console.exe" />
+		<xmlpeek file="${path::combine(Path.To.This.Git.Repository, 'Tests\.nuget\packages.config')}" property="ReportGenerator.Version" xpath="/packages/package[@id='ReportGenerator']/@version" />
+		<property name="ReportGenerator" value="${Path.To.This.Git.Repository}\Tests\packages\ReportGenerator.${ReportGenerator.Version}\tools\ReportGenerator.exe" />
+
+		<choose>
+			<when test="${Get.Code.Coverage}">
+				<trycatch>
+					<try>
+						<exec program="cmd.exe" commandline='/C subst s: "${Path.To.This.Git.Repository}"' verbose='true' />
+
+						<exec program="${OpenCover.Console}" verbose="true" workingdir="${Path.To.This.Git.Repository}\Tests">
+							<arg value="-register" />
+							<arg value="-output:${Path.To.Tests.Output}\OpenCover.${Nunit.Project.Run.Mode}.results.xml" />
+							<arg value="-filter:+[PackageMethods.CSharpMethods]*" />
+							<arg value="-target:${NUnit.Console}" />
+							<arg value="-targetargs:${NUnit.Console.Arguments}" />
+							<arg value="-returntargetcode" />
+						</exec>
+
+						<exec program="${ReportGenerator}" verbose="true" workingdir="${Path.To.This.Git.Repository}\Tests">
+							<arg value="-reports:${Path.To.Tests.Output}\OpenCover.${Nunit.Project.Run.Mode}.results.xml" />
+							<arg value="-targetdir:${Path.To.Tests.Output}\UnitTestsCoverage" />
+							<arg value="-reporttypes:Html" />
+							<arg value="-verbosity:Warning" />
+						</exec>
+						<exec program="${ReportGenerator}" verbose="true" workingdir="${Path.To.This.Git.Repository}\Tests">
+							<arg value="-reports:${Path.To.Tests.Output}\OpenCover.${Nunit.Project.Run.Mode}.results.xml" />
+							<arg value="-targetdir:${Path.To.Tests.Output}\UnitTestsCoverageSummary" />
+							<arg value="-reporttypes:HtmlSummary" />
+							<arg value="-verbosity:Warning" />
+						</exec>
+					</try>
+					<finally>
+						<call target="Remove.Used.Substitutions" />
+					</finally>
+				</trycatch>
+			</when>
+			<otherwise>
+				<exec program="${NUnit.Console}"
+					  commandline="${NUnit.Console.Arguments}"
+					  verbose="true"
+					  workingdir="${Path.To.This.Git.Repository}\Tests"/>
+			</otherwise>
+		</choose>
+	</target>
+
+	<target name="Restore.Tests.Nuget.Packages">
+		<property name="Path.To.Tests.Nuget.Packages.Config" value="${path::combine(Path.To.This.Git.Repository, 'Tests\.nuget\packages.config')}" />
+		<property name="Path.To.Tests.Packages.Dir" value="${path::combine(Path.To.This.Git.Repository, 'Tests\packages')}" />
+		<exec program="${Path.To.Nuget}"
+			commandline='restore "${Path.To.Tests.Nuget.Packages.Config}" -PackagesDirectory "${Path.To.Tests.Packages.Dir}"'
+			workingdir="${Path.To.This.Git.Repository}"
+			failonerror="true" />
+	</target>
+
+	<target name="Run.Standard.Integration.Tests" depends="Restore.Tests.Nuget.Packages">
+		<choose>
+			<when test="${file::exists(Path.To.ATF.Zip)}">
+				<property name="Path.To.ATF.Dir" value="${path::combine(Path.To.Automated.Procedures.Output, 'atf')}" />
+
+				<exec program="${Path.To.SevenZip}" verbose="true">
+					<arg value="x" />
+					<arg value="${Path.To.ATF.Zip}" />
+					<arg value="-aoa" />
+					<arg value="-o${Path.To.ATF.Dir}" />
+				</exec>
+
+				<property name="Path.To.Standard.Tests.Zip" value="${path::combine(Path.To.ATF.Dir, Standart.Tests.Zip.Name)}" />
+				<property name="Path.To.Standard.Tests.Dir" value="${path::combine(Path.To.ATF.Dir, 'StandardTests')}" />
+				<exec program="${Path.To.SevenZip}" verbose="true">
+					<arg value="x" />
+					<arg value="${Path.To.Standard.Tests.Zip}" />
+					<arg value="-aoa" />
+					<arg value="-o${Path.To.Standard.Tests.Dir}" />
+				</exec>
+
+				<mkdir dir="${Path.To.Tests.Output}" />
+
+				<property name="Path.IntegrationTests.App.Config" value="${path::combine(Path.To.Standard.Tests.Dir, 'Output\IntegrationTests\Aras.IntegrationTests.dll.config')}" />
+
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Server}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='sql_server']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.SA.User}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='dba_user']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.SA.Password}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='dba_pwd']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Innovator.User}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='database_innovator_uid']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Innovator.Password}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='database_innovator_pwd']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Innovator.Regular.User}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='database_innovator_regular_uid']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Innovator.Regular.Password}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='database_innovator_regular_pwd']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="False" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='do_restore_db_after']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${Url.Of.Installed.Innovator}/Server/InnovatorServer.aspx" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='innovator_server_url']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${Url.Of.Installed.Innovator}/OAuthServer/" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='oauth_server_url']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${path::combine(Path.To.Tests.Output, 'IntegrationTests')}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='output_path']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${path::combine(Path.To.Installed.Innovator, 'ConversionServer')}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='path_to_conversion_server']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Database.Name}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='database']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${MSSQL.Database.Name}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='database_name']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='ReportingServices_ReportingService2005_Url']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${Agent.Service.Name}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='agent_service_name']/value" />
+
+				<xmlpeek file="${path::combine(Path.To.Installed.Innovator, 'AgentService/Aras.Server.Agent.Service.exe.config')}" property="Agent.Service.Url" xpath="/configuration/system.serviceModel/services/service[@name='Aras.Server.Agent.Service.InternalAgent']/host/baseAddresses/add/@baseAddress" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${Agent.Service.Url}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='agent_service_url']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${path::combine(Path.To.Installed.Innovator, 'AgentService')}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='path_to_agent_service']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${path::combine(Path.To.Installed.Innovator, 'Innovator')}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='path_to_innovator_server']/value" />
+
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${ArasEssentialsSubscription12}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='Aras_PremierSubscription']/value" />
+				<xmlpoke file="${Path.IntegrationTests.App.Config}" value="${ArasSelfServiceReporting12}" xpath="/configuration/applicationSettings/Aras.Tests.Integration.Properties.Settings/setting[@name='Aras_SelfServiceReporting']/value" />
+
+				<choose>
+					<when test="${Integration.Tests.Part == '1'}">
+						<property name="Nunit.Project.Where" value="test=~/(?i)Aras.Tests.Integration.A([a-b]|c([a-b]|c[a-e])).*/" />
+					</when>
+					<when test="${Integration.Tests.Part == '2'}">
+						<property name="Nunit.Project.Where" value="test=~/(?i)Aras.Tests.Integration.(A[^a-c]|Ac[^a-c]|Acc[^a-e]|B|C[a-n]|Co[a-m]|Con[a-u]).*/" />
+					</when>
+					<when test="${Integration.Tests.Part == '3'}">
+						<property name="Nunit.Project.Where" value="test=~/(?i)Aras.Tests.Integration.(Con[^a-u]|Co[^a-n]|C[^a-o]|D|E[a-m]).*/" />
+					</when>
+					<when test="${Integration.Tests.Part == '4'}">
+						<property name="Nunit.Project.Where" value="test=~/(?i)Aras.Tests.Integration.E[^a-m].*/" />
+					</when>
+					<when test="${Integration.Tests.Part == '5'}">
+						<property name="Nunit.Project.Where" value="test=~/(?i)Aras.Tests.Integration.([F-H]|I([a-n]|[0-9])).*/" />
+					</when>
+					<when test="${Integration.Tests.Part == '6'}">
+						<property name="Nunit.Project.Where" value="test=~/(?i)Aras.Tests.Integration.(I([^a-n][^0-9])|[L-R]|S[a-d]|Se[a-c]).*/" />
+					</when>
+					<when test="${Integration.Tests.Part == '7'}">
+						<property name="Nunit.Project.Where" value="test=~/(?i)Aras.Tests.Integration.(S[^a-e]|Se[^a-c]|T[a-i]).*/" />
+					</when>
+					<when test="${Integration.Tests.Part == '8'}">
+						<property name="Nunit.Project.Where" value="test!~/(?i)Aras.Tests.Integration.([A-S]|T[a-i]).*/" />
+					</when>
+				</choose>
+
+				<property name="Path.To.Innovator.Server.Config" value="${path::combine(Path.To.Installed.Innovator, 'InnovatorServerConfig.xml')}" />
+				<exec program="cmd" commandline='/C icacls "${Path.To.Innovator.Server.Config}" /t /grant "*S-1-5-11:M" &gt; nul' verbose="true" />
+
+				<servicecontroller action="Start" service="${Agent.Service.Name}" if="${service::is-installed(Agent.Service.Name, Agent.Service.Host.Name) and not service::is-running(Agent.Service.Name, Agent.Service.Host.Name)}" />
+
+				<trycatch>
+					<try>
+						<property name="NUnit.Console.Arguments" value='"${Path.To.Standard.Tests.Dir}\IntegrationTests.nunit" --where "${Nunit.Project.Where} and test !~ /MetadataCacheAsyncTest/ and test !~ /TestSecuredFunctionForTableItemType/" --framework="v4.0" --config="UnitIntegrationTests" --result="${Path.To.Tests.Output}\nunit.StandardIntegrationTests.results.xml" --labels=All' />
+						<property name="Get.Code.Coverage" value="false" />
+						<call target="RunNUnit" />
+					</try>
+					<finally>
+						<call target="Create.Log.Package.Zip" />
+					</finally>
+				</trycatch>
+			</when>
+			<otherwise>
+				<fail message="Property 'Path.To.ATF.Zip' must contain absolute path to ATF.zip" />
+			</otherwise>
+		</choose>
+	</target>
+</project>

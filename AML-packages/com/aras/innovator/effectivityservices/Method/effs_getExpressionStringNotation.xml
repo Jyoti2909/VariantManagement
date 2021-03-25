@@ -1,0 +1,145 @@
+﻿<AML>
+ <Item type="Method" id="765ACF276881472EA4C96AFC016C7688" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	int effectiveItemCount = this.getItemCount();
+
+	Stack<string> selectAttributesForEffectiveItems = (Stack<string>)RequestState["effs_stack_of_select_attributes_for_effective_items"];
+	string requestItemSelectAttribute = selectAttributesForEffectiveItems.Pop();
+	ItemPropertySelectionStatus expressionStringNotationPropertySelectionStatus = GetItemPropertySelectionStatus(
+		requestItemSelectAttribute, "eff_expression_string_notation");
+
+	if (effectiveItemCount == 0 || expressionStringNotationPropertySelectionStatus == ItemPropertySelectionStatus.NotSelected)
+	{
+		return this;
+	}
+
+	Dictionary<string, Item> effectiveItemsHashedById = new Dictionary<string, Item>();
+	for (int i = 0; i < effectiveItemCount; i++)
+	{
+		Item effectiveItem = this.getItemByIndex(i);
+		effectiveItemsHashedById.Add(effectiveItem.getID(), effectiveItem);
+	}
+
+	string effectiveItemTypeId = effectiveItemsHashedById.First().Value.getAttribute("typeId");
+	string effectivityExpressionItemTypeId = GetEffectivityExpressionItemTypeIdByEffectiveItemTypeId(effectiveItemTypeId);
+	if (string.IsNullOrEmpty(effectivityExpressionItemTypeId))
+	{
+		return this;
+	}
+
+	Dictionary<string, List<Item>> effectivityExpressionItemsHashedBySourceId =
+		GetEffectivityExpressionItemsFilteredBySourceId(effectivityExpressionItemTypeId, effectiveItemsHashedById.Keys);
+
+	foreach (KeyValuePair<string, Item> effectiveItem in effectiveItemsHashedById)
+	{
+		string effectiveItemSourceId = effectiveItem.Key;
+
+		IEnumerable<string> effectivityExpressionStringNotations = null;
+		List<Item> effectivityExpressionItemsOfSingleEffectiveItem;
+		if (effectivityExpressionItemsHashedBySourceId.TryGetValue(effectiveItemSourceId, out effectivityExpressionItemsOfSingleEffectiveItem))
+		{
+			effectivityExpressionStringNotations = effectivityExpressionItemsOfSingleEffectiveItem
+				.Select(effectivityExpressionItem => effectivityExpressionItem.getProperty("string_notation"));
+		}
+
+		string joinedEffectivityExpressionStringNotation = effectivityExpressionStringNotations != null
+			? JoinExpressionStringNotation(effectivityExpressionStringNotations)
+			: null;
+
+		if (joinedEffectivityExpressionStringNotation != null || expressionStringNotationPropertySelectionStatus == ItemPropertySelectionStatus.Selected)
+		{
+			effectiveItem.Value.setProperty("eff_expression_string_notation", joinedEffectivityExpressionStringNotation);
+		}
+	}
+
+	return this;
+}
+
+internal virtual string GetEffectivityExpressionItemTypeIdByEffectiveItemTypeId(string effectiveItemTypeId)
+{
+	Item lookupEffectiveItemTypeItem = this.newItem("effs_scope_itemtype", "get");
+	lookupEffectiveItemTypeItem.setAttribute("select", "effs_expression_itemtype_id");
+	lookupEffectiveItemTypeItem.setAttribute("maxRecords", "1");
+	lookupEffectiveItemTypeItem.setProperty("related_id", effectiveItemTypeId);
+	lookupEffectiveItemTypeItem = lookupEffectiveItemTypeItem.apply();
+
+	bool isEffectiveItemTypeNotFound = lookupEffectiveItemTypeItem.isEmpty();
+
+	if (!isEffectiveItemTypeNotFound && lookupEffectiveItemTypeItem.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(lookupEffectiveItemTypeItem.dom);
+	}
+
+	return isEffectiveItemTypeNotFound ? null : lookupEffectiveItemTypeItem.getProperty("effs_expression_itemtype_id");
+}
+
+internal virtual Dictionary<string, List<Item>> GetEffectivityExpressionItemsFilteredBySourceId(
+	string effectivityExpressionItemTypeId,
+	IEnumerable<string> effectivityExpressionItemSourceIds)
+{
+	Item effectivityExpressionItems = this.newItem();
+	effectivityExpressionItems.setAttribute("typeId", effectivityExpressionItemTypeId);
+	effectivityExpressionItems.setProperty("source_id", string.Join(",", effectivityExpressionItemSourceIds));
+	effectivityExpressionItems.setPropertyCondition("source_id", "in");
+	effectivityExpressionItems.setAttribute("select", "source_id,string_notation");
+	effectivityExpressionItems = effectivityExpressionItems.apply("get");
+
+	if (effectivityExpressionItems.isError() && !effectivityExpressionItems.isEmpty())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(effectivityExpressionItems.dom);
+	}
+
+	Dictionary<string, List<Item>> effectivityExpressionItemsHashedBySourceId = new Dictionary<string, List<Item>>();
+	for (int i = 0, effectivityExpressionItemCount = effectivityExpressionItems.getItemCount(); i < effectivityExpressionItemCount; i++)
+	{
+		Item effectivityExpressionItem = effectivityExpressionItems.getItemByIndex(i);
+		string effectivityExpressionItemSourceId = effectivityExpressionItem.getProperty("source_id");
+
+		List<Item> effectivityExpressionItemsOfSingleEffectiveItem;
+		if (!effectivityExpressionItemsHashedBySourceId.TryGetValue(effectivityExpressionItemSourceId, out effectivityExpressionItemsOfSingleEffectiveItem))
+		{
+			effectivityExpressionItemsOfSingleEffectiveItem = new List<Item>();
+			effectivityExpressionItemsHashedBySourceId.Add(effectivityExpressionItemSourceId, effectivityExpressionItemsOfSingleEffectiveItem);
+		}
+		effectivityExpressionItemsOfSingleEffectiveItem.Add(effectivityExpressionItem);
+	}
+
+	return effectivityExpressionItemsHashedBySourceId;
+}
+
+internal virtual string JoinExpressionStringNotation(IEnumerable<string> expressionStringNotations)
+{
+	//If there is more than one expression, than that means each expression should be put in parentheses and devided by comma,
+	//otherwise single expression string notation string is returned
+	if (!string.IsNullOrEmpty(expressionStringNotations.ElementAtOrDefault(1)))
+	{
+		expressionStringNotations = expressionStringNotations.Select(expressionStringNotation => "(" + expressionStringNotation + ")");
+	}
+	return string.Join(", ", expressionStringNotations);
+}
+
+internal virtual ItemPropertySelectionStatus GetItemPropertySelectionStatus(string selectAttributeValue, string propertyNameToVerify)
+{
+	if (string.IsNullOrWhiteSpace(selectAttributeValue))
+	{
+		return ItemPropertySelectionStatus.NotSpecified;
+	}
+
+	bool isPropertyNameMatchedInSelectAttributeValue = System.Text.RegularExpressions.Regex.IsMatch(
+		System.Text.RegularExpressions.Regex.Replace(selectAttributeValue, @"\([\s\S]*?\)", string.Empty),
+		string.Format(CultureInfo.InvariantCulture, @"(^|,)\s*({0}|\*)\s*(,|$)", propertyNameToVerify));
+
+	return isPropertyNameMatchedInSelectAttributeValue ? ItemPropertySelectionStatus.Selected : ItemPropertySelectionStatus.NotSelected;
+}
+
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1008:EnumsShouldHaveZeroValue")]
+[Flags]
+public enum ItemPropertySelectionStatus
+{
+	NotSpecified = 1,
+	NotSelected = 2,
+	Selected = 4]]></method_code>
+  <method_type>C#</method_type>
+  <name>effs_getExpressionStringNotation</name>
+ </Item>
+</AML>

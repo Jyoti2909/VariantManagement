@@ -1,0 +1,54 @@
+﻿<AML>
+ <Item type="Method" id="D6BF5787593946D697DD36B15276D95F" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string isRelationship = this.getProperty("is_relationship");
+string implementationType = this.getProperty("implementation_type");
+string name = this.getProperty("name");
+if (string.IsNullOrEmpty(isRelationship) || string.IsNullOrEmpty(implementationType) || string.IsNullOrEmpty(name))
+{
+	Item itemType = this.newItem("ItemType", "get");
+	itemType.setAttribute("select","is_relationship, implementation_type, name");
+	itemType.setID(this.getID());
+	itemType = itemType.apply();
+	if (itemType.isError())
+	{
+		return itemType.getErrorCode() == "0" ? this : this.getInnovator().newError(itemType.getErrorString());
+	}
+
+	isRelationship = string.IsNullOrEmpty(isRelationship) ? itemType.getProperty("is_relationship") : isRelationship;
+	implementationType = string.IsNullOrEmpty(implementationType) ? itemType.getProperty("implementation_type") : implementationType;
+	name = string.IsNullOrEmpty(name) ? itemType.getProperty("name") : name;
+}
+
+if (isRelationship == "1" || implementationType == "polymorphic" || implementationType == "federated" || name == "File")
+{
+	var dt = this.dom.SelectNodes("Item/Relationships/Item[@type='DiscussionTemplate']");
+	if (dt.Count == 0)
+	{
+		Item dtItem = this.newItem("DiscussionTemplate", "get");
+		dtItem.setProperty("source_id", this.getID());
+		dtItem.setAttribute("doGetItem", "0");
+		dtItem = dtItem.apply();
+		if (dtItem.isError())
+		{
+			if (dtItem.getErrorCode() == "0")
+			{
+				return this;
+			}
+		}
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_ItemTypeCannotHaveDT"));
+	}
+	else
+	{
+		var dtForDel = this.dom.SelectNodes("Item/Relationships/Item[@type='DiscussionTemplate'][@action='delete']");
+		if (dtForDel != null && dt.Count != dtForDel.Count)
+		{
+			return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_ItemTypeCannotHaveDT"));
+		}
+	}
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_ValidatePossibilityToCreateDT</name>
+ </Item>
+</AML>

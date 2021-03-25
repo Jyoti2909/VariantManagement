@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="0AE12C5363F34D5CB6D44633EB3AEB58" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!options.eventState) {
+	options.eventState = aras.evalMethod('cui_reinit_calc_tearoff_states');
+}
+
+const isClaimedByMe = options.eventState.canUnlock;
+const isClaimedByOther = options.eventState.isClaimed && !isClaimedByMe;
+const canUnclaim = isClaimedByMe || isClaimedByOther && aras.isAdminUser();
+const isDisabled = !options.eventState.canLock && !canUnclaim;
+
+let image = 'ClaimOff.svg';
+let title = 'common.lock';
+if (isClaimedByOther) {
+	image = 'ClaimOther.svg';
+	title = 'claim_button.claimed_by_another_user';
+} else if (isClaimedByMe) {
+	image = 'ClaimOn.svg';
+	title = 'common.unlock';
+}
+return {
+	hidden: options.eventState.isNew,
+	image: '../images/' + image,
+	claimed: canUnclaim,
+	disabled: isDisabled,
+	tooltip_template: aras.getResource('', title)
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivtb_claim_init</name>
+ </Item>
+</AML>

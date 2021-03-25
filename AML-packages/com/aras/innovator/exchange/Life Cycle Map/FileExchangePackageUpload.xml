@@ -1,0 +1,53 @@
+﻿<AML>
+ <Item type="Life Cycle Map" id="2C51AD67B5904C2F88A5F0D53EE0459A" action="add">
+  <description>Life Cycle for File Exchange Packages</description>
+  <start_state keyed_name="InWork" type="Life Cycle State">036E1E15552F402685D202C2582C385E</start_state>
+  <name>FileExchangePackageUpload</name>
+  <Relationships>
+   <Item type="Life Cycle State" id="BA1A1EE3F17F4B3AAAC3C592F6B09563" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <label xml:lang="en">Complete</label>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="FileExchangePackageUpload" type="Life Cycle Map">2C51AD67B5904C2F88A5F0D53EE0459A</source_id>
+    <state_permission_id keyed_name="FileExchangePackageComplete" type="Permission">CAFE3B3406FF4D778B2260671ED95F81</state_permission_id>
+    <x>331</x>
+    <y>62</y>
+    <name>Complete</name>
+   </Item>
+   <Item type="Life Cycle State" id="036E1E15552F402685D202C2582C385E" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <label xml:lang="en">InWork</label>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="FileExchangePackageUpload" type="Life Cycle Map">2C51AD67B5904C2F88A5F0D53EE0459A</source_id>
+    <state_permission_id keyed_name="FileExchangePackage" type="Permission">043CF9BC1B5740919401141B0F1FAB3D</state_permission_id>
+    <x>102</x>
+    <y>62</y>
+    <name>InWork</name>
+   </Item>
+   <Item type="Life Cycle Transition" id="81DF771231E745DAB947D547F6AB2596" action="add">
+    <from_state keyed_name="InWork" type="Life Cycle State">036E1E15552F402685D202C2582C385E</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="FE_PromoteFileExchangePackage" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>FE_PromoteFileExchangePackage</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Creator" type="Identity">
+     <Item type="Identity" action="get" select="id">
+      <name>Creator</name>
+     </Item>
+    </role>
+    <segments />
+    <sort_order>128</sort_order>
+    <source_id keyed_name="FileExchangePackageUpload" type="Life Cycle Map">2C51AD67B5904C2F88A5F0D53EE0459A</source_id>
+    <to_state keyed_name="Complete" type="Life Cycle State">BA1A1EE3F17F4B3AAAC3C592F6B09563</to_state>
+    <x>-1</x>
+    <y>-1</y>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

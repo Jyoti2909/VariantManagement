@@ -1,0 +1,282 @@
+﻿<AML>
+ <Item type="Method" id="F1E5C1E9B6D246838981EDF044357429" action="add">
+  <comments>Verifies that specified WebService configuration contains valid references</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+//MethodTemplateName=CSharpInOut;
+
+if (InnovatorServerASP == null) 
+  throw new ArgumentNullException("InnovatorServerASP");
+WSCVerificator wscv = new WSCVerificator();
+Innovator inn = new Innovator( InnovatorServerASP );
+wscv.VerifyWSConfiguration( inn, inDom, outDom );
+}
+
+public class WSCVerificator
+{
+    /// <summary>
+    /// It's assumed that 'inDom' contains a name of the WSConfiguration
+    /// that has to be verified; the format is the following:
+    /// <![CDATA[
+    /// <WSConfiguration name='{WS configuration name}' action='verify'/>
+    /// ]]]]><![CDATA[>
+    ///
+    /// Resulting xml that is put into 'outDom' has the following format:
+    /// <![CDATA[
+    /// <Result>
+    ///   <type name='...'>
+    ///     <error code='{error code}' [expected='...' current='...']/>
+    ///     ...
+    ///     <property name='...'>
+    ///       <error code='{error code}' [expected='...' current='...']/>
+    ///       ...
+    ///     </property>
+    ///     ...
+    ///   </type>
+    /// </Result>
+    /// ]]]]><![CDATA[>
+    /// where {error_code}:
+    ///    1 - doesn't exist in Innovator (applicable to both types and properties)
+    ///    2 - has different type in Innovator (applicable to properties)
+    ///    3 - has different data source in Innovator (applicable to properties)
+    ///    4 - has different 'related' (applicable to relationship types)
+    ///    5 - has different 'source' (applicable to relationship types)
+    /// </summary>
+    public void VerifyWSConfiguration( Innovator inn, XmlDocument inDom, XmlDocument result )
+    {
+      string wsconf_name = inDom.DocumentElement.SelectSingleNode( ".//WSConfiguration" ).Attributes["name"].Value;
+      Item wsconf = inn.applyAML( 
+        string.Format("<AML><Item type='WSConfiguration' action='get' levels='2'><name>{0}</name></Item></AML>", System.Security.SecurityElement.Escape(wsconf_name)));
+      if (wsconf.isError())
+      {
+      	if( wsconf.getErrorCode() == "0" )
+      	  throw new Exception( string.Format( "WSConfiguration with name '{0}' doesn't exist", wsconf_name ) );
+      	else
+          throw new Exception( wsconf.getErrorDetail() );
+      }
+
+      result.LoadXml("<Result/>");
+
+      Item wstypes = wsconf.getItemsByXPath("//Item[@type='WSConfiguration']/Relationships/Item[@type='WSType']");
+      int tcount = wstypes.getItemCount();
+      for (int i = 0; i < tcount; i++)
+      {
+        Item wstype = wstypes.getItemByIndex(i);
+        string tname = wstype.getProperty("type_name");
+
+        Item type_request = inn.newItem();
+        string type_request_query =
+          "<Item type='ItemType' action='get' select='is_relationship'>" +
+            "<name>" + System.Security.SecurityElement.Escape(tname) + "</name>" +
+          "</Item>";
+        type_request.loadAML(type_request_query);
+
+        Item type_response = type_request.apply();
+        if (type_response.isError())
+        {
+          if (type_response.getErrorCode() == "0")
+            AddTypeError( result, tname, 1 );
+          else
+            throw new Exception(type_response.getErrorDetail());
+        }
+        else
+        {
+          // If the type is a relationship check that it has matching source and related
+          string is_rel = type_response.getProperty("is_relationship");
+          if (is_rel != null && is_rel == "1")
+          {
+            VerifyRelationshipType(wsconf, wstype, result);
+          }
+
+          // Find invalid properties
+          VerifyPropertiesForType(wstype, type_response, result);
+        }
+      }
+    }
+
+    private void VerifyRelationshipType(Item wsconf, Item wstype, XmlDocument result)
+    {
+      Innovator inn = wsconf.getInnovator();
+      string tname = wstype.getProperty("type_name");
+
+	  Item wst_associates = wsconf.getItemsByXPath("//Item[@type='WSTypeAssociate'][ptiname='']");
+      int acount = wst_associates.getItemCount();
+
+      string source_wst_id = null;
+      string related_wst_id = null;
+      for (int ia = 0; ia < acount; ia++)
+      {
+        Item wst_a = wst_associates.getItemByIndex(ia);
+        if (wst_a.getProperty("source_id") == wstype.getID())
+        {
+          related_wst_id = wst_a.getProperty("related_id");
+        }
+        else if (wst_a.getProperty("related_id") == wstype.getID())
+        {
+          source_wst_id = wst_a.getProperty("source_id");
+        }
+      }
+
+      if (related_wst_id != null || source_wst_id != null)
+      {
+        Item rel_request = inn.newItem();
+        string rel_request_query =
+          "<Item type='RelationshipType' action='get' select='source_id,related_id'>" +
+            "<name>" + System.Security.SecurityElement.Escape(tname) + "</name>" +
+          "</Item>";
+        rel_request.loadAML(rel_request_query);
+
+        Item rel_response = rel_request.apply();
+        if (rel_response.isError())
+        {
+          throw new Exception(rel_response.getErrorDetail());
+        }
+
+        if (related_wst_id != null)
+        {
+          Item related_wst_item = wsconf.getItemsByXPath(string.Format("Relationships/Item[@type='WSType' and @id='{0}']", related_wst_id));
+          string expected_related = related_wst_item.getProperty("type_name");
+          string current_related = rel_response.getPropertyAttribute("related_id", "keyed_name");
+          if (expected_related != current_related)
+            AddTypeError(result, tname, 4, expected_related, current_related);
+        }
+
+        if (source_wst_id != null)
+        {
+          Item source_wst_item = wsconf.getItemsByXPath(string.Format("Relationships/Item[@type='WSType' and @id='{0}']", source_wst_id));
+          string expected_source = source_wst_item.getProperty("type_name");
+          string current_source = rel_response.getPropertyAttribute("source_id", "keyed_name");
+          if (expected_source != current_source)
+            AddTypeError(result, tname, 5, expected_source, current_source);
+        }
+      }
+    }
+
+    private void VerifyPropertiesForType(Item wstype, Item type_response, XmlDocument result)
+    {
+      string tname = wstype.getProperty("type_name");
+      Innovator inn = type_response.getInnovator();
+
+      Item wstype_props = wstype.getItemsByXPath("Relationships/Item[@type='WSTypeProperty']");
+      int pcount = wstype_props.getItemCount();
+      for (int j = 0; j < pcount; j++)
+      {
+        Item wsprop = wstype_props.getItemByIndex(j);
+        string pname = wsprop.getProperty("property_name");
+        string ptype = wsprop.getProperty("property_type");
+        string prop_request_query =
+          "<Item type='Property' action='get'>" +
+            "<name>" + System.Security.SecurityElement.Escape(pname) + "</name>" +
+            "<source_id>" + System.Security.SecurityElement.Escape(type_response.getID()) + "</source_id>" +
+          "</Item>";
+        Item prop_request = inn.newItem();
+        prop_request.loadAML(prop_request_query);
+        Item prop_response = prop_request.apply();
+        if (prop_response.isError())
+        {
+          // The property doesn't exist any more
+          if (prop_response.getErrorCode() == "0")
+          {
+            AddPropertyError(result, tname, pname, 1);
+          }
+          else
+          {
+            throw new Exception(prop_response.getErrorDetail());
+          }
+        }
+        else
+        {
+          // The property exists but has a different type
+          _checkPropertyType( inn, result, tname, pname, ptype, prop_response );
+         }
+      }
+    }
+
+    private void _checkPropertyType( Innovator inn, XmlDocument result, string tname, string pname, string ptype, Item prop_response )
+    {
+      string ptype_db = prop_response.getProperty( "data_type" );
+      
+      if( ptype_db == "list" || 
+          ptype_db == "image" || 
+          ptype_db == "md5" || 
+          ptype_db == "filter list" ||
+          ptype_db == "color list" ||
+          ptype_db == "federated" ||
+          ptype_db == "formatted text" ||
+          ptype_db == "ml_string" ||
+          ptype_db == "color" ||
+          ptype_db == "sequence")
+      {
+      	if( ptype != "string" )
+      	{
+          AddPropertyError(result, tname, pname, 2, ptype, ptype_db);
+        }
+      }
+      else if (ptype_db == "item")
+      {
+        string dsource = prop_response.getPropertyAttribute("data_source", "keyed_name");
+        if (dsource != ptype)
+          AddPropertyError(result, tname, pname, 3, ptype, dsource);
+      }
+      else if( ptype_db == "foreign" )
+      {
+      	string fp_id = prop_response.getProperty( "foreign_property" );
+        string fp_request_query = string.Format( "<Item type=\"Property\" action=\"get\" id=\"{0}\"/>", System.Security.SecurityElement.Escape(fp_id));
+        Item fp_request = inn.newItem();
+        fp_request.loadAML(fp_request_query);
+        Item fp_response = fp_request.apply();
+        if (fp_response.isError())
+        {
+           throw new Exception(fp_response.getErrorDetail());
+        }
+      	_checkPropertyType( inn, result, tname, pname, ptype, fp_response );
+      }
+      else if (ptype_db != ptype)
+      {
+        AddPropertyError(result, tname, pname, 2, ptype, ptype_db);
+      }
+    }
+    
+    private void AddTypeError(XmlDocument doc, string tname, int error, params string[] values)
+    {
+      XmlElement tnode = GetResultNode(doc.DocumentElement, "type", tname);
+      SetError(tnode, error, values);
+    }
+
+    private void AddPropertyError(XmlDocument doc, string tname, string pname, int error, params string[] values)
+    {
+      XmlElement tnode = GetResultNode(doc.DocumentElement, "type", tname);
+      XmlElement pnode = GetResultNode( tnode, "property", pname );
+      SetError(pnode, error, values);
+    }
+
+    private XmlElement GetResultNode(XmlElement parent, string node_name, string attr_name)
+    {
+      XmlElement tnode = (XmlElement)parent.SelectSingleNode(string.Format("{0}[@name='{1}']", node_name, attr_name));
+      if (tnode == null)
+      {
+        tnode = parent.OwnerDocument.CreateElement(node_name);
+        tnode.SetAttribute("name", attr_name);
+        parent.AppendChild(tnode);
+      }
+
+      return tnode;
+    }
+
+    private void SetError(XmlElement parent, int error, params string[] values)
+    {
+      XmlElement errnode = parent.OwnerDocument.CreateElement("error");
+      errnode.SetAttribute("code", error.ToString());
+
+      if (error != 1)
+      {
+        errnode.SetAttribute("expected", values[0]);
+        errnode.SetAttribute("current", values[1]);
+      }
+      parent.AppendChild(errnode);
+    }
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VerifyWSConfiguration</name>
+ </Item>
+</AML>

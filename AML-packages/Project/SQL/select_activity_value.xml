@@ -1,0 +1,73 @@
+﻿<AML>
+ <Item type="SQL" id="02A76848EC0B4613A15BD7AA0FA1F778" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_activity_value</old_name>
+  <sqlserver_body><![CDATA[/* Name:    select_activity_value
+   Purpose: This must handle every value which is contained
+            in the list with name = "datelist"
+            Note: @NOW passed in as an argument, because GETUTCDATE() is non-deterministic
+                  and cannot be used inside a user-defined-function.
+            TODO: dynamically generate this SQL based on,
+                  or when the admin changes the datelist values.
+            Or it could be based on a query if the Property table,
+            which this is, from a database with VersionBuild=5237
+   Created: 3-DEC-2005 George J. Carrette
+*/
+CREATE FUNCTION innovator.Select_activity_value(@ID  CHAR(32),
+                                                @COL VARCHAR(32),
+                                                @NOW DATETIME)
+RETURNS TABLE
+AS
+    RETURN
+      -- This is a linear search. But we could use operators "<" and ">" and
+      -- code a binary search, amenable to compiler-generated code.
+      SELECT VALUE = CASE
+                       WHEN @COL = 'today' THEN @NOW
+                       WHEN @COL = 'created_on' THEN (SELECT created_on
+                                                      FROM   ACTIVITY2
+                                                      WHERE  ID = @ID)
+                       WHEN @COL = 'date_activated' THEN (SELECT date_activated
+                                                          FROM   ACTIVITY2
+                                                          WHERE  ID = @ID)
+                       WHEN @COL = 'date_due_act' THEN (SELECT date_due_act
+                                                        FROM   ACTIVITY2
+                                                        WHERE  ID = @ID)
+                       WHEN @COL = 'date_due_original' THEN (SELECT date_due_original
+                                                             FROM   ACTIVITY2
+                                                             WHERE  ID = @ID)
+                       WHEN @COL = 'date_due_sched' THEN (SELECT date_due_sched
+                                                          FROM   ACTIVITY2
+                                                          WHERE  ID = @ID)
+                       WHEN @COL = 'date_ef' THEN (SELECT date_ef
+                                                   FROM   ACTIVITY2
+                                                   WHERE  ID = @ID)
+                       WHEN @COL = 'date_es' THEN (SELECT date_es
+                                                   FROM   ACTIVITY2
+                                                   WHERE  ID = @ID)
+                       WHEN @COL = 'date_lf' THEN (SELECT date_lf
+                                                   FROM   ACTIVITY2
+                                                   WHERE  ID = @ID)
+                       WHEN @COL = 'date_ls' THEN (SELECT date_ls
+                                                   FROM   ACTIVITY2
+                                                   WHERE  ID = @ID)
+                       WHEN @COL = 'date_start_act' THEN (SELECT date_start_act
+                                                          FROM   ACTIVITY2
+                                                          WHERE  ID = @ID)
+                       WHEN @COL = 'date_start_sched' THEN (SELECT date_start_sched
+                                                            FROM   ACTIVITY2
+                                                            WHERE  ID = @ID)
+                       WHEN @COL = 'date_user_estimate' THEN (SELECT date_user_estimate
+                                                              FROM   ACTIVITY2
+                                                              WHERE  ID = @ID)
+                       WHEN @COL = 'modified_on' THEN (SELECT modified_on
+                                                       FROM   ACTIVITY2
+                                                       WHERE  ID = @ID)
+                       ELSE NULL
+                     END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_activity_value</name>
+ </Item>
+</AML>

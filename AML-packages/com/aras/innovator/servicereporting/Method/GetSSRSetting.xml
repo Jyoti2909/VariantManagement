@@ -1,0 +1,98 @@
+﻿<AML>
+ <Item type="Method" id="CFD22304FE1B4E52B7D9CA4B75941A9F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	var userId = this.getInnovator().getUserID();
+	var userIdentities = Aras.Server.Security.Permissions.GetIdentitiesList(CCO.DB.InnDatabase, userId);
+	var worldPref = this.newItem("SelfServiceReportSettings", "get");
+	worldPref.setAttribute("select", "hide_advanced_for_all");
+	worldPref = worldPref.apply();
+	if (worldPref.isError())
+	{
+		return worldPref;
+	}
+
+	var resultItem = this.newItem();
+
+	var hideForAll = worldPref.getProperty("hide_advanced_for_all");
+	if (!string.IsNullOrEmpty(hideForAll))
+	{
+		if (ConvertToBool(hideForAll))
+		{
+			resultItem.setProperty("hide_advanced_for_all", "True");
+			return resultItem;
+		}
+
+	}
+
+	var userFeaturedSettings = this.newItem("SelfServiceReportFeatured", "get");
+	userFeaturedSettings.setProperty("identity_id", userIdentities);
+	userFeaturedSettings.setPropertyCondition("identity_id", "in");
+	userFeaturedSettings.setAttribute("select", "hide_advanced, show_all, allow_excluded_properties, excluded_properties");
+	userFeaturedSettings = userFeaturedSettings.apply();
+	if (!userFeaturedSettings.isError())
+	{
+		bool hideAdvanced = false,
+			showAll = false,
+			allowExcludedProps = false;
+
+		List<string> excludedProperties = new List<string>();
+		List<string> ignoreExProps = new List<string>();
+		for (var i = 0; i < userFeaturedSettings.getItemCount(); i++)
+		{
+			var current = userFeaturedSettings.getItemByIndex(i);
+			if (!hideAdvanced)
+			{
+				hideAdvanced = ConvertToBool(current.getProperty("hide_advanced"));
+			}
+			if (!showAll)
+			{
+				showAll = ConvertToBool(current.getProperty("show_all"));
+			}
+
+			allowExcludedProps = ConvertToBool(current.getProperty("allow_excluded_properties"));
+			var properties = current.getProperty("excluded_properties");
+			if (!String.IsNullOrEmpty(properties))
+			{
+				string[] parts = properties.Split('|');
+				foreach (string excludedProperty in parts)
+				{
+					if (!excludedProperties.Contains(excludedProperty))
+					{
+						excludedProperties.Add(excludedProperty);
+					}
+
+					if (allowExcludedProps && !ignoreExProps.Contains(excludedProperty))
+					{
+						ignoreExProps.Add(excludedProperty);
+					}
+				}
+			}
+		}
+
+		foreach (var prop in ignoreExProps.Where(prop => excludedProperties.Contains(prop)))
+		{
+			excludedProperties.Remove(prop);
+		}
+
+		resultItem.setProperty("hide_advanced_for_all", "False");
+		resultItem.setProperty("hide_advanced", hideAdvanced.ToString());
+		resultItem.setProperty("show_all", showAll.ToString());
+		resultItem.setProperty("allow_excluded_properties", allowExcludedProps.ToString());
+		resultItem.setProperty("excluded_properties", String.Join("|", excludedProperties));
+	}
+
+	return resultItem;
+}
+
+private bool ConvertToBool(string val)
+{
+	var intVal = 0;
+	if (!string.IsNullOrEmpty(val))
+	{
+		intVal = Int32.Parse(val);
+	}
+	return Convert.ToBoolean(intVal);]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetSSRSetting</name>
+ </Item>
+</AML>

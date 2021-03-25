@@ -1,0 +1,137 @@
+@import '../mixins/mixins';
+@import '../core/variables';
+
+.aras-dialog-alert,
+.aras-dialog-confirm {
+	&__img {
+		width: 4rem;
+		height: 4rem;
+		display: table-cell;
+		margin-right: 16px;
+	}
+
+	&__text {
+		display: table-cell;
+		vertical-align: middle;
+		white-space: pre-line;
+		width: ~'calc(100% - 4rem)';
+		padding: 4px 0;
+		word-break: break-word;
+		@supports (-ms-ime-align: auto) {
+			word-break: break-all;
+		}
+	}
+
+	.aras-button {
+		margin-left: 8px;
+		&_right {
+			float: right;
+		}
+	}
+
+	&__container {
+		margin: 16px;
+		overflow: auto;
+		&:first-child {
+			display: table;
+			margin-top: 0;
+			margin-bottom: 20px;
+		}
+
+		&-aml {
+			border-top: 1px solid #c2c2c2;
+			max-height: 15rem;
+			margin: 0;
+			padding: 18px;
+		}
+
+		&-dark {
+			background-color: #eeeeee;
+		}
+	}
+
+	&__title {
+		display: block;
+		width: 11rem;
+		float: left;
+		font-weight: 700;
+		padding: 0.2rem 0.5rem 0.5rem 0.5rem;
+	}
+
+	&__text-description {
+		word-wrap: break-word;
+		padding: 0.2rem 0 0.5rem 0;
+		width: ~'calc(100% - 13rem)';
+		float: left;
+		min-height: 1.4rem;
+	}
+
+	&__half-of-container {
+		min-height: 1px;
+		float: left;
+		width: 50%;
+	}
+}
+
+.aras-dialog-confirm,
+.aras-dialog-confirm.polyfilled.aras-dialog-confirm {
+	width: min-content;
+	min-width: .pxToRem(320px) [ @rem ];
+
+	&__container {
+		display: flex;
+		justify-content: flex-end;
+		overflow: visible;
+
+		& .aras-button:first-child {
+			margin-left: 0;
+		}
+	}
+}
+
+.aras-dialog-alert,
+.aras-dialog-alert.polyfilled.aras-dialog-alert {
+	width: 45rem;
+
+	.aras-button {
+		&:last-child {
+			margin-left: 0;
+		}
+	}
+}
+
+.aml-description {
+	font: x-small 'Verdana';
+	margin-right: 1.2em;
+
+	&__clicable-row {
+		cursor: pointer;
+	}
+
+	&__plus-or-minus {
+		color: red;
+		font-family: 'Courier New';
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	&__tag-block {
+		margin-left: 1em;
+		text-indent: -1em;
+		&_comment {
+			margin-right: 1em;
+		}
+	}
+
+	&__tag-name {
+		color: #990000;
+	}
+
+	&__special-character {
+		color: blue;
+	}
+
+	&__pre {
+		white-space: pre;
+	}
+}

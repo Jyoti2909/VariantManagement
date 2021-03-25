@@ -1,0 +1,498 @@
+﻿<TestCase author="apetrovsky@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>Tests for dynamic manager identity deletion on Cancel Activity.</Description>
+	<Request runAs='cadUser1:1' position='1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser1
+			When:
+				add new GECO as cadUser1
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='GECO.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='GAG_EngineeringChangeObject' id='28D200BDC6A545179BF03875D4B59955' action='add' doGetItem='0'>
+					<classification>Release &amp; Change/CAD Document</classification>
+					<Relationships>
+						<Item type='GAG_GECO ChangeControlled' id='26B86B9E007B4F4F877AF15A3E6F7682' action='add'>
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Release</gag_action>
+							<related_id type='GAG_GrammerChangeControlled'>E89A2B735D6C4DCF86F2B5BBD77F263E</related_id>
+							<source_id type='GAG_EngineeringChangeObject'>28D200BDC6A545179BF03875D4B59955</source_id>
+						</Item>
+						<Item type='GAG_GECO CADDesigner' id='FA3A428A1EB847C1B3B963EAC3E3D6E0' action='add'>
+							<source_id type='GAG_EngineeringChangeObject'>28D200BDC6A545179BF03875D4B59955</source_id>
+							<related_id>
+								<Item type='Identity' action='get' select='id'>
+									<keyed_name>cadUser1</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type='GAG_GECO CADDesigner' id='E534FC7A650A44779A2369B35F8C209C' action='add'>
+							<source_id type='GAG_EngineeringChangeObject'>28D200BDC6A545179BF03875D4B59955</source_id>
+							<related_id>
+								<Item type='Identity' action='get' select='id'>
+									<keyed_name>cadUser2</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type='GAG_GECO DevReleaseApprover' id='3289942AFE8E401B8588D742FB957EFD' action='add'>
+							<source_id type='GAG_EngineeringChangeObject'>28D200BDC6A545179BF03875D4B59955</source_id>
+							<related_id>
+								<Item type='Identity' action='get' select='id'>
+									<keyed_name>prodUser1</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type='GAG_GECO TechReviewApprover' id='69DFDD6552574945A62800082DCB0AC7' action='add'>
+							<source_id type='GAG_EngineeringChangeObject'>28D200BDC6A545179BF03875D4B59955</source_id>
+							<related_id>
+								<Item type='Identity' action='get' select='id'>
+									<keyed_name>techUser1</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='GAG_EngineeringChangeObject' id='28D200BDC6A545179BF03875D4B59955' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs='cadUser1:1' position='2'>
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser1 and new GECO
+			When:
+				Get new GECO
+			Then:
+				State of GECO should be 'In Planning'
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='GECO.Id' action='apply' xpath='Query/AML/Item/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='GAG_EngineeringChangeObject' id='' action='get' select='state' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='GAG_EngineeringChangeObject' typeId='5DCFF174F8144371B57B563263F31D42' id='28D200BDC6A545179BF03875D4B59955'>
+							<id keyed_name='GECO-00000038' type='GAG_EngineeringChangeObject'>28D200BDC6A545179BF03875D4B59955</id>
+							<state>In Planning</state>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadUser1:1' position='3'>
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser1 and new GECO
+			When:
+				As cadUser1
+				Get active InBasket Task
+			Then:
+				InBasket Task is returned
+				Which means that workflow has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='Activity.Assigment.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='InBasket Task' action='get' select='id'>
+					<status condition='eq'>active</status>
+					<my_assignment condition='eq'>1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='InBasket Task' typeId='BC7977377FFF40D59FF14205914E9C71' id='BCC429846D134683A77F1633773F21D2'>
+							<assigned_to keyed_name='cadUser1' type='Identity'>EA81CCCCB56C417D823B1DE3BD0826CC</assigned_to>
+							<id keyed_name='Planning' type='InBasket Task'>BCC429846D134683A77F1633773F21D2</id>
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadUser1:1' position='4'>
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Start CAD Task' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='Activity.Assigment.Id' action='apply' xpath='Query/AML/Item/Relationships/Item/id' />
+			<Variable id='Activity.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Variable id='Task1.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id' />
+			<Variable id='Task2.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[3]/@id' />
+			<Variable id='Process.Path.Id' action='set' xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Activity' action='get' select='id'>
+					<Relationships>
+						<Item type='Activity Assignment' action='get' select='id'>
+							<id></id>
+						</Item>
+						<Item type='Activity Task' action='get' select='id' />
+						<Item type='Workflow Process Path' action='get' select='id' >
+							<name condition='eq'>Start CAD Task</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Activity' typeId='937CE47DE2854308BE6FF5AB1CFB19D4' id='C4F89AA90A7746E5AFB1B9A78A93922C'>
+							<id keyed_name='Planning' type='Activity'>C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type='Activity Assignment' typeId='85924010F3184E77B24E9142FDBB481B' id=''>
+									<id keyed_name='' type='Activity Assignment'></id>
+									<source_id keyed_name='Planning' type='Activity'>C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type='Activity Task' typeId='46BDE53304404C28B5C45610E41C1DD5' id='63911BD3FEEC439096A48B850ECF5ABC'>
+									<id keyed_name='63911BD3FEEC439096A48B850ECF5ABC' type='Activity Task'>63911BD3FEEC439096A48B850ECF5ABC</id>
+									<source_id keyed_name='Planning' type='Activity'>C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type='Activity Task' typeId='46BDE53304404C28B5C45610E41C1DD5' id='007F3524F0264CB381459E96EB12E938'>
+									<id keyed_name='007F3524F0264CB381459E96EB12E938' type='Activity Task'>007F3524F0264CB381459E96EB12E938</id>
+									<source_id keyed_name='Planning' type='Activity'>C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type='Workflow Process Path' typeId='34682D3EB66141ECACC8796C9D3A42B8' id='C8F0917B60D84D688B92EC80B742E1CD'>
+									<id keyed_name='C8F0917B60D84D688B92EC80B742E1CD' type='Workflow Process Path'>C8F0917B60D84D688B92EC80B742E1CD</id>
+									<source_id keyed_name='Planning' type='Activity'>C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadUser1:1' position='5'>
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated by 'Start CAD Task' path
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='Activity.Assigment.Id' action='apply' xpath='Query/AML/Item/ActivityAssignment' />
+			<Variable id='Activity.Id' action='apply' xpath='Query/AML/Item/Activity' />
+			<Variable id='Task1.Id' action='apply' xpath='Query/AML/Item/Tasks/Task[1]/@id' />
+			<Variable id='Task2.Id' action='apply' xpath='Query/AML/Item/Tasks/Task[2]/@id' />
+			<Variable id='Process.Path.Id' action='apply' xpath='Query/AML/Item/Paths/Path/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Activity' action='EvaluateActivity'>
+					<Activity>C4F89AA90A7746E5AFB1B9A78A93922C</Activity>
+					<ActivityAssignment></ActivityAssignment>
+					<Paths>
+						<Path id=''>
+							<![CDATA[Start CAD Task]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id='' completed='1'></Task>
+						<Task id='' completed='1'></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=''></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name='ids_modified' value='C4F89AA90A7746E5AFB1B9A78A93922C' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadUser2:1' position='6'>
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser2 and new GECO
+			When:
+				As cadUser2
+				Get active InBasket Task
+			Then:
+				InBasket Task is returned
+				Which means that workflow has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='Activity.Assigment.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='InBasket Task' action='get' select='id'>
+					<status condition='eq'>active</status>
+					<my_assignment condition='eq'>1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='InBasket Task' typeId='BC7977377FFF40D59FF14205914E9C71' id='A5BEE10278394407BC1FA0943F8E327B'>
+							<assigned_to keyed_name='GECO-00000133 Managers' type='Identity'>2A62903E334441FD85B42BD8D8E1766B</assigned_to>
+							<id keyed_name='CAD Task' type='InBasket Task'>A5BEE10278394407BC1FA0943F8E327B</id>
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadUser2:1' position='7'>
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Cancel GECO' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='Activity.Assigment.Id' action='apply' xpath='Query/AML/Item/Relationships/Item/id' />
+			<Variable id='Activity.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Variable id='Task1.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id' />
+			<Variable id='Process.Path.Id' action='set' xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Activity' action='get' select='id'>
+					<Relationships>
+						<Item type='Activity Assignment' action='get' select='id'>
+							<id></id>
+						</Item>
+						<Item type='Activity Task' action='get' select='id' />
+						<Item type='Workflow Process Path' action='get' select='id' >
+							<name condition='eq'>Cancel GECO</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Activity' typeId='937CE47DE2854308BE6FF5AB1CFB19D4' id=''>
+							<id keyed_name='CAD Task' type='Activity'>6E4169801B774D5BA722D0F6428ED821</id>
+							<Relationships>
+								<Item type='Activity Assignment' typeId='85924010F3184E77B24E9142FDBB481B' id='83C10C16213F4D6BB0B0F4DE911AE34F'>
+									<id keyed_name='83C10C16213F4D6BB0B0F4DE911AE34F' type='Activity Assignment'>83C10C16213F4D6BB0B0F4DE911AE34F</id>
+									<source_id keyed_name='CAD Task' type='Activity'>6E4169801B774D5BA722D0F6428ED821</source_id>
+								</Item>
+								<Item type='Activity Task' typeId='46BDE53304404C28B5C45610E41C1DD5' id='230211BAEC9F4D6794692050DD3FF8F0'>
+									<id keyed_name='230211BAEC9F4D6794692050DD3FF8F0' type='Activity Task'>230211BAEC9F4D6794692050DD3FF8F0</id>
+									<source_id keyed_name='CAD Task' type='Activity'>6E4169801B774D5BA722D0F6428ED821</source_id>
+								</Item>
+								<Item type='Workflow Process Path' typeId='34682D3EB66141ECACC8796C9D3A42B8' id='DF6B86606F964BF1BA6EDAD1A37AA03F'>
+									<id keyed_name='DF6B86606F964BF1BA6EDAD1A37AA03F' type='Workflow Process Path'>DF6B86606F964BF1BA6EDAD1A37AA03F</id>
+									<source_id keyed_name='CAD Task' type='Activity'>6E4169801B774D5BA722D0F6428ED821</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadUser2:1' position='8'>
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated by 'Cancel GECO' path
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='Activity.Assigment.Id' action='apply' xpath='Query/AML/Item/ActivityAssignment' />
+			<Variable id='Activity.Id' action='apply' xpath='Query/AML/Item/Activity' />
+			<Variable id='Task1.Id' action='apply' xpath='Query/AML/Item/Tasks/Task[1]/@id' />
+			<Variable id='Process.Path.Id' action='apply' xpath='Query/AML/Item/Paths/Path/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Activity' action='EvaluateActivity'>
+					<Activity>C4F89AA90A7746E5AFB1B9A78A93922C</Activity>
+					<ActivityAssignment></ActivityAssignment>
+					<Paths>
+						<Path id=''>
+							<![CDATA[Cancel GECO]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id='' completed='1'></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=''></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name='ids_modified' value='C4F89AA90A7746E5AFB1B9A78A93922C' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadUser1:1' position='9'>
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser1 and GECO
+			When:
+				Get GECO
+			Then:
+				State of the GECO should be 'Canceled'
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='GECO.Id' action='apply' xpath='Query/AML/Item/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='GAG_EngineeringChangeObject' id='' action='get' select='state' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" typeId="5DCFF174F8144371B57B563263F31D42" id="28D200BDC6A545179BF03875D4B59955">
+							<id keyed_name="GECO-00000072" type="GAG_EngineeringChangeObject">28D200BDC6A545179BF03875D4B59955</id>
+							<state>Canceled</state>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id' />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Variables>
+			<Variable id='GECO.Id' action='apply' xpath='Query/AML/Item/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='GAG_EngineeringChangeObject' id='' action='delete' />
+				<Item type='Workflow Process' action='delete' where="[WORKFLOW_PROCESS].created_by_id = 'AC7A409355B447FFA1C10C70F0F4719C'" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

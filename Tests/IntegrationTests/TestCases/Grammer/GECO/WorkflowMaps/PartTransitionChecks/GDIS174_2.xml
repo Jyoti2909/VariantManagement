@@ -1,0 +1,777 @@
+﻿<TestCase author="pponkrashov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../TestCase.xsd">
+	<Description>
+		<![CDATA[
+		Promote GECO from planning to end with CAD with invalid Part CAD.
+		]]>
+	</Description>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Create CADs
+			Then:
+				Should create CADs
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part'][1]/@id" />
+			<Variable id="CAD.10.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][1]/@id" />
+			<Variable id="CAD.25.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][2]/@id" />
+			<Variable id="CAD.28.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][3]/@id" />
+			<Variable id="CAD.29.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][4]/@id" />
+			<Variable id="CAD.30.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][5]/@id" />
+			<Variable id="CAD.50.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][6]/@id" />
+			<Variable id="CAD.60.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][7]/@id" />
+			<Variable id="CAD.90.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][8]/@id" />
+			<Variable id="CAD.19.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][9]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="add" doGetItem="0">
+					<name>ParentPart</name>
+					<classification>Mechanical Part/Assembly</classification>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD10</name>
+					<classification>Mechanical/Assembly</classification>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD25</name>
+					<classification>Mechanical/Assembly</classification>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD28</name>
+					<classification>Mechanical/Assembly</classification>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD29</name>
+					<classification>Mechanical/Assembly</classification>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD30</name>
+					<classification>Mechanical/Assembly</classification>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD50</name>
+					<classification>Mechanical/Assembly</classification>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD60</name>
+					<classification>Mechanical/Assembly</classification>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD90</name>
+					<classification>Mechanical/Assembly</classification>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD19</name>
+					<classification>Mechanical/Assembly</classification>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Create CADs
+			Then:
+				Should create CADs
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[@type='Part']/@id" />
+			<Variable id="CAD.10.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][1]/@id" />
+			<Variable id="CAD.25.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][2]/@id" />
+			<Variable id="CAD.28.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][3]/@id" />
+			<Variable id="CAD.29.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][4]/@id" />
+			<Variable id="CAD.30.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][5]/@id" />
+			<Variable id="CAD.50.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][6]/@id" />
+			<Variable id="CAD.60.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][7]/@id" />
+			<Variable id="CAD.90.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][8]/@id" />
+			<Variable id="CAD.19.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][9]/@id" />
+
+			<Variable id="Part.Parent.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part']/@id" />
+			<Variable id="CAD.10.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][1]/@id" />
+			<Variable id="CAD.25.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][2]/@id" />
+			<Variable id="CAD.28.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][3]/@id" />
+			<Variable id="CAD.29.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][4]/@id" />
+			<Variable id="CAD.30.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][5]/@id" />
+			<Variable id="CAD.50.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][6]/@id" />
+			<Variable id="CAD.60.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][7]/@id" />
+			<Variable id="CAD.90.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][8]/@id" />
+			<Variable id="CAD.19.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][9]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="edit" id="{Part.Parent.Id}" doGetItem="0">
+					<item_number>ParentPart</item_number>
+				</Item>
+				<Item type="CAD" action="edit" id="{CAD.10.Id}" doGetItem="0">
+					<item_number>CAD10</item_number>
+				</Item>
+				<Item type="CAD" action="edit" id="{CAD.25.Id}" doGetItem="0">
+					<item_number>CAD25</item_number>
+				</Item>
+				<Item type="CAD" action="edit" id="{CAD.28.Id}" doGetItem="0">
+					<item_number>CAD28</item_number>
+				</Item>
+				<Item type="CAD" action="edit" id="{CAD.29.Id}" doGetItem="0">
+					<item_number>CAD29</item_number>
+				</Item>
+				<Item type="CAD" action="edit" id="{CAD.30.Id}" doGetItem="0">
+					<item_number>CAD30</item_number>
+				</Item>
+				<Item type="CAD" action="edit" id="{CAD.50.Id}" doGetItem="0">
+					<item_number>CAD50</item_number>
+				</Item>
+				<Item type="CAD" action="edit" id="{CAD.60.Id}" doGetItem="0">
+					<item_number>CAD60</item_number>
+				</Item>
+				<Item type="CAD" action="edit" id="{CAD.90.Id}" doGetItem="0">
+					<item_number>CAD90</item_number>
+				</Item>
+				<Item type="CAD" action="edit" id="{CAD.19.Id}" doGetItem="0">
+					<item_number>CAD19</item_number>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser3
+			When:
+				promote CADs19 to 19 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.19.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD.19.Id}" doGetItem="0">
+					<state>19</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser3
+			When:
+				promote CADs25 to 25 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.25.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD.25.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser3
+			When:
+				promote CADs28 to 28 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.28.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD.28.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.28.Id}" doGetItem="0">
+					<state>30</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.28.Id}" doGetItem="0">
+					<state>28</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser3
+			When:
+				promote CADs29 to 29 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.29.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD.29.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.29.Id}" doGetItem="0">
+					<state>30</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.29.Id}" doGetItem="0">
+					<state>28</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.29.Id}" doGetItem="0">
+					<state>29</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser3
+			When:
+				promote CADs30 to 30 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.30.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD.30.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.30.Id}" doGetItem="0">
+					<state>30</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser3
+			When:
+				promote CADs50 to 50 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.50.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD.50.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.50.Id}" doGetItem="0">
+					<state>50</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser3
+			When:
+				promote CADs60 to 60 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.60.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD.60.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.60.Id}" doGetItem="0">
+					<state>50</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.60.Id}" doGetItem="0">
+					<state>60</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser3
+			When:
+				promote CADs90 to 90 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.90.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD.90.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.90.Id}" doGetItem="0">
+					<state>50</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.90.Id}" doGetItem="0">
+					<state>60</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD.90.Id}" doGetItem="0">
+					<state>90</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request
+		runAs="superMPCheckUser3:1"
+		srcName="PartPreReleaseTransitionChecksCommon.AddPartCADs"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\PartTransitionChecks\_Common.xml" />
+	<Request
+		runAs="superMPCheckUser3:1"
+		srcName="PartPreReleaseTransitionChecksCommon.GetPartCADs"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\PartTransitionChecks\_Common.xml" />
+	<Request runAs="partCheckUser1:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				partCheckUser1
+			When:
+				add new GECO as partCheckUser1
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="GECO.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="add" doGetItem="0">
+					<classification>Pre-Release &amp; Change/Mechanical Part</classification>
+					<gag_sap_change_number>PART00000001</gag_sap_change_number>
+					<gag_master_data_review_team>
+						<Item type="Identity" action="get">
+							<name>partCheckUser1</name>
+						</Item>
+					</gag_master_data_review_team>
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled"  action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Release</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{Part.Parent.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.Promotion.StartMechanicalPartTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.EvaluateActivityWithTwoTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.Promotion.StartReview"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+
+	<Request runAs="partCheckUser1:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>{Activity.Id}</Activity>
+					<ActivityAssignment>{Activity.Assigment.Id}</ActivityAssignment>
+					<Paths>
+						<Path id="{Process.Path.Id}">
+							<![CDATA[Process Name]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="{Task1.Id}" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:i18n="http://www.aras.com/I18N">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault>
+						<faultcode>1</faultcode>
+						<faultactor />
+						<faultstring>3 errors in ParentPart:
+CAD10 in 10 state.
+CAD25 in 25 state.
+CAD19 in 19 state.
+</faultstring>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request
+		runAs="superMPCheckUser3:1"
+		srcName="PartPreReleaseTransitionChecksCommon.RemovePartCADs"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\PartTransitionChecks\_Common.xml" />
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml" />
+
+	<Request
+		runAs="superMPCheckUser3:1"
+		srcName="PartPreReleaseTransitionChecksCommon.AddPartCADs"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\PartTransitionChecks\_Common.xml" />
+
+	<Request
+		runAs="superMPCheckUser3:1"
+		srcName="PartPreReleaseTransitionChecksCommon.GetPartCADs"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\PartTransitionChecks\_Common.xml" />
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.Promotion.MasterDataReviewCompleted"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request runAs="partCheckUser1:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>{Activity.Id}</Activity>
+					<ActivityAssignment>{Activity.Assigment.Id}</ActivityAssignment>
+					<Paths>
+						<Path id="{Process.Path.Id}">
+							<![CDATA[Process Name]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="{Task1.Id}" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:i18n="http://www.aras.com/I18N">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault>
+						<faultcode>1</faultcode>
+						<faultactor />
+						<faultstring>3 errors in ParentPart:
+CAD10 in 10 state.
+CAD25 in 25 state.
+CAD19 in 19 state.
+</faultstring>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request
+		runAs="superMPCheckUser3:1"
+		srcName="PartPreReleaseTransitionChecksCommon.RemovePartCADs"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\PartTransitionChecks\_Common.xml" />
+
+	<TestCaseCleanUp runAs="root:innovator">
+		<Variables>
+			<Variable id="GECO.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/@id" />
+			<Variable id="CAD.10.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][1]/@id" />
+			<Variable id="CAD.25.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][2]/@id" />
+			<Variable id="CAD.28.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][3]/@id" />
+			<Variable id="CAD.29.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][4]/@id" />
+			<Variable id="CAD.30.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][5]/@id" />
+			<Variable id="CAD.50.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][6]/@id" />
+			<Variable id="CAD.60.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][7]/@id" />
+			<Variable id="CAD.90.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][8]/@id" />
+			<Variable id="CAD.19.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][9]/@id" />
+			<Variable id="Part.Parent.Id" action="apply" xpath="Query/AML/Item[@type='Part']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_SAPTransferLog" action="delete" where="[GAG_SAPTransferLog].created_by_id IN ('5769798D6AB448808B373414DDBDDEFB','DE2E38130C9F4A4E873EB330EACEA129', 'F36F0F8148AF4B12948C5FA99FECC4F3')" />
+				<Item type="GAG_EngineeringChangeObject" id="FC4284C01D524D37ACF863B47FC4D2ED" action="delete" />
+				<Item type="Workflow Process" action="delete" where="[WORKFLOW_PROCESS].created_by_id IN ('5769798D6AB448808B373414DDBDDEFB','DE2E38130C9F4A4E873EB330EACEA129', 'F36F0F8148AF4B12948C5FA99FECC4F3')" />
+
+				<Item type="CAD" action="delete" id="{CAD.10.Id}" />
+				<Item type="CAD" action="delete" id="{CAD.25.Id}" />
+				<Item type="CAD" action="delete" id="{CAD.28.Id}" />
+				<Item type="CAD" action="delete" id="{CAD.29.Id}" />
+				<Item type="CAD" action="delete" id="{CAD.30.Id}" />
+				<Item type="CAD" action="delete" id="{CAD.50.Id}" />
+				<Item type="CAD" action="delete" id="{CAD.60.Id}" />
+				<Item type="CAD" action="delete" id="{CAD.90.Id}" />
+				<Item type="CAD" action="delete" id="{CAD.19.Id}" />
+				<Item type="Part" action="delete" id="FC4284C01D524D37ACF863B47FC4D2ED" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="416A5357FC7646BE8A7F327DA381612B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const favoritesManager = aras.getMainWindow().favorites;
+const itemId = aras.getItemProperty(window.item, 'config_id');
+
+if (target._favoriteItem) {
+	return favoritesManager.delete(target._favoriteItem.id)
+		.then(function() {
+			target._favoriteItem = null;
+			options.notifyObserver('SelectFavorite');
+		});
+}
+const itemName = aras.getItemProperty(window.item, 'keyed_name');
+return favoritesManager.add('Item', {
+	contextType: options.itemTypeName,
+	label: itemName,
+	additionalData: {id: itemId},
+	mustViewById: aras.getItemProperty(window.item, 'owned_by_id'),
+	quickAccess: '1'
+}).then(function(resultItem) {
+	target._favoriteItem = resultItem;
+	options.notifyObserver('SelectFavorite');
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivtb_favorite_click</name>
+ </Item>
+</AML>

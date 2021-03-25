@@ -1,0 +1,548 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.OAuth.Server</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.OAuth.Server.AppConfiguration">
+            <summary>
+            Application configuration.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.AppConfiguration.#ctor(System.String,System.String,System.String,System.String,System.String,System.String)">
+            <summary>
+            Create instance of <see cref="T:Aras.OAuth.Server.AppConfiguration"/>.
+            </summary>
+            <param name="innovatorServerUrl">Innovator server URL.</param>
+            <param name="authenticationAdmin">Authentication admin name.</param>
+            <param name="productName">Product name.</param>
+            <param name="localAuthenticationDisplayName">Display name of local authentication type.</param>
+            <param name="logoUrl">Logo URL.</param>
+            <param name="backgroundImageUrl">Background image URL.</param>
+            <exception cref="T:System.ArgumentNullException">Thrown when parameters are missing.</exception>
+        </member>
+        <member name="P:Aras.OAuth.Server.AppConfiguration.InnovatorServerUrl">
+            <summary>
+            Returns Innovator server Url.
+            </summary>
+            <returns>Innovator server Url.</returns>
+        </member>
+        <member name="P:Aras.OAuth.Server.AppConfiguration.AuthenticateUrl">
+            <summary>
+            Returns Innovator server `Authenticate` endpoint Url.
+            </summary>
+            <returns>Innovator server `Authenticate` endpoint Url.</returns>
+        </member>
+        <member name="P:Aras.OAuth.Server.AppConfiguration.DbListUrl">
+            <summary>
+            Returns Innovator server `DbList` endpoint Url.
+            </summary>
+            <returns>Innovator server `DbList` endpoint Url.</returns>
+        </member>
+        <member name="P:Aras.OAuth.Server.AppConfiguration.AuthenticationAdmin">
+            <summary>
+            Returns user name for connection to InnovatorServer.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.AppConfiguration.LocalAuthenticationDisplayName">
+            <summary>
+            Returns display name of local authentication type.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.AppConfiguration.ProductName">
+            <summary>
+            Returns product name.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.AppConfiguration.LogoUrl">
+            <summary>
+            Returns logo Url.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.AppConfiguration.BackgroundImageUrl">
+            <summary>
+            Returns background image Url.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.AppConfigurationReader">
+            <summary>
+            Reads application configuration file.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.AppConfigurationReader.#ctor(System.String)">
+            <summary>
+            Creates instance of <see cref="T:Aras.OAuth.Server.AppConfigurationReader"/>.
+            </summary>
+            <param name="configPath">Path to application configuration file.</param>
+        </member>
+        <member name="M:Aras.OAuth.Server.AppConfigurationReader.GetAppConfiguration">
+            <summary>
+            Reads application configuration file and returns instance of <see cref="T:Aras.OAuth.Server.AppConfiguration"/>.
+            </summary>
+            <returns>Instance of <see cref="T:Aras.OAuth.Server.AppConfiguration"/>.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.WebHostBuilderExtensions">
+            <summary>
+            Extension methods for <see cref="T:Microsoft.AspNetCore.Hosting.IWebHostBuilder"/>.
+            </summary>
+            <summary>
+            Extension methods for <see cref="T:Microsoft.AspNetCore.Hosting.IWebHostBuilder"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.WebHostBuilderExtensions.UseOAuthServerConfiguration(Microsoft.AspNetCore.Hosting.IWebHostBuilder,System.String)">
+            <summary>
+            Adds classes with configuration info to services.
+            </summary>
+            <param name="hostBuilder">Instance of <see cref="T:Microsoft.AspNetCore.Hosting.IWebHostBuilder"/>.</param>
+            <param name="configPath">Path to application configuration file.</param>
+            <returns>Instance of <see cref="T:Microsoft.AspNetCore.Hosting.IWebHostBuilder"/>.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.X509Certificate2Extensions">
+            <summary>
+            Extension methods for <see cref="T:System.Security.Cryptography.X509Certificates.X509Certificate2"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.X509Certificate2Extensions.DecryptWithPrivateKey(System.Security.Cryptography.X509Certificates.X509Certificate2,System.String)">
+            <summary>
+            Decrypts the provided encrypted Base64 string using certificate's private key
+            </summary>
+            <param name="cert"></param>
+            <param name="encryptedValue"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.OAuth.Server.X509Certificate2Extensions.GetPublicKeyPem(System.Security.Cryptography.X509Certificates.X509Certificate2)">
+            <summary>
+            Generates RSA Public key in PEM DER ASN.1 PKCS#1 format
+            The code was adopted based on
+            https://stackoverflow.com/questions/48038106/exporting-a-public-key-in-pem-format-from-x509certificate2-object
+            </summary>
+            <param name="cert">The X509 Certificate</param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.IAppConfigurationReader">
+            <summary>
+            Reads application configuration file.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.IAppConfigurationReader.GetAppConfiguration">
+            <summary>
+            Reads application configuration file and returns instance of <see cref="T:Aras.OAuth.Server.AppConfiguration"/>.
+            </summary>
+            <returns>Instance of <see cref="T:Aras.OAuth.Server.AppConfiguration"/>.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.Constants.AppSettings">
+            <summary>
+            Application settings.
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Server.Constants.AppSettings.AuthenticationAdmin">
+            <summary>
+            Used to set user to access to InnovatorServer.
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Server.Constants.AppSettings.InnovatorServerUrl">
+            <summary>
+            Used to set InnovatorServer URL.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.AccountController">
+            <summary>
+            This controller implements login/logout workflow with local account and external providers.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.AccountController.#ctor(IdentityServer4.Services.IIdentityServerInteractionService,IdentityServer4.Stores.IClientStore,IdentityServer4.Services.IEventService,System.IServiceProvider)">
+            <summary>
+            Creates the instance of <see cref="T:Aras.OAuth.Server.AccountController"/>.
+            </summary>
+            <param name="interaction">Interaction service.</param>
+            <param name="clientStore">Client store.</param>
+            <param name="eventService">Event service.</param>
+            <param name="serviceProvider">Service provider.</param>
+        </member>
+        <member name="M:Aras.OAuth.Server.AccountController.Login(System.String,System.String)">
+            <summary>
+            Entry point into the login workflow.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.AccountController.Logout(System.String)">
+            <summary>
+            Entry point into the logout workflow.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.AccountController.Login(Aras.OAuth.Server.LoginInputModel)">
+            <summary>
+            Processes POST request from login page.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.ExternalController">
+            <summary>
+            This controller implements authentication with external providers.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.ExternalController.#ctor(IdentityServer4.Services.IIdentityServerInteractionService,IdentityServer4.Stores.IClientStore,IdentityServer4.Services.IEventService,Microsoft.Extensions.Localization.IStringLocalizer{Aras.OAuth.Server.ExternalController},System.IServiceProvider,Microsoft.Extensions.Logging.ILogger{Aras.OAuth.Server.ExternalController})">
+            <summary>
+            Creates the instance of <see cref="T:Aras.OAuth.Server.ExternalController"/>.
+            </summary>
+            <param name="interaction">Interaction service.</param>
+            <param name="clientStore">Client store.</param>
+            <param name="eventService">Event service.</param>
+            <param name="stringLocalizer"></param>
+            <param name="serviceProvider">Service provider.</param>
+            <param name="logger">Logger service.</param>
+        </member>
+        <member name="M:Aras.OAuth.Server.ExternalController.Challenge(Aras.OAuth.Server.LoginInputModel)">
+            <summary>
+            Post method to initiate roundtrip to external authentication provider.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.ExternalController.Challenge(System.String,System.String,System.String,System.Boolean)">
+            <summary>
+            Initiate roundtrip to external authentication provider.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.ExternalController.Callback">
+            <summary>
+            Post processing of external authentication.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.HomeController">
+            <summary>
+            This controller implements error handling.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.HomeController.#ctor(System.IServiceProvider)">
+            <summary>
+            Creates the instance of <see cref="T:Aras.OAuth.Server.HomeController"/>.
+            </summary>
+            <param name="serviceProvider">Service provider.</param>
+        </member>
+        <member name="M:Aras.OAuth.Server.HomeController.Error(System.String)">
+            <summary>
+            Redirect with error.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.AccessControlAllowCredentialsMiddleware">
+            <summary>
+            This middleware appends 'Access-Control-Allow-Credentials' header
+            to the response when 'Access-Control-Allow-Origin' is present to
+            fixup standard IdentityServer's CorsPolicyProvider which does not
+            set CorsPolicy.SupportsCredentials to true.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.AccessControlAllowCredentialsMiddleware.#ctor(Microsoft.AspNetCore.Http.RequestDelegate)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.OAuth.Server.AccessControlAllowCredentialsMiddleware"/>.
+            </summary>
+            <param name="next">The next middleware.</param>
+        </member>
+        <member name="M:Aras.OAuth.Server.AccessControlAllowCredentialsMiddleware.Invoke(Microsoft.AspNetCore.Http.HttpContext)">
+            <summary>
+            Process an individual request.
+            </summary>
+            <param name="context">Http context.</param>
+            <returns>Next middleware call.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.ImpersonateGrantValidator">
+            <summary>
+            Handles validation of impersonate token requests.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.ImpersonateGrantValidator.#ctor(Aras.OAuth.Server.Infrastructure.IInnovatorUserNameValidator)">
+            <summary>
+            Creates instance of <see cref="T:Aras.OAuth.Server.ImpersonateGrantValidator"/>.
+            </summary>
+            <param name="userNameValidator">Instance of <see cref="T:Aras.OAuth.Server.Infrastructure.IInnovatorUserNameValidator"/>.</param>
+        </member>
+        <member name="P:Aras.OAuth.Server.ImpersonateGrantValidator.GrantType">
+            <summary>
+            Returns the grant type this validator can deal with: impersonate.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.ImpersonateGrantValidator.ValidateAsync(IdentityServer4.Validation.ExtensionGrantValidationContext)">
+            <summary>
+            Validates the impersonate grant request.
+            </summary>
+            <param name="context">Current context.</param>
+            <exception cref="T:System.ArgumentException">Thrown when required request parameters are missing.</exception>
+        </member>
+        <member name="T:Aras.OAuth.Server.InnovatorUserNameValidator">
+            <summary>
+            Class for validating Innovator user name.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.InnovatorUserNameValidator.ValidateInnovatorUserNameAsync(Aras.OAuth.Server.Infrastructure.InnovatorUserNameValidationContext)">
+            <summary>
+            Validates Innovator user name.
+            </summary>
+            <param name="context">Context of Innovator user name validation.</param>
+            <returns>Result of Innovator user name validation.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.AuthenticationTypeInfo">
+            <summary>
+            Represents information about authentication type.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.AuthenticationTypeInfo.DisplayName">
+            <summary>
+            Display name.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.AuthenticationTypeInfo.AuthenticationType">
+            <summary>
+            Authentication type.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.LayoutViewModel">
+            <summary>
+            Contains information that shoud be displayed on Layout page.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LayoutViewModel.ProductName">
+            <summary>
+            Product name.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LayoutViewModel.LogoUrl">
+            <summary>
+            Logo Url.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LayoutViewModel.BackgroundImageUrl">
+            <summary>
+            Background image Url.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LayoutViewModel.VersionInfo">
+            <summary>
+            Information about version.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.LoggedOutViewModel">
+            <summary>
+            Contains information that should be displayed on logged out page.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoggedOutViewModel.PostLogoutRedirectUri">
+            <summary>
+            Post logout redirect uri.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoggedOutViewModel.ClientName">
+            <summary>
+            Client name.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoggedOutViewModel.SignOutIframeUrl">
+            <summary>
+            Signout iframe url.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoggedOutViewModel.AutomaticRedirectAfterSignOut">
+            <summary>
+            Automatic redirect after signout.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoggedOutViewModel.LogoutId">
+            <summary>
+            Logout id.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoggedOutViewModel.TriggerExternalSignout">
+            <summary>
+            Trigger external signout.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoggedOutViewModel.ExternalAuthenticationType">
+            <summary>
+            External authentication type.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.LoginInputModel">
+            <summary>
+            Contains data that is returned from login page.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginInputModel.Database">
+            <summary>
+            Selected database.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginInputModel.AuthenticationType">
+            <summary>
+            Selected authentication type.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginInputModel.Username">
+            <summary>
+            User name.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginInputModel.EncryptedPassword">
+            <summary>
+            Encrypted Password.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginInputModel.ReturnUrl">
+            <summary>
+            Return URL.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginInputModel.ShouldSavePreferences">
+            <summary>
+            Should user preferences be saved.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.LoginViewModel">
+            <summary>
+            Contains information that shoud be displayed on login page.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.Databases">
+            <summary>
+            List of databases.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.AuthenticationTypeInfos">
+            <summary>
+            List of available authentication type infos.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.IsDirectLogin">
+            <summary>
+            Determines if login should be direct to external provider.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.ShowAuthenticationType">
+            <summary>
+            Determines if Authentication type field should be shown on login page.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.CanChangeDatabase">
+            <summary>
+             Determines if Database field should be readonly.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.CanChangeAuthenticationType">
+            <summary>
+            Determines if Authentication type field should be readonly.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.CanChangeUsername">
+            <summary>
+            Determines if Username field should be readonly.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.IsSilentLogin">
+            <summary>
+            Determines if it is should be silent login.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.ErrorMessage">
+            <summary>
+            Value of error message.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.LoginViewModel.CertificatePublicKey">
+            <summary>
+            The public key from the OAuthServer certificate
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.VersionInfo">
+            <summary>
+            Contains information about current version.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.VersionInfo.#ctor(System.Version,System.String)">
+            <summary>
+            Creates the instance of <see cref="T:Aras.OAuth.Server.VersionInfo"/>.
+            </summary>
+            <param name="version">Instance of Version.</param>
+            <param name="servicePack">Service pack.</param>
+        </member>
+        <member name="P:Aras.OAuth.Server.VersionInfo.Version">
+            <summary>
+            Version value.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.VersionInfo.VersionString">
+            <summary>
+            Version string.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.VersionInfo.BuildString">
+            <summary>
+            Build string.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.ErrorViewModel">
+            <summary>
+            Contains information that shoud be displayed on error page.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.ErrorViewModel.ErrorDescription">
+            <summary>
+            Error description.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.Program">
+            <summary>
+            Entry point for Core application.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.Program.Main(System.String[])">
+            <summary>
+            Builds application.
+            </summary>
+            <param name="args">Command line arguments.</param>
+        </member>
+        <member name="M:Aras.OAuth.Server.Program.CreateWebHostBuilder(Aras.OAuth.Server.WebHostBuilderContext,System.Boolean)">
+            <summary>
+            Initializes new instanse of <see cref="T:Microsoft.AspNetCore.Hosting.IWebHostBuilder"/>.
+            </summary>
+            <param name="builderContext">Builder context.</param>
+            <param name="reloadOnChange">Flag to create or not filewatcher on each call of extension.</param>
+            <returns>Instanse of <see cref="T:Microsoft.AspNetCore.Hosting.IWebHostBuilder"/>.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.ProtocolVersionAttribute">
+            <summary>
+            Attribute to store OAuthServer protocol version.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.ProtocolVersionAttribute.#ctor(System.String)">
+            <summary>
+            Creates an instance of <see cref="T:Aras.OAuth.Server.ProtocolVersionAttribute"/> class.
+            </summary>
+            <param name="protocolVersion">The protocol version.</param>
+        </member>
+        <member name="P:Aras.OAuth.Server.ProtocolVersionAttribute.ProtocolVersion">
+            <summary>
+            Gets the OAuthServer protocol version.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.WebHostBuilderContext">
+            <summary>
+            Builder context.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.WebHostBuilderContext.Args">
+            <summary>
+            Comand line arguments.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.WebHostBuilderContext.ServerConfigPath">
+            <summary>
+            Path to application configuration file.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.WebHostBuilderContext.PluginsConfigPath">
+            <summary>
+            Path to plugins configuration file.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.WebHostBuilderContext.LocalizationDirectory">
+            <summary>
+            Localization directory.
+            </summary>
+        </member>
+    </members>
+</doc>

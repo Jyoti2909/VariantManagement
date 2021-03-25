@@ -1,0 +1,22 @@
+﻿<AML>
+ <Item type="EMail Message" id="D7DED4DE50BA4CD4817B4B4638C1CD78" action="add">
+  <body_html>&lt;BODY&gt;&lt;font size="+1"&gt;
+&lt;p&gt;You have been assigned a new change management activity in Aras Innovator (details below).  Please log in to Innovator to complete the work.&lt;/p&gt;
+&lt;p&gt;&lt;font size="+0" style="font-variant: small-caps"&gt;Activity: &lt;/font&gt;${Item[@type="Activity"]/name}&lt;br/&gt;
+&lt;font size="+0" style="font-variant: small-caps"&gt;Instructions:&lt;/font&gt; ${Item[@type="Activity"]/message}&lt;/p&gt;
+&lt;p&gt;&lt;font size="+0" style="font-variant: small-caps"&gt;${Item[@type="ItemType"]/label}:&lt;/font&gt; ${Item[2]/item_number}&lt;br/&gt;
+&lt;font size="+0" style="font-variant: small-caps"&gt;Title:&lt;/font&gt; ${Item[2]/title}&lt;/p&gt;
+&lt;/font&gt;
+&lt;B&gt;
+${substring("Some information needed to form this email was not found. Please contact your system administrator to ensure that the sender has privileges to view the items.", 1, (1-count(Item[2]))*158)}
+&lt;/B&gt;
+&lt;/BODY&gt;</body_html>
+  <body_plain />
+  <from_user keyed_name="Innovator Admin" type="User">30B991F927274FA3829655F50C99472E</from_user>
+  <query_string>&lt;Item type="Activity" id="${Item/ActivityId}" action="get" select="name,message"/&gt;
+&lt;Item type="${Item/@type}" id="${Item/@id}" action="get" select="item_number,title"/&gt;
+&lt;Item type="ItemType" id="${Item/@typeId}" action="get" select="label"/&gt;</query_string>
+  <subject>New Innovator Activity: ${Item[@type="Activity"]/name} for ${Item[2]/item_number}</subject>
+  <name>CM Activity Notification</name>
+ </Item>
+</AML>

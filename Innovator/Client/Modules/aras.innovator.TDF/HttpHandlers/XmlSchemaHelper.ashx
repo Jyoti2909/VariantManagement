@@ -1,0 +1,1 @@
+﻿<%@ WebHandler Language="C#"   Class="Aras.TDF.HttpHandlers.XmlSchemaHelper"  %>

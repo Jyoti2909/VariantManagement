@@ -1,0 +1,90 @@
+﻿<AML>
+ <Item type="Method" id="4788A3297828486ABBC8FC4CA09EDA4B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Innovator innovator = this.getInnovator();
+
+	Newtonsoft.Json.Linq.JObject favoriteObject = GetGenericJsonObjectForFavorite(this);
+	string favoriteCategory = this.getProperty("category");
+	Newtonsoft.Json.Linq.JObject additionalData = favoriteObject.Value<Newtonsoft.Json.Linq.JObject>("additional_data");
+	if (additionalData == null)
+	{
+		favoriteObject["additional_data"] = additionalData = new Newtonsoft.Json.Linq.JObject();
+	}
+
+	switch (favoriteCategory)
+	{
+		case "ItemType":
+			Item contextTypeItem = innovator.newItem("ItemType", "get");
+			contextTypeItem.setProperty("name", this.getProperty("context_type"));
+			contextTypeItem = contextTypeItem.apply();
+
+			if (contextTypeItem.isError())
+			{
+				additionalData["image"] = "../images/DefaultItemType.svg";
+			}
+			else
+			{
+				additionalData["label"] = contextTypeItem.getProperty("label_plural", contextTypeItem.getProperty("name"));
+				additionalData["itemTypeId"] = contextTypeItem.getID();
+				additionalData["image"] = contextTypeItem.getProperty("open_icon", "../images/DefaultItemType.svg");
+				additionalData["name"]  = contextTypeItem.getProperty("name");
+			}
+			break;
+		case "Search":
+			Item savedSearchItem = innovator.newItem("SavedSearch", "get");
+			savedSearchItem.setID(additionalData.Value<string>("id"));
+			savedSearchItem.setAttribute("select", "criteria, search_mode, location");
+			savedSearchItem = savedSearchItem.apply();
+
+			if (savedSearchItem.isError())
+			{
+				break;
+			}
+
+			additionalData["criteria"] = savedSearchItem.getProperty("criteria");
+			additionalData["search_mode"] = savedSearchItem.getProperty("search_mode");
+			additionalData["location"] = savedSearchItem.getProperty("location");
+
+			break;
+		default:
+			break;
+	}
+
+	return innovator.newResult(favoriteObject.ToString());
+}
+
+private static Newtonsoft.Json.Linq.JObject GetGenericJsonObjectForFavorite(Item favoriteItem)
+{
+	Newtonsoft.Json.Linq.JObject favoriteObject = new Newtonsoft.Json.Linq.JObject();
+
+	SetJsonPropertyIfIsNotNullOrEmpty(favoriteObject, "quickAccessFlag", favoriteItem.getProperty("quick_access_flag"));
+	SetJsonPropertyIfIsNotNullOrEmpty(favoriteObject, "favoriteOrder", favoriteItem.getProperty("favorite_order"));
+	SetJsonPropertyIfIsNotNullOrEmpty(favoriteObject, "folderId", favoriteItem.getProperty("folder_id"));
+	SetJsonPropertyIfIsNotNullOrEmpty(favoriteObject, "contextType", favoriteItem.getProperty("context_type"));
+	SetJsonPropertyIfIsNotNullOrEmpty(favoriteObject, "category", favoriteItem.getProperty("category"));
+	SetJsonPropertyIfIsNotNullOrEmpty(favoriteObject, "label", favoriteItem.getProperty("label"));
+	SetJsonPropertyIfIsNotNullOrEmpty(favoriteObject, "id", favoriteItem.getID());
+	SetJsonPropertyIfIsNotNullOrEmpty(favoriteObject, "ownedBy", favoriteItem.getProperty("owned_by_id"));
+
+	try
+	{
+		favoriteObject["additional_data"] = Newtonsoft.Json.Linq.JObject.Parse(favoriteItem.getProperty("additional_data", string.Empty));
+	}
+	catch (Newtonsoft.Json.JsonReaderException)
+	{
+	}
+
+	return favoriteObject;
+}
+
+private static void SetJsonPropertyIfIsNotNullOrEmpty(Newtonsoft.Json.Linq.JObject jObject, string propName, string propValue)
+{
+	if (!string.IsNullOrEmpty(propValue))
+	{
+		jObject[propName] = propValue;
+	}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>Fav_FavoriteItemJsonBuilder</name>
+ </Item>
+</AML>

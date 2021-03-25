@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="295168AD6FF44F68A5EFE3CA6DD3761A" action="add">
+  <comments>Method simplifies Derived Relationship adding</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const string queryDefinitionIdPropertyName = "query_definition_id";
+var queryDefinitionId = this.getProperty(queryDefinitionIdPropertyName);
+if (string.IsNullOrEmpty(queryDefinitionId))
+{
+	return this;
+}
+var queryDefinitionQuery = this.newItem("qry_QueryDefinition", "get");
+queryDefinitionQuery.setID(queryDefinitionId);
+queryDefinitionQuery.setAttribute("levels", "1");
+var queryDefinition = queryDefinitionQuery.apply();
+if (queryDefinition.isError())
+{
+	return queryDefinition;
+}
+
+if (string.IsNullOrEmpty(this.getProperty("name")))
+{
+	this.setProperty("name", queryDefinition.getProperty("name"));
+}
+this.setProperty("implementation_query", queryDefinition.node.OuterXml);
+
+this.removeProperty(queryDefinitionIdPropertyName);
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_ConvertFromQueryDefinition</name>
+ </Item>
+</AML>

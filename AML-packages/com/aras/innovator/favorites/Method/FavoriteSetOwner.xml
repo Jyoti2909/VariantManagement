@@ -1,0 +1,68 @@
+﻿<AML>
+ <Item type="Method" id="B733E3A178E04A5CBC3B01524AF06A9D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	return MethodLogic(new DataAccessLayer(CCO.ErrorLookup));
+}
+
+internal Item MethodLogic(IDataAccessLayer dataAccessLayer)
+{ 
+	if (string.IsNullOrEmpty(this.getProperty("owned_by_id")) && this.getPropertyItem("owned_by_id") == null)
+{
+	Item userItem = this.newItem();
+	userItem.loadAML(@"<AML>
+	<Item type=""User"" action=""get"" select=""id,name"">
+		<Relationships>
+			<Item type=""Alias"" action=""get"" select=""related_id"" isCriteria=""0"">
+				<related_id>
+					<Item type=""Identity"" action=""get"" select=""id"">
+						<is_alias>1</is_alias>
+					</Item>
+				</related_id>
+			</Item>
+		</Relationships>
+	</Item>
+</AML>");
+	userItem.setID(this.getInnovator().getUserID());
+	userItem = userItem.apply();
+
+		Item isAliasIdentities =
+			userItem.getItemsByXPath(
+				"//Result/Item[@type='User']/Relationships/Item[@type='Alias']/related_id/Item[@type='Identity']");
+
+		if (isAliasIdentities.getItemCount() == 0)
+	{
+			string errorMessage = dataAccessLayer.LookupError("SSVC_FailedGetUserIsAlias", userItem.getProperty("name"));
+			return this.getInnovator().newError(errorMessage);
+	}
+	else
+	{
+		this.setProperty("owned_by_id", isAliasIdentities.getItemByIndex(0).getID());
+		return this;
+	}
+}
+
+	return this;
+}
+
+internal interface IDataAccessLayer
+{
+	string LookupError(string name, string par1);
+}
+
+internal class DataAccessLayer:IDataAccessLayer
+{
+	private Aras.Server.Core.ErrorLookup errorLookup;
+
+	internal DataAccessLayer(Aras.Server.Core.ErrorLookup errorLookup)
+	{
+		this.errorLookup = errorLookup;
+	}
+
+	public string LookupError(string name, string par1)
+	{
+		return errorLookup.Lookup(name, par1);
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>FavoriteSetOwner</name>
+ </Item>
+</AML>

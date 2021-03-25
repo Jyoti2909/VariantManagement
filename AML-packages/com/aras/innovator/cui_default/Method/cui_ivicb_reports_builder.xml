@@ -1,0 +1,150 @@
+﻿<AML>
+ <Item type="Method" id="3DB282C89F724B1F80D2884C2C8B3146" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string itemTypeId = this.getProperty("item_type_id");
+	Innovator inn = this.getInnovator();
+	IDataAccessLayer dataAccessLayer = new DataAccessLayer(inn);
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer, inn);
+	return businessLogic.GetReportsMenuButtons(itemTypeId);
+}
+
+internal class BusinessLogic
+{
+	private IDataAccessLayer dataAccessLayer;
+	private Innovator innovator;
+	// '0F7DA70E60DB4002BDF0ADA41DFA19F5' - itemview.itemcommandbar.default.reports
+	private const string ItemCommandBarDefaultReportsButtonId = "0F7DA70E60DB4002BDF0ADA41DFA19F5";
+
+	internal BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+		this.innovator = innovator;
+	}
+
+	public Item GetReportsMenuButtons(string itemTypeId)
+	{
+		Item items = null;
+
+		//ItemType and Item reports
+		if (!string.IsNullOrEmpty(itemTypeId))
+		{
+			string clickMethodId = this.dataAccessLayer.GetReportsClickMethodId();
+			Item reports = this.dataAccessLayer.GetRegularReports(itemTypeId);
+			items = HandleMenuButtons(reports, "report:{0}:{1}", clickMethodId, itemTypeId);
+
+			//Sel-Service Reports
+			Item ssrReports = this.dataAccessLayer.GetSsrReports(itemTypeId);
+			Item ssrItems = HandleMenuButtons(ssrReports, "userreport:{0}", clickMethodId);
+			if (ssrItems != null)
+			{
+				if (items != null)
+				{
+					items.appendItem(GetSeporator("cui_after_reports_sep"));
+					items.appendItem(ssrItems);
+				}
+				else
+				{
+					items = ssrItems;
+				}
+			}
+		}
+
+		return items ?? this.innovator.newResult("");
+	}
+
+	private Item GetSeporator(string name)
+	{
+		Item separator = this.innovator.newItem("CommandBarSeparator");
+		separator.setProperty("name", name);
+		separator.setProperty("parent_menu", ItemCommandBarDefaultReportsButtonId);
+
+		return separator;
+	}
+
+	private Item HandleMenuButtons(Item reports, string reportTemplate, string clickMethodId, string itemTypeId = "")
+	{
+		int reportsCount = reports.getItemCount();
+		if (reportsCount > 0)
+		{
+			Item cuiItems = this.innovator.newItem();
+			for (int reportIndex = 0; reportIndex < reportsCount; reportIndex++)
+			{
+				Item currentReport = reports.getItemByIndex(reportIndex);
+				Item menuButton = currentReport.newItem("CommandBarMenuButton");
+				string reportId = currentReport.getID();
+				menuButton.setProperty("name", currentReport.getProperty("name") ?? reportId);
+				menuButton.setProperty("label", currentReport.getProperty("label") ?? currentReport.getProperty("name"));
+
+				menuButton.setProperty("parent_menu", ItemCommandBarDefaultReportsButtonId);
+				menuButton.setProperty("action", "Add");
+				menuButton.setProperty("on_click_handler", clickMethodId);
+				menuButton.setProperty("additional_data", string.Format(CultureInfo.InvariantCulture, "{{\"report_type_name\": \"{0}\", \"report_id\": \"{1}\"}}", currentReport.getType(), reportId));
+				menuButton.setID(reportId);
+				menuButton.removeAttribute("isNew");
+				menuButton.removeAttribute("isTemp");
+				cuiItems.appendItem(menuButton);
+			}
+
+			// newItem() is creates empty node. It's should be deleted
+			cuiItems.removeItem(cuiItems.getItemByIndex(0));
+			return cuiItems;
+		}
+
+		return null;
+	}
+}
+
+internal interface IDataAccessLayer
+{
+	string GetReportsClickMethodId();
+
+	Item GetRegularReports(string itemTypeId);
+
+	Item GetSsrReports(string itemTypeId);
+}
+
+internal class DataAccessLayer : IDataAccessLayer
+{
+	// 'cui_ivicb_reports_click' - name of default click method for reports items
+	const string ReportsClickMethodName = "cui_ivicb_reports_click";
+	private Innovator innovator;
+
+	internal DataAccessLayer(Innovator innovator)
+	{
+		this.innovator = innovator;
+	}
+
+	public string GetReportsClickMethodId()
+	{
+		Item method = this.innovator.newItem("Method", "get");
+		method.setAttribute("select", "id");
+		method.setProperty("name", ReportsClickMethodName);
+		method = method.apply();
+
+		return method.getID();
+	}
+
+	public Item GetRegularReports(string itemTypeId)
+	{
+		Item itemReports = this.innovator.newItem("Item Report", "get");
+		itemReports.setProperty("source_id", itemTypeId);
+		Item relReports = this.innovator.newItem("Report", "get");
+		relReports.setAttribute("select", "name,label");
+		Item logicOr = relReports.newOR();
+		logicOr.setProperty("type", "itemtype");
+		logicOr.setProperty("type", "item");
+		itemReports.setRelatedItem(relReports);
+		itemReports = itemReports.apply();
+		return itemReports.getItemsByXPath(Item.XPathResultItem + "/related_id/Item");
+	}
+
+	public Item GetSsrReports(string itemTypeId)
+	{
+		Item userReports = this.innovator.newItem("Method", "GetSelfServiceReports");
+		userReports.setProperty("base_item_type", itemTypeId);
+		return userReports.apply();
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>cui_ivicb_reports_builder</name>
+ </Item>
+</AML>

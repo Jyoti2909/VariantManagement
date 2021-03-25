@@ -1,0 +1,35 @@
+﻿<AML>
+ <Item type="Method" id="02E3E109A2CC44A18D35C1B6A7F23743" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//Method receive the following arguments:
+// inDom = 
+// inArgs = 
+
+//debugger;
+//create new filter Object
+var Filter = new Object( );
+var item_type_keyed_name = '';
+var item_type = inArgs.itemContext.selectSingleNode('reference_item_type');
+if(item_type && item_type.text!=="")
+{
+  var item_type_id = item_type.text;
+  item_type_keyed_name = item_type.getAttribute('keyed_name');
+  if(item_type_keyed_name === null || item_type_keyed_name === "")
+  {
+    item_type = item_type.selectSingleNode('Item');
+    if(item_type === null)
+      {item_type = inArgs.windowContext.getItemById('ItemType', item_type_id);}
+    if(item_type)
+      {item_type_keyed_name = item_type.getAttribute('keyed_name');}
+  }
+}
+//Assign Filters
+Filter["data_type"]={filterValue:"Item", isFilterFixed:true};
+if(item_type_keyed_name && item_type_keyed_name!=="")
+  {Filter["source_id"]={filterValue:item_type_keyed_name,isFilterFixed:true};}
+return Filter;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>MSO_SelectPropertyItem</name>
+ </Item>
+</AML>

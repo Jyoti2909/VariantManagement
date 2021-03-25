@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="82C59F1547C34058A1FB37008C81AD6E" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const effectivityContext = options.effectivityContext;
+
+let getPermissionsItem = aras.newIOMItem('Method', 'effs_getExpressionPermissions');
+getPermissionsItem.setProperty('access_type', 'can_add');
+getPermissionsItem.setProperty('effective_item_id', effectivityContext.effectiveItemId);
+getPermissionsItem.setProperty('effective_itemtype_id', effectivityContext.effectiveItemTypeId);
+getPermissionsItem.setProperty('expression_itemtype_id', effectivityContext.effectivityExpressionItemTypeId);
+getPermissionsItem.setProperty('extra_access_control_provider', effectivityContext.extraAccessControlProviderMethodName);
+
+getPermissionsItem = getPermissionsItem.apply();
+
+let canAdd;
+
+if (getPermissionsItem.isError()) {
+	aras.AlertError(getPermissionsItem);
+	canAdd = false;
+} else {
+	canAdd = getPermissionsItem.getResult() === '1';
+}
+
+return {
+	disabled: !canAdd
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_exprItemGridCreateBtnInit</name>
+ </Item>
+</AML>

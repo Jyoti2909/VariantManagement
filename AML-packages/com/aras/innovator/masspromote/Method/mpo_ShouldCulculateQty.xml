@@ -1,0 +1,53 @@
+﻿<AML>
+ <Item type="Method" id="6FC0B76CAE94462B8DDBAF9E157C0363" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[    var selectAttribute = this.getAttribute("select");
+    if (string.IsNullOrEmpty(selectAttribute) || String.Equals(selectAttribute, "*",  StringComparison.OrdinalIgnoreCase))
+    {
+        SetRequestState(RequestState, ShouldCalculateQtyKey, true);
+        SetRequestState(RequestState, ShouldCalculateQtyTotalKey, true);
+        SetRequestState(RequestState, ShouldCalculateQtyPromotedKey, true);
+        SetRequestState(RequestState, ShouldCalculateQtyFailedKey, true);
+        return this;
+    }
+    
+    var selectAttributeValues = selectAttribute.Split(new [] {","}, StringSplitOptions.RemoveEmptyEntries).Select(field => field.Trim().ToLower(CultureInfo.InvariantCulture)).ToArray();
+    if (selectAttributeValues.Contains("qty_total")) {
+        SetRequestState(RequestState, ShouldCalculateQtyKey, true);
+        SetRequestState(RequestState, ShouldCalculateQtyTotalKey, true);
+    }
+    
+    if (selectAttributeValues.Contains("qty_promoted")) {
+        SetRequestState(RequestState, ShouldCalculateQtyKey, true);
+        SetRequestState(RequestState, ShouldCalculateQtyPromotedKey, true);
+    }
+    
+    if (selectAttributeValues.Contains("qty_failed")) {
+        SetRequestState(RequestState, ShouldCalculateQtyKey, true);
+        SetRequestState(RequestState, ShouldCalculateQtyFailedKey, true);
+    }
+    
+    return this;
+}
+
+private const string ShouldCalculateQtyKey = "ShouldCalculateQty";
+private const string ShouldCalculateQtyTotalKey = "ShouldCalculateQtyTotal";
+private const string ShouldCalculateQtyPromotedKey = "ShouldCalculateQtyPromoted";
+private const string ShouldCalculateQtyFailedKey = "ShouldCalculateQtyFailed";
+
+private static void SetRequestState(Aras.Server.Core.IContextState requestState, object key, object value)
+{
+    if (requestState.Contains(key))
+    {
+        requestState[key] = value;
+    }
+    else
+    {
+        requestState.Add(key, value);
+    }
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>mpo_ShouldCalculateQty</name>
+ </Item>
+</AML>

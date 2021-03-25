@@ -1,0 +1,93 @@
+﻿<AML>
+ <Item type="Method" id="DD4859B92E174ED6AE23D9C35E101019" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// Find the item and its classification
+var thisItem = document.thisItem;
+var classification = thisItem.getProperty("classification");
+
+function classificationToArray(classification)
+{
+  var res = new Array();
+  if (classification)
+  {
+    classification = classification.replace(/ /g, "_");
+    res = classification.split("/");
+  }
+  return res;
+}
+
+var thisClassificationArr = classificationToArray(classification);
+
+// Get the itemtype definition
+var innovator = thisItem.newInnovator();
+var itemType = innovator.newItem("ItemType");
+itemType.node = document.itemType;
+
+var fieldContainer = document.getElementById("classSpecificFieldContainer");
+
+var showBorder = false;
+var props = itemType.getRelationships("Property");
+for (var i=0, L=props.getItemCount(); i<L; i++)
+{
+  var propName = props.getItemByIndex(i).getProperty("name");
+  // Get the class_path for this property
+  var propClass = props.getItemByIndex(i).getProperty("class_path");
+  var propClassStr = classificationToArray(propClass);
+  // Traverse the class_path and match against each level of the item's class
+  var L1 = propClassStr.length;
+  if (0 == L1)
+  {
+    continue;
+  }
+    
+  var matched = true;
+  for (var j=0; j<L1; j++)
+  {
+    if (propClassStr[j] != thisClassificationArr[j])
+    {
+      matched = false;
+      break;
+    }
+  }
+  
+  if (matched)
+  {
+    showBorder = true;//we'll show border around the "matched" fields
+  }
+  
+  // Find the field with the same name as the property
+  var field = getFieldByName(propName);
+  if (field)
+  {
+    var visibility = matched ? "visible" : "hidden";
+    var display    = matched ? ""        : "none";
+    
+    var fieldStyle = field.style;
+    fieldStyle.visibility = visibility;
+    fieldStyle.display    = display;
+    fieldStyle.position = "relative";
+    fieldStyle.top = "0px";
+    fieldStyle.left = "0px";
+    
+    fieldContainer.appendChild(field);
+  }
+}
+
+var borderField = getFieldByName("classSpecificFields_border");
+if (borderField)
+{
+  var visibility = showBorder ? "visible" : "hidden";
+  var display    = showBorder ? ""        : "none";
+ 
+  var uiResourceName = "class_spec_field." + aras.getItemProperty(document.itemType, "name", "") + "_" + thisClassificationArr[thisClassificationArr.length-1];
+  document.getElementById("classNameTd").innerHTML = aras.getResource("PLM", uiResourceName);
+    
+  var fieldStyle = borderField.style;
+  fieldStyle.visibility = visibility;
+  fieldStyle.display    = display;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Show Class-Specific Fields</name>
+ </Item>
+</AML>

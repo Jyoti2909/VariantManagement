@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="0369AABC5F5F48A09BC0B6255F23FDD6" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			return Execute(this, tmpItem => tmpItem.apply(), CCO.DB.InnDatabase.QuoteName);
+		}
+
+		public static Item Execute(Item self, Func<Item, Item> applyFunc, Func<string, string> quoteNameFunc)
+		{
+			if (self == null || applyFunc == null || quoteNameFunc == null)
+			{
+				return null;
+			}
+			string instanceData = self.getProperty("instance_data");
+			string generationSql = String.Format(CultureInfo.InvariantCulture,
+				"SELECT MAX(generation) FROM {0} maxreleasedinset WHERE maxreleasedinset.config_id={0}.config_id AND " +
+				"maxreleasedinset.is_released='1' AND maxreleasedinset.is_current='0'", quoteNameFunc(instanceData));
+
+			string configId = self.getProperty("config_id");
+			string itemTypeName = self.getType();
+			Innovator inn = self.getInnovator();
+			Item query = inn.newItem(itemTypeName, "get");
+			query.setAttribute("type", itemTypeName);
+			query.setProperty("config_id", configId);
+			query.setProperty("generation", generationSql);
+			query.setPropertyAttribute("generation", "condition", "in");
+			Item result = applyFunc(query);
+			return result;
+			]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetReleasedMaxGenerationRelGrid</name>
+ </Item>
+</AML>

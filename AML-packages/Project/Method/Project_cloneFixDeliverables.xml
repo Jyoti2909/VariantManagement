@@ -1,0 +1,77 @@
+﻿<AML>
+ <Item type="Method" id="54F7D76C52F24FBAA0E02FC8D50787E0" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (this.getAttribute("isNeedFixDeliverables") != "1")
+{
+	return this;
+}
+else
+{
+	this.removeAttribute("isNeedFixDeliverables");
+}
+
+var allDeliverableIds = new List<string>();
+
+Item deliverablesActivity2AndWbs = this.getItemsByXPath("//Item[@type='Activity2 Deliverable' or @type='WBS Deliverable']");
+Item deliverablesProjectDocs = this.getItemsByXPath("//Item[@type='Project Docs']");
+
+//(for deliverablesActivity2AndWbs) fill in allDeliverableIds if in DB (if user opened deliverable and saved it)
+int deliverablesActivity2AndWbsCount = deliverablesActivity2AndWbs.getItemCount();
+for (int i = 0; i < deliverablesActivity2AndWbsCount; i++)
+{
+	Item deliverable = deliverablesActivity2AndWbs.getItemByIndex(i);
+	//if we save the Item in DB, then getPropertyItem will be null and related_id will contain only id (string)
+	if (deliverable.getPropertyItem("related_id") == null)
+	{
+		allDeliverableIds.Add(deliverable.getProperty("related_id"));
+	}
+}
+
+//(the same for deliverablesProjectDocs) fill in allDeliverableIds if in DB (if user opened deliverable and saved it)
+int deliverablesProjectDocsCount = deliverablesProjectDocs.getItemCount();
+for (int i = 0; i < deliverablesProjectDocsCount; i++)
+{
+	Item deliverable = deliverablesProjectDocs.getItemByIndex(i);
+	//if we save the Item in DB, then getPropertyItem will be null and related_id will contain only id (string)
+	if (deliverable.getPropertyItem("related_id") == null)
+	{
+		allDeliverableIds.Add(deliverable.getProperty("related_id"));
+	}
+}
+
+//Important to go through deliverablesActivity2AndWbs before deliverablesProjectDocs. Because deliverablesActivity2AndWbs will be processed in other project events: like Project_saveProjectTree and action processProjectTree.
+//Fill in rest allDeliverableIds (we should leave at least one related_id as Item if there are no this Item in DB) and fix relatedId
+for (int i = 0; i < deliverablesActivity2AndWbsCount; i++)
+{
+	Item deliverable = deliverablesActivity2AndWbs.getItemByIndex(i);
+	string relatedId = deliverable.getProperty("related_id");
+	if (allDeliverableIds.Contains(relatedId))
+	{
+		//note, that if the property related_id is item then deliverable.getProperty("related_id") returns only its id (string). So now we change property of type "Item" to property type "string".
+		deliverable.setProperty("related_id", relatedId);
+		continue;
+	}
+	
+	allDeliverableIds.Add(relatedId);
+}
+
+//(the same for deliverablesProjectDocs) fill in rest allDeliverableIds (we should leave at least one related_id as Item if there are no this Item in DB) and fix relatedId
+for (int i = 0; i < deliverablesProjectDocsCount; i++)
+{
+	Item deliverable = deliverablesProjectDocs.getItemByIndex(i);
+	string relatedId = deliverable.getProperty("related_id");
+	if (allDeliverableIds.Contains(relatedId))
+	{
+		//note, that if the property related_id is item then deliverable.getProperty("related_id") returns only its id (string). So now we change property of type "Item" to property type "string".
+		deliverable.setProperty("related_id", relatedId);
+		continue;
+	}
+	
+	allDeliverableIds.Add(relatedId);
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Project_cloneFixDeliverables</name>
+ </Item>
+</AML>

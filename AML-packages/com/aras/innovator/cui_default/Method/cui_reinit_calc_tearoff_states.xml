@@ -1,0 +1,63 @@
+﻿<AML>
+ <Item type="Method" id="2B4BC740F3144F62972580322288A33B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var eventState = {};
+var topWindow = aras.getMostTopWindowWithAras(window);
+var item = topWindow.item;
+var itemType = topWindow.itemType;
+if (item) {
+	var itemTypeName = topWindow.itemTypeName;
+	var isTemp = aras.isTempEx(item);
+	var isDirty = aras.isDirtyEx(item);
+	var isNew = aras.isNew(item);
+	var lockedBy = aras.getItemProperty(item, 'locked_by_id', '');
+	var isClaimed = lockedBy !== '';
+	var lockFlg = aras.uiItemCanBeLockedByUser(item, topWindow.isRelationshipIT, topWindow['use_src_accessIT']);
+	var unlockFlg = aras.isLockedByUser(item);
+	var canAddFlg = topWindow['can_addFlg'];
+	var openFlg = (!isTemp && itemTypeName == 'File');
+	var saveFlg = ((isTemp && !isDependentIT) || (lockedBy == aras.getCurrentUserID())) && !isFunctionDisabled(itemTypeName, 'Save');
+	var saveAsFlg = !isTemp && !isFunctionDisabled(itemTypeName, 'Save As');
+	var purgeFlg = (lockedBy === '') && !isFunctionDisabled(itemTypeName, 'Delete');
+	var undoFlg = (!isTemp && isDirty);
+	var revisionFlg = (!isTemp && isVersionableIT);
+	var discussionFlg = !!(topWindow.isSSVCEnabled && !isNew);
+
+	var copy2clipboardFlg = aras.getItemProperty(itemType, 'is_relationship') == '1' && aras.getItemProperty(itemType, 'is_dependent') != '1' &&
+		(!isFunctionDisabled(itemTypeName, 'Copy'));
+	var relationshipsTab = findCurrentRelationshipsTab();
+	var relatedItemTypeName = relationshipsTab ? relationshipsTab.relatedItemTypeName : '';
+	var relationshipTypeName = relationshipsTab ? relationshipsTab.relationshipTypeName : '';
+	var pasteFlg = isPasteCommandAvailable(item, relatedItemTypeName, relationshipTypeName);
+	var pasteSpecialFlg = !aras.clipboard.isEmpty() && (isTemp || unlockFlg) && (!isFunctionDisabled(itemTypeName, 'Paste Special'));
+	var showClipboardFlg = !aras.clipboard.isEmpty();
+	var promoteFlg = lockFlg && !(isFunctionDisabled(itemTypeName, 'Promote'));
+
+	eventState = {
+		isTemp: isTemp,
+		isDirty: isDirty,
+		isNew: isNew,
+		isClaimed: isClaimed,
+		canLock: lockFlg,
+		canUnlock: unlockFlg,
+		canAdd: canAddFlg,
+		canOpen: openFlg,
+		canSave: saveFlg,
+		canSaveAs: saveAsFlg,
+		canPurge: purgeFlg,
+		canUndo: undoFlg,
+		canDoRevision: revisionFlg,
+		discussionEnabled: discussionFlg,
+		canCopy2clipboard: copy2clipboardFlg,
+		canPaste: pasteFlg,
+		canShowClipboard: showClipboardFlg,
+		canPromote: promoteFlg
+	};
+}
+
+return eventState;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_reinit_calc_tearoff_states</name>
+ </Item>
+</AML>

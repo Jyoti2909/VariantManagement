@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="5886FDC24EE64319A2C592A8DD485EF3" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Aras.Server.Security.Identity drIdentity = Aras.Server.Security.Identity.GetByName("dr_AccessControlDaemon");
+bool permissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(drIdentity);
+Innovator inn = this.getInnovator();
+
+try
+{
+	string nextState = this.getProperty("nextstate");
+
+	Item resItem = this.promote(nextState, string.Empty);
+	if (resItem.isError())
+	{
+		return resItem;
+	}
+}
+finally
+{
+	if (permissionWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(drIdentity);
+	}
+}
+
+return inn.newResult("OK");]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_PromoteDRFItem</name>
+ </Item>
+</AML>

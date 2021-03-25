@@ -1,0 +1,42 @@
+﻿<AML>
+ <Item type="SQL" id="D27C087DF0774040BB68126B7E87CB78" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>set_project_status</old_name>
+  <sqlserver_body><![CDATA[/* Name:    set_project_status
+   Purpose: does the dynamic sql needed to set the potential
+            status_1 through status_12 columns of a project.
+   Created: 5-DEC-2005 George J. Carrette
+   Input:   the ID of a project.
+*/
+
+create procedure set_project_status(@PROJECT_ID CHAR(32),
+                                        @J integer,
+					@status varchar(64),
+                                        @percent_compl integer)
+
+AS
+begin
+ DECLARE @SQL NVARCHAR(256)
+ DECLARE @DCL NVARCHAR(256)
+ DECLARE @N NVARCHAR(2)
+ DECLARE @RES INTEGER
+ SET @N = CONVERT(VARCHAR(2),@J+1)
+ SET @SQL = 'update project set ' +
+            'status_' + @N + '=@status_n,' +
+            'percent_compl_' + @N + '=@percent_compl_n ' +
+            'where id=@id'
+ SET @DCL = '@status_n varchar(64),@percent_compl_n integer,@id char(32)'
+ execute sp_executesql @SQL,
+                       @DCL,
+                       @id=@project_id,
+                       @status_n=@status,
+                       @percent_compl_n=@percent_compl
+end
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>set_project_status</name>
+ </Item>
+</AML>

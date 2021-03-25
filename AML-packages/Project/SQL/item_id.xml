@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="SQL" id="DF506B5C179A44AA96A2AAE0C58FD530" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>item_id</old_name>
+  <sqlserver_body><![CDATA[/* name: item_id.sql
+created: 28-MAR-2003 George J. Carrette, for Army WVA project.
+purpose: to support item creation from sql code.
+note: Call this one using ITEM_ID(NEWID())
+      because NEWID() cannot be used inside the function itself due to the 
+      limitation against non-determinism within functions */
+
+create function innovator.item_id(@X uniqueidentifier)
+RETURNS CHAR (32)
+AS
+BEGIN
+DECLARE @Y CHAR(36)
+SET @Y = CONVERT(CHAR(36),@X)
+RETURN(SUBSTRING(@Y,1,8)+
+       SUBSTRING(@Y,10,4)+SUBSTRING(@Y,15,4)+SUBSTRING(@Y,20,4)+
+       SUBSTRING(@Y,25,12))
+END
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>item_id</name>
+ </Item>
+</AML>

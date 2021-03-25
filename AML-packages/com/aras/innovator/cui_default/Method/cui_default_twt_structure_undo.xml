@@ -1,0 +1,17 @@
+﻿<AML>
+ <Item type="Method" id="776A7931B7F4499490A1BF8F23D2B9CA" action="add">
+  <comments>Structure Toolbar Undo Button</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var control = inArgs.control;
+if (control) {
+	var context = control._toolbar._toolbar.dom.ownerDocument.defaultView;
+	if (context && context.onUndoCommand) {
+		control.setEnabled(false);
+		return context.onUndoCommand();
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_twt_structure_undo</name>
+ </Item>
+</AML>

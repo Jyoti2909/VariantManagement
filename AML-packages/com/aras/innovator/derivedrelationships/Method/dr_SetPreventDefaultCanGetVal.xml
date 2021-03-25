@@ -1,0 +1,73 @@
+﻿<AML>
+ <Item type="Method" id="A752052C546042AE9B31099ED0C83090" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	var preventDefaultCanGetCheckPropertyName = "prevent_default_event_handlers";
+	var preventDefaultCanGetCheckValue = this.getProperty(preventDefaultCanGetCheckPropertyName, "0");
+	var persistentType = this.getProperty("drs_persistent_type");
+	if (string.Equals(preventDefaultCanGetCheckValue, "0") && string.Equals(persistentType, "Persistent", StringComparison.OrdinalIgnoreCase))
+	{
+		this.setProperty(preventDefaultCanGetCheckPropertyName, "1");
+
+		var eventHandler = this.newItem("dr_FamilyEventHandler", "add");
+		string determinedId = CalculateId(this.getID(), "Default can_get check dr_FamilyEventHandler event");
+		eventHandler.setID(determinedId);
+		var method = this.newItem("Method", "get");
+		method.setProperty("name", "dr_EnsurePropagatedAccess");
+		eventHandler.setPropertyItem("event_handler_id", method);
+		eventHandler.setProperty("event_type", "OnBeforePersistRelationships");
+		eventHandler.setProperty("sort_order", "10");
+		eventHandler.setProperty("event_data", "<data><access_types>can_get</access_types></data>");
+		this.addRelationship(eventHandler);
+
+		var eventHandlerItemVersion = this.newItem("dr_FamilyEventHandler", "add");
+		string determinedIdItemVersion = CalculateId(this.getID(), "Default Handle Item Version");
+		eventHandlerItemVersion.setID(determinedIdItemVersion);
+		var methodItemVersion = this.newItem("Method", "get");
+		methodItemVersion.setProperty("name", "dr_HandleItemVersion");
+		eventHandlerItemVersion.setPropertyItem("event_handler_id", methodItemVersion);
+		eventHandlerItemVersion.setProperty("event_type", "OnBeforePersistRelationships");
+		eventHandlerItemVersion.setProperty("sort_order", "5");
+		
+		this.addRelationship(eventHandlerItemVersion);
+	}
+	return this;
+}
+
+private static string CalculateId(string drfId, string stringForHash)
+{
+	var xxHashAlgorithmHelper = new XxHashAlgorithmHelper();
+	string drfIdHash = BitConverter.ToString(xxHashAlgorithmHelper.ComputeHash(Encoding.UTF8.GetBytes(drfId)));
+	string eventIdHash = BitConverter.ToString(xxHashAlgorithmHelper.ComputeHash(Encoding.UTF8.GetBytes(stringForHash)));
+	string id = string.Format(CultureInfo.InvariantCulture, "{0}{1}", drfIdHash, eventIdHash)
+		.Replace("-", string.Empty);
+
+	return id;
+}
+
+internal class XxHashAlgorithmHelper
+{
+	private readonly object _xxHashAlgorithm;
+	private readonly System.Reflection.MethodInfo _computeHashMethodInfo;
+
+	internal XxHashAlgorithmHelper()
+	{
+		System.Reflection.Assembly targetAssembly = System.Reflection.Assembly.Load("Aras.Cryptography");
+		Type xxHash64AlgorithmBuilderType = targetAssembly.GetTypes().Single(t => t.Name == "XxHash64AlgorithmBuilder");
+		var xxHash64AlgorithmBuilder = Activator.CreateInstance(xxHash64AlgorithmBuilderType);
+
+		System.Reflection.MethodInfo buildMethodInfo = xxHash64AlgorithmBuilderType.GetMethod("Build");
+
+		_xxHashAlgorithm = buildMethodInfo.Invoke(xxHash64AlgorithmBuilder, null);
+		_computeHashMethodInfo = _xxHashAlgorithm.GetType().GetMethod("ComputeHash", new[] { typeof(byte[]) });
+	}
+
+	internal byte[] ComputeHash(byte[] dataBytes)
+	{
+		byte[] result = (byte[])_computeHashMethodInfo.Invoke(_xxHashAlgorithm, new object[] { dataBytes });
+		return result;
+	}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_SetPreventDefaultCanGetVal</name>
+ </Item>
+</AML>

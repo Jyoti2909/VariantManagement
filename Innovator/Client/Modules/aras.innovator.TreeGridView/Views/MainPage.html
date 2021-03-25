@@ -1,0 +1,179 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+	<meta charset="utf-8"/>
+	<link rel="stylesheet" href="../../../javascript/dijit/themes/claro/claro.css" media="screen">
+	<style type="text/css">
+		@import '../../../javascript/dijit/themes/claro/claro.css';
+		@import '../../../public/styles/controls.css';
+		@import '../styles/view.css';
+		/*start of styles for TreeGrid*/
+		@import '../../../styles/common.css';
+		@import '../styles/tgvViewerTreeGrid.css';
+		@import '../styles/mainPage.css';
+		/*end of styles for TreeGrid*/
+	</style>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=polyfillsBundle"></script>
+	<script type="text/javascript" src="../../../vendors/hyperhtml-element.min.js"></script>
+	<script src="../../../vendors/inferno.min.js"></script>
+	<script src="../../../jsBundles/core.js"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="async: true, isDebug: false, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=XmlDocument,ToolbarWrapper"></script>
+	<script type="text/javascript" src="../Scripts/Viewer/MainPageDefaultArgs/ConditionProvider/ItemDefault.js"></script>
+	<script type="text/javascript" src="../Scripts/Viewer/MainPageDefaultArgs/ConditionProvider/Default.js"></script>
+	<script type="text/javascript" src="../Scripts/Viewer/MainPageDefaultArgs/DefaultParametersProvider.js"></script>
+</head>
+<body class="claro">
+	<div id="dimmer_spinner" class="overlay_hidden">
+		<div class="aras-centered">
+			<div class="aras-spinner"></div>
+			<span>Processing</span>
+			<button>Cancel</button>
+		</div>
+	</div>
+	<div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters:false, liveSplitters:false" id="borderContainer">
+		<div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'top'" id="toolbar_container" style="height:30px; overflow:hidden;"></div>
+		<div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center', splitter:true" id="rb_tree_grid" class="tgv-grid"></div>
+		<div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center', splitter:true" id="rb_tree_grid_error"></div>
+	</div>
+<script>
+	var mainPage;
+	var startConditionProviderStr;
+	var aras = parent.aras;
+
+	function setEditMode() {
+		reload();
+	}
+
+	function setViewMode() {
+		reload();
+	}
+
+	function reload() {
+		var startCondition = calculateStartCondition();
+		mainPage.reload(startCondition);
+	}
+
+	function createProviderInstanceFromString(providerStr) {
+		var splittedByOpenBracket = providerStr.split('(');
+		var providerNameWithOptinalParent;
+		var stringArg;
+		var providerInstance;
+		//example of startConditionProvider: parent.CustomStartConditionProvider('some text') or ItemDefault({"id":"id", "name": "name"})
+		//note that 'some text' can contain ')', so, splittedByOpenBracket.length can be 2 and more. Usually it will be 2.
+		if (splittedByOpenBracket.length > 1) {
+			providerNameWithOptinalParent = splittedByOpenBracket[0]; //value of providerNameWithOptinalParent, e.g., parent.CustomStartConditionProvider
+			//we use array.splice(start, deleteCount) to remove the first array element.
+			splittedByOpenBracket.splice(0, 1);
+			//slice(0, -1) just removes the last symbol from the string. The last symbol should be a close bracket: ')'.
+			stringArg = splittedByOpenBracket.join('(').slice(0, -1);
+			//value of stringArg, e.g., '{"id":"id", "name": "name"}' or '\'some text\''
+
+			//note that for case of '\'some text\'' we need to remove quotes.
+			if (stringArg.length > 1) {
+				//TODO: test this one
+				if (stringArg[0] === '\'' && stringArg[stringArg.length - 1] === '\'') {
+					stringArg = stringArg.slice(0, -1); //remove the last symbol.
+					stringArg = stringArg.slice(1); //remove the first symbol.
+				}
+				if (stringArg[0] === '"' && stringArg[stringArg.length - 1] === '"') {
+					stringArg = stringArg.slice(0, -1); //remove the last symbol.
+					stringArg = stringArg.slice(1); //remove the first symbol.
+				}
+			}
+		} else {
+			return;
+		}
+
+		var providerName;
+
+		if (providerNameWithOptinalParent.slice(0, 7) === 'parent.') {
+			providerName = providerNameWithOptinalParent.slice(7);
+			providerInstance = new parent[providerName](stringArg);
+		} else {
+			providerName = providerNameWithOptinalParent;
+			providerInstance = new window[providerName](stringArg);
+		}
+		return providerInstance;
+	}
+
+	function calculateStartCondition() {
+		var startConditionProvider;
+		if (startConditionProviderStr) {
+			startConditionProvider = createProviderInstanceFromString(startConditionProviderStr);
+			if (!startConditionProvider) {
+				aras.AlertError(aras.getResource('../Modules/aras.innovator.TreeGridView/', 'viewer.wrong_format_start_condition_provider'));
+			}
+		} else {
+			startConditionProvider = new Default();
+		}
+
+		var startCondition = startConditionProvider.getCondition();
+		return startCondition;
+	}
+
+	window.onload = function() {
+		var modules = ['dojo/_base/declare', 'TreeGridView/Scripts/Viewer/MainPage', 'TreeGridView/Scripts/Viewer/Parameters/MainPageExtension'];
+		var mainPageCustomExtensionPath = parent.tgvMainPageCustomExtensionPath;
+		if (mainPageCustomExtensionPath) {
+			modules.push(mainPageCustomExtensionPath);
+		}
+		modules.push('dijit/layout/BorderContainer', 'dijit/layout/ContentPane');
+		require(modules, function(declare, MainPage, ParametersMainPageExtension, MainPageCustomExtension) {
+			var queryAllArgsString = decodeURIComponent(window.location.search.substring(1));
+			var queryAllArgsStringsArray = queryAllArgsString.split('&');
+			var queryArgs = {};
+			var currentQueryArg;
+			for (var i = 0; i < queryAllArgsStringsArray.length; i++) {
+				currentQueryArg = queryAllArgsStringsArray[i].split('=');
+				queryArgs[currentQueryArg[0].toUpperCase()] = currentQueryArg[1];
+			}
+			var treeGridViewDefinitionId = queryArgs['tgvdId'.toUpperCase()];
+			startConditionProviderStr = queryArgs['startConditionProvider'.toUpperCase()];
+			var startCondition = calculateStartCondition();
+
+			var parametersProvider;
+			var parametersProviderQueryString = queryArgs['parametersProvider'.toUpperCase()];
+			if (parametersProviderQueryString) {
+				parametersProvider = createProviderInstanceFromString(parametersProviderQueryString);
+				if (!parametersProvider) {
+					aras.AlertError(aras.getResource('../Modules/aras.innovator.TreeGridView/', 'viewer.wrong_format_parameters_provider'));
+				}
+			}
+
+			var tgvdItemNode = aras.itemsCache.getItem(treeGridViewDefinitionId);
+			if (!tgvdItemNode || tgvdItemNode.getAttribute('levels') !== '2') {
+				tgvdItemNode = aras.getItemById('rb_TreeGridViewDefinition', treeGridViewDefinitionId, 2);
+			};
+			tgvdItemNode = tgvdItemNode.cloneNode(true);
+
+			var toDeclare = [MainPage, ParametersMainPageExtension];
+			if (mainPageCustomExtensionPath) {
+				toDeclare.push(MainPageCustomExtension);
+			}
+			var MainPageWithExtensions = declare(toDeclare);
+			mainPage = new MainPageWithExtensions(
+			{
+				clientControlsFactory: clientControlsFactory,
+				toolbarContainerHeight: toolbar_container.height,
+				treeGridViewItemTypeInfo: aras.getItemTypeNodeForClient('rb_TreeGridViewDefinition'),
+				treeGridViewDefinitionNode: tgvdItemNode,
+				parametersProvider: parametersProvider,
+				aras: parent.aras
+			});
+			mainPage.load(startCondition);
+			var overlay = document.getElementById('dimmer_spinner');
+
+			overlay.querySelector('span').textContent = aras.getResource('../Modules/aras.innovator.TreeGridView', 'expandAll_processing_label');
+			overlay.querySelector('button').textContent = aras.getResource('../Modules/aras.innovator.TreeGridView', 'expandAll_processing_button');
+		});
+	}
+	window.addEventListener("beforeunload", function() {
+		if (mainPage) {
+			mainPage.destroy();
+		}
+	});
+</script>
+</body>
+</html>

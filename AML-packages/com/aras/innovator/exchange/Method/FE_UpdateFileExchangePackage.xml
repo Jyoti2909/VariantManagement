@@ -1,0 +1,39 @@
+﻿<AML>
+ <Item type="Method" id="2560D61A725C402087A337323A52A176" action="add">
+  <comments>Update file exchange package</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string teamId = this.getProperty("team_id");
+string managedById = this.getProperty("managed_by_id");
+string ownedById = this.getProperty("owned_by_id");
+
+Item packageFile = this.newItem("FileExchangePackageFile", "get");
+packageFile.setAttribute("select", "related_id");
+Item query = this.newItem("FileExchangePackage", "get");
+query.setID(this.getID());
+query.addRelationship(packageFile);
+query = query.apply();
+if (query.isError())
+	return query;	
+query = query.getRelationships("FileExchangePackageFile");
+
+for (int i = 0; i < query.getItemCount(); i++)
+{
+	Item pkg_file = query.getItemByIndex(i);
+	pkg_file = pkg_file.getRelatedItem();
+		
+	XmlDocument body = new XmlDocument();
+	body.XmlResolver = null;
+	body.LoadXml("<body />");
+	body.DocumentElement.SetAttribute("fileId", pkg_file.getID());
+	body.DocumentElement.SetAttribute("teamId", teamId);
+	body.DocumentElement.SetAttribute("managedById", managedById);
+	body.DocumentElement.SetAttribute("ownedById", ownedById);
+	
+	Innovator innovator = this.getInnovator();
+	innovator.applyMethod("FE_SetFilePackageProperties", body.OuterXml);
+}
+return query;]]></method_code>
+  <method_type>C#</method_type>
+  <name>FE_UpdateFileExchangePackage</name>
+ </Item>
+</AML>

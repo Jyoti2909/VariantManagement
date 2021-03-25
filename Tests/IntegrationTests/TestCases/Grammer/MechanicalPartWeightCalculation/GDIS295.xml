@@ -1,0 +1,416 @@
+﻿<TestCase author="vsmirnov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../TestCase.xsd">
+	<Description>Test that check mechanical part theoretical weight calculation.</Description>
+
+	<Request runAs="testUser:1" position="1">
+		<Comments>
+			<![CDATA[
+			GDIS-295-01
+			Given:
+				User which is a member of CAD-Designer Identity
+			When:
+				Create MASTER CAD with gag_volume = 5
+				Create ANNOTATION CAD with gag_volume = 7
+			Then:
+				CADs are created
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[1]/@id" />
+			<Variable id="CAD2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[2]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD1.Id</name>
+					<classification>Mechanical/Component</classification>
+					<gag_classification>MASTER</gag_classification>
+					<gag_volume>5</gag_volume>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD2.Id</name>
+					<classification>Mechanical/Component</classification>
+					<gag_classification>ANNOTATION</gag_classification>
+					<gag_volume>7</gag_volume>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="testUser:1" position="2">
+		<Comments>
+			<![CDATA[
+			GDIS-295-01
+			Given:
+				User which is a member of Product Engineer Identity
+			When:
+				Create PArt with gag_density = 6
+				and related CADs created in previous request
+				Create PArt with gag_density = 8
+				and related CADs created in previous request
+			Then:
+				Part is created
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD1.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[1]/related_id" />
+			<Variable id="CAD1.Id" action="apply" xpath="Query/AML/Item[2]/Relationships/Item[1]/related_id" />
+			<Variable id="CAD2.Id" action="apply" xpath="Query/AML/Item[1]/Relationships/Item[2]/related_id" />
+			<Variable id="CAD2.Id" action="apply" xpath="Query/AML/Item[2]/Relationships/Item[2]/related_id" />
+			<Variable id="Part1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[1]/@id" />
+			<Variable id="Part2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[2]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="add" doGetItem="0">
+					<classification>Mechanical Part/Component</classification>
+					<name>Part1.Id</name>
+					<gag_density>6</gag_density>
+					<Relationships>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>CAD1.Id</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>CAD2.Id</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+				<Item type="Part" action="add" doGetItem="0">
+					<classification>Mechanical Part/Component</classification>
+					<name>Part1.Id</name>
+					<gag_density>8</gag_density>
+					<Relationships>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>CAD1.Id</related_id>
+						</Item>
+						<Item type="Part CAD" action="add" doGetItem="0">
+							<related_id>CAD2.Id</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="" />
+						<Item type="Part" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="testUser:1" position="3">
+		<Comments>
+			<![CDATA[
+			GDIS-295-01
+			Given:
+				Parts created in previous request
+			When:
+				get these parts
+			Then:
+				Parts are returned with gag_theoretical_weight = 30 an 40
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="apply" xpath="Query/AML/Item[1]/@id" />
+			<Variable id="Part2.Id" action="apply" xpath="Query/AML/Item[2]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="get" id="Part1.Id" select="gag_theoretical_weight" />
+				<Item type="Part" action="get" id="Part2.Id" select="gag_theoretical_weight" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="">
+							<gag_theoretical_weight>30.0000</gag_theoretical_weight>
+							<id keyed_name="" type="Part"></id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="">
+							<gag_theoretical_weight>40.0000</gag_theoretical_weight>
+							<id keyed_name="" type="Part"></id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="testUser:1" position="4">
+		<Comments>
+			<![CDATA[
+			GDIS-295-02
+			Given:
+				MASTER CAD related to a part
+			When:
+				Update its volume
+			Then:
+				CAD is updated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD1.Id" action="apply" xpath="Query/AML/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="edit" id="CAD1.Id" doGetItem="0">
+					<gag_volume>10</gag_volume>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="testUser:1" position="5">
+		<Comments>
+			<![CDATA[
+			GDIS-295-02
+			Given:
+				Parts created in previous requests
+			When:
+				get these parts
+			Then:
+				Part is returned with gag_theoretical_weight = 60 and 80
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="apply" xpath="Query/AML/Item[1]/@id" />
+			<Variable id="Part2.Id" action="apply" xpath="Query/AML/Item[2]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="get" id="Part1.Id" select="gag_theoretical_weight" />
+				<Item type="Part" action="get" id="Part2.Id" select="gag_theoretical_weight" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="">
+							<gag_theoretical_weight>60.0000</gag_theoretical_weight>
+							<id keyed_name="" type="Part"></id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="">
+							<gag_theoretical_weight>80.0000</gag_theoretical_weight>
+							<id keyed_name="" type="Part"></id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="testUser:1" position="6">
+		<Comments>
+			<![CDATA[
+			GDIS-295-05
+			Given:
+				MASTER CAD related to two parts
+			When:
+				Change it"s classification to ANNOTATION
+			Then:
+				CAD is updated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD1.Id" action="apply" xpath="Query/AML/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="edit" id="CAD1.Id" doGetItem="0">
+					<gag_classification>ANNOTATION</gag_classification>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="testUser:1" position="7">
+		<Comments>
+			<![CDATA[
+			GDIS-295-05
+			Given:
+				ANNOTATION CAD related to two parts
+			When:
+				Change it"s classification to MASTER
+			Then:
+				CAD is updated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD2.Id" action="apply" xpath="Query/AML/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="edit" id="CAD2.Id" doGetItem="0">
+					<gag_classification>MASTER</gag_classification>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="testUser:1" position="8">
+		<Comments>
+			<![CDATA[
+			GDIS-295-05
+			Given:
+				Parts created in previous requests
+			When:
+				get these parts
+			Then:
+				Part is returned with gag_theoretical_weight = 42 and 56
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="apply" xpath="Query/AML/Item[1]/@id" />
+			<Variable id="Part2.Id" action="apply" xpath="Query/AML/Item[2]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="get" id="Part1.Id" select="gag_theoretical_weight" />
+				<Item type="Part" action="get" id="Part2.Id" select="gag_theoretical_weight" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="">
+							<gag_theoretical_weight>42.0000</gag_theoretical_weight>
+							<id keyed_name="" type="Part"></id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="">
+							<gag_theoretical_weight>56.0000</gag_theoretical_weight>
+							<id keyed_name="" type="Part"></id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+
+	<TestCaseCleanUp runAs="root:innovator">
+		<Query>
+			<AML>
+				<Item type="Part CAD" action="delete" where="[PART_CAD].[CREATED_BY_ID] = 'D45821108E4549A8A04BE4C3A46B5336'"/>
+				<Item type="Part" action="delete" where="[PART].[CREATED_BY_ID] = 'D45821108E4549A8A04BE4C3A46B5336'"/>
+				<Item type="CAD" action="delete" where="[CAD].[CREATED_BY_ID] = 'D45821108E4549A8A04BE4C3A46B5336'"/>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name="ids_modified" value="1C16D4DADAC44A659DF90262DF9E70E8" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

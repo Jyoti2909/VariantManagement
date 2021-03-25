@@ -1,0 +1,100 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2014. -->
+<html>
+<head>
+	<title></title>
+	<style type="text/css">
+		body {
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+			overflow: hidden;
+		}
+		iframe {
+			border: 0px;
+		}
+		#instance {
+			position: absolute;
+			top: 29px;
+			left: 0px;
+		}
+	</style>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<script type="text/javascript">
+		if (typeof(dialogArguments) === "undefined") {
+			var dialogArguments = window.frameElement.dialogArguments;
+		}
+		var aras = dialogArguments.aras;
+		var item = dialogArguments.item;
+	</script>
+	<script type="text/javascript" src="../javascript/scheduling_methods.js"></script>
+	<script type="text/javascript" src="../../../javascript/dialog.js"></script>
+	<script type="text/javascript">
+		function setToolbarControlEnabled(ctrlName, b) {
+			window.frames[0].setControlEnabled(ctrlName, b);
+		}
+
+		function sendData() {
+			var errMes = "";
+			if (!aras.getItemProperty(item, "name")) {
+				errMes = aras.getResource("project", "add_project_dialog.to_create_project_enter_project_name");
+			}
+
+			if (errMes) {
+				aras.AlertError(errMes, "", "", window);
+				return;
+			}
+
+			var frame = document.getElementById("instance"),
+				retVal = [];
+
+			if (document.frames) {
+				frame = document.frames["instance"];
+			}
+			else {
+				frame.document = frame.contentDocument;
+			}
+			dialogArguments.dialog.result = retVal;
+			dialogArguments.dialog.close();
+		}
+
+		function processCommand(cmdId) {
+			switch (cmdId) {
+				case "sendData":
+					sendData();
+					break;
+			}
+		}
+
+		onload = function onload_handler() {
+			var ProjectOnAdd_FormNm = "PM_projectOnAdd",
+				prFormNd = aras.getItem("Form", "name='" + ProjectOnAdd_FormNm + "'", "<name>" + ProjectOnAdd_FormNm + "</name>", 0),
+				prFormID = (prFormNd) ? prFormNd.getAttribute("id") : "";
+
+			if (!prFormID) {
+				aras.AlertError(aras.getResource("project", "add_project_dialog.form_not_found", ProjectOnAdd_FormNm))
+				return;
+			}
+			prFormNd = aras.getFormForDisplay(prFormID);
+			if (!prFormNd) {
+				aras.AlertError(aras.getResource("project", "add_project_dialog.form_not_found_for_display", ProjectOnAdd_FormNm))
+				return;
+			}
+			prFormNd = prFormNd.node;
+
+			var frame = document.getElementById("instance");
+			if (document.frames) {
+				frame = document.frames["instance"];
+			}
+			else {
+				frame.document = frame.contentDocument;
+			}
+			aras.uiShowItemInFrameEx(frame, item, "edit", 0, prFormNd);
+		}
+	</script>
+</head>
+<body id="pr_frameset" rows="28px, 100%">
+	<iframe id="toolbar" width="100%" height="28px" frameborder="0" src="ActivityCompletionWorksheet/toolbar.html?mode=add_project"></iframe>
+	<iframe id="instance" width="100%" frameborder="0" src="../../../scripts/blank.html" frameborder="no"></iframe>
+</body>
+</html>

@@ -1,0 +1,428 @@
+﻿<AML>
+ <Item type="Workflow Map" id="B264D9B4BDCB4E2DBD79E06E465568C7" action="add">
+  <description xml:lang="en">Problem Report Workflow</description>
+  <node_bg_color>       </node_bg_color>
+  <node_label1_color>       </node_label1_color>
+  <node_label1_font />
+  <node_label2_color>       </node_label2_color>
+  <node_label2_font />
+  <node_name_color>       </node_name_color>
+  <node_name_font />
+  <node_size />
+  <process_owner keyed_name="Change Specialist I" type="Identity">80727DB851A94DBCB10419D30ED69F9F</process_owner>
+  <transition_line_color>       </transition_line_color>
+  <transition_name_color>       </transition_name_color>
+  <transition_name_font />
+  <name>PR</name>
+  <Relationships>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Start" type="Activity Template">
+     <Item type="Activity Template" id="CEEB8C1B77B24E7E96D860DA5E530665" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/WorkflowStart.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>0</is_end>
+      <is_start>1</is_start>
+      <message xml:lang="en">Workflow Start</message>
+      <priority>2</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>20</x>
+      <y>20</y>
+      <name>Start</name>
+      <Relationships>
+       <Item type="Workflow Map Path" id="EDDBE9034D5743B8878BC843AF9961A7" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>0</is_override>
+        <name>Go</name>
+        <related_id>2FFDC4B9203146FEB3D6EF088001DBB9</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Start" type="Activity Template">CEEB8C1B77B24E7E96D860DA5E530665</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="PR" type="Workflow Map">B264D9B4BDCB4E2DBD79E06E465568C7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="PR Pending" type="Activity Template">
+     <Item type="Activity Template" id="A7B42005E07E4BD2AAD467585D307046" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Workflow End</message>
+      <priority>1</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>677</x>
+      <y>20</y>
+      <name>PR Pending</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="26DD7F35D3E44720873FA4EC646CBB78" action="add">
+        <controlled_itemtype keyed_name="PR" type="ItemType" name="PR">881803D90C0B4F98A49A4732C16277F2</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="F5D611374B354F29A1C527E3CD9A8731" type="Life Cycle Transition">F5D611374B354F29A1C527E3CD9A8731</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="PR Pending" type="Activity Template">A7B42005E07E4BD2AAD467585D307046</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="PR" type="Workflow Map">B264D9B4BDCB4E2DBD79E06E465568C7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Review PR" type="Activity Template">
+     <Item type="Activity Template" id="2FFDC4B9203146FEB3D6EF088001DBB9" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <escalate_to keyed_name="CM" type="Identity">F6624E9AE5504958A84E4B6A5831298B</escalate_to>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review the Problem Report</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>140</x>
+      <y>20</y>
+      <name>Review PR</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="1BAB2DE90DEC40698189FCF7BADF6884" action="add">
+        <related_id keyed_name="Change Specialist I" type="Identity">80727DB851A94DBCB10419D30ED69F9F</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review PR" type="Activity Template">2FFDC4B9203146FEB3D6EF088001DBB9</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template EMail" id="D84ACABA33FB43D190BF83EE660FA52D" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="CM Activity Notification" type="EMail Message">D7DED4DE50BA4CD4817B4B4638C1CD78</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review PR" type="Activity Template">2FFDC4B9203146FEB3D6EF088001DBB9</source_id>
+        <target>all_assignments</target>
+       </Item>
+       <Item type="Activity Template Task" id="7371ACB47D8344EC997310969BCE81C2" action="add">
+        <description xml:lang="en">Check the PR for completeness (Title, Application Environment, Sequence of Events, Description, Affected Part/Document, Priority and Basis should be filled at this time)</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review PR" type="Activity Template">2FFDC4B9203146FEB3D6EF088001DBB9</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="10B0BA0BA93E4A889E0E3F92D30227EE" action="add">
+        <description xml:lang="en">Check for duplicate PRs </description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review PR" type="Activity Template">2FFDC4B9203146FEB3D6EF088001DBB9</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="7F28BC8691F448A784BD497A9F50626C" action="add">
+        <description xml:lang="en">Assign a Creator for the PR</description>
+        <is_required>0</is_required>
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Review PR" type="Activity Template">2FFDC4B9203146FEB3D6EF088001DBB9</source_id>
+        <sequence>3</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="294A0F9CAC4A49A4A48B6C7731FC23B9" action="add">
+        <description xml:lang="en">Vote "Reject" to reject the PR outright or "Verify" to send it for verification</description>
+        <is_required>0</is_required>
+        <sort_order>512</sort_order>
+        <source_id keyed_name="Review PR" type="Activity Template">2FFDC4B9203146FEB3D6EF088001DBB9</source_id>
+        <sequence>4</sequence>
+       </Item>
+       <Item type="Workflow Map Path" id="D09FD96164264F2484C7905DDD714162" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Reject</name>
+        <related_id>DB25507BC763415C98F0DACC23424AFD</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review PR" type="Activity Template">2FFDC4B9203146FEB3D6EF088001DBB9</source_id>
+        <x>6</x>
+        <y>63</y>
+       </Item>
+       <Item type="Workflow Map Path" id="F32B8AEF958246D3B176326CA7B3E462" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Verify</name>
+        <related_id>F65B8C48F2F943969D1EA14F8CA91B0A</related_id>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review PR" type="Activity Template">2FFDC4B9203146FEB3D6EF088001DBB9</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="PR" type="Workflow Map">B264D9B4BDCB4E2DBD79E06E465568C7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Verify PR" type="Activity Template">
+     <Item type="Activity Template" id="F65B8C48F2F943969D1EA14F8CA91B0A" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <escalate_to keyed_name="CM" type="Identity">F6624E9AE5504958A84E4B6A5831298B</escalate_to>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please verify the Problem Report</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>366</x>
+      <y>20</y>
+      <name>Verify PR</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="6BBCB5DBB7CE4E988E03DE96AA595C51" action="add">
+        <related_id keyed_name="Owner" type="Identity">
+         <Item type="Identity" action="get" select="id">
+          <name>Owner</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Verify PR" type="Activity Template">F65B8C48F2F943969D1EA14F8CA91B0A</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template EMail" id="669B93AB32584B4E90CD9944FE9B02B8" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="CM Activity Notification" type="EMail Message">D7DED4DE50BA4CD4817B4B4638C1CD78</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Verify PR" type="Activity Template">F65B8C48F2F943969D1EA14F8CA91B0A</source_id>
+        <target>all_assignments</target>
+       </Item>
+       <Item type="Activity Template Task" id="6FE2DC0EBB7D4F968E2AFCFDC101FD88" action="add">
+        <description xml:lang="en">Attempt to verify the problem as described</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Verify PR" type="Activity Template">F65B8C48F2F943969D1EA14F8CA91B0A</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="6DA2453CD2DB4F85AA6BDB5B15A743E8" action="add">
+        <description xml:lang="en">Complete the Problem Verification, Phase Caused, Phase Found, Ramifications and Severity fields</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Verify PR" type="Activity Template">F65B8C48F2F943969D1EA14F8CA91B0A</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="2C8EA95879274FBB950ADA11EFA4B278" action="add">
+        <description xml:lang="en">Vote "Verified" to send the PR for approval or "Not Verified" if unverifiable</description>
+        <is_required>0</is_required>
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Verify PR" type="Activity Template">F65B8C48F2F943969D1EA14F8CA91B0A</source_id>
+        <sequence>3</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="7C999868F74F4DB2AA0DBA6D4074F32C" action="add">
+        <controlled_itemtype keyed_name="PR" type="ItemType" name="PR">881803D90C0B4F98A49A4732C16277F2</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="61AC059DFC0F43FD90D5D9AC215F4A82" type="Life Cycle Transition">61AC059DFC0F43FD90D5D9AC215F4A82</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Verify PR" type="Activity Template">F65B8C48F2F943969D1EA14F8CA91B0A</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="80E6296119504792AD1D82D88F105ECB" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Verified</name>
+        <related_id>A4D774624F8544A1A247B6C33B1E8530</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Verify PR" type="Activity Template">F65B8C48F2F943969D1EA14F8CA91B0A</source_id>
+        <x>39</x>
+        <y>11</y>
+       </Item>
+       <Item type="Workflow Map Path" id="E0A762DA05284ECABA21EA1D3DB7FA48" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Not Verified</name>
+        <related_id>A6AC7513AB8C4E2A950EEEC832F50A70</related_id>
+        <segments />
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Verify PR" type="Activity Template">F65B8C48F2F943969D1EA14F8CA91B0A</source_id>
+        <x>-67</x>
+        <y>48</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="PR" type="Workflow Map">B264D9B4BDCB4E2DBD79E06E465568C7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Approve PR" type="Activity Template">
+     <Item type="Activity Template" id="A4D774624F8544A1A247B6C33B1E8530" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <escalate_to keyed_name="CM" type="Identity">F6624E9AE5504958A84E4B6A5831298B</escalate_to>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please approve the Problem Report</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>516</x>
+      <y>20</y>
+      <name>Approve PR</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="F27169AF3D71453CAD155DD8FB3236BF" action="add">
+        <related_id keyed_name="Change Specialist I" type="Identity">80727DB851A94DBCB10419D30ED69F9F</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Approve PR" type="Activity Template">A4D774624F8544A1A247B6C33B1E8530</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template EMail" id="CAB8C3AC0C0048209F76A54FA06AD420" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="CM Activity Notification" type="EMail Message">D7DED4DE50BA4CD4817B4B4638C1CD78</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Approve PR" type="Activity Template">A4D774624F8544A1A247B6C33B1E8530</source_id>
+        <target>all_assignments</target>
+       </Item>
+       <Item type="Activity Template Task" id="C0C1E9CC37D94860A6B8074643ED82F7" action="add">
+        <description xml:lang="en">Check the PR for completeness</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Approve PR" type="Activity Template">A4D774624F8544A1A247B6C33B1E8530</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="330FC8E1EF684C33819B18E8488E8506" action="add">
+        <description xml:lang="en">Vote "Approve" to signify that the PR is complete and verified</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Approve PR" type="Activity Template">A4D774624F8544A1A247B6C33B1E8530</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="D0AEDA2839F845B3BC060DF09117A8F7" action="add">
+        <controlled_itemtype keyed_name="PR" type="ItemType" name="PR">881803D90C0B4F98A49A4732C16277F2</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="96E24B8F72414C5CA498ED50B02FA98A" type="Life Cycle Transition">96E24B8F72414C5CA498ED50B02FA98A</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Approve PR" type="Activity Template">A4D774624F8544A1A247B6C33B1E8530</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="A1CF410B210647AE8E8DA2CD33E8A74A" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Approve</name>
+        <related_id>A7B42005E07E4BD2AAD467585D307046</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Approve PR" type="Activity Template">A4D774624F8544A1A247B6C33B1E8530</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="PR" type="Workflow Map">B264D9B4BDCB4E2DBD79E06E465568C7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="PR Rejected" type="Activity Template">
+     <Item type="Activity Template" id="DB25507BC763415C98F0DACC23424AFD" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Your Problem Report has been rejected</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>140</x>
+      <y>140</y>
+      <name>PR Rejected</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="FEB216CAE2954935B2B922275426A51A" action="add">
+        <related_id keyed_name="Creator" type="Identity">
+         <Item type="Identity" action="get" select="id">
+          <name>Creator</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="PR Rejected" type="Activity Template">DB25507BC763415C98F0DACC23424AFD</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Transition" id="F3E6D7A3698F44F1AEF2EB1213EA8C59" action="add">
+        <controlled_itemtype keyed_name="PR" type="ItemType" name="PR">881803D90C0B4F98A49A4732C16277F2</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="A2D0B7C4770242D785E07B755DAA477A" type="Life Cycle Transition">A2D0B7C4770242D785E07B755DAA477A</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="PR Rejected" type="Activity Template">DB25507BC763415C98F0DACC23424AFD</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>768</sort_order>
+    <source_id keyed_name="PR" type="Workflow Map">B264D9B4BDCB4E2DBD79E06E465568C7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="PR Unverified" type="Activity Template">
+     <Item type="Activity Template" id="A6AC7513AB8C4E2A950EEEC832F50A70" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">We were not able to verify your Problem Report</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>367</x>
+      <y>101</y>
+      <name>PR Unverified</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="C4F7B9C1C92F4DFD8E8AF3EFC6D45A3A" action="add">
+        <related_id keyed_name="Creator" type="Identity">
+         <Item type="Identity" action="get" select="id">
+          <name>Creator</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="PR Unverified" type="Activity Template">A6AC7513AB8C4E2A950EEEC832F50A70</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Transition" id="F78F3F1C12154A3BB75B799465E944C3" action="add">
+        <controlled_itemtype keyed_name="PR" type="ItemType" name="PR">881803D90C0B4F98A49A4732C16277F2</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="C9A4C3D20E5F4F2EB3F6054ED8F98911" type="Life Cycle Transition">C9A4C3D20E5F4F2EB3F6054ED8F98911</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="PR Unverified" type="Activity Template">A6AC7513AB8C4E2A950EEEC832F50A70</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>896</sort_order>
+    <source_id keyed_name="PR" type="Workflow Map">B264D9B4BDCB4E2DBD79E06E465568C7</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

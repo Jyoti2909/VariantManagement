@@ -1,0 +1,34 @@
+﻿<AML>
+ <Item type="Method" id="731451521EEB4414B2308173460C904A" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const getItemType = function() {
+	const relationshipFamilyId = aras.getItemProperty(document.item, 'dr_relationshipfamily_id');
+	const relationshipFamily = aras.itemsCache.getItem(relationshipFamilyId) || aras.getItemById('dr_RelationshipFamily', relationshipFamilyId);
+	if (!relationshipFamily) {
+		return;
+	}
+	const queryDefinitionId = aras.getItemProperty(relationshipFamily, 'query_definition_id');
+	const queryDefinition = aras.itemsCache.getItem(queryDefinitionId) || aras.getItemById('qry_QueryDefinition', queryDefinitionId);
+
+	if (!queryDefinition) {
+		return;
+	}
+	if (!queryDefinition.getElementsByTagName('Item').length) {
+		aras.getItemRelationshipsEx(queryDefinition, 'qry_QueryReference');
+		aras.getItemRelationshipsEx(queryDefinition, 'qry_QueryItem');
+	}
+	const rootQueryReference = queryDefinition.selectSingleNode('Relationships/Item[@type=\'qry_QueryReference\' and not(parent_ref_id)]');
+	const rootQueryItem = queryDefinition.selectSingleNode('Relationships/Item[ref_id=\'' + aras.getItemProperty(rootQueryReference, 'child_ref_id') + '\']');
+	return aras.getItemTypeForClient(aras.getItemProperty(rootQueryItem, 'item_type'), 'id').node;
+};
+
+const link = document.querySelector('.root_item-type');
+const itemType = getItemType();
+
+link.textContent = aras.getItemProperty(itemType, 'name') || '';
+link.onclick = aras.uiShowItemEx.bind(aras, itemType, null);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>dac_showRootItemTypeOnForm</name>
+ </Item>
+</AML>

@@ -1,0 +1,174 @@
+﻿<AML>
+ <Item type="Report" id="DBAA17478EDE4AD59F1D1ECDE1906D00" action="add">
+  <description />
+  <location>server</location>
+  <report_query><![CDATA[<Item type="ItemType" id="{@id}" action="Core_ItemTypeHistoryConfigReport"/>]]></report_query>
+  <target>one window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" 
+     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+     xmlns:msxsl="urn:schemas-microsoft-com:xslt" 
+     xmlns:user="urn:user-scripts" 
+     xmlns:aras="http://www.aras.com"
+     >
+ <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes" cdata-section-elements="script msxsl:script"/>
+  
+  <xsl:template match="/">
+    <xsl:apply-templates select="//Result"/>
+  </xsl:template>
+  
+  <xsl:template match="Result">
+   <html>
+    <head>
+     <title>ItemType History Configuration Report for &quot;<xsl:value-of select="Item[@type='ItemType']/name"/>&quot;</title>
+    </head>
+    <style>
+     <![CDATA[
+           span.title{font-family:Verdana; font-size:16pt; font-color: red;}
+           td {font-family:Arial; font-size:8pt; padding-left:5px; padding-right:5px; border:solid 1px;}
+           td.headLabel {font-weight:bold; text-align:right; vertical-align:bottom;}
+           td.headValue {font-size:11pt; padding-5px:10px; padding-right:15px;}
+           td.label {font-weight:bold; text-align:center;}
+           td.value {border-style:solid;}
+           td.section {font-size:11pt; background-color:#dddddd;}
+           table {width: 650px}
+           table.border {empty-cells:show; border-collapse:collapse; border-style:solid; border-width:1}
+           table.noborder {empty-cells:show; border-collapse:collapse; border-width:0}
+           th {font-family:Arial; font-size:8pt; border-style:solid; border-width:1; padding-right:5px; padding-left:5px; text-align:center;}
+
+     ]]]]><![CDATA[> 
+    </style>
+   <body>
+    <span class="title">ItemType History Configuration Report for &quot;<xsl:value-of select="Item[@type='ItemType']/name"/>&quot;</span>
+    <br/>
+    <br/>
+    <xsl:choose>
+      <xsl:when test="not(Item[@type='ItemType']/history_template/Item)">
+        <H2>This ItemType does not have a History Template defined.</H2>
+      </xsl:when>
+      <xsl:otherwise>
+        <table class="border">
+          <tr><td class="section" colspan="5"><b>Default History Template</b></td></tr>
+          <tr>
+            <th>History Template</th>
+            <th>Property History</th>
+            <th>Action Name</th>
+            <th>Action Label</th>
+            <th>Comments</th>
+          </tr>
+          <xsl:call-template name="templateRows">
+            <xsl:with-param name="LCMapOrHistTemplateNd" select="Item[@type='ItemType']/history_template/Item"/>
+          </xsl:call-template>
+        </table>
+        
+        <table class="border">
+          <tr><td class="section" colspan="3"><b>Tracked Properties</b></td></tr>
+          <tr>
+            <th>Property Name</th>
+            <th>Label</th>
+            <th>Data Type</th>
+          </tr>
+          <xsl:for-each select="Item[@type='Property']">
+            <tr>
+              <td>
+                <xsl:value-of select="name"/>
+              </td>
+              <td>
+                <xsl:value-of select="label"/>&#160;
+              </td>
+              <td>
+                <xsl:value-of select="data_type"/>
+              </td>
+            </tr>
+          </xsl:for-each>
+        </table>
+        
+        <table class="border">
+          <tr><td class="section" colspan="7"><b>Life Cycle History Templates</b></td></tr>
+          <tr>
+            <th>Life Cycle Map</th>
+            <th>State</th>
+            <th>History Template</th>
+            <th>Property History</th>
+            <th>Action Name</th>
+            <th>Action Label</th>
+            <th>Comments</th>
+          </tr>
+          <xsl:for-each select="Item[@type='ItemType Life Cycle']/related_id/Item">
+            <xsl:call-template name="templateRows">
+              <xsl:with-param name="LCMapOrHistTemplateNd" select="."/>
+            </xsl:call-template>
+          </xsl:for-each>
+        </table>
+      </xsl:otherwise>
+    </xsl:choose>
+   </body>
+  </html>
+ </xsl:template>
+ 
+ <xsl:template name="templateRows">
+   <xsl:param name="LCMapOrHistTemplateNd"/>
+   <xsl:for-each select="$LCMapOrHistTemplateNd//Item[@type='History Template Action' and related_id/Item]">
+     <tr>
+       <xsl:if test="not(preceding-sibling::Item[@type='History Template Action'])">
+         <xsl:variable name="parentLCMap" select="ancestor::Item[@type='Life Cycle Map']"/>
+         <xsl:variable name="parentLCState" select="ancestor::Item[@type='Life Cycle State']"/>
+         <xsl:variable name="parentHistTemplate" select="ancestor::Item[@type='History Template']"/>
+         <xsl:variable name="LCMapHistActsCnt" select="count($parentLCMap//Item[@type='History Action'])"/>
+         <xsl:variable name="histTemplateAtcsCnt" select="count($parentHistTemplate//Item[@type='History Action'])"/>
+         <xsl:if test="$parentLCMap and not($parentLCState[preceding-sibling::Item[@type='Life Cycle State']])">
+           <td>
+             <xsl:attribute name="ROWSPAN">
+               <xsl:value-of select="$LCMapHistActsCnt"/>
+             </xsl:attribute>
+             <xsl:value-of select="$parentLCMap/name"/>
+           </td>
+         </xsl:if>
+         <xsl:if test="$parentLCState">
+           <td>
+             <xsl:attribute name="ROWSPAN">
+               <xsl:value-of select="$histTemplateAtcsCnt"/>
+             </xsl:attribute>
+             <xsl:value-of select="$parentLCState/name"/>
+           </td>
+         </xsl:if>
+         <td>
+           <xsl:attribute name="ROWSPAN">
+             <xsl:value-of select="$histTemplateAtcsCnt"/>
+           </xsl:attribute>
+           <xsl:value-of select="$parentHistTemplate/name"/>
+         </td>
+         <td>
+           <xsl:attribute name="ROWSPAN">
+             <xsl:value-of select="$histTemplateAtcsCnt"/>
+           </xsl:attribute>
+           <xsl:call-template name="YesNo">
+             <xsl:with-param name="val"><xsl:value-of select="$parentHistTemplate/property_history"/></xsl:with-param>
+           </xsl:call-template>
+         </td>
+       </xsl:if>
+       <td>
+         <xsl:value-of select="related_id/Item/name"/>&#160;
+       </td>
+       <td>
+         <xsl:value-of select="related_id/Item/label"/>&#160;
+       </td>
+       <td>
+         <xsl:value-of select="related_id/Item/comment_text"/>&#160;
+       </td>
+     </tr>
+   </xsl:for-each>
+ </xsl:template>
+
+ <xsl:template name="YesNo">
+  <xsl:param name="val"/>
+  <xsl:choose>
+   <xsl:when test="$val = '1'">Yes</xsl:when>
+   <xsl:otherwise>No</xsl:otherwise>
+  </xsl:choose>
+ </xsl:template>
+ 
+</xsl:stylesheet>]]></xsl_stylesheet>
+  <name>ItemType History Configuration</name>
+ </Item>
+</AML>

@@ -1,0 +1,22 @@
+﻿<AML>
+ <Item type="Method" id="F1B7B3EDC8C348A7AD0382D55A9AD99A" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string type = this.getType();
+if (String.Equals(type, "Part", StringComparison.Ordinal))
+{
+	// Reorders the relationships to put all Part Goal items at the end
+	Item goals = this.getRelationships("Part Goal");
+	for (int i = 0; i < goals.getItemCount() - 1; i++)
+	{
+		Item goal = goals.getItemByIndex(i);
+		this.removeRelationship(goal);
+		this.addRelationship(goal);
+	}
+}
+
+this.removeProperty("has_change_pending");
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_clean_has_change_pending_prop</name>
+ </Item>
+</AML>

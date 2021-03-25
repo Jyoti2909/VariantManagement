@@ -1,0 +1,128 @@
+﻿<AML>
+ <Item type="Method" id="82FCA42423584A139C060A3F63E6745C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+var a = aras;
+var topWnd = aras.getMostTopWindowWithAras(window);
+var item = topWnd.item;
+var Item = topWnd.Item;
+
+function getIconForType(type)
+{
+  var qryXml = "<Item type='ItemType' action='get' select='open_icon'><name>" + type + "</name></Item>";
+  var qry = new Item();
+  qry.loadAML(qryXml);
+  var result = qry.apply();
+  if(result.isError()) return "";
+  else return '<img src="' + result.getProperty("open_icon") + '">';
+}
+
+function getCCItem(id)
+{
+  var qryXml = "<Item type='Change Controlled Item' id='" + id + "' action='get' select='id'/>";
+  var qry = new Item();
+  qry.loadAML(qryXml);
+  var result = qry.apply();
+  if(result.isError()) { return null; }
+  return result;
+}
+
+function setAnotherIcon(item,anotherPropName)
+{
+  var anotherId = a.getItemProperty(item,anotherPropName);
+  if(typeof(anotherId)=="string" && anotherId!="")
+  {
+    var anotherItem = getCCItem(anotherId);
+    if(anotherItem)
+    {
+      var anotherType = anotherItem.getAttribute("type");
+      type_img_container.innerHTML = getIconForType(anotherType);
+    }
+  }
+  else
+  {
+    setErrorIcon();
+  }
+}
+
+function setErrorIcon()
+{
+  type_img_container.innerHTML = '<img style="max-width: 20px; max-heigh: 20px; width: auto; height: auto;" src="../images/Delete.svg">';
+}
+
+if(srcElement)
+{
+  var val = srcElement.value;
+  if(val != undefined)
+  {
+    var thisPropName = "";
+    var anotherPropName = "";
+    if(srcElement.name == "affected_id")
+    {
+      thisPropName = "affected_id";
+      anotherPropName = "new_item_id";
+    }
+    else if(srcElement.name == "new_item_id")
+    {
+      thisPropName = "new_item_id";
+      anotherPropName = "affected_id";
+    }
+    
+    if(val=="")
+    {
+      setAnotherIcon(item,anotherPropName);
+      return true;
+    }
+    
+    var thisKN = "";
+    var thisId = a.getItemProperty(item,thisPropName);
+    if(typeof(thisId)=="string" && thisId!="")
+    {
+      var thisItem = getCCItem(thisId);
+      if(!thisItem) return true; // inadmissible situation
+      thisKN = thisItem.getPropertyAttribute("id","keyed_name","");
+    }
+    
+    if(thisKN != val)
+    {
+      thisItem = a.getItemByKeyedName('Change Controlled Item',val,0,'','keyed_name'); // this is not IOM item
+      if(!thisItem)
+      {
+        setAnotherIcon(item,anotherPropName);
+        return true;
+      }
+      thisId = a.getItemProperty(thisItem,"id");
+      thisItem = getCCItem(thisId);
+      if(!thisItem) return true; // inadmissible situation
+    }
+
+    var thisType = thisItem.getAttribute("type");
+    
+    var anotherId = a.getItemProperty(item,anotherPropName);
+    if(typeof(anotherId)=="string" && anotherId!="")
+    {
+      var anotherItem = getCCItem(anotherId);
+      if(!anotherItem) return true; // inadmissible situation
+      var anotherType = anotherItem.getAttribute("type");
+      if(anotherType != thisType)
+      {
+        a.AlertError(a.getResource("plm", "checkaffectedtypeonform.same_affected_superseding_types", (thisPropName=="affected_id" ? thisType : anotherType), (thisPropName=="new_item_id" ? thisType : anotherType)));
+        setErrorIcon();
+      }
+      else // anotherType == thisType
+      {
+        type_img_container.innerHTML = getIconForType(anotherType);
+      }
+    }
+    else
+    {
+      type_img_container.innerHTML = getIconForType(thisType);
+    }
+  }
+}
+return true;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>checkAffectedTypeOnForm</name>
+ </Item>
+</AML>

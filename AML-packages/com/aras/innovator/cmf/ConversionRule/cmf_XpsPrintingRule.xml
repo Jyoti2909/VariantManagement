@@ -1,0 +1,44 @@
+﻿<AML>
+ <Item type="ConversionRule" id="A69F71FF04D148CDB2F8FBF2EB55ADCA" action="add">
+  <converter_type keyed_name="cmf_XpsPrintingConverter" type="ConverterType">0EF7EC1CCACB456987E76522E3F34A8D</converter_type>
+  <cutoff>1</cutoff>
+  <delay>1</delay>
+  <enabled>1</enabled>
+  <timeout>2</timeout>
+  <name>cmf_XpsPrintingRule</name>
+  <Relationships>
+   <Item type="ConversionRuleEventHandler" id="788C8316BD194D4D9B10D40B01F962ED" action="add">
+    <event_type>OnTaskAfterCreate</event_type>
+    <related_id keyed_name="SendOnCreateTaskNotification" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>SendOnCreateTaskNotification</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="cmf_XpsPrintingRule" type="ConversionRule">A69F71FF04D148CDB2F8FBF2EB55ADCA</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="1C3B17F5AFCB4EC6A7BB4D9F08FA8427" action="add">
+    <event_type>OnConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="InvokeStandardConverterAsCreator" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>InvokeStandardConverterAsCreator</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="cmf_XpsPrintingRule" type="ConversionRule">A69F71FF04D148CDB2F8FBF2EB55ADCA</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="59C2E7F90ED341838D61EB063E420127" action="add">
+    <event_type>OnAfterConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="SetFilesToFileGroup" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>SetFilesToFileGroup</name>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="cmf_XpsPrintingRule" type="ConversionRule">A69F71FF04D148CDB2F8FBF2EB55ADCA</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

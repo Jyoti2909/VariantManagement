@@ -1,0 +1,234 @@
+﻿<AML>
+ <Item type="SQL" id="17EAAE5DFED24D6BBC4E976C48D38774" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_critical_path_schedule</old_name>
+  <sqlserver_body><![CDATA[/* Name:    select_critical_path_schedule.sql
+   Purpose: computes project activities schedule values using 
+            the Critical Path Method.
+   Created: 27-SEP-2005 George J. Carrette
+   Input:   the root WBS_ID of a project.
+   Output:  a table of activities and the schedule values in days offset 
+            starting at 0.
+   Algorithm: (3) compute the set of activities.
+              (4) compute activities early start/finish.
+              (5) compute project early finish.
+              (6) compute activities late start/finish.
+              (7) select return value.
+
+   Description:
+   The critical path is a set of activities for which early and late dates coincide.
+   Semantically they represent the sequence of activities determining the shortest possible time to complete the project.
+
+   Errors: If there is a circular depedency or other problem then the
+           return table will have some NULL values in it.  
+
+*/
+
+CREATE FUNCTION innovator.SELECT_CRITICAL_PATH_SCHEDULE(@WBS_ID CHAR(32))
+	RETURNS @ACTIVITIES_EL TABLE(ID CHAR(32) COLLATE database_default PRIMARY KEY,
+                               E_S INTEGER,E_F INTEGER,L_S INTEGER,L_F INTEGER)
+AS
+BEGIN
+	DECLARE @ACTIVITIES TABLE(ID CHAR(32) COLLATE database_default PRIMARY KEY);
+	DECLARE @ACTIVITIES_IN_WORK TABLE(ID CHAR(32) COLLATE database_default PRIMARY KEY);
+	DECLARE @ACTIVITIES_E TABLE(ID CHAR(32) COLLATE database_default primary key,S INTEGER,F INTEGER);
+	DECLARE @PREDECESSORS TABLE (id CHAR(32) COLLATE database_default PRIMARY KEY,
+	                             source_id CHAR(32) COLLATE database_default,
+	                             related_id CHAR(32) COLLATE database_default,
+	                             UNIQUE (source_id, related_id),
+	                             UNIQUE (related_id, source_id));
+	DECLARE @myRowsCount AS INTEGER;
+
+	/* create a list of activities of the project */
+	INSERT @ACTIVITIES
+		SELECT ID
+		FROM SELECT_ACTIVITIES(@WBS_ID);
+	SET @myRowsCount = @@ROWCOUNT;
+	
+	IF 0 = @myRowsCount
+	BEGIN
+		RETURN;
+	END;
+	
+	/* populate local temporary table of all possible predecessors */
+	INSERT INTO @PREDECESSORS
+		SELECT P.ID, SOURCE_ID, RELATED_ID
+		FROM innovator.PREDECESSOR P INNER JOIN @ACTIVITIES A ON P.SOURCE_ID = A.ID;
+
+	/* start work with "leaf" activities (with no predecessors) */
+	INSERT INTO @ACTIVITIES_IN_WORK
+		SELECT A.ID
+		FROM @ACTIVITIES A LEFT OUTER JOIN @PREDECESSORS P ON A.ID = P.SOURCE_ID
+		WHERE P.SOURCE_ID IS NULL;
+	SET @myRowsCount = @@ROWCOUNT;
+	
+	IF 0 = @myRowsCount
+	BEGIN
+		/* TODO: RAISEERROR HERE */
+		RETURN;
+	END;
+	
+	/* since activities do not depend on others it's very easy to calculate their early start and finish */
+	INSERT INTO @ACTIVITIES_E
+		SELECT A.ID, 0 AS early_start, A.EXPECTED_DURATION AS early_finish
+		FROM innovator.[ACTIVITY2] A INNER JOIN @ACTIVITIES_IN_WORK LA ON A.ID = LA.ID;
+
+	/* ++++++++ delete information about processed activities */
+	DELETE FROM @PREDECESSORS
+	WHERE related_id IN (SELECT ID FROM @ACTIVITIES_IN_WORK);
+
+	DELETE FROM @ACTIVITIES
+	WHERE ID IN (SELECT ID FROM @ACTIVITIES_IN_WORK);
+	
+	DELETE FROM @ACTIVITIES_IN_WORK;
+	/* ^^^^^^^^ delete information about processed activities */
+
+	/* now get next level of activities (they look like leaf because we've just deleted information about real "leaf" activities) */
+	INSERT INTO @ACTIVITIES_IN_WORK
+		SELECT A.ID
+		FROM @ACTIVITIES A LEFT OUTER JOIN @PREDECESSORS P ON A.ID = P.SOURCE_ID
+		WHERE P.SOURCE_ID IS NULL;
+	SET @myRowsCount = @@ROWCOUNT;
+
+	WHILE @myRowsCount > 0
+	BEGIN
+		INSERT INTO @ACTIVITIES_E
+			SELECT tmp.id, tmp.early_start, tmp.expected_duration+tmp.early_start early_finish
+			FROM
+				(SELECT A.ID id, A.EXPECTED_DURATION expected_duration,
+				/* compute early start */
+				MAX(ISNULL(
+					innovator.NOTNEG(
+						 CASE
+									 WHEN p.precedence_type = 'Finish to Start' THEN E.F + p.lead_lag
+									 WHEN p.precedence_type = 'Start to Start' THEN E.S + p.lead_lag
+									 WHEN p.precedence_type = 'Finish to Finish' THEN E.F - A.expected_duration + p.lead_lag
+									 WHEN p.precedence_type = 'Start to Finish' THEN E.S - A.expected_duration + p.lead_lag
+									 END),
+					0)) AS early_start
+				/* compute early start */
+				
+				FROM innovator.[ACTIVITY2] A INNER JOIN @ACTIVITIES_IN_WORK LA ON A.ID = LA.ID
+					INNER JOIN innovator.[PREDECESSOR] P ON A.ID = P.SOURCE_ID
+					INNER JOIN @ACTIVITIES_E E ON P.RELATED_ID = E.ID
+				GROUP BY A.ID, A.EXPECTED_DURATION) tmp;
+		
+		/* ++++++++ delete information about processed activities */
+		DELETE FROM @PREDECESSORS
+		WHERE related_id IN (SELECT ID FROM @ACTIVITIES_IN_WORK);
+
+		DELETE FROM @ACTIVITIES
+		WHERE ID IN (SELECT ID FROM @ACTIVITIES_IN_WORK);
+		
+		DELETE FROM @ACTIVITIES_IN_WORK;
+		/* ^^^^^^^^ delete information about processed activities */
+
+		/* now get next level of activities (they look like leaf because we've just deleted information about real "leaf" activities) */
+		INSERT INTO @ACTIVITIES_IN_WORK
+			SELECT A.ID
+			FROM @ACTIVITIES A LEFT OUTER JOIN @PREDECESSORS P ON A.ID = P.SOURCE_ID
+			WHERE P.SOURCE_ID IS NULL;
+		
+		SET @myRowsCount = @@ROWCOUNT;
+	END
+	
+	/* Now calculate late start and finish */
+	DECLARE @ACTIVITIES_L TABLE(ID CHAR(32) COLLATE database_default primary key,S INTEGER,F INTEGER);
+	DECLARE @PROJECT_EF INTEGER;
+	SET @PROJECT_EF = (SELECT MAX(F) FROM @ACTIVITIES_E);
+	
+	/* TODO: check if there is sense in caching @ACTIVITIES and @PREDECESSORS */
+	
+	/* populate @ACTIVITIES once again */
+	INSERT @ACTIVITIES
+		SELECT ID
+		FROM SELECT_ACTIVITIES(@WBS_ID);
+	
+	/* populate @PREDECESSORS once again */
+	INSERT INTO @PREDECESSORS
+		SELECT P.ID, SOURCE_ID, RELATED_ID
+		FROM innovator.PREDECESSOR P INNER JOIN @ACTIVITIES A ON P.SOURCE_ID = A.ID;
+
+	/* find "top" activities - activities that nobody depends on */
+	INSERT INTO @ACTIVITIES_IN_WORK
+		SELECT A.ID
+		FROM @ACTIVITIES A LEFT OUTER JOIN @PREDECESSORS P ON A.ID = P.RELATED_ID
+		WHERE P.RELATED_ID IS NULL;
+	
+	/* for such activities it's very easy to calculate late start and finish */
+	INSERT INTO @ACTIVITIES_L
+		SELECT A.ID, @PROJECT_EF - A.EXPECTED_DURATION AS late_start, @PROJECT_EF AS late_finish
+		FROM innovator.[ACTIVITY2] A INNER JOIN @ACTIVITIES_IN_WORK LA ON A.ID = LA.ID;
+	
+	/* ++++++++ delete information about processed activities */
+	DELETE FROM @PREDECESSORS
+	WHERE source_id IN (SELECT ID FROM @ACTIVITIES_IN_WORK);
+	
+	DELETE FROM @ACTIVITIES
+	WHERE ID IN (SELECT ID FROM @ACTIVITIES_IN_WORK);
+	
+	DELETE FROM @ACTIVITIES_IN_WORK;
+	/* ^^^^^^^^ delete information about processed activities */
+	
+	/* now get next level of activities (they look like "top" because we've just deleted information about real "top" activities) */
+	INSERT INTO @ACTIVITIES_IN_WORK
+		SELECT A.ID
+		FROM @ACTIVITIES A LEFT OUTER JOIN @PREDECESSORS P ON A.ID = P.RELATED_ID
+		WHERE P.RELATED_ID IS NULL;
+	SET @myRowsCount = @@ROWCOUNT;
+	
+	WHILE @myRowsCount > 0
+	BEGIN
+		INSERT INTO @ACTIVITIES_L
+			SELECT tmp.id, tmp.late_finish - tmp.expected_duration late_start, tmp.late_finish
+			FROM
+				(SELECT A.ID id, A.EXPECTED_DURATION expected_duration,
+				/* compute late finish */
+				MIN(ISNULL(
+					innovator.notgreater(
+						 CASE
+							 WHEN p.precedence_type = 'Finish to Start'  THEN L.S - p.lead_lag
+							 WHEN p.precedence_type = 'Start to Start'   THEN L.S + A.expected_duration - p.lead_lag
+							 WHEN p.precedence_type = 'Finish to Finish' THEN L.F - p.lead_lag
+							 WHEN p.precedence_type = 'Start to Finish' THEN L.F + A.expected_duration - p.lead_lag
+						 END,
+						 @PROJECT_EF),
+					@PROJECT_EF)) AS late_finish
+				/* compute late finish */
+				
+				FROM innovator.[ACTIVITY2] A INNER JOIN @ACTIVITIES_IN_WORK LA ON A.ID = LA.ID
+					INNER JOIN innovator.[PREDECESSOR] P ON A.ID = P.RELATED_ID
+					INNER JOIN @ACTIVITIES_L L ON P.SOURCE_ID = L.ID
+				GROUP BY A.ID, A.EXPECTED_DURATION) tmp;
+
+		/* ++++++++ delete information about processed activities */
+		DELETE FROM @PREDECESSORS
+		WHERE source_id IN (SELECT ID FROM @ACTIVITIES_IN_WORK);
+		
+		DELETE FROM @ACTIVITIES
+		WHERE ID IN (SELECT ID FROM @ACTIVITIES_IN_WORK);
+		
+		DELETE FROM @ACTIVITIES_IN_WORK;
+		/* ^^^^^^^^ delete information about processed activities */
+		
+		/* now get next level of activities (they look like "top" because we've just deleted information about real "top" activities) */
+		INSERT INTO @ACTIVITIES_IN_WORK
+			SELECT A.ID
+			FROM @ACTIVITIES A LEFT OUTER JOIN @PREDECESSORS P ON A.ID = P.RELATED_ID
+			WHERE P.RELATED_ID IS NULL;
+		SET @myRowsCount = @@ROWCOUNT;
+	END
+
+	INSERT @ACTIVITIES_EL
+		SELECT E.ID, E.S, E.F, L.S, L.F
+		FROM @ACTIVITIES_E E INNER JOIN @ACTIVITIES_L L ON E.ID = L.ID;
+	
+	RETURN;
+end]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_critical_path_schedule</name>
+ </Item>
+</AML>

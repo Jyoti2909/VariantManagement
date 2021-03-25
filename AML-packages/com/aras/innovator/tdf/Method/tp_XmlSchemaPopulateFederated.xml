@@ -1,0 +1,25 @@
+﻿<AML>
+ <Item type="Method" id="33275B46BAE24731A325668CC0B054D4" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+for(int itemIndex = 0; itemIndex < this.getItemCount(); itemIndex++)
+{
+	Item item = this.getItemByIndex(itemIndex);
+	string content = item.getProperty("content");
+	if(String.IsNullOrEmpty(content))
+	{
+		continue;
+	}
+	XmlDocument schemaDom = new XmlDocument();
+	schemaDom.XmlResolver = null;
+	schemaDom.LoadXml(content);
+	string targetNamespace = schemaDom.DocumentElement.GetAttribute("targetNamespace");
+
+	item.setProperty("target_namespace", targetNamespace);
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>tp_XmlSchemaPopulateFederated</name>
+ </Item>
+</AML>

@@ -1,0 +1,111 @@
+﻿<AML>
+ <Item type="Method" id="BAA874E35E7D4CA7BE7CE26D7F1F0E6D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	var markupHolderConfigId = this.getProperty("markup_holder_config_id");
+	if (string.IsNullOrEmpty(markupHolderConfigId))
+	{
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_MarkupHolderConfigIdEmpty"));
+	}
+
+	var markupHolderId = this.getAttribute("id");
+	if (string.IsNullOrEmpty(markupHolderId))
+	{
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_MarkupHolderIdEmpty"));
+	}
+
+	var markupHolderType = this.getAttribute("type");
+	if (string.IsNullOrEmpty(markupHolderType))
+	{
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_MarkupHolderTypeEmpty"));
+	}
+
+	Item discussionItem = this.newItem("DiscussionDefinition", "get");
+	discussionItem.setProperty("item_config_id", markupHolderConfigId);
+	discussionItem.setProperty("item_type_name", markupHolderType);
+	discussionItem.setAttribute("select", "id");
+	Item ddvItem = this.newItem("DiscussionDefinitionView", "get");
+	ddvItem.setAttribute("select", "id, related_id(sm_template)");
+	ddvItem.setProperty("client", "js");
+	discussionItem.addRelationship(ddvItem);
+	discussionItem = discussionItem.apply();
+	if (discussionItem.isError())
+	{
+		if (discussionItem.getErrorCode() != "0")
+		{
+			return discussionItem;
+		}
+		
+		Item markupHolderItem = this.newItem(markupHolderType, "get");
+		markupHolderItem.setID(markupHolderId);
+		markupHolderItem.setAttribute("select", "classification");
+		markupHolderItem = markupHolderItem.apply();
+		if (markupHolderItem.isError())
+		{
+			return markupHolderItem;
+		}
+		
+		var classification = markupHolderItem.getProperty("classification");
+		discussionItem = this.newItem("DiscussionTemplate", "get");
+		discussionItem.setAttribute("select", "id");
+		discussionItem.setAttribute("orderBy", "class_path desc");
+		discussionItem.setAttribute("maxRecords", "1");
+		Item orItem = discussionItem.newOR();
+		orItem.setProperty("class_path", "null");
+		orItem.setPropertyCondition("class_path", "is");
+		
+		var classificationForReq = new List<string>();
+		if (!string.IsNullOrEmpty(classification))
+		{
+			string[] classArray = classification.Split('/');
+			var count = 0;
+			foreach (var cls in classArray)
+			{
+				if (classificationForReq.Any())
+				{
+					classificationForReq.Add(classificationForReq[count - 1] + "/" + cls);
+				}
+				else
+				{
+					classificationForReq.Add(cls);
+				}
+				orItem.setProperty("class_path", classificationForReq[count]);
+				count += 1;
+			}
+		}
+		
+		Item itemTypeItem = this.newItem("ItemType", "get");
+		itemTypeItem.setProperty("name", markupHolderType);
+		itemTypeItem.setAttribute("select", "id");
+		discussionItem.setPropertyItem("source_id", itemTypeItem);
+		
+		Item dtvItem = this.newItem("DiscussionTemplateView", "get");
+		dtvItem.setProperty("client", "js");
+		dtvItem.setAttribute("select", "id, related_id(sm_template)");
+		discussionItem.addRelationship(dtvItem);
+		discussionItem = discussionItem.apply();
+		if (discussionItem.isError())
+		{
+			return discussionItem;
+		}
+	}
+
+	var ssvcPresentationConfiguration = discussionItem.getItemsByXPath("Relationships/Item/related_id/Item[@type='SSVCPresentationConfiguration']");
+	if (ssvcPresentationConfiguration.node == null)
+	{
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_SSVCPresentationConfigurationNotFound"));
+	}
+
+	string smViewTemplateId = ssvcPresentationConfiguration.getProperty("sm_template");
+	Item secureMessageViewTemplate = this.newItem("SecureMessageViewTemplate", "get");
+	secureMessageViewTemplate.setID(smViewTemplateId);
+	secureMessageViewTemplate = secureMessageViewTemplate.apply();
+	if (secureMessageViewTemplate.isError())
+	{
+		return this.getInnovator().newError(secureMessageViewTemplate.getErrorString());
+	}
+
+	return secureMessageViewTemplate;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_GetSecureMessageViewTemplate</name>
+ </Item>
+</AML>

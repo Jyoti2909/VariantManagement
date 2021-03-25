@@ -1,0 +1,50 @@
+﻿<AML>
+ <Item type="Method" id="90BDF712608E4ED1AC3A0808FF2A77EB" action="add">
+  <comments>Methods for copy files in relationships grid</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Item packageFile = this.newItem("FileExchangePackageFile", "get");
+packageFile.setProperty("select", "related_id");
+Item query = this.newItem("FileExchangePackage", "get");
+query.setID(this.getID());
+query.addRelationship(packageFile);
+query = query.apply();
+if (query.isError())
+	return query;
+
+string teamId = this.getProperty("team_id");
+string managedById = this.getProperty("managed_by_id");
+string ownedById = this.getProperty("owned_by_id");	
+
+query = query.getRelationships("FileExchangePackageFile");
+for (int i = 0; i < query.getItemCount(); i++)
+{
+	Item pkg_file = query.getItemByIndex(i);
+	
+	string fileId = pkg_file.getRelatedItemID();
+	if (string.IsNullOrEmpty(fileId))
+		return this;
+		
+	Item file = this.newItem("File", "copyAsNew");
+	file.setID(fileId);
+	file = file.apply();
+	fileId = file.getID();
+
+	XmlDocument body = new XmlDocument();
+	body.XmlResolver = null;
+	body.LoadXml("<body />");
+	body.DocumentElement.SetAttribute("fileId", fileId);
+	body.DocumentElement.SetAttribute("teamId", teamId);
+	body.DocumentElement.SetAttribute("managedById", managedById);
+	body.DocumentElement.SetAttribute("ownedById", ownedById);
+	
+	Innovator innovator = this.getInnovator();
+	file = innovator.applyMethod("FE_SetFilePackageProperties", body.OuterXml);
+		
+	pkg_file.setRelatedItem(file);
+	pkg_file.apply("edit");
+}
+return this.apply("edit");]]></method_code>
+  <method_type>C#</method_type>
+  <name>FE_SaveAsFileExchangePackage</name>
+ </Item>
+</AML>

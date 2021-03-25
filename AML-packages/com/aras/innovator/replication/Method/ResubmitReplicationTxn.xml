@@ -1,0 +1,138 @@
+﻿<AML>
+ <Item type="Method" id="8C14794D32C247AB9F44FF68511B74DC" action="add">
+  <comments>Rerun failed replicatin transaction log</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+//MethodTemplateName=CSharpInOut;
+
+if (InnovatorServerASP == null) 
+  throw new ArgumentNullException("InnovatorServerASP");
+  
+Innovator inn = new Innovator( InnovatorServerASP );
+
+ResubmitManager rrm = new ResubmitManager(inn, InnovatorServerASP, inDom );
+rrm.CreateTxnFromLog();
+}
+
+private class ResubmitManager
+{
+	private Innovator m_inn;
+	private IServerConnection m_conn;
+	private Item m_item;
+	
+	public ResubmitManager(Innovator a_inn, IServerConnection a_isconn, XmlDocument a_inDom)
+	{
+		m_inn = a_inn;
+		m_conn = a_isconn;
+		
+		m_item = m_inn.newItem();
+		XmlNode inode = a_inDom.SelectSingleNode("//Item");
+		if( inode == null )
+		  throw new ArgumentException("Wrong format of passed AML: " + a_inDom.OuterXml);
+		  
+		m_item.loadAML(inode.OuterXml);
+	}
+	
+	// It's assumed that the server method is called by administrators only; this is why
+	// the caller must have sufficient priviledges to create replication txn.
+	public void CreateTxnFromLog()
+	{
+		// Validate that it's ReplicationTxnLog which has status 'Failed'
+		validateInDom();
+		
+		Aras.Server.Core.CallContext cco = ((Aras.Server.Core.IOMConnection)m_conn).CCO;
+		
+		// Create replication txn using info from the log
+		createTxn(cco);
+		
+		// Finally delete the log if needed
+		deleteLog(cco);
+	}
+	
+	private void validateInDom()
+	{
+		if( m_item.getType() != "ReplicationTxnLog" )
+		{
+			throw new ApplicationException("The context item must have type 'ReplicationTxnLog'");
+		}
+		
+		if( m_item.getProperty("replication_status") != "Failed" )
+		{
+			throw new ApplicationException("Only failed transactions could be resubmitted");
+		}
+	}
+	
+	private void createTxn(Aras.Server.Core.CallContext a_cco)
+	{
+		int ea;
+		if( !Int32.TryParse(m_item.getProperty("execution_attempt"), out ea ) )
+		  ea = 0;
+		ea += 1;
+
+		string aml = string.Format("<Item type='ReplicationTxn' action='add'>" +
+		  "<replication_status>NotStarted</replication_status>" +
+		  "<from_vault>{0}</from_vault>" + 
+		  "<to_vault>{1}</to_vault>" +
+		  "<file_id>{2}</file_id>" + 
+		  "<user_id>{3}</user_id>" +
+		  "<replication_rule>{4}</replication_rule>" +
+		  "<not_before>{5}</not_before>" +
+		  "<execution_attempt>{6}</execution_attempt>" +
+		  "</Item>",
+		  System.Security.SecurityElement.Escape(m_item.getProperty("from_vault")),
+		  System.Security.SecurityElement.Escape(m_item.getProperty("to_vault")),
+		  System.Security.SecurityElement.Escape(m_item.getProperty("file_id")),
+		  System.Security.SecurityElement.Escape(a_cco.Variables.GetUserID()),
+		  System.Security.SecurityElement.Escape(m_item.getProperty("replication_rule")),
+		  System.Security.SecurityElement.Escape(getDateTimeForAML(DateTime.UtcNow)),
+		  System.Security.SecurityElement.Escape(ea.ToString()));
+		  
+		Item req = m_inn.newItem();
+		req.loadAML(aml);
+		Item resp = req.apply();
+		if( resp.isError() )
+		{
+			throw new ApplicationException(
+			   string.Format("Failed to execute the following AML - '{0}' : {1}", aml, resp.getErrorString()));
+		}
+	}
+	
+	private void deleteLog(Aras.Server.Core.CallContext a_cco)
+	{
+		bool doRemove = false;
+		string val = a_cco.Utilities.GetVarValue("RemoveReplicationLogOnRerun", null);
+		if( !string.IsNullOrEmpty(val) )
+		{
+			if(val.ToLower().Trim() == "true")
+			  doRemove = true;
+		}
+		
+		if( doRemove )
+		{
+			string aml = string.Format("<Item type='ReplicationTxnLog' action='delete' id='{0}' />", System.Security.SecurityElement.Escape(m_item.getID()));
+			Item req = m_inn.newItem();
+			req.loadAML(aml);
+			Item resp = req.apply();
+			if( resp.isError() )
+			{
+				throw new ApplicationException("Failed to delete the ReplicationTxnLog (ID='" + m_item.getID() + "')");
+			}
+		}
+	}
+	
+	private string getDateTimeForAML(DateTime dtutc)
+	{
+		string result = string.Format("{0:D4}-{1:D2}-{2:D2}T{3:D2}:{4:D2}:{5:D2}",
+		  dtutc.Year, dtutc.Month, dtutc.Day, dtutc.Hour, dtutc.Minute, dtutc.Second);
+
+	      // No time zone on I18nSessionContext means that the TIMEZONE_NAME header
+	      // was NOT set on the request that is currently processed.
+	      if( m_inn.getI18NSessionContext().GetTimeZone() != null )
+		result = m_inn.getI18NSessionContext().ConvertUtcDateTimeToNeutral(result, Aras.I18NUtils.DateTimeConverter.DATETIME_NEUTRAL_FORMAT);
+
+	      return result;
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>ResubmitReplicationTxn</name>
+ </Item>
+</AML>

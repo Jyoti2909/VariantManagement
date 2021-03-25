@@ -1,0 +1,34 @@
+﻿<AML>
+ <Item type="Method" id="AD6EED1C64B2451693A8E88EE0373D3C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!window.aras.UserNotification) {
+	window.aras.UserNotification = new UserNotificationContainer(control, options.notifyObserver);
+}
+if (!target.notificationControl) {
+	target.notificationControl = window.aras.UserNotification;
+	target.ariaLabelTemplate = target.aria_label;
+}
+const roots = [];
+const data = new Map();
+target.notificationControl.notifications.forEach(function(notification, id) {
+	const notificationMenuButton = Object.assign({
+		on_click_handler: target.on_click_handler
+	}, notification);
+
+	roots.push(id);
+	data.set(id, notificationMenuButton);
+});
+const ariaLabel = target.ariaLabelTemplate
+	.replace('{0}', roots.length);
+
+return {
+	aria_label: ariaLabel,
+	data: data,
+	disabled: !roots.length,
+	roots: roots
+};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_mwh_initNotificatios</name>
+ </Item>
+</AML>

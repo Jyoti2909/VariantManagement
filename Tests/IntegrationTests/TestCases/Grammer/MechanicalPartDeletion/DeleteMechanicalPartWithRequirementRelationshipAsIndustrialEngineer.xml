@@ -1,0 +1,130 @@
+﻿<TestCase author='apetrovsky@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>
+		Create Parent item as industrial engineer.
+		Add Requirement item into Parent item as relationship as industrial engineer.
+		Delete Parent item and get error as industrial engineer.
+	</Description>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial Engineer identity
+			When:
+				The user tries to create a part with Mechanical Part/Component classification.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='EF51F0F7CA734A4EA2BD8C6063BB9AC3' doGetItem='0'>
+					<classification>Mechanical Part/MBOM only Part</classification>
+					<name>Parent Item</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='EF51F0F7CA734A4EA2BD8C6063BB9AC3' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial Engineer identity
+			When:
+				The user tries to add Requirement Item into Parent Item.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='re_Part_Requirement' action='add' id='1F1A9B81153C4692B62C01000887EB7F' doGetItem='0'>
+					<related_id>269ECB1F0EE242E5830CFF5ED516DBCA</related_id>
+					<source_id>EF51F0F7CA734A4EA2BD8C6063BB9AC3</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='re_Part_Requirement' id='1F1A9B81153C4692B62C01000887EB7F'>
+							<related_id>269ECB1F0EE242E5830CFF5ED516DBCA</related_id>
+						</Item>
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial Engineer identity
+			When:
+				The user tries to delete item with the Requirement relationship.
+			Then:
+				The request should return error.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='delete' id='EF51F0F7CA734A4EA2BD8C6063BB9AC3' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/' xmlns:i18n='http://www.aras.com/I18N'>
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault>
+						<faultcode>1</faultcode>
+						<faultactor />
+						<faultstring>1 generation of this item cannot be deleted because it has linked relationships.</faultstring>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='re_Part_Requirement' action='delete' id='1F1A9B81153C4692B62C01000887EB7F' />
+				<Item type='Part' action='delete' id='EF51F0F7CA734A4EA2BD8C6063BB9AC3' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

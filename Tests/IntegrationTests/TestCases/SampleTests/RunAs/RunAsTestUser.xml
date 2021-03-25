@@ -1,0 +1,39 @@
+﻿<TestCase author="Noname" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>Create Item of Item Type ItemTypeForAdmin, created in 'Setup Test.xml' as a Test User. Due to the fact that the Test User has no Permissoin to Add, we are expecting an error</Description>
+	<Request runAs="testuser:1">
+		<Comments>
+			Create a new item of ItemTypeForAdmin item type as a Test User.
+			In order to send request as Test User add a 'runAs' attribute to a 'Request' tag as shown in this example.
+
+			Syntax:
+			runAs="user_login:user_password"
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="ItemTypeForAdmin" action="add" id="A47C4869B9824339A39E964DCF6F03F5" doGetItem="0" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server.PermissionsNoCanAddFoundException</faultcode>
+						<faultstring><![CDATA[Add access is denied for ItemTypeForAdmin.]]></faultstring>
+						<detail>
+							<af:legacy_detail><![CDATA[Add access is denied for ItemTypeForAdmin.]]></af:legacy_detail>
+							<af:exception message="Add access is denied for ItemTypeForAdmin." type="Aras.Server.Core.PermissionsNoCanAddFoundException" />
+							<af:item type="ItemTypeForAdmin" id="A47C4869B9824339A39E964DCF6F03F5" xpath="Item" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<TestCaseCleanUp>
+		<Query>
+			<AML>
+				<Item type="ItemTypeForAdmin" id="A47C4869B9824339A39E964DCF6F03F5" action="delete" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

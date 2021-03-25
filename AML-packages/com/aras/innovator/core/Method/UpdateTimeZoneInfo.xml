@@ -1,0 +1,78 @@
+﻿<AML>
+ <Item type="Method" id="8FDB4CAE99F245E18F08FB925BE99AB8" action="add">
+  <comments>Updates TimeZones data in database</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[function selectValidContent() {
+	return aras.vault.selectFile().then(function(file) {
+		return aras.vault.readText(file);
+	}).then(function(aml) {
+		var errorMessage = parseError(aml);
+		if (errorMessage) {
+			return aras.AlertError(aras.getResource('', 'tz.parse_update_fail'), errorMessage).then(selectValidContent);
+		}
+		return aml;
+	});
+}
+
+function parseError(aml) {
+	if (!aml) {
+		return aras.getResource('', 'tz.file_is_empty');
+	}
+
+	var xmlDoc = ArasModules.xml.parseString(aml);
+	var error = ArasModules.xml.getError(xmlDoc);
+
+	if (error.errorCode !== 0) {
+		return aras.getResource('', 'tz.parse_update_fail_details', error.reason);
+	}
+	return null;
+}
+
+function applyValidAml(aml) {
+	var inn = new Innovator();
+	var res = inn.applyAML(aml);
+	if (res.isError()) {
+		var errorMessage = res.getErrorDetail();
+		var sqlErrorPosition = errorMessage.indexOf('in SQL: ');
+		if (sqlErrorPosition > -1) {
+			errorMessage = errorMessage.substr(0, sqlErrorPosition);
+		}
+		return aras.AlertError(aras.getResource('', 'tz.apply_update_fail'), errMsg, '');
+	}
+
+	return aras.AlertSuccess(aras.getResource('', 'tz.apply_update_success'));
+}
+
+function onRequestLoad() {
+	if (request.readyState === 4) {
+		if (request.status === 200) {
+			var parsingError = parseError(request.responseText);
+			if (parsingError) {
+				alertErrorAndSelectValidAml('tz.parse_update_fail', parsingError);
+			} else {
+				applyValidAml(request.responseText);
+			}
+		} else {
+			alertErrorAndSelectValidAml('tz.get_update_fail', request.statusText);
+		}
+	}
+}
+
+function onRequestError() {
+	alertErrorAndSelectValidAml('tz.get_update_fail', 'Network error');
+}
+
+function alertErrorAndSelectValidAml(mainErrorCode, detailsError) {
+	aras.AlertError(aras.getResource('', mainErrorCode), detailsError).then(selectValidContent).then(applyValidAml);
+}
+
+var request = new XMLHttpRequest();
+request.open('GET', 'http://www.aras.com/timezones/tzupdate.xml');
+request.onload = onRequestLoad;
+request.onerror = onRequestError;
+request.send();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>UpdateTimeZoneInfo</name>
+ </Item>
+</AML>

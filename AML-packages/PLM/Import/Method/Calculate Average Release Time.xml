@@ -1,0 +1,47 @@
+﻿<AML>
+ <Item type="Method" id="EAAAE28B71DF4BB6A6AF89F99D8C5222" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Dim tInn As Innovator = New Innovator(Me.serverConnection)
+Dim docs = Me.getItemsByXPath("//Result/Item")
+Dim resItem As Item
+Dim i As Integer
+Dim res As Integer = 0
+Dim count As Integer = 0
+
+If docs.IsError() Or docs.isEmpty() Then 
+  resItem = tInn.newResult("0")  
+  Return resItem
+End If
+For i = 0 To docs.getItemCount()-1
+	Dim doc As Item = docs.getItemByIndex(i)
+	Dim created_on = doc.getProperty("created_on")
+	Dim release_date = doc.getProperty("release_date")	
+	If Not((release_date Is Nothing) Or (release_date="") Or (created_on Is Nothing) Or (created_on=""))Then	
+	  Dim mdy_arr() As String
+	  mdy_arr = Split(created_on," ") 'to get mm/dd/yyyy substring from the date used pattern like "mm/dd/yyyy hh:mm:ss"
+	  Dim mdy_str As String = mdy_arr(0) 'get mm/dd/yyyy
+	  Dim mdy() As String
+	  mdy = Split(mdy_str,"/") 'split mm/dd/yyyy string
+	
+	  Dim cr_on As New System.DateTime(mdy(2),mdy(0),mdy(1)) 'create new date with using of split year, month, day
+	
+      mdy_arr = Split(release_date," ") 'the same steps of split for release_date
+      mdy_str = mdy_arr(0)
+      mdy = Split(mdy_str,"/")
+    
+      Dim rl_dt As New System.DateTime(mdy(2),mdy(0),mdy(1))	
+    
+      res = res + DateDiff("d",cr_on,rl_dt)
+      count = count + 1
+    End If
+Next i
+If count=0 Then 
+  resItem = tInn.newResult("0")
+Else
+  resItem = tInn.newResult(CStr(res/count))
+End If
+Return resItem]]></method_code>
+  <method_type>VB</method_type>
+  <name>Calculate Average Release Time</name>
+ </Item>
+</AML>

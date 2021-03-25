@@ -1,0 +1,31 @@
+@{
+	Layout = "Shared/_cuiTabItemViewLayout.cshtml";
+}
+@section extra_header
+{
+	<link rel="stylesheet" type="text/css" href="@Url.ContentWithSalt("~/styles/splitter.css")"></link>
+	<link rel="stylesheet" type="text/css" href="@Url.ContentWithSalt("~/styles/dac.css")"></link>
+	<script>
+		require(['DomainAccessControl/scripts/domainaccesscontrol/DomainDefinitionEditor']);
+	</script>
+}
+@section editor
+{
+	<div id="dac-editor" data-dojo-type="Controls/Tab">
+		<div class="dac-editor__container aras-flex">
+			<div class="dac-editor__content-pane">
+				<div class="destination-tree-container">
+					<div id="root-itemtype-info" class="itemtype-info"></div>
+					<div class="destination-tree"></div>
+				</div>
+			</div>
+			<aras-splitter></aras-splitter>
+			<div class="aras-flex-grow">
+				<div id="derived-relationship-info" class="relationship-info"></div>
+				<div class="rules-grid" style="height: calc(100% - 33px)">
+					<iframe src="@Url.ContentWithSalt("~/Modules/aras.innovator.DomainAccessControl/Views/RulesGridWrapper.html")" id="wrapper" frameBorder="0" width="100%" height="100%" scrolling="no"></iframe>
+				</div>
+			</div>
+		</div>
+	</div>
+}

@@ -1,0 +1,697 @@
+﻿<TestCase author="vsmirnov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../TestCase.xsd">
+	<Description>Setup for GECO affected items tests</Description>
+	<Request name="Create.Part.And.Cad.Items">
+		<Comments>
+			<![CDATA[
+			Given:
+				testUser from Setup Test.
+			When:
+				Create 4 Cads and 4 Parts.
+				For parts we have to update numbers separately in order to avoid value from sequence.
+			Then:
+				Items were created.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part.10" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[1]/@id" />
+			<Variable id="Part.30" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[3]/@id" />
+			<Variable id="Part.50" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[5]/@id" />
+			<Variable id="Part.Other" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[7]/@id" />
+			<Variable id="CAD.10" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[9]/@id" />
+			<Variable id="CAD.30" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[10]/@id" />
+			<Variable id="CAD.50" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[11]/@id" />
+			<Variable id="CAD.Other" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[12]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="add" id="5D1FBBE6BE274BF08B32A8DB83FBEB8F" doGetItem="0">
+					<classification>Mechanical Part/Assembly</classification>
+					<name>10</name>
+				</Item>
+				<Item type="Part" action="edit" id="5D1FBBE6BE274BF08B32A8DB83FBEB8F" serverEvents="0" version="0" doGetItem="0">
+					<item_number>10</item_number>
+				</Item>
+				<Item type="Part" action="add" id="53FCD6264AA545BAA26A26EFAA61E871" doGetItem="0">
+					<classification>Mechanical Part/Assembly</classification>
+					<name>30</name>
+				</Item>
+				<Item type="Part" action="edit" id="53FCD6264AA545BAA26A26EFAA61E871" serverEvents="0" version="0" doGetItem="0">
+					<item_number>30</item_number>
+				</Item>
+				<Item type="Part" action="add" id="DC8166EBBEFE4BA6A9BA501397814694" doGetItem="0">
+					<classification>Mechanical Part/Assembly</classification>
+					<name>50</name>
+				</Item>
+				<Item type="Part" action="edit" id="DC8166EBBEFE4BA6A9BA501397814694" serverEvents="0" version="0" doGetItem="0">
+					<item_number>50</item_number>
+				</Item>
+				<Item type="Part" action="add" id="610958C356AA48C8837B2BC33BFF992A" doGetItem="0">
+					<classification>Mechanical Part/Assembly</classification>
+					<name>Other</name>
+				</Item>
+				<Item type="Part" action="edit" id="610958C356AA48C8837B2BC33BFF992A" serverEvents="0" version="0" doGetItem="0">
+					<item_number>Other</item_number>
+				</Item>
+				<Item type="CAD" action="add" id="89015AF461B94AD49B19B8C0485EF376" doGetItem="0">
+					<classification>Mechanical/Assembly</classification>
+					<item_number>10</item_number>
+					<name>10</name>
+				</Item>
+				<Item type="CAD" action="add" id="663621837F7A404995323535D47DB37A" doGetItem="0">
+					<classification>Mechanical/Assembly</classification>
+					<item_number>30</item_number>
+					<name>30</name>
+				</Item>
+				<Item type="CAD" action="add" id="1509EE8C94E143738D922E5F74130B7E" doGetItem="0">
+					<classification>Mechanical/Assembly</classification>
+					<item_number>50</item_number>
+					<name>50</name>
+				</Item>
+				<Item type="CAD" action="add" id="F582A8CEEFF84DCEACF1329F3193E219" doGetItem="0">
+					<classification>Mechanical/Assembly</classification>
+					<item_number>Other</item_number>
+					<name>Other</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="5D1FBBE6BE274BF08B32A8DB83FBEB8F" />
+						<Item type="Part" id="5D1FBBE6BE274BF08B32A8DB83FBEB8F" />
+						<Item type="Part" id="53FCD6264AA545BAA26A26EFAA61E871" />
+						<Item type="Part" id="53FCD6264AA545BAA26A26EFAA61E871" />
+						<Item type="Part" id="DC8166EBBEFE4BA6A9BA501397814694" />
+						<Item type="Part" id="DC8166EBBEFE4BA6A9BA501397814694" />
+						<Item type="Part" id="610958C356AA48C8837B2BC33BFF992A" />
+						<Item type="Part" id="610958C356AA48C8837B2BC33BFF992A" />
+						<Item type="CAD" id="89015AF461B94AD49B19B8C0485EF376" />
+						<Item type="CAD" id="663621837F7A404995323535D47DB37A" />
+						<Item type="CAD" id="1509EE8C94E143738D922E5F74130B7E" />
+						<Item type="CAD" id="F582A8CEEFF84DCEACF1329F3193E219" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="Promote.Part.And.Cad.Items">
+		<Comments>
+			<![CDATA[
+			Given:
+				testUser from Setup Test and 4 Parts/CADs created earlier.
+			When:
+				Promote Cads and Parts into 30, 50 and 25 states.
+			Then:
+				Items were promoted.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="Part" action="promoteItem" id="53FCD6264AA545BAA26A26EFAA61E871" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="Part" action="promoteItem" id="53FCD6264AA545BAA26A26EFAA61E871" doGetItem="0">
+					<state>30</state>
+				</Item>
+				<Item type="Part" action="promoteItem" id="DC8166EBBEFE4BA6A9BA501397814694" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="Part" action="promoteItem" id="DC8166EBBEFE4BA6A9BA501397814694" doGetItem="0">
+					<state>35</state>
+				</Item>
+				<Item type="Part" action="promoteItem" id="DC8166EBBEFE4BA6A9BA501397814694" doGetItem="0">
+					<state>45</state>
+				</Item>
+				<Item type="Part" action="promoteItem" id="DC8166EBBEFE4BA6A9BA501397814694" doGetItem="0">
+					<state>50</state>
+				</Item>
+				<Item type="Part" action="promoteItem" id="610958C356AA48C8837B2BC33BFF992A" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="663621837F7A404995323535D47DB37A" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="663621837F7A404995323535D47DB37A" doGetItem="0">
+					<state>30</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="1509EE8C94E143738D922E5F74130B7E" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="1509EE8C94E143738D922E5F74130B7E" doGetItem="0">
+					<state>50</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="F582A8CEEFF84DCEACF1329F3193E219" doGetItem="0">
+					<state>25</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result/>
+					<Message>
+						<event name="ids_modified" value="53FCD6264AA545BAA26A26EFAA61E871"/>
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="Create.GECO">
+		<Comments>
+			<![CDATA[
+			Given:
+				testUser from Setup Test, 4 Parts/CADs in different states
+			When:
+				Create Geco (classification depends on a test case in .cs file)
+				With all identities filled with testUser identity
+				And Parts/Cads as affected items with different actions (depends on a test case in .cs file)
+			Then:
+				Geco was created.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Geco.Classification" action="apply" xpath="Query/AML/Item/classification" />
+			<Variable id="Active.10" action="apply" xpath="Query/AML/Item/Relationships/Item[1]/related_id" />
+			<Variable id="Active.10.Incorrect.Action" action="apply" xpath="Query/AML/Item/Relationships/Item[1]/gag_action" />
+			<Variable id="Active.30" action="apply" xpath="Query/AML/Item/Relationships/Item[2]/related_id" />
+			<Variable id="Active.30.Incorrect.Action" action="apply" xpath="Query/AML/Item/Relationships/Item[2]/gag_action" />
+			<Variable id="Active.50" action="apply" xpath="Query/AML/Item/Relationships/Item[3]/related_id" />
+			<Variable id="Active.Other" action="apply" xpath="Query/AML/Item/Relationships/Item[4]/related_id" />
+			<Variable id="Inactive.10" action="apply" xpath="Query/AML/Item/Relationships/Item[5]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" id="A8241D6C0D0741D9A267C1CE3790FCB3" action="add" doGetItem="0">
+					<classification>{Geco.Classification}</classification>
+					<gag_master_data_review_team>
+						<Item type="Identity" action="get" select="id">
+							<keyed_name>testUser</keyed_name>
+						</Item>
+					</gag_master_data_review_team>
+					<gag_sap_change_number>AAAA11111111</gag_sap_change_number>
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" id="B1A0E6FDA5B9487C8B1E08E4F9E53966" action="add" doGetItem="0">
+							<related_id>{Active.10}</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+							<gag_action>{Active.10.Incorrect.Action}</gag_action>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled" id="B4FC0F1B851145AC9101CB1DC5865C76" action="add" doGetItem="0">
+							<related_id>{Active.30}</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+							<gag_action>{Active.30.Incorrect.Action}</gag_action>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled" id="3F2547B4BF7E4A0B91CDEC72498B3359" action="add" doGetItem="0">
+							<related_id>{Active.50}</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+							<gag_action>Release</gag_action>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled" id="B918F3272594472FA2021916907FCA8C" action="add" doGetItem="0">
+							<related_id>{Active.Other}</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+							<gag_action>Release</gag_action>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled" id="1817930539EC417494D3132DF7DE7339" action="add" doGetItem="0">
+							<related_id>{Inactive.10}</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+							<gag_action>Release</gag_action>
+						</Item>
+						<Item type="GAG_GECO CADDesigner" id="C02D3570DF1541FC97776D0B62810CF5" action="add" doGetItem="0">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>testUser</keyed_name>
+								</Item>
+							</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+						</Item>
+						<Item type="GAG_GECO DevReleaseApprover" id="13806149813D473B984C8AD8288A1621" action="add" doGetItem="0">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>testUser</keyed_name>
+								</Item>
+							</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+						</Item>
+						<Item type="GAG_GECO ExtReviewApprover" id="C074EADFDF1645EA91652E172A80FC3C" action="add" doGetItem="0">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>testUser</keyed_name>
+								</Item>
+							</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+						</Item>
+						<Item type="GAG_GECO IntReviewApprover" id="4C292B5EA5C04A0BAFF40F6F01338812" action="add" doGetItem="0">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>testUser</keyed_name>
+								</Item>
+							</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+						</Item>
+						<Item type="GAG_GECO TechReviewApprover" id="3A26EA0BAE7D4C05B130DEF41BBD8ACA" action="add" doGetItem="0">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>testUser</keyed_name>
+								</Item>
+							</related_id>
+							<source_id>A8241D6C0D0741D9A267C1CE3790FCB3</source_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="A8241D6C0D0741D9A267C1CE3790FCB3" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="1DD13D16F6154AA99D18FF3DE1C92B71" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="Get.InBasket.Task">
+		<Comments>
+			<![CDATA[
+			Given:
+				testUser and new GECO
+			When:
+				as testUser
+				get active InBasket Task
+			Then:
+				InBasket Task is returned
+				which means that workflow has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" typeId="BC7977377FFF40D59FF14205914E9C71" id="F61A549100A64628A1539567EB9BDBC6">
+							<assigned_to keyed_name="cadUser1" type="Identity">576D31D2EE2B40E894566F22EFF035B2</assigned_to>
+							<id keyed_name="Planning" type="InBasket Task">F61A549100A64628A1539567EB9BDBC6</id>
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/@keyed_name" />
+		</Comparison>
+	</Request>
+
+	<Request name="Assign.Activity.Variables">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				get Activity with Tasks and Path assigned to the given InBasket Task Id 
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id/text()" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Workflow.Path" action="apply" xpath="Query/AML/Item/Relationships/Item[3]/name" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Task2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[3]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>F61A549100A64628A1539567EB9BDBC6</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">{Workflow.Path}</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" typeId="937CE47DE2854308BE6FF5AB1CFB19D4" id="C4F89AA90A7746E5AFB1B9A78A93922C">
+							<id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type="Activity Assignment" typeId="85924010F3184E77B24E9142FDBB481B" id="F61A549100A64628A1539567EB9BDBC6">
+									<id keyed_name="F61A549100A64628A1539567EB9BDBC6" type="Activity Assignment">F61A549100A64628A1539567EB9BDBC6</id>
+									<source_id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="63911BD3FEEC439096A48B850ECF5ABC">
+									<id keyed_name="63911BD3FEEC439096A48B850ECF5ABC" type="Activity Task">63911BD3FEEC439096A48B850ECF5ABC</id>
+									<source_id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="007F3524F0264CB381459E96EB12E938">
+									<id keyed_name="007F3524F0264CB381459E96EB12E938" type="Activity Task">007F3524F0264CB381459E96EB12E938</id>
+									<source_id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Workflow Process Path" typeId="34682D3EB66141ECACC8796C9D3A42B8" id="C8F0917B60D84D688B92EC80B742E1CD">
+									<id keyed_name="C8F0917B60D84D688B92EC80B742E1CD" type="Workflow Process Path">C8F0917B60D84D688B92EC80B742E1CD</id>
+									<source_id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id/text()" />
+		</Comparison>
+	</Request>
+
+	<Request>
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Error is returned because affected items have incorrect actions
+			]]>
+		</Comments>
+		<Query name="Evaluate.Activity">
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>C4F89AA90A7746E5AFB1B9A78A93922C</Activity>
+					<ActivityAssignment>F61A549100A64628A1539567EB9BDBC6</ActivityAssignment>
+					<Paths>
+						<Path id="C8F0917B60D84D688B92EC80B742E1CD">{Workflow.Path}</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="63911BD3FEEC439096A48B850ECF5ABC" completed="1"></Task>
+						<Task id="007F3524F0264CB381459E96EB12E938" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring></faultstring>
+						<detail>
+							<af:legacy_detail></af:legacy_detail>
+							<af:exception message="" type="Aras.Ark.Common.ItemException" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/faultstring" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_detail" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:exception/@message" />
+		</Comparison>
+	</Request>
+
+	<Request name="Change.Active.10.Action">
+		<Comments>
+			<![CDATA[
+			Given:
+				Geco in planning state with items with incorrect actions
+			When:
+				Change one of actions to the correct one
+			Then:
+				Action was changed.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Active.10.Correct.Action" action="apply" xpath="Query/AML/Item/gag_action" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_GECO ChangeControlled" id="B1A0E6FDA5B9487C8B1E08E4F9E53966" action="edit" doGetItem="0">
+					<gag_action>{Active.10.Correct.Action}</gag_action>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_GECO ChangeControlled" id="B1A0E6FDA5B9487C8B1E08E4F9E53966" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="1DD13D16F6154AA99D18FF3DE1C92B71" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="Change.Active.30.Action">
+		<Comments>
+			<![CDATA[
+			Given:
+				Geco in planning state with items with incorrect actions
+			When:
+				Change one of actions to the correct one
+			Then:
+				Action was changed.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Active.30.Correct.Action" action="apply" xpath="Query/AML/Item/gag_action" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_GECO ChangeControlled" id="B4FC0F1B851145AC9101CB1DC5865C76" action="edit" doGetItem="0">
+					<gag_action>{Active.30.Correct.Action}</gag_action>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_GECO ChangeControlled" id="B4FC0F1B851145AC9101CB1DC5865C76" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="1DD13D16F6154AA99D18FF3DE1C92B71" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="Change.Active.50.Action">
+		<Comments>
+			<![CDATA[
+			Given:
+				Geco in planning state with items with incorrect actions
+			When:
+				Change one of actions to the correct one
+			Then:
+				Action was changed.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="GAG_GECO ChangeControlled" id="3F2547B4BF7E4A0B91CDEC72498B3359" action="edit" doGetItem="0">
+					<gag_action>None</gag_action>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_GECO ChangeControlled" id="3F2547B4BF7E4A0B91CDEC72498B3359" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="1DD13D16F6154AA99D18FF3DE1C92B71" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="Change.Active.Other.Action">
+		<Comments>
+			<![CDATA[
+			Given:
+				Geco in planning state with items with incorrect actions
+			When:
+				Change one of actions to the correct one
+			Then:
+				Action was changed.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="GAG_GECO ChangeControlled" id="B918F3272594472FA2021916907FCA8C" action="edit" doGetItem="0">
+					<gag_action>None</gag_action>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_GECO ChangeControlled" id="B918F3272594472FA2021916907FCA8C" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="1DD13D16F6154AA99D18FF3DE1C92B71" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="Change.Inactive.10.Action">
+		<Comments>
+			<![CDATA[
+			Given:
+				Geco in planning state with items with incorrect actions
+			When:
+				Change last incorrect action to the correct one
+			Then:
+				Action was changed.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="GAG_GECO ChangeControlled" id="1817930539EC417494D3132DF7DE7339" action="edit" doGetItem="0">
+					<gag_action>None</gag_action>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_GECO ChangeControlled" id="1817930539EC417494D3132DF7DE7339" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="1DD13D16F6154AA99D18FF3DE1C92B71" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request name="Evaluate.Activity.Successfully">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated because all actions are correct now.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Workflow.Path" action="apply" xpath="Query/AML/Item/Paths/Path" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>C4F89AA90A7746E5AFB1B9A78A93922C</Activity>
+					<ActivityAssignment>F61A549100A64628A1539567EB9BDBC6</ActivityAssignment>
+					<Paths>
+						<Path id="C8F0917B60D84D688B92EC80B742E1CD">{Workflow.Path}</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="63911BD3FEEC439096A48B850ECF5ABC" completed="1"></Task>
+						<Task id="007F3524F0264CB381459E96EB12E938" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="C4F89AA90A7746E5AFB1B9A78A93922C" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+</TestCase>

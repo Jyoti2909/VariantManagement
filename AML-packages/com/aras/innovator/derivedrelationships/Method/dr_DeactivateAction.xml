@@ -1,0 +1,14 @@
+﻿<AML>
+ <Item type="Method" id="23EED634760B4CEC82A0FC3655572835" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[let item = aras.newIOMItem(this.getType());
+item.setID(this.getID());
+item.setProperty('nextstate', 'Preliminary');
+const result = item.apply('dr_PromoteDRFItem');
+if (result.isError()) {
+	aras.AlertError(result);
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>dr_DeactivateAction</name>
+ </Item>
+</AML>

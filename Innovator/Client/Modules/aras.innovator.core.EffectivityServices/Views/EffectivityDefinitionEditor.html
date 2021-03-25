@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+		@import '../../../javascript/include.aspx?classes=common.min.css';
+		@import '../../../styles/default.css';
+		@import '../../../public/styles/controls.css';
+		@import '../../../Modules/aras.innovator.core.Controls/Styles/Controls/ruleEditor.css';
+	</style>
+
+	<script>
+		const aras = parent.aras;
+	</script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=polyfillsBundle,pageReturnBlocker"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=XmlDocument"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js"
+		data-dojo-config="async: false, isDebug: false, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../Scripts/EffectivityDefinitionEditorController.js"></script>
+	<script type="text/javascript">
+		require([
+			'EffectivityServices/Scripts/Classes/RuleEditorControl',
+			'Controls/Common/RenderUtils',
+			'EffectivityServices/Scripts/Classes/ExpressionSerializer',
+			'EffectivityServices/Scripts/Classes/ExpressionGrammar'
+		], function (RuleEditorControl, RenderUtils, ExpressionSerializerControl, ExpressionGrammar) {
+			window.ruleEditorController = new EffectivityDefinitionEditorController(RuleEditorControl, RenderUtils, ExpressionSerializerControl, ExpressionGrammar, aras);
+		});
+	</script>
+</head>
+<body class="claro">
+	<div id="editorControlContainer" class="effs-definition-editor">
+		<div id="ruleEditorContainer"></div>
+		<div id="editorMessageContainer" class="effs-definition-editor__message"></div>
+	</div>
+</body>
+</html>

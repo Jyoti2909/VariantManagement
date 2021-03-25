@@ -1,0 +1,144 @@
+﻿@{
+	Layout = "Shared/_cuiLayout.cshtml";
+}
+@section header
+{
+	<link rel="stylesheet" type="text/css" href="@Url.ContentWithSalt("~/styles/common.min.css")">
+	<style type="text/css">
+		#center {
+			width: 100%;
+			top: 0;
+			bottom: 23px;
+			overflow:hidden;
+			position:relative;
+			padding:0px;
+		}
+		#borderContainer {
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			padding:4px;
+		}
+		#formsPanel {
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			height: 200px;
+			border-bottom: 1px solid #d4d4d4;
+		}
+		#lcFormPanel {
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			width: 230px;
+			bottom:0px;
+		}
+		#tabsContainer {
+			position: absolute;
+			overflow: hidden;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			height: 30px;
+		}
+		#formsContainer {
+			position: absolute;
+			top: 30px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			padding-left: 5px;
+		}
+		#editorPanel {
+			overflow: hidden;
+			position: absolute;
+			top: 202px;
+			left: 0px;
+			bottom: 0px;
+			right: 0px;
+		}
+		#container {
+			position: absolute;
+			top: 0px;
+			left: 231px;
+			bottom: 0px;
+			right: 0px;
+			border-left: 1px solid #d4d4d4;
+		}
+	</style>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=tearoffWindow&files=lifecycletool")"></script>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/jsBundles/cui.js")"></script>
+	<script type="text/javascript">
+		initializeLifecycleToolFunctions(window);
+		var isLifeCycleTool = true;
+		var currTabID = "";
+		var performOnTabAction = true;
+		var tabsFReady = false;
+		var access_id_const = aras.getRelationshipTypeId('Access');
+		var lcstate_id_const = aras.getRelationshipTypeId('Life Cycle State');
+		var lctransition_id_const = aras.getRelationshipTypeId('Life Cycle Transition');
+		var formsCache = null;
+		var tabbar;
+
+		if (!aras.isDirtyEx(window.item)) {
+			window.item = aras.getItemById('Life Cycle Map', itemID, 1, 'Life Cycle State|Life Cycle Transition');
+		}
+
+		window.initFormsCache('formsContainer');
+	</script>
+}
+@section init_widgets
+{
+	<script type="text/javascript">
+		const initTearOffMenuController = () => {
+			const tearOffMenuController = new TearOffMenuController({ view: 'formtool', aras: window.aras });
+			tearOffMenuController.menuFrameReady = true;
+			tearOffMenuController.initSvgManager();
+			tearOffMenuController.initController();
+			window.tearOffMenuController = tearOffMenuController;
+			return clientControlsFactory.createControl('Aras.Client.Frames.TearOffMenu', { tearOffMenuController });
+		};
+		const initCuiLayout = async () => {
+			const options = window.getDefaultOptions(window.itemID, window.itemTypeName);
+			const layoutNode = document.getElementById('top-toolbars');
+			window.layout = new ItemViewToolbarsCuiLayout(layoutNode, '', options);
+			window.addEventListener('unload', () => window.layout.destroy());
+			await window.layout.init();
+			const commandBarNode = layoutNode.querySelector('.aras-commandbar');
+			if (commandBarNode) {
+				const itemTypeColor = aras.getItemTypeColor(window.itemTypeName, 'name');
+				commandBarNode.style.borderBottom = `4px solid ${itemTypeColor}`;
+			}
+		};
+		document.addEventListener('DOMContentLoaded', async () => {
+			await Promise.all([
+				initTearOffMenuController(),
+				initCuiLayout()
+			]);
+
+			window.showItemForm('Life Cycle Map', isEditMode ? 'edit' : 'view', window.item, lcFormPanel);
+			window.setupToolOnLoad();
+			window.createTabbar();
+
+			aras.browserHelper.toggleSpinner(document, false);
+		});
+	</script>
+}
+@section center
+{
+	<div id="borderContainer">
+		<div id="formsPanel">
+			<div id="lcFormPanel"></div>
+			<div id="container">
+				<aras-tabs movable id="tabs-container" class="aras-flex-grow"></aras-tabs>
+				<div id="formsContainer"></div>
+			</div>
+		</div>
+		<div id="editorPanel">
+			<iframe id="editor" src="@Url.ContentWithSalt("~/scripts/LifeCycle/lifecycleEditor.html")" frameborder="no" scrolling="no" marginwidth="0" marginheight="0" style="position:relative; width:100%; height:100%"></iframe>
+		</div>
+	</div>
+}

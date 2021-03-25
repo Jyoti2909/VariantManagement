@@ -1,0 +1,82 @@
+﻿<AML>
+ <Item type="Method" id="CA65D721B16E4CA29BA7E556034CEE66" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[		Aras.ConversionFramework.Models.ConversionTask task = new Aras.ConversionFramework.Models.ConversionTask()
+		{
+		  Item = this
+		};
+		
+		InputItem dependancyHelper = new InputItem(this);
+		Item resultTask = dependancyHelper.SetUserDataToTask(task);
+
+		return resultTask;
+	}
+}
+
+
+class InputItem
+{
+	private Innovator inn;
+	
+	public InputItem(Item item)
+	{
+		inn = item.getInnovator();
+	}
+
+	public Item SetUserDataToTask(Aras.ConversionFramework.Models.ConversionTask task)
+	{
+		/*to the cads, that will be selected here, will
+		be added result of conversion.*/
+		Item cadDocument = GetCadDocument(task.FileID);
+		
+		if(cadDocument.isError())
+		{
+			return cadDocument;
+		}
+
+		// Adds nativeFileId to user data for creating FileRepresentation NativeFile->SCS
+		task.UserData = GetUserData(cadDocument, task.UserData);
+		
+		return task.Item;
+	}
+	
+	private string GetUserData(Item rootCad, string userData)
+	{
+	    string rootCadId = rootCad.getProperty("id");
+		XmlDocument result = new XmlDocument();
+		result.LoadXml("<Data></Data>");
+		
+		// Adds nativeFileId to user data for creating FileRepresentation NativeFile->SCS
+		string nativeFileId = rootCad.getProperty("native_file");
+
+		XmlElement dataNode = result.DocumentElement;
+		XmlElement nativeFileIdElement = result.CreateElement("NativeFileId");
+		nativeFileIdElement.InnerText = nativeFileId;
+		dataNode.AppendChild(nativeFileIdElement);
+		
+		return result.InnerXml;
+	}
+	
+	/// <summary>
+	/// Returns CAD Document which contains prc file
+	/// </summary>
+	private Item GetCadDocument(string fileId)
+	{
+		const string CadItemTypeId = "CCF205347C814DD1AF056875E0A880AC";
+
+		Item fileContainerLocator = inn.newItem("FileContainerLocator");
+		fileContainerLocator.setProperty("file_id", fileId);
+		fileContainerLocator.setProperty("container_type_id", CadItemTypeId);
+		fileContainerLocator.setProperty("container_property_name", "monolithic_model_file");
+
+		Item cad = inn.newItem("CAD","get");
+		cad.setAttribute("select", "id, native_file");
+		cad.setPropertyItem("id", fileContainerLocator);
+		cad.setPropertyCondition("id", "in");
+		cad.setPropertyAttribute("id", "by", "container_id");
+		cad.setProperty("is_current", "1");
+		return cad.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>CR_3DPRCtoSCS_SetUserData</name>
+ </Item>
+</AML>

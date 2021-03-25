@@ -1,0 +1,49 @@
+﻿<AML>
+ <Item type="Method" id="7F2E13582CA24067B1DB0A39D00B9BD3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var warningText = aras.getResource('../Modules/aras.innovator.CMF/', 'cmf_automigration_dataloss_warning');
+if (!aras.confirm(warningText)) {
+	return;
+}
+
+var innovator = aras.newIOMInnovator();
+
+var item = innovator.newItem('cmf_ContentType', '');
+item.setID(this.getProperty('source_id'));
+item.setAttribute('method_action', 'ConvertElementToProperties');
+item.setProperty('element_id', this.getID());
+
+var parent = innovator.newItem('cmf_ElementType', 'get');
+parent.setID(this.getID());
+parent.setAttribute('select', 'id, source_id, parent');
+parent = parent.apply();
+
+var response = item.apply('cmf_SchemaDefinitionHandler');
+if (response.isError()) {
+	aras.AlertError(response);
+	return;
+}
+
+var winElement = aras.uiFindWindowEx(this.getID());
+if (winElement) {
+	winElement.close();
+}
+
+if (parent.getProperty('source_id')) {
+	var winDocument = aras.uiFindWindowEx(parent.getProperty('source_id'));
+	if (winDocument) {
+		winDocument.onRefresh();
+	}
+}
+
+if (parent.getProperty('parent')) {
+	var winParent = aras.uiFindWindowEx(parent.getProperty('parent'));
+	if (winParent) {
+		winParent.onRefresh();
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cmf_ConvertElementToProperties</name>
+ </Item>
+</AML>

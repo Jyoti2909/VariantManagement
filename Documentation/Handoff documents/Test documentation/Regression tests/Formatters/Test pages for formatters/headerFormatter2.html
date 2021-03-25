@@ -1,0 +1,123 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Grid Header Formatter Test</title>
+	<link href="../../styles/common.css" rel="stylesheet"/>
+	<link href="styles/vmGridFormatters.css" rel="stylesheet"/>
+	<script src="../../vendors/regeneratorRuntime.js"></script>
+	<script src="../../Modules/polyfills/polyfillsBundle.min.js"></script>
+	<script src="../../Modules/polyfills/matchesAndClosest.js"></script>
+	<script src="../../Modules/polyfills/customEvent.js"></script>
+	<script src="../../Modules/polyfills/promises.js"></script>
+	<script src="../../Modules/polyfills/document-register-element.js"></script>
+	<script src="../../Modules/polyfills/smoothscroll.min.js"></script>
+	<script src="../../vendors/hyperhtml-element.min.js"></script>
+	<script src="../../vendors/inferno.min.js"></script>
+	<script src="../../jsBundles/core.js"></script>
+	<script src="Scripts/vmGridFormatters.js"></script>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			const columns = [
+				{
+					label: 'One',
+					width: 32,
+					searchType: 'vm_subheaders'
+				},
+				{
+					label: 'Super cool feature with two options',
+					width: 64,
+					searchType: 'vm_subheaders'
+				},
+				{
+					label: 'Three',
+					width: 96,
+					searchType: 'vm_subheaders'
+				},
+				{
+					label: 'Four',
+					width: 128,
+					searchType: 'vm_subheaders'
+				},
+				{
+					label: 'Five',
+					width: 160,
+					searchType: 'vm_subheaders'
+				}
+			];
+
+			const values = [
+				'Syntax',
+				'Properties',
+				'Methods',
+				'Inheritance',
+				'Function'
+			];
+
+			let head = new Map();
+			let rows = new Map();
+
+			const getCanvasContext = function() {
+				const canvas = document.createElement('canvas');
+				const style = window.getComputedStyle(canvas);
+				const font = style.fontSize + ' ' + style.fontFamily;
+
+				const canvasContext = canvas.getContext('2d');
+				canvasContext.font = font;
+
+				return canvasContext;
+			};
+
+			const canvasContext = getCanvasContext();
+
+			for (let j = 0; j < columns.length; j++) {
+				head.set(j, columns[j]);
+			}
+
+			for (let i = 0; i < values.length * 10; i++) {
+				const row = {};
+
+				for (let j = 0; j < columns.length; j++) {
+					row[j] = values[i % values.length];
+				}
+
+				rows.set(i, row);
+			}
+
+			let grid = new Grid(document.getElementById('grid'), {editable: true, search: true});
+			grid.head = head;
+			grid.rows = rows;
+
+			grid.getCellMetadata = function(headId, rowId, type) {
+				if (rowId === 'searchRow') {
+					const subcolumnsNumber = headId + 1;
+					const subheaders = [];
+					let subheaderTextMaxWidth = 95;
+
+					for (let i = 0; i < subcolumnsNumber; i++) {
+						const subheaderText = 'Column ' + headId + '_' + (i + 10*i*headId);
+						subheaders.push(subheaderText);
+
+						//subheaderTextMaxWidth = Math.max(subheaderTextMaxWidth, Math.round(canvasContext.measureText(subheaderText).width));
+					}
+
+					return {
+						subheaderHeight: subheaderTextMaxWidth,
+						subheaders: subheaders,
+						subheaderContainerClassName: 'vm-aras-grid-row-cell-subheaders__subheader-container_vertical',
+						subheaderTextClassName: 'vm-aras-grid-row-cell-subheaders__subheader-text_vertical'
+					};
+				}
+				return null;
+			};
+
+			grid.getCellType = function(headId, rowId, value, type) {
+				return type;
+			};
+		});
+	</script>
+</head>
+<body>
+	<div id="grid" style="padding: 20px 0 0 20px;"></div>
+</body>
+</html>

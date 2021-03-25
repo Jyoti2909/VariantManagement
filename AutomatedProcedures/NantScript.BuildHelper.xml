@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="BuildHelper">
+	<property name="Path.To.Deployment.Tool.Dir" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\tools\Aras.Deployment.Tool')}" />
+	<property name="Path.To.Deployment.Tool" value="${path::combine(Path.To.Deployment.Tool.Dir, 'Aras.Deployment.Tool.exe')}" />
+	<property name="Path.To.Deployment.Tool.Config" value="${Path.To.Deployment.Tool}.config" />
+
+	<target name="Build.Deployment.Tool">
+		<property name="Do.Build.Deployment.Tool" overwrite="false" value="false" />
+		<choose>
+			<when test="${Do.Build.Deployment.Tool}">
+				<property name="Path.To.Instance.Setup.Config" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\tools\Aras.Deployment.Tool\Instance.setup.xml')}" />
+				<property name="Path.To.Instance.Deploy.Config" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\tools\Aras.Deployment.Tool\Instance.deploy.xml')}" />
+
+				<if test="${directory::exists(Path.To.Deployment.Tool.Dir)}">
+					<loadfile file="${Path.To.Instance.Setup.Config}" property="Instance.Setup.Config.Content" if="${file::exists(Path.To.Instance.Setup.Config)}">
+						<filterchain>
+							<expandproperties />
+						</filterchain>
+					</loadfile>
+					<loadfile file="${Path.To.Instance.Deploy.Config}" property="Instance.Deploy.Config.Content" if="${file::exists(Path.To.Instance.Deploy.Config)}">
+						<filterchain>
+							<expandproperties />
+						</filterchain>
+					</loadfile>
+
+					<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Deployment.Tool.Dir}" /S /Q' />
+					<if test="${property::exists('Instance.Setup.Config.Content')}">
+						<echo message="${Instance.Setup.Config.Content}" file="${Path.To.Instance.Setup.Config}" />
+					</if>
+					<if test="${property::exists('Instance.Deploy.Config.Content')}">
+						<echo message="${Instance.Deploy.Config.Content}" file="${Path.To.Instance.Deploy.Config}" />
+					</if>
+				</if>
+
+				<property name="Path.To.VS.Solution" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\src\CRT.sln')}" />
+				<mkdir dir="${Path.To.Build.Output}" />
+				<property name="Path.To.Build.Logs" value="${Path.To.Build.Output}" />
+				<call target="BuildVsSolutionUsingMSBUILD" />
+			</when>
+			<otherwise>
+				<echo message="Using Aras.Deployment.Tool from NuGet package." />
+
+				<property name="Path.To.Deployment.Tool.Lib.Dir" value="${path::combine(Path.To.Deployment.Tool.Dir, 'lib\net472')}" />
+				<property name="Path.To.Deployment.Tool.Nupkg" value="${path::combine(Path.To.Deployment.Tool.Dir, 'Aras.Deployment.Tool.nupkg')}" />
+				<exec program="cmd" commandline='/C del /F "${Path.To.Deployment.Tool.Nupkg}"' if="${file::exists(Path.To.Deployment.Tool.Nupkg)}" />
+				<move todir="${Path.To.Deployment.Tool.Dir}">
+					<fileset basedir="${Path.To.Deployment.Tool.Lib.Dir}">
+						<include name="**/*" />
+					</fileset>
+				</move>
+				<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Deployment.Tool.Lib.Dir}" /S /Q' if="${directory::exists(Path.To.Deployment.Tool.Lib.Dir)}" />
+			</otherwise>
+		</choose>
+	</target>
+
+	<target name="Build.Custom.Solutions" description="Build the specified custom solutions using MSBuild" depends="Restore.Tests.Nuget.Packages">
+		<trycatch>
+			<try>
+				<!-- We have to convert package methods to CS and add them to the CSharpMethods project before build it-->
+				<exec program="ConvertPackageMethodsFromXmlToCs.bat" commandline="noUI" verbose="true" />
+
+				<mkdir dir="${Path.To.Build.Output}" />
+				<mkdir dir="${Path.To.Tests.Output}" />
+				<exec program="cmd.exe" commandline='/C subst s: "${Path.To.This.Git.Repository}"' verbose='true' />
+				<property name="Path.To.Build.Logs" value="${Path.To.Build.Output}" />
+				<foreach item="File" property="Path.To.VS.Solution">
+					<in>
+						<items>
+							<include name="s:\src\**\*.sln" />
+						</items>
+					</in>
+					<do>
+						<call target="BuildVsSolutionUsingMSBUILD" />
+					</do>
+				</foreach>
+			</try>
+			<finally>
+				<call target="Remove.Used.Substitutions" />
+			</finally>
+		</trycatch>
+	</target>
+</project>

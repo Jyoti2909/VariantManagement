@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = "../..";
+  gCommonRootRelPath = "../..";
+  gTopicId = "2.2.0_7";
+
+//]]></script>
+
+<script type="text/javascript" src="../../template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="../../template/scripts/common.min.js"></script>
+<script type="text/javascript" src="../../template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="../../template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../../template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="../../assets/css/JAI_styles.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="condition-tags" content="Others:Ignore"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Parameterized Search</title>
+  
+</head>
+<body>
+  <div data-condition="Others:Ignore">
+  <h1>Parameterized Search</h1>
+  <p class="Content_body">Use the Parameterized Search search method to search for Items with one or more Item properties, where the properties you search for remain constant, but the values to be searched for differ. You can pre-configure the Item&#39;s properties on which the search needs to be conducted and save the search.  </p>
+  <p class="Content_body">You can use Parameterized Searches in any search mode, but they are probably most useful in Saved Searches.  This search is also useful in cases where Items with numerous properties are displayed in the main grid.  In such cases, searching for only a few properties would be inconvenient.  You can also restrict your search to certain parameters using the Parameterized Search.</p>
+  <p class="Content_body">Example:  If you often search for Parts that are in a &#39;Released&#39; State, but the Cost, Revision, or Part Number included in the search varies, you can use Parameterized Search.</p>
+  <p class="Content_body">You can pre-define the Item&#39;s properties (parameters) to include in the search using the syntax @{<span style="font-style: italic;">n</span>}, where <span style="font-style: italic;">n</span> is a number.  There can be any number of parameters, and the numbers need not be sequential. You can also use wild-cards before or after @{<span style="font-style: italic;">n</span>}.  </p>
+  <?rh-list_start level="1" an="1" class="rl-p-Note" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Note">The syntax @{<span style="font-style: italic;">n</span>} is  reserved for Parameterized Search. It is always interpreted as a parameter; you cannot search for the string &#39;@{1}.&#39; </p>
+  <?rh-list_end ?>
+  <p class="Procedure_Title">To create and use a Parameterized Search:</p>
+  <ol>
+    <li style="list-style: decimal">Log in to Aras Innovator.</li>
+    <li>In the TOC, navigate to the Item you want to search for. For example, to search for Parts, navigate to <span class="Bold">Design --&gt; Parts</span>.</li>
+    <li>In the search bar, define the properties to be used in the search by specifying @{<span style="font-style: italic;">n</span>} in the column. In our example, let&#39;s use the following Item Properties:</li>
+  </ol>
+  <?rh-list_start class="Bullet_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="text-indent: -30px; margin-left: 80px;"><span class="Bold">Part Number</span>: @{1}*</p>
+  <?rh-list_end ?>
+  <?rh-list_start class="Bullet_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="text-indent: -30px; margin-left: 80px;"><span class="Bold">State</span>: @{2}*</p>
+  <?rh-list_end ?>
+  <?rh-list_start class="Bullet_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="text-indent: -30px; margin-left: 80px;"><span class="Bold">Changes</span>: @{3}</p>
+  <?rh-list_end ?>
+  <p class="Content_body_indented"><img src="../../assets/images/paramsearch.jpg" style="width: 100%; max-width: 813px;"/></p>
+  <?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Figure_indented"> </p>
+  <?rh-list_end ?>
+  <ol start="4">
+    <li>Navigate to <span class="Bold">Search --&gt; Save Search</span> to save the parameterized search. Saving the search is an optional step.</li>
+    <li>Click <img src="../../assets/images/searchbutton.jpg" style="width: 100%; max-width: 81px;"/> to execute the search.</li>
+  </ol>
+  <p class="Numbered">The <span class="Bold">Set Parameter Value</span> dialog box appears.</p>
+  <p class="Numbered"><img src="../../assets/images/setparamval.jpg" style="width: 100%; max-width: 651px;"/></p>
+  <p class="Figure_indented">Figure 2</p>
+  <ol start="6">
+    <li style="list-style: decimal;">Specify the values to be searched for. Let&#39;s search for Parts using the following criteria:<br/>
+    </li>
+  </ol>
+  <?rh-list_start class="Bullet_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="text-indent: -30px; margin-left: 80px;">Part Numbers starting with 1000*</p>
+  <?rh-list_end ?>
+  <?rh-list_start class="Bullet_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="text-indent: -30px; margin-left: 80px;">In <span class="Bold">Released</span> State</p>
+  <?rh-list_end ?>
+  <?rh-list_start class="Bullet_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="text-indent: -30px; margin-left: 80px;">Not included in Change Management.</p>
+  <?rh-list_end ?>
+  <p class="Content_body_indented"><img src="../../assets/images/setparam2.jpg" style="cursor: nesw-resize; width: 100%; max-width: 876px;"/></p>
+  <ol start="7">
+    <li style="list-style: decimal;">Click <span style="font-weight: bold;">OK</span>. The main grid displays the list of items matching your search criteria. Every time you execute the search, a search dialog displaying the Item Properties you defined appears.<br/>
+    </li>
+  </ol>
+  <ol class="Decimal" start="8">
+    <li style="list-style: decimal;">You can specify the values of the Item&#39;s properties you want to conduct the search for.</li>
+  </ol>
+
+</div>
+  <div data-condition="Others:Ignore">
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

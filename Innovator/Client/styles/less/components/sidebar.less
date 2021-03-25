@@ -1,0 +1,36 @@
+@easeOutCubic: cubic-bezier(0.215, 0.61, 0.355, 1);
+@easeInCubic: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+
+.aras-sidebar {
+	position: absolute;
+	background-color: #fff;
+	height: 100%;
+	transition-duration: 0.25s;
+	transition-timing-function: @easeOutCubic;
+	transition-property: box-shadow, transform, visibility, width;
+	outline: none;
+
+	&_pinned {
+		position: relative;
+		transition-property: box-shadow, width;
+	}
+
+	&_hidden {
+		transition-duration: 0.15s;
+		transition-timing-function: @easeInCubic;
+		visibility: hidden;
+		transform: translateX(-100%);
+	}
+
+	&_pinned&_hidden {
+		position: absolute;
+		transition: none;
+	}
+
+	&_right {
+		right: 0;
+		&.aras-sidebar_hidden {
+			transform: translateX(100%);
+		}
+	}
+}

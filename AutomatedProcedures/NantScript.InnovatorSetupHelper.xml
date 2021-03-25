@@ -1,0 +1,56 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project name="InnovatorSetupHelper">
+	<target name="Prepare.Innovator.Baseline.For.Setup"
+			description="The task's purpose is to read configuration and manage parameters for Deployment.Tool execution">
+		<if test="${property::exists('Path.To.CodeTree.Zip') and property::exists('PathToSharedBaselinesRegex') and property::exists('Local.Shared.Baselines.Folder')}">
+			<property name="Path.To.CodeTree.Zip" value="${regex::regex-replace-string(Path.To.CodeTree.Zip, PathToSharedBaselinesRegex, Local.Shared.Baselines.Folder)}" />
+		</if>
+		<call target="Check.DB.Bak" if="${Is.Development.Build.Type}"/>
+
+		<property name="Path.To.Package.Exclude" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\package.exclude')}" />
+		<if test="${Path.To.Unzipped.Code.Tree == path::combine(Path.To.Automated.Procedures.Output, 'UnzippedCodeTree')}">
+			<call target="Check.CodeTree.Zip"/>
+			<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Unzipped.Code.Tree}" /S /Q' if='${directory::exists(Path.To.Unzipped.Code.Tree)}'/>
+			<mkdir dir="${Path.To.Unzipped.Code.Tree}" />
+			<foreach item="String" property="Current.Path.To.CodeTree.Zip" in="${Path.To.CodeTree.Zip},${Path.To.Partial.CodeTree.Zip}" delim=",">
+				<if test="${file::exists(Current.Path.To.CodeTree.Zip)}">
+					<exec program="${Path.To.SevenZip}" verbose="true" workingdir="${Path.To.Unzipped.Code.Tree}">
+						<arg value="x" />
+						<arg value="${Current.Path.To.CodeTree.Zip}" />
+						<arg value="-aoa" />
+						<arg value="*" />
+						<arg value="-xr@${Path.To.Package.Exclude}" />
+					</exec>
+
+					<property name="Path.To.Unzipped.Innovator.Server" value="${path::combine(Path.To.Unzipped.Code.Tree, 'Innovator\Server')}" />
+					<property name="Path.To.Unzipped.Innovator.Client" value="${path::combine(Path.To.Unzipped.Code.Tree, 'Innovator\Client')}" />
+					<if test="${not directory::exists(Path.To.Unzipped.Innovator.Server) or not directory::exists(Path.To.Unzipped.Innovator.Client)}">
+						<fail>The ${Current.Path.To.CodeTree.Zip} has wrong structure! The structure of a CodeTree.zip should be flat, see:
+							CodeTree.zip
+								- AgentService
+								- ConversionServer
+								- Innovator
+								- SelfServiceReporting
+								- VaultServer
+						</fail>
+					</if>
+				</if>
+			</foreach>
+		</if>
+	</target>
+
+	<target name="Setup.Innovator.From.Backups"
+			depends="Prepare.Innovator.Baseline.For.Setup"
+			description="The task's purpose is to read configuration and manage parameters for Deployment.Tool execution">
+		<property name="Deploy.Verb.Value" value="-t Deploy" />
+		<property name="Deploy.Verb.Value" value="deploy" if="${version::get-major(fileversioninfo::get-file-version(fileversioninfo::get-version-info(Path.To.Deployment.Tool))) == 1}" />
+
+		<exec program="${Path.To.Deployment.Tool}" workingdir="${Path.To.Deployment.Tool.Dir}">
+			<arg value="${Deploy.Verb.Value}" />
+			<arg value="-c ${Path.To.Instance.Setup.Config}" />
+		</exec>
+	</target>
+
+	<target name="Setup.Innovator.For.Deploy.Task"
+			depends="SetupParameters.For.Deploy.Task Setup.Innovator.From.Backups" />
+</project>

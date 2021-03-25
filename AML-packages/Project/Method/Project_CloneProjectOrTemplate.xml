@@ -1,0 +1,672 @@
+﻿<AML>
+ <Item type="Method" id="1BA6FAAF6A6C41C6A62392E336523E4C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Utils.InitializeForRequest(this.getInnovator(), CCO);
+ProjectTreeItemBase projTreeItem;
+Item returnItem;
+
+var allDeliverables = new Dictionary<string, Item>();
+Dictionary<string, Dictionary<int, string>> itemTypeForClientProps = new Dictionary<string, Dictionary<int, string>>();
+Item namingMethod = Utils.Innovator.newItem("Method", "Project_CloneNumberingAndNaming");
+var newIdByOldId = new Dictionary<string, string>();
+
+string actionMode = this.getAttribute("projectCloneMode").ToUpper();
+switch(actionMode) {
+	case "CREATEPROJECTFROMPROJECT":
+	case "CREATEPROJECTFROMTEMPLATE":
+		returnItem = Utils.Innovator.newItem("Project", "add");
+		string projectNumber = Utils.Innovator.getNextSequence("Project Number");
+
+		returnItem.setProperty("project_number", projectNumber);
+		returnItem.setProperty("scheduling_type", "Forward");
+		returnItem.setProperty("keyed_name", projectNumber + " Copy of " + this.getProperty("name"));
+		if("Project Template" == this.getType()) {
+			returnItem.setProperty("from_template", this.getID());
+		}
+
+		I18NSessionContext i18NContext = Utils.Innovator.getI18NSessionContext();
+		CultureInfo ci = CultureInfo.GetCultureInfo(i18NContext.GetLocale());
+		returnItem.setProperty("date_due_target", i18NContext.ConvertToNeutral(DateTime.UtcNow.AddDays(1).ToString(ci.DateTimeFormat.ShortDatePattern, ci), "date", "short_date"));
+		returnItem.setProperty("date_start_target", i18NContext.ConvertToNeutral(DateTime.UtcNow.ToString(ci.DateTimeFormat.ShortDatePattern, ci), "date", "short_date"));
+		Item wbs = ProjectTreeWbsItem.GetExistWbs(this.getProperty("wbs_id"));
+		bool isFromTemplate = actionMode == "CREATEPROJECTFROMTEMPLATE";
+		List<string> roles = isFromTemplate ? new List<String>() : null;
+		projTreeItem = new ProjectTreeWbsItem(wbs, true, true, isFromTemplate, allDeliverables, false, namingMethod, itemTypeForClientProps, false, newIdByOldId, projectNumber, roles);
+		if (isFromTemplate)
+		{
+			foreach (string role in roles)
+			{
+				Item projectTeam = Utils.Innovator.newItem("Project Team", "add");
+				projectTeam.setNewID();
+				projectTeam.setProperty("role", role);
+				returnItem.addRelationship(projectTeam);
+			}
+		}
+		break;
+	case "CREATETEMPLATEFROMPROJECT":
+	case "CREATETEMPLATEFROMTEMPLATE":
+		returnItem = Utils.Innovator.newItem("Project Template", "add");
+		Item existWbs = ProjectTreeWbsItem.GetExistWbs(this.getProperty("wbs_id"));
+		projTreeItem = new ProjectTreeWbsItem(existWbs, true, true, false, allDeliverables, actionMode == "CREATETEMPLATEFROMTEMPLATE", namingMethod, itemTypeForClientProps, false, newIdByOldId, null, null);
+		break;
+	case "CREATEELEMENTS":
+		returnItem = Utils.Innovator.newItem("Create Elements Result");
+		Item elements = this.getItemsByXPath("/*/*/*/Item/Item");
+		int elementsCount = elements.getItemCount();
+		bool isWithDeliverables = this.getAttribute("projectCloneWithDeliverables") == "1";
+		string projectNumberClone = this.getAttribute("project_number_clone");
+		for (int i = 0; i < elementsCount; i++)
+		{
+			Item element = elements.getItemByIndex(i);
+			if (element.getAttribute("type") == "WBS Element")
+			{
+				projTreeItem = new ProjectTreeWbsItem(element, false, true, false, allDeliverables, isWithDeliverables, namingMethod, itemTypeForClientProps, true, newIdByOldId, projectNumberClone, null);	
+			}
+			else
+			{
+				projTreeItem = new ProjectTreeActivity2Item(element, false, allDeliverables, isWithDeliverables, namingMethod, itemTypeForClientProps, true, newIdByOldId, projectNumberClone, null);
+			}
+			
+			returnItem.addRelationship(projTreeItem.item);
+		}
+
+		Utils.UpdateAllPredecessors(returnItem, newIdByOldId);
+
+		return returnItem;
+	default:
+		return null;
+}
+
+// fetches default values for all properties
+returnItem.fetchDefaultPropertyValues(false);
+
+if (actionMode == "CREATEPROJECTFROMPROJECT")
+{
+	//Fill in from_project_id
+	returnItem.setProperty("from_project_id", this.getProperty("id"));
+	
+	//Copy Project Team
+	Item oldProjectTeams = this.getItemsByXPath("Relationships/Item[@type='Project Team']");
+	int oldProjectTeamsCount = oldProjectTeams.getItemCount();
+	for (int i = 0; i < oldProjectTeamsCount; i++)
+	{
+		Item oldProjectTeam = oldProjectTeams.getItemByIndex(i);
+		Item projectTeam = Utils.Innovator.newItem("Project Team", "add");
+		projectTeam.setNewID();
+		projectTeam.setProperty("sort_order", oldProjectTeam.getProperty("sort_order"));
+		projectTeam.setProperty("role", oldProjectTeam.getProperty("role"));
+		returnItem.addRelationship(projectTeam);
+	}
+}
+
+if (actionMode == "CREATEPROJECTFROMTEMPLATE")
+{
+	//Clone All Deliverables
+	this.fetchRelationships("Project Template Docs");
+	Item allSourceDeliv = this.getItemsByXPath("Relationships/Item[@type='Project Template Docs']/related_id/Item");
+	int allSourceDelivCount = allSourceDeliv.getItemCount();
+	for (Int32 index = 0; index < allSourceDelivCount; index += 1)
+	{
+		Item oldDeliv = allSourceDeliv.getItemByIndex(index);
+		Item newDeliv = Utils.CloneDeliverable(oldDeliv, allDeliverables, namingMethod, itemTypeForClientProps);
+		Utils.AddRelationship(returnItem, newDeliv, "Project Docs");
+	}
+}
+	
+returnItem.setNewID();
+returnItem.setProperty("name", "Copy of " + this.getProperty("name"));
+returnItem.setPropertyItem("wbs_id", projTreeItem.item);
+returnItem.setProperty("owned_by_id", Utils.UserAlias);
+returnItem.setAttribute("newProject", "true");
+
+if (actionMode == "CREATEPROJECTFROMTEMPLATE")
+{
+	//Do not forget update onCreateNewProject.xml if you modify returnItem here
+	namingMethod.setPropertyItem("project", returnItem.clone(true));
+	Item namingMethodResult = namingMethod.apply();
+
+	var newDeliverableNamesById = new Dictionary<string, string>();
+	var newFileNamesById = new Dictionary<string, string>();
+	Item deliverablesForNaming = namingMethodResult.getItemsByXPath("//Item[@type='ArasDeliverableForNamingAA37EE0D']");
+	int deliverablesForNamingCount = deliverablesForNaming.getItemCount();
+	for (int i = 0; i < deliverablesForNamingCount; i++)
+	{
+		Item deliverableForNaming = deliverablesForNaming.getItemByIndex(i);
+		string deliverableNameNew = deliverableForNaming.getProperty("deliverable_name");
+		newDeliverableNamesById.Add(deliverableForNaming.getPropertyAttribute("deliverable_name", "id_new"), deliverableNameNew);
+		int fileIndex = 0;
+		while (true)
+		{
+			string fileNameNew = deliverableForNaming.getProperty("file_name" + fileIndex);
+			if (string.IsNullOrEmpty(fileNameNew))
+			{
+				break;
+			}
+			newFileNamesById.Add(deliverableForNaming.getPropertyAttribute("file_name" + fileIndex, "id_only_for_naming_project_clone"), fileNameNew);
+			fileIndex++;
+		}
+	}
+
+	Item projectDeliverables = returnItem.getItemsByXPath("//Item[@type='Activity2 Deliverable' or @type='WBS Deliverable' or @type='Project Docs']/related_id/Item");
+	int projectDeliverablesCount = projectDeliverables.getItemCount();
+	for (int i = 0; i < projectDeliverablesCount; i++)
+	{
+		Item projectDeliverable = projectDeliverables.getItemByIndex(i);
+
+		string projectDeliverableId = projectDeliverable.getAttribute("id");
+		//this validation was added for case if in Project Tree, e.g., in Deliverable as relationthip, will exist items the same types of project Deliverables, but they are not ProjectDeliverables of project
+		if (!newDeliverableNamesById.ContainsKey(projectDeliverableId))
+		{
+			continue;
+		}
+
+		string itemTypeName = projectDeliverable.getAttribute("type");
+		Dictionary<int, string> orderedProps = itemTypeForClientProps[itemTypeName];
+		string propToRename = orderedProps.Count == 0 ? "" : orderedProps[0];
+		if (!string.IsNullOrEmpty(propToRename))
+		{
+			projectDeliverable.setProperty(propToRename, newDeliverableNamesById[projectDeliverableId]);
+		}
+	
+		//generate keyed_name
+		string keyedNameValue = "";
+		foreach (var prop in orderedProps)
+		{
+			if (prop.Key != 0)
+			{
+				keyedNameValue += " ";
+			}
+			keyedNameValue += projectDeliverable.getProperty(prop.Value);
+		}
+		projectDeliverable.setProperty("keyed_name", keyedNameValue);
+
+		Item fileItems = projectDeliverable.getItemsByXPath(".//Item[@type='File' and @action='copyAsNew']");
+		int fileItemsCount = fileItems.getItemCount();
+		for (int j = 0; j < fileItemsCount; j++)
+		{
+			Item fileItem = fileItems.getItemByIndex(j);
+			string fileItemIdForNaming = fileItem.getAttribute("id_only_for_naming_project_clone");
+			fileItem.removeAttribute("id_only_for_naming_project_clone");
+			if (!newFileNamesById.ContainsKey(fileItemIdForNaming))
+			{
+				continue;
+			}
+			fileItem.setProperty("filename", newFileNamesById[fileItemIdForNaming]);
+		}
+	}
+	
+	returnItem.setAttribute("isNeedFixDeliverables", "1");
+}
+			
+Utils.UpdateAllPredecessors(returnItem, newIdByOldId);
+
+return	returnItem;
+}}
+
+public static class Utils
+{
+	private const String InnovatorObjectUID = "Project_CloneProjectOrTemplate_InnovatorObject";
+	private const String InnovatorCCOUID = "Project_CloneProjectOrTemplate_InnovatorCCO";
+
+	public static void InitializeForRequest(Innovator innovator, Aras.Server.Core.CallContext CCO)
+	{
+		HttpContext.Current.Items[InnovatorObjectUID] = innovator;
+		HttpContext.Current.Items[InnovatorCCOUID] = CCO;
+	}
+
+	public static Innovator Innovator
+	{
+		get
+		{
+			return ((Innovator)HttpContext.Current.Items[InnovatorObjectUID]);
+		}
+	}
+
+	public static string UserAlias
+	{
+			get
+			{
+				return Aras.Server.Security.Permissions.GetIdentitiesList(CCO.Variables.InnDatabase, Innovator.getUserID()).Substring(1, 32);
+			}
+	}
+
+	public static Aras.Server.Core.CallContext CCO
+	{
+		get
+		{
+			return ((Aras.Server.Core.CallContext)HttpContext.Current.Items[InnovatorCCOUID]);
+		}
+	}
+
+	public static Item CloneDeliverable(Item deliverableOld, Dictionary<string, Item> allDeliverables, Item namingMethod, Dictionary<string, Dictionary<int, string>> itemTypeForClientProps)
+	{
+		string deliverableIdOld = deliverableOld.getAttribute("id");
+		if (allDeliverables.ContainsKey(deliverableIdOld))
+		{
+			return allDeliverables[deliverableIdOld];
+		}
+		Item deliverableOldSeparateOfProject = deliverableOld.apply("get");
+		Item deliverableForNaming = Innovator.newItem("ArasDeliverableForNamingAA37EE0D");
+		string itemTypeName = deliverableOld.getAttribute("type");
+		if (!itemTypeForClientProps.ContainsKey(itemTypeName))
+		{
+			itemTypeForClientProps.Add(itemTypeName, GetPropsOrderedByKeyedNameOrder(GetItemTypeForClient(itemTypeName)));
+		}
+		Dictionary<int, string> orderedProps = itemTypeForClientProps[itemTypeName];
+
+		string propToRename = "";
+		string deliverableNameForNaming = "";
+		if (orderedProps.Count != 0)
+		{
+			propToRename = orderedProps[0];	
+			deliverableNameForNaming = deliverableOldSeparateOfProject.getProperty(propToRename);
+		}
+		
+		deliverableForNaming.setProperty("deliverable_name", deliverableNameForNaming);
+		deliverableForNaming.setPropertyAttribute("deliverable_name", "id_old", deliverableIdOld);
+		deliverableForNaming.setPropertyAttribute("deliverable_name", "property_to_rename", propToRename);
+		
+		deliverableOld.setAttribute("do_add", "0");
+		deliverableOld.setAttribute("do_lock", "0");
+		Item deliverableNew = deliverableOld.apply("copy");
+		deliverableForNaming.setPropertyAttribute("deliverable_name", "id_new", deliverableNew.getAttribute("id"));
+		int namingFileIndex = 0;
+		FindPropertiesTypeFileAndFixToClone(deliverableNew, ref namingFileIndex, deliverableForNaming);
+		FindRelationshipsAndClone(deliverableNew, ref namingFileIndex, deliverableForNaming);
+		
+		namingMethod.setPropertyItem("deliverable" + allDeliverables.Count, deliverableForNaming);
+		allDeliverables.Add(deliverableIdOld, deliverableNew);
+		return deliverableNew;
+	}
+
+	private static void FindPropertiesTypeFileAndFixToClone(Item item, ref int namingFileIndex, Item deliverableForNaming)
+	{
+		XmlNodeList propertiesOfTypeFile = item.node.SelectNodes("/Item/*[@type='File']");
+		for (int index = 0; index < propertiesOfTypeFile.Count; index++)
+		{
+			XmlElement tmp = propertiesOfTypeFile[index].SelectSingleNode("./Item[@type='File']") as XmlElement;
+			string id = tmp != null ? tmp.GetAttribute("id") : propertiesOfTypeFile[index].ChildNodes[0].Value;
+			Item file = Utils.Innovator.newItem("File", "get");
+			file.setID(id);
+			file = file.apply();
+			file.setAttribute("action", "copyAsNew");
+			file.setAttribute("do_lock", "0");
+			file.setAttribute("useInputProperties", "1");
+			file.setAttribute("isTemp", "1");
+			string fileName = file.getProperty("filename");
+			XmlElement importedFileElement = (XmlElement) item.dom.ImportNode(file.node, true);
+			propertiesOfTypeFile[index].ReplaceChild(importedFileElement, tmp != null ? tmp : propertiesOfTypeFile[index].ChildNodes[0]);
+
+			deliverableForNaming.setProperty("file_name" + namingFileIndex, fileName);
+			deliverableForNaming.setPropertyAttribute("file_name" + namingFileIndex, "id_old", id);
+			//used unique id because user can have the same files, e.g., in diff. deliverables, but it's rare case (only if user configures in deliverable to use pick related when adding files)
+			string fileIdForNaming = deliverableForNaming.getNewID();
+			importedFileElement.SetAttribute("id_only_for_naming_project_clone", fileIdForNaming);
+			deliverableForNaming.setPropertyAttribute("file_name" + namingFileIndex, "id_only_for_naming_project_clone", fileIdForNaming);
+			namingFileIndex++;
+		}
+	}
+
+	private static void FindRelationshipsAndClone(Item itemWithRelationships, ref int namingFileIndex, Item deliverableForNaming)
+	{
+		Item relathionships = itemWithRelationships.getItemsByXPath("Relationships/Item");
+		int relathionshipsCount = relathionships.getItemCount();
+		for (int index = 0; index < relathionshipsCount; index++)
+		{
+			Item relationship = relathionships.getItemByIndex(index);
+			Item item = Utils.Innovator.newItem(relationship.getAttribute("type"), "copy");
+			item.setAttribute("do_add", "0");
+			item.setAttribute("do_lock", "0");
+			item.setAttribute("id", relationship.getAttribute("donor_id"));
+			item = item.apply();
+			FindPropertiesTypeFileAndFixToClone(item, ref namingFileIndex, deliverableForNaming);
+			FindRelationshipsAndClone(item, ref namingFileIndex, deliverableForNaming);
+			XmlElement importedElement = (XmlElement) relationship.dom.ImportNode(item.node, true);
+			relationship.node.ParentNode.ReplaceChild(importedElement, relationship.node);
+			relationship.node = importedElement;
+			relationship.setProperty("source_id", itemWithRelationships.getAttribute("id"));
+			relationship.setPropertyAttribute("source_id", "keyed_name", null);
+		}
+	}
+
+	public static Item AddRelationship(Item sourceItem, Item relatedItem, string typeName) 
+	{
+		Item relationshipItem = Innovator.newItem(typeName, "add");
+		relationshipItem.setNewID();
+		relationshipItem.setRelatedItem(relatedItem);
+		sourceItem.addRelationship(relationshipItem);
+		return relationshipItem;
+	}
+
+	private class TempProperty
+	{
+		public int Order;
+		public string Name;
+	}
+
+	private static Dictionary<int, string> GetPropsOrderedByKeyedNameOrder(Item itemTypeForClient)
+	{
+		var temp = new List<TempProperty>();
+		Item props = itemTypeForClient.getItemsByXPath("Item/Relationships/Item[@type='Property' and data_type!='foreign' and data_type!='federated']");
+		int propsCount = props.getItemCount();
+		for (int i = 0; i < propsCount; i++)
+		{
+			Item prop = props.getItemByIndex(i);
+			string keyedNameOrder = prop.getProperty("keyed_name_order");
+			if (string.IsNullOrEmpty(keyedNameOrder))
+			{
+				continue;
+			}
+			temp.Add(new TempProperty { Order = int.Parse(keyedNameOrder), Name = prop.getProperty("name") } );
+		}
+		
+		var result = new Dictionary<int, string>();
+		int counter = 0;
+		foreach (TempProperty prop in temp.OrderBy(i => i.Order))
+		{
+			result.Add(counter, prop.Name);
+			counter++;
+		}
+		
+		return result;
+	}
+
+	private static Item GetItemTypeForClient(string itemTypeName)
+	{
+		Item itemType = Innovator.newItem("ItemType");
+		itemType.setProperty("name", itemTypeName);
+		Item getItemTypeForClient = Innovator.newItem();
+		Innovator.getConnection().CallAction("GetItemTypeForClient", itemType.dom, getItemTypeForClient.dom);
+		var namespaceManager = new XmlNamespaceManager(getItemTypeForClient.dom.NameTable);
+		namespaceManager.AddNamespace("SOAP-ENV", "http://schemas.xmlsoap.org/soap/envelope/");
+		getItemTypeForClient.node = (XmlElement) getItemTypeForClient.dom.SelectSingleNode("SOAP-ENV:Envelope/SOAP-ENV:Body/Result", namespaceManager);
+		return getItemTypeForClient;
+	}
+
+	public static void UpdateAllPredecessors(Item returnItem, Dictionary<string, string> newIdByOldId)
+	{
+		Item allPredecessors = returnItem.getItemsByXPath("descendant::Item[@type='Predecessor']");
+		int allPredecessorsCount = allPredecessors.getItemCount();
+		for (int i = 0; i < allPredecessorsCount; i++)
+		{
+			Item predecessor = allPredecessors.getItemByIndex(i);
+			string relatedIdOld = predecessor.getProperty("related_id");
+			if (!string.IsNullOrEmpty(relatedIdOld) && newIdByOldId.ContainsKey(relatedIdOld))
+			{
+				predecessor.setProperty("related_id", newIdByOldId[relatedIdOld]);
+			}
+		}
+	}
+}
+
+	public class ProjectTreeItemBase
+	{
+		#region Fields
+
+		public Item item;
+
+		#endregion
+
+		#region Properties
+	
+		protected bool IsCloneDeliverables { get; set; }
+		
+		protected bool IsCopyPointersToDeliverables { get; set; }
+		
+		protected Dictionary<string, Item> AllDeliverables { get; set; }
+		
+		protected Item NamingMethod { get; set; }
+
+		protected Dictionary<string, Dictionary<int, string>> ItemTypeForClientProps { get; set; }
+
+		protected bool IsPrependCopyOf { get; set; }
+
+		#endregion
+	}
+
+	public class ProjectTreeActivity2Item : ProjectTreeItemBase
+	{
+		public ProjectTreeActivity2Item(Item source, bool isCloneDeliverables, Dictionary<string, Item> allDeliverables, bool isCopyPointersToDeliverables, Item namingMethod, Dictionary<string, Dictionary<int, string>> itemTypeForClientProps, bool isPrependCopyOf, Dictionary<string, string> newIdByOldId, string projNum, List<string> roles)
+		{
+			this.IsCloneDeliverables = isCloneDeliverables;
+			this.IsCopyPointersToDeliverables = isCopyPointersToDeliverables;
+			this.AllDeliverables = allDeliverables;
+			this.NamingMethod = namingMethod;
+			this.ItemTypeForClientProps = itemTypeForClientProps;
+			this.IsPrependCopyOf = isPrependCopyOf;
+			this.item = Utils.Innovator.newItem("Activity2", "add");
+			this.item.setNewID();
+			//clone necessary properties
+			this.item.setProperty("is_milestone", source.getProperty("is_milestone"));
+			this.item.setProperty("expected_duration", source.getProperty("expected_duration"));
+			this.item.setProperty("work_earned", source.getProperty("work_earned"));
+			this.item.setProperty("work_est", source.getProperty("work_est"));
+			this.item.setProperty("name", (this.IsPrependCopyOf ? "Copy of " : "") + source.getProperty("name"));
+			this.item.setProperty("is_required", source.getProperty("is_required"));
+			this.item.setProperty("deliv_required", source.getProperty("deliv_required"));
+			this.item.setProperty("deliv_type", source.getProperty("deliv_type"));
+			this.item.setProperty("keyed_name", (this.IsPrependCopyOf ? "Copy of " : "") + source.getProperty("keyed_name"));
+			string leadRole = source.getProperty("lead_role");
+			if (roles != null && !roles.Contains(leadRole) && !string.IsNullOrEmpty(leadRole))
+			{
+				roles.Add(leadRole);	
+			}
+			this.item.setProperty("lead_role", leadRole);
+			this.item.setProperty("state", "Pending");
+			this.item.setProperty("prev_item", source.getProperty("prev_item"));
+			this.item.setProperty("proj_num", projNum);
+
+			newIdByOldId[source.getID()] = this.item.getID();
+
+			//set all Activity2 Assignment
+			Item allAct2Assign = source.getItemsByXPath("Relationships/Item[@type='Activity2 Assignment' and not(@action='delete')]");
+			Int32 itemCount = allAct2Assign.getItemCount();
+			for (Int32 index = 0; index < itemCount; index += 1)
+			{
+
+				Item oldAct2Assign = allAct2Assign.getItemByIndex(index);
+				Item newAct2Assign = this.CreateActivity2Assignment(oldAct2Assign, roles);
+				if (null != newAct2Assign)
+				{
+					this.item.addRelationship(newAct2Assign);
+				}
+			}
+
+			//set all Activity2 Task
+			Item allAct2Task = source.getItemsByXPath("Relationships/Item[@type='Activity2 Task' and not(@action='delete')]");
+			itemCount = allAct2Task.getItemCount();
+			for (Int32 index = 0; index < itemCount; index += 1)
+			{
+				Item oldAct2Task = allAct2Task.getItemByIndex(index);
+				Item newAct2Task = this.CreateActivity2Task(oldAct2Task);
+				this.item.addRelationship(newAct2Task);
+				newAct2Task.setProperty("sort_order", oldAct2Task.getProperty("sort_order"));
+			}
+
+			//set all Activity2 Deliverable
+			if (this.IsCloneDeliverables || this.IsCopyPointersToDeliverables)
+			{
+				Item allAct2Deliv = source.getItemsByXPath("Relationships/Item[@type='Activity2 Deliverable' and not(@action='delete')]/related_id/Item");
+				itemCount = allAct2Deliv.getItemCount();
+				for (Int32 index = 0; index < itemCount; index += 1)
+				{
+					Item oldDeliv = allAct2Deliv.getItemByIndex(index);
+					Item newDeliv = this.IsCopyPointersToDeliverables ? oldDeliv : Utils.CloneDeliverable(oldDeliv, this.AllDeliverables, this.NamingMethod, this.ItemTypeForClientProps);
+					Utils.AddRelationship(this.item, newDeliv, "Activity2 Deliverable");
+				}
+			}
+			//set Predecessor
+			Item predecessors = source.getRelationships("Predecessor");
+			itemCount = predecessors.getItemCount();
+			for (Int32 index = 0; index < itemCount; index += 1)
+			{
+				Item predecessor = this.CreatePredecessor(predecessors.getItemByIndex(index));
+				this.item.addRelationship(predecessor);
+			}
+		}
+
+		private Item CreatePredecessor(Item source)
+		{
+			Item newPred = Utils.Innovator.newItem("Predecessor", "add");
+			newPred.setNewID();
+			newPred.setProperty("related_id", source.getProperty("related_id"));
+			newPred.setProperty("lead_lag", source.getProperty("lead_lag"));
+			newPred.setProperty("precedence_type", source.getProperty("precedence_type"));
+			return newPred;
+		}
+
+		private Item CreateActivity2Assignment(Item source, List<string> roles)
+		{
+			string role = source.getProperty("role");
+			if (roles != null && !roles.Contains(role) && !string.IsNullOrEmpty(role))
+			{
+				roles.Add(role);
+			}
+			if (string.IsNullOrEmpty(role))
+			{
+				return null;
+			}
+			Item newAct2Assign = Utils.Innovator.newItem("Activity2 Assignment", "add");
+
+			//clone necessary properties
+			newAct2Assign.setProperty("role", role);
+			newAct2Assign.setProperty("state", "Pending");
+			newAct2Assign.setNewID();
+
+			return newAct2Assign;
+		}
+
+		private Item CreateActivity2Task(Item source)
+		{
+			Item newAct2Task = Utils.Innovator.newItem("Activity2 Task", "add");
+			//clone necessary properties
+			newAct2Task.setProperty("description", source.getProperty("description"));
+			newAct2Task.setProperty("is_required", source.getProperty("is_required"));
+			return newAct2Task;
+		}
+	}
+
+	public class ProjectTreeWbsItem : ProjectTreeItemBase
+	{
+		private const string GET_EXIST_WBS_AML_TEMPLATE = "<AML>" +
+			"<Item type=\"WBS Element\" select=\"name,wbs_index,is_top,keyed_name,prev_item,deliv_required,deliv_type,wbs_index\"  action=\"GetItemRepeatConfig\">" +
+			"	<Relationships>" +
+			"		<Item type=\"Sub WBS\" select=\"related_id\"  repeatProp=\"related_id\" repeatTimes=\"-1\">" +
+			"			<related_id>" +
+			"				<Item type=\"WBS Element\" select=\"name,wbs_index,is_top,keyed_name,deliv_required,deliv_type\"/>" +
+			"			</related_id>" +
+			"		</Item>" +
+			"		<Item type=\"WBS Activity2\" select=\"related_id\" repeatProp=\"related_id\" repeatTimes=\"-1\">" +
+			"			<related_id>" +
+			"				<Item type=\"Activity2\" select=\"name,is_milestone,date_start_act,date_due_act,expected_duration,is_required,deliv_required,deliv_type,keyed_name,work_earned,work_est,prev_item,lead_role\">" +
+			"					<Relationships>" +
+			"						<Item type=\"Predecessor\" select=\"related_id,precedence_type,lead_lag\">" +
+			"							<related_id>" +
+			"								<Item type=\"Activity2\" select=\"id\"/>" +
+			"							</related_id>" +
+			"						</Item>" +
+			"						<Item type=\"Activity2 Assignment\" select=\"role\"/>" +
+			"						<Item type=\"Activity2 Task\" select=\"description,is_required,sort_order\"/>" +
+			"						<Item type=\"Activity2 Deliverable\" select=\"related_id(keyed_name,itemtype)\"/>" +
+			"					</Relationships>" +
+			"				</Item>" +
+			"			</related_id>" +
+			"		</Item>" +
+			"		<Item type=\"WBS Deliverable\" select=\"related_id(keyed_name, itemtype)\"/>" +
+			"	</Relationships>" +
+			"</Item></AML>";
+
+		public ProjectTreeWbsItem(Item source, bool isRoot, bool isTopForThisOperation, bool isCloneDeliverables, Dictionary<string, Item> allDeliverables, bool isCopyPointersToDeliverables, Item namingMethod, Dictionary<string, Dictionary<int, string>> itemTypeForClientProps, bool isPrependCopyOf, Dictionary<string, string> newIdByOldId, string projNum, List<string> roles)
+		{
+			this.IsCloneDeliverables = isCloneDeliverables;
+			this.IsCopyPointersToDeliverables = isCopyPointersToDeliverables;
+			this.AllDeliverables = allDeliverables;
+			this.NamingMethod = namingMethod;
+			this.ItemTypeForClientProps = itemTypeForClientProps;
+			this.IsPrependCopyOf = isPrependCopyOf;
+			Initialize(source, isRoot, isTopForThisOperation, newIdByOldId, projNum, roles);
+		}
+
+		private void Initialize(Item source, bool isRoot, bool isTopForThisOperation, Dictionary<string, string> newIdByOldId, string projNum, List<string> roles)
+		{
+			this.item = Utils.Innovator.newItem("WBS Element", "add");
+
+			//clone necessary properties
+			this.item.setNewID();
+			this.item.setProperty("is_top", (isRoot ? "1" : "0"));
+			this.item.setProperty("name", (this.IsPrependCopyOf ? "Copy of " : "") + source.getProperty("name"));
+			this.item.setProperty("deliv_type", source.getProperty("deliv_type"));
+			this.item.setProperty("deliv_required", source.getProperty("deliv_required"));
+			this.item.setProperty("wbs_index", source.getProperty("wbs_index"));
+			this.item.setProperty("keyed_name", (this.IsPrependCopyOf ? "Copy of " : "") + source.getProperty("keyed_name"));
+			this.item.setProperty("prev_item", source.getProperty("prev_item"));
+			this.item.setProperty("proj_num", projNum);
+
+			newIdByOldId[source.getID()] = this.item.getID();
+			Item childWBSs = source.getItemsByXPath("Relationships/Item[@type='Sub WBS' and not(@action='delete')]/related_id/Item[@type='WBS Element']");
+			Int32 itemCount = childWBSs.getItemCount();
+			for (Int32 index = 0; index < itemCount; index += 1)
+			{
+				Item oldWbs = childWBSs.getItemByIndex(index);
+				var newWbs = new ProjectTreeWbsItem(oldWbs, false, false, this.IsCloneDeliverables, this.AllDeliverables, this.IsCopyPointersToDeliverables, this.NamingMethod, this.ItemTypeForClientProps, this.IsPrependCopyOf, newIdByOldId, projNum, roles);
+				Item relationshipItem = Utils.AddRelationship(this.item, newWbs.item, "Sub WBS");
+			}
+			Item childActs = source.getItemsByXPath("Relationships/Item[@type='WBS Activity2' and not(@action='delete')]/related_id/Item[@type='Activity2']");
+			itemCount = childActs.getItemCount();
+			for (Int32 index = 0; index < itemCount; index += 1)
+			{
+				Item oldActivity2 = childActs.getItemByIndex(index);
+				ProjectTreeActivity2Item newActivity2 = new ProjectTreeActivity2Item(oldActivity2, this.IsCloneDeliverables, this.AllDeliverables, this.IsCopyPointersToDeliverables, this.NamingMethod, this.ItemTypeForClientProps, this.IsPrependCopyOf, newIdByOldId, projNum, roles);
+				Item relationshipItem = Utils.AddRelationship(this.item, newActivity2.item, "WBS Activity2");
+			}
+
+			//set all WBS Deliverable
+			if (this.IsCloneDeliverables || this.IsCopyPointersToDeliverables)
+			{
+				Item allWbsDeliv = source.getItemsByXPath("Relationships/Item[@type='WBS Deliverable' and not(@action='delete')]/related_id/Item");
+				itemCount = allWbsDeliv.getItemCount();
+				for (Int32 index = 0; index < itemCount; index += 1)
+				{
+					Item oldDeliv = allWbsDeliv.getItemByIndex(index);
+					Item newDeliv = this.IsCopyPointersToDeliverables ? oldDeliv : Utils.CloneDeliverable(oldDeliv, this.AllDeliverables, this.NamingMethod, this.ItemTypeForClientProps);
+					Utils.AddRelationship(this.item, newDeliv, "WBS Deliverable");
+				}
+			}
+
+			if (isTopForThisOperation)
+			{
+				//update prevItem in all WBS Element's and Activity2's
+				Item allProjectTreeElements = this.item.getItemsByXPath("descendant::Item[(@type='WBS Element' or @type='Activity2') and not(@action='delete')]");
+				int allProjectTreeElementsCount = allProjectTreeElements.getItemCount();
+				for (int i = 0; i < allProjectTreeElementsCount; i++)
+				{
+					Item element = allProjectTreeElements.getItemByIndex(i);
+					string prevItemOld = element.getProperty("prev_item");
+					if (!string.IsNullOrEmpty(prevItemOld) && newIdByOldId.ContainsKey(prevItemOld))
+					{
+						element.setProperty("prev_item", newIdByOldId[prevItemOld]);
+					}
+				}
+
+			}
+		}
+
+		#region Private Methods
+		internal static Item GetExistWbs(string wbsID)
+		{
+			Item queryItem = Utils.Innovator.newItem();
+			queryItem.loadAML(GET_EXIST_WBS_AML_TEMPLATE);
+			queryItem.setID(System.Security.SecurityElement.Escape(wbsID));
+			Item result = queryItem.apply().getItemByIndex(0);
+			return result;
+		}
+		#endregion
+	}
+class fin
+{
+	void method()
+	{]]></method_code>
+  <method_type>C#</method_type>
+  <name>Project_CloneProjectOrTemplate</name>
+ </Item>
+</AML>

@@ -1,0 +1,21 @@
+﻿<AML>
+ <Item type="SQL" id="1574370A805F4E29897E42F8CAF37041" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>business_calendar_compile</old_name>
+  <sqlserver_body><![CDATA[CREATE PROCEDURE [business_calendar_compile](@force char(1), @TZ_NAME NVARCHAR(50) = NULL)
+AS
+BEGIN
+	IF @force = '1' DELETE FROM BUSINESS_CALENDAR
+	DECLARE @K INT
+	EXEC [innovator].[business_calendar_compile_check] @TZ_NAME
+	SET @K = (SELECT COUNT(*) FROM BUSINESS_CALENDAR)
+	SELECT 'SUCCESS' as result_status,
+	'OK: ' + CONVERT(VARCHAR(32), @K) + ' DAYS' as result_text
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>business_calendar_compile</name>
+ </Item>
+</AML>

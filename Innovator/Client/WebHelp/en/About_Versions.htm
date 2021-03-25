@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = ".";
+  gCommonRootRelPath = ".";
+  gTopicId = "3.4.1.0_1";
+
+//]]></script>
+
+<script type="text/javascript" src="./template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="./template/scripts/common.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="./template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="assets/css/JAI_styles.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="topic-check-list" content="Ran Smart Index"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>About Versions</title>
+  
+</head>
+<body>
+  <div>
+  <h1>About Versions</h1>
+  <p class="Content_body">The business rule behavior of an Item is established by the default properties of its ItemType definition and its Lifecycle State Properties stored on the Item instance.  As an Item instance moves through the States of a business Lifecycle it may undergo
+    changes (versioning) to its metadata or its Relationships.  These changes result in a re-identification of the Item over time, using revision, version, and generation properties.  Versioning behavior is controlled by the ItemType definition properties,
+    and the flags attached to the current Lifecycle State.  </p>
+  <p class="Content_body">Versioning can be initiated as either an automatic or a manual process.  When you select the automatic process, the Generation of the item increments each time the item is changed (i.e., locked, edited and unlocked).  The lifecycle for the item is automatically
+    set back to the lifecycle start state.  When you select manual versioning, the item is only incremented at the explicit request of a user.  As with automatic versioning, the Generation is incremented and the lifecycle is set back to the start state.</p>
+  <p class="Content_body">Additional logic has been incorporated to control incrementing of a Major_Rev.  When the lifecycle state for an item instance is a release state, any subsequent changes to that item result in a new Major_Rev, as well as incrementing the Generation and
+    setting the lifecycle back to the start state.</p>
+  <table cellspacing="0" class="Aras_Blue" width="71.168%">
+    <colgroup>
+      <col style="width: 19.383%;"/>
+      <col style="width: 80.617%;"/>
+    </colgroup>
+    <tbody>
+      <tr class="t1st">
+        <td style="border: Solid 1px #c0c0c0;">
+          <p class="Table_header">Properties</p>
+        </td>
+        <td style="border-top: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_header">Description</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">Major_Rev</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">The version field - the major increments, controlled by business rules which cause the version to be incremented when changes are made to an item is in a release date.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">Minor_Rev</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">The revision field - the secondary increments, controlled by business rules whose behavior is definable at the application level and via tailoring.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">Generation</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">An integer field that is a sequence  number counting the number of  changes.  Generations are automatically incremented by the Innovator code processes  and rules whenever an Item is Locked and Saved.</p>
+          <?rh-list_start level="1" an="1" class="rl-p-Note" style="list-style: rh-list; 
+						 list-style: rh-list;" ?>
+            <p class="Note">While a new Generation is created for every Item saved change, versioning occurs.</p>
+            <?rh-list_end ?>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">Number</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">A key field (i.e.. part_number, document_number), controlled by business rules.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">ID</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">An internal unique instance identifier (not seen by the end user)</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">Lifecycle</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">A customer-defined sequence of States and Transitions between States that are used as a primary driver of business rules.  All Items are defined to be in one State within one specified Lifecycle. The State names are not significant; flags on
+            each State&#39;s definition determine the behaviors.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">Lifecycle Start State</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">A state within the Lifecycle that has been specifically designated as the starting point for the Lifecycle.  When a new Item is created, its state is automatically set to the start state.  When Versioning, the item will be set back to its lifecycle
+            start state whenever its version (i.e. generation) changes.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">Lifecycle Release State</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">A state within the Lifecycle that has been specifically flagged as the release state.  There may be more than one release state in a lifecycle.  When an item in release state is versioned, its Major_Rev is incremented, it is set back to its
+            lifecycle start state, and its generation is incremented.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">Promote</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">An action to change the State of an Item, by assigning it another State from the same Lifecycle that is connected by a Transition.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; 
+			 border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">Lock, Save, and Unlock</p>
+        </td>
+        <td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+          <p class="Table_Body">A set of actions used to initiate and save changes to Items, which result in versioning when automatic versioning is selected.  Lock, Save, and Unlock affect the Generation and Major_Rev of an item explicitly. Minor_Rev behavior is controlled
+            by business rules which are definable at the application level via tailoring.</p>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+</div>
+  <div>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

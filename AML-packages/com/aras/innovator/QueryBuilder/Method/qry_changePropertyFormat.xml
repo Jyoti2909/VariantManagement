@@ -1,0 +1,419 @@
+﻿<AML>
+ <Item type="Method" id="F8FC7251141F46B3872BE209BF41C0D0" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+			Innovator innovator = this.getInnovator();
+			string queryDefinitionIdList = getProperty("query_definition_id_list");
+			Item query = innovator.newItem();
+			query.loadAML(@"<AML>
+	<Item action='get' select='id' type='qry_QueryDefinition'>
+		<Relationships>
+			<Item type='qry_QueryItem' action='get' select='id,filter_xml,ref_id,item_type'>
+				<Relationships>
+					<Item type='qry_QueryItemSelectProperty' action='get' select='id,property_name' isCriteria='0'/>
+					<Item type='qry_QueryItemSortProperty' action='get' select='id,property_name' isCriteria='0'/>
+				</Relationships>
+			</Item>
+			<Item type='qry_QueryReference' action='get' select='id,filter_xml,ref_id,parent_ref_id,child_ref_id'>
+			</Item>
+		</Relationships>
+	</Item>
+</AML>");
+			if (!string.IsNullOrEmpty(queryDefinitionIdList))
+			{
+				query.setAttribute("idlist", queryDefinitionIdList);
+			}
+			Item queryDefinition = query.apply();
+			if (queryDefinition.isError())
+			{
+				return queryDefinition;
+			}
+			var logger = new Logger();
+			try
+			{
+				var migrationLogic = new QueryMigrationLogic(new AvailablePropetiesProvider(innovator, logger), innovator, logger);
+				Item migrationQuery = migrationLogic.GetMigrationQuery(queryDefinition);
+				if (migrationQuery != null)
+				{
+					Item migrationResponse = innovator.applyAML(migrationQuery.dom.OuterXml);
+					if (migrationResponse.isError())
+					{
+						return migrationResponse;
+					}
+				}
+				return innovator.newResult(logger.GetLog());
+			}
+			catch (QueryDefinitionConversionException)
+			{
+				return innovator.newError(logger.GetLog());
+			}
+		}
+
+		internal class Logger
+		{
+			private readonly StringBuilder _sb = new StringBuilder();
+
+			public void Write(string logMessage)
+			{
+				_sb.AppendLine(logMessage);
+			}
+
+			public string GetLog()
+			{
+				return _sb.ToString();
+			}
+		}
+
+		internal class AvailablePropetiesProvider
+		{
+			private readonly Innovator _innovator;
+			private readonly Logger _logger;
+
+			public AvailablePropetiesProvider(Innovator innovator, Logger logger)
+			{
+				_innovator = innovator;
+				_logger = logger;
+			}
+
+			public IEnumerable<QueryItemProperty> GetAvailableProperties(IEnumerable<QueryItem> queryItems)
+			{
+				IEnumerable<QueryItemProperty> properties = queryItems.SelectMany(qi =>
+				{
+					Item query = _innovator.newItem("Method", "qry_GetAvailableProperties");
+					query.setProperty("ref_id", qi.RefId);
+					query.setProperty("item_type", qi.ItemType);
+					Item response = query.apply();
+					if (response.isError())
+					{
+						_logger.Write(string.Format(CultureInfo.InvariantCulture,
+							"Error while getting available properties info for query item with refId = {0}: {1}",
+							qi.RefId, response.getErrorString()));
+					}
+					var result = new List<QueryItemProperty>();
+					for (var i = 0; i < response.getItemCount(); i++)
+					{
+						Item responseItem = response.getItemByIndex(i);
+						result.Add(new QueryItemProperty
+						{
+							RefId = responseItem.getProperty("ref_id"),
+							QueryItemRefId = responseItem.getProperty("query_item_ref_id"),
+							Name = responseItem.getProperty("name")
+						});
+					}
+					return result;
+				});
+				return properties;
+			}
+		}
+
+		internal class QueryItem
+		{
+			public string RefId { get; set; }
+			public string ItemType { get; set; }
+		}
+
+		internal class QueryItemProperty
+		{
+			public string RefId { get; set; }
+			public string QueryItemRefId { get; set; }
+			public string Name { get; set; }
+		}
+
+		internal class QueryMigrationLogic
+		{
+			private readonly AvailablePropetiesProvider _availablePropetiesProvider;
+			private readonly Innovator _innovator;
+			private readonly Logger _logger;
+
+			public QueryMigrationLogic(AvailablePropetiesProvider availablePropetiesProvider, Innovator innovator, Logger logger)
+			{
+				_availablePropetiesProvider = availablePropetiesProvider;
+				_innovator = innovator;
+				_logger = logger;
+			}
+
+			private static string GetFormattedXmlString(XmlDocument doc)
+			{
+				var sb = new StringBuilder();
+				var settings = new XmlWriterSettings
+				{
+					Indent = true,
+					IndentChars = "\t",
+					NewLineChars = "\r\n",
+					NewLineHandling = NewLineHandling.Replace,
+					OmitXmlDeclaration = true
+				};
+				using (XmlWriter writer = XmlWriter.Create(sb, settings))
+				{
+					doc.Save(writer);
+				}
+
+				return sb.ToString();
+			}
+
+			public Item GetMigrationQuery(Item queryDefinitions)
+			{
+				var hasError = false;
+				var result = new List<Item>();
+				int queryDefinitionCount = queryDefinitions.getItemCount();
+				for (var i = 0; i < queryDefinitionCount; i++)
+				{
+					Item queryDefinition = queryDefinitions.getItemByIndex(i);
+					hasError |= ProcessQueryDefinition(queryDefinition, result);
+				}
+
+				if (hasError)
+				{
+					throw new QueryDefinitionConversionException("Query definition processing error");
+				}
+				return result.Any()
+					? result.Aggregate((acc, next) =>
+					{
+						acc.appendItem(next);
+						return acc;
+					})
+					: null;
+			}
+
+			private bool ProcessQueryDefinition(Item queryDefinition, List<Item> result)
+			{
+				var hasError = false;
+				string queryDefinitionId = queryDefinition.getID();
+
+				_logger.Write("Processing QueryDefinition with id: " + queryDefinitionId);
+
+				Item queryItems = queryDefinition.getRelationships("qry_QueryItem");
+
+				Dictionary<string, Dictionary<string, QueryItemProperty>> properties = GetQueryItemProperties(queryItems);
+
+				int queryItemsCount = queryItems.getItemCount();
+				for (var i = 0; i < queryItemsCount; i++)
+				{
+					Item queryItem = queryItems.getItemByIndex(i);
+					string queryItemRefId = queryItem.getProperty("ref_id");
+
+					Dictionary<string, QueryItemProperty> queryItemPropeties = properties[queryItemRefId];
+
+					hasError |= ProcessFilterXml(queryItem, queryItemPropeties, queryItemRefId, result);
+					hasError |= ProcessRelationships("qry_QueryItemSelectProperty", queryItem, queryItemPropeties, queryItemRefId,
+						result);
+					hasError |= ProcessRelationships("qry_QueryItemSortProperty", queryItem, queryItemPropeties, queryItemRefId,
+						result);
+				}
+
+				Item relationships = queryDefinition.getRelationships("qry_QueryReference");
+				int relationshipCount = relationships.getItemCount();
+				for (var i = 0; i < relationshipCount; i++)
+				{
+					Item relationship = relationships.getItemByIndex(i);
+					hasError |= ProcessQueryReference(relationship, properties, result);
+				}
+
+				_logger.Write("Query definition processing was " + (hasError ? "failed" : "successfull"));
+				return hasError;
+			}
+
+			private bool ProcessFilterXml(Item queryItem, Dictionary<string, QueryItemProperty> queryItemPropeties,
+				string queryItemRefId, List<Item> result)
+			{
+				string filterXml = queryItem.getProperty("filter_xml");
+				if (string.IsNullOrEmpty(filterXml))
+				{
+					return false;
+				}
+				XmlDocument conditionXml = Aras.Server.Core.XML.CreateNewXMLDocument(filterXml);
+				XmlNodeList propertyNodes = conditionXml.SelectNodes("//property");
+				if (propertyNodes == null || propertyNodes.Count < 1)
+				{
+					return false;
+				}
+
+				var hasError = false;
+				var hasChanges = false;
+				for (var i = 0; i < propertyNodes.Count; i++)
+				{
+					var propertyNode = (XmlElement)propertyNodes[i];
+
+					if (!string.IsNullOrEmpty(propertyNode.InnerText))
+					{
+						hasChanges = true;
+						propertyNode.IsEmpty = true;
+					}
+
+					XmlNode refIdNode = propertyNode.Attributes != null ? propertyNode.Attributes.GetNamedItem("ref-id") : null;
+					if (refIdNode == null)
+					{
+						continue;
+					}
+					string propertyRefId = refIdNode.Value;
+					QueryItemProperty propertyInfo;
+					if (!queryItemPropeties.TryGetValue(propertyRefId, out propertyInfo))
+					{
+						hasError = true;
+						_logger.Write(string.Format(CultureInfo.InvariantCulture,
+							"Property with ref-id: {0} not found at filter_xml property of query item with ref-id {1}", propertyRefId,
+							queryItemRefId));
+						continue;
+					}
+					propertyNode.Attributes.RemoveNamedItem("ref-id");
+					AppendAttribute(propertyNode, "name", propertyInfo.Name);
+					hasChanges = true;
+				}
+				if (hasChanges)
+				{
+					Item updateItem = GetUpdateItem(queryItem);
+					updateItem.setProperty("filter_xml", GetFormattedXmlString(conditionXml));
+					result.Add(updateItem);
+				}
+				return hasError;
+			}
+
+			private bool ProcessRelationships(string relationshipName, Item queryItem,
+				Dictionary<string, QueryItemProperty> queryItemPropeties, string queryItemRefId, List<Item> result)
+			{
+				var hasError = false;
+				Item selectItems = queryItem.getRelationships(relationshipName);
+				int selectItemCount = selectItems.getItemCount();
+				for (var i = 0; i < selectItemCount; i++)
+				{
+					Item selectProperty = selectItems.getItemByIndex(i);
+					string propertyRefId = selectProperty.getProperty("property_name");
+					QueryItemProperty propertyInfo;
+					if (queryItemPropeties.TryGetValue(propertyRefId, out propertyInfo))
+					{
+						Item updateItem = GetUpdateItem(selectProperty);
+						updateItem.setProperty("property_name", propertyInfo.Name);
+						result.Add(updateItem);
+					}
+					else if (!queryItemPropeties.Values.Select(p => p.Name).Contains(propertyRefId))
+					{
+						hasError = true;
+						_logger.Write(string.Format(CultureInfo.InvariantCulture,
+							"Query item with ref-id {0} constains {2} with invalid property_name: {1}", queryItemRefId,
+							propertyRefId, relationshipName));
+					}
+				}
+				return hasError;
+			}
+
+			private bool ProcessQueryReference(Item relationship,
+				Dictionary<string, Dictionary<string, QueryItemProperty>> properties, List<Item> result)
+			{
+				string queryReferenceRefId = relationship.getProperty("ref_id");
+				string filterXml = relationship.getProperty("filter_xml");
+				if (string.IsNullOrEmpty(filterXml))
+				{
+					return false;
+				}
+				string parentRefId = relationship.getProperty("parent_ref_id");
+				string childRefId = relationship.getProperty("child_ref_id");
+				Dictionary<string, QueryItemProperty> parentProperites = parentRefId != null ? properties[parentRefId] : null;
+				Dictionary<string, QueryItemProperty> childProperties = properties[childRefId];
+				XmlDocument conditionXml = Aras.Server.Core.XML.CreateNewXMLDocument(filterXml);
+				XmlNodeList propertyNodes = conditionXml.SelectNodes("//property");
+
+				if (propertyNodes == null || propertyNodes.Count < 1)
+				{
+					return false;
+				}
+
+				var hasError = false;
+				var hasChanges = false;
+				for (var i = 0; i < propertyNodes.Count; i++)
+				{
+					var propertyNode = (XmlElement)propertyNodes[i];
+					if (!string.IsNullOrEmpty(propertyNode.InnerText))
+					{
+						hasChanges = true;
+						propertyNode.IsEmpty = true;
+					}
+
+					XmlNode refIdNode = propertyNode.Attributes != null ? propertyNode.Attributes.GetNamedItem("ref-id") : null;
+					if (refIdNode == null)
+					{
+						continue;
+					}
+					string propertyRefId = refIdNode.Value;
+					var atParent = false;
+					QueryItemProperty propertyInfo;
+					if (parentProperites != null && parentProperites.TryGetValue(propertyRefId, out propertyInfo))
+					{
+						atParent = true;
+					}
+					else if (!childProperties.TryGetValue(propertyRefId, out propertyInfo))
+					{
+						hasError = true;
+						_logger.Write(string.Format(CultureInfo.InvariantCulture,
+							"Property with ref-id: {0} not found at filter_xml property of query reference item with ref-id {1}",
+							propertyRefId,
+							queryReferenceRefId));
+						continue;
+					}
+					propertyNode.Attributes.RemoveNamedItem("ref-id");
+					AppendAttribute(propertyNode, "name", propertyInfo.Name);
+					if (atParent)
+					{
+						AppendAttribute(propertyNode, "query_items_xpath", "parent::Item");
+					}
+					hasChanges = true;
+				}
+				if (hasChanges)
+				{
+					Item updateItem = GetUpdateItem(relationship);
+					updateItem.setProperty("filter_xml", GetFormattedXmlString(conditionXml));
+					result.Add(updateItem);
+				}
+				return hasError;
+			}
+
+			private static void AppendAttribute(XmlNode propertyNode, string name, string value)
+			{
+				XmlAttribute nameAttribute = propertyNode.OwnerDocument.CreateAttribute(name);
+				nameAttribute.Value = value;
+				propertyNode.Attributes.Append(nameAttribute);
+			}
+
+			private Dictionary<string, Dictionary<string, QueryItemProperty>> GetQueryItemProperties(Item queryItems)
+			{
+				int queryItemsCount = queryItems.getItemCount();
+				var queryItemsQuery = new List<QueryItem>();
+				for (var j = 0; j < queryItemsCount; j++)
+				{
+					Item queryItem = queryItems.getItemByIndex(j);
+					string qiRefId = queryItem.getProperty("ref_id");
+					string qiItemType = queryItem.getProperty("item_type");
+					queryItemsQuery.Add(new QueryItem {RefId = qiRefId, ItemType = qiItemType});
+				}
+
+				Dictionary<string, Dictionary<string, QueryItemProperty>> properties = _availablePropetiesProvider
+					.GetAvailableProperties(queryItemsQuery)
+					.GroupBy(p => p.QueryItemRefId)
+					.ToDictionary(g => g.Key, g => g.ToDictionary(p => p.RefId));
+				return properties;
+			}
+
+			private Item GetUpdateItem(Item item)
+			{
+				Item updateItem = _innovator.newItem(item.getType(), "edit");
+				updateItem.setID(item.getID());
+				return updateItem;
+			}
+		}
+
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1064:ExceptionsShouldBePublic")]
+		[Serializable]
+		internal class QueryDefinitionConversionException : Exception
+			{
+				public QueryDefinitionConversionException(string message) : base(message)
+				{
+				}
+
+				protected QueryDefinitionConversionException(System.Runtime.Serialization.SerializationInfo info, System.Runtime.Serialization.StreamingContext context) : base(info, context)
+				{
+				}
+
+				]]></method_code>
+  <method_type>C#</method_type>
+  <name>qry_changePropertyFormat</name>
+ </Item>
+</AML>

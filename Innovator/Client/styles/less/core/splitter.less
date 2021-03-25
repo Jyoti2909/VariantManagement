@@ -1,0 +1,128 @@
+﻿@import 'variables';
+
+@hover-color: lighten(@blue-hover, 8%);
+
+.aras-splitter {
+	--splitter-border-size: 1px;
+	--splitter-thickness: 0.5rem;
+	--holder-length: 19px;
+	--holder-thickness: 1px;
+	position: relative;
+	box-sizing: border-box;
+
+	&:hover {
+		&:before {
+			background-color: @hover-color;
+		}
+	}
+
+	&:before,
+	&-ghost:before {
+		content: '';
+		display: block;
+		position: absolute;
+		background-color: @container-border-color;
+		margin: auto;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		right: 0;
+	}
+
+	&_vertical {
+		height: 100%;
+		width: var(--splitter-thickness);
+		cursor: ew-resize;
+		&,
+		& > .aras-splitter-ghost {
+			border-right: var(--splitter-border-size) solid @container-border-color;
+		}
+
+		&:before,
+		& > .aras-splitter-ghost:before {
+			height: var(--holder-length);
+			width: var(--holder-thickness);
+		}
+	}
+
+	&_horizontal {
+		width: 100%;
+		height: var(--splitter-thickness);
+		cursor: ns-resize;
+		&,
+		& > .aras-splitter-ghost {
+			border-top: var(--splitter-border-size) solid @container-border-color;
+		}
+
+		&:before,
+		& > .aras-splitter-ghost:before {
+			width: var(--holder-length);
+			height: var(--holder-thickness);
+		}
+	}
+	&_draggable {
+		z-index: 100000;
+	}
+	&:not(&_draggable)::after {
+		display: none;
+	}
+	&::after {
+		overflow: hidden;
+		// this 'after' block need to fix mouse moving events over iframes.
+		// this block fills all window due to 'vh' and 'vw' (viewpoint height and viewpoint width).
+		// negative values of top and left positions need for set top left angle of this block to top left angle of the window,
+		// bacause 'after' block always displaying relative to the parent.
+		// fixed position prevents scrollbars
+		content: '';
+		position: fixed;
+		top: -100vh;
+		right: -100vw;
+		display: block;
+		height: 200vh;
+		width: 200vw;
+	}
+	&_draggable > .aras-splitter-ghost {
+		display: block;
+	}
+
+	&-ghost {
+		width: 100%;
+		height: 100%;
+		opacity: 0.5;
+		display: none;
+		position: absolute;
+
+		&:before {
+			background-color: @hover-color;
+		}
+	}
+
+	&_divider-a {
+		background-color: @neutral-e;
+		--holder-length: 96px;
+		--holder-thickness: 4px;
+		--splitter-thickness: 8px;
+		--splitter-border-size: 0;
+
+		.aras-splitter-ghost {
+			opacity: 1;
+			background-color: @color-2;
+		}
+
+		&:before,
+		.aras-splitter-ghost:before {
+			border-radius: 2px;
+		}
+
+		&:before {
+			background-color: @neutral-9;
+		}
+		.aras-splitter-ghost:before {
+			background-color: @color-16;
+		}
+
+		&:hover:before {
+			background-color: @color-10;
+		}
+	}
+}

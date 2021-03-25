@@ -1,0 +1,38 @@
+﻿<AML>
+ <Item type="Method" id="3B40F21DBC054F718FC929876B9CA817" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' name: onCompleteActivity
+' purpose: APQP.
+' created: 24-MAY-2005 Alex Cheushev
+' (c) Copyright by Aras Corporation, 2005-2008.
+' MethodTemplateName=VBScriptMainUpgrade
+
+Dim activity As XmlElement = Me.dom.DocumentElement
+
+Dim qryItem As Item = Me.newItem("Activity2", "edit")
+qryItem.setID(activity.getAttribute("id"))
+qryItem.setAttribute("serverEvents", "0")
+qryItem.setAttribute("doGetItem", "0")
+qryItem.setProperty("date_due_act", "__now()")
+
+'++++ Add current user to Program Management identity. +++
+Const pmIdentityNm As String = "Project Management"
+Dim pmIdentity As Aras.Server.Security.Identity = Aras.Server.Security.Identity.GetByName(pmIdentityNm)
+Dim pmIdentityWasGranted As Boolean = Aras.Server.Security.Permissions.GrantIdentity(pmIdentity)
+'---- Add current user to Program Management identity. ---
+
+Dim res As Item
+
+Try
+  res = qryItem.apply()
+Finally
+  If pmIdentityWasGranted Then
+    Aras.Server.Security.Permissions.RevokeIdentity(pmIdentity)
+  End If
+End Try
+
+Return res]]></method_code>
+  <method_type>VB</method_type>
+  <name>onCompleteActivity</name>
+ </Item>
+</AML>

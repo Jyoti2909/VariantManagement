@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Entering Goals","type":"item","url":"Entering_Goals.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

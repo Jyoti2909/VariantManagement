@@ -1,0 +1,921 @@
+﻿<TestCase author="apetrovsky@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../TestCase.xsd">
+	<Description>
+		<![CDATA[
+		Promoting Part to “25” and “45” states with “CAD” child in NOT allowed states (Child States = 10, 19, 25, 30, 28, 29; WFT = Part Release)
+		]]>
+	</Description>
+
+	<Request runAs="root:innovator">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Create CADs
+			Then:
+				Should create CADs
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD14-Allo10.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][1]/@id" />
+			<Variable id="CAD16-Allo25.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][2]/@id" />
+			<Variable id="CAD15-Allo19.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][3]/@id" />
+			<Variable id="CAD17-Allo30.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][4]/@id" />
+			<Variable id="CAD18-Allo28.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][5]/@id" />
+			<Variable id="CAD19-Allo29.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][6]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD14-Allo10</name>
+					<item_number>CAD14-Allo10</item_number>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD16-Allo25</name>
+					<item_number>CAD16-Allo25</item_number>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD15-Allo19</name>
+					<item_number>CAD15-Allo19</item_number>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD17-Allo30</name>
+					<item_number>CAD17-Allo30</item_number>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD18-Allo28</name>
+					<item_number>CAD18-Allo28</item_number>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD19-Allo29</name>
+					<item_number>CAD19-Allo29</item_number>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="9739B314C1C448509BAA70E0DD0029F1" />
+						<Item type="CAD" id="C0960797EC6F4274B3252465CDD7C601" />
+						<Item type="CAD" id="DF32D96226B14E8A9C4C92529BC72A7E" />
+						<Item type="CAD" id="66D05D13B35C4953B0355618DECBCCD6" />
+						<Item type="CAD" id="C521BB3AD11643A2A906D677F0101E86" />
+						<Item type="CAD" id="CF67585DC5BF4F0C8B859B2F6A608D1A" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="0C90442DF59A4AF8882E0EB2F8305051|E6BD3CE1B0644B61851B24669E40A77D|EAB009B8C5154B1A8558BE02CDFF3B34|7A6FADD4EAD141AF9762948C95474EDF|264FB11F5B6349519C9DA7A1F67ABAF8|B0BA55DB3AF94AE0A1D7AAE22ED003F8|A71A58D5DF63419BB6D76165D7676498|892B8D4A26CC472294D75281C868EBB5|0EB3880728854A409369108FC259794C|9C18F2D71B2B4EDF8E781E52543B5294|604B0F1E14F348F6959D038296F2146A|2191AAC344A44CEABE8186020E73F559|9DCAFA10F14242F4927EDEADABA462C6|B90F9B34A6B24D628CB92057E26B3251" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser4
+			When:
+				promote CAD to 25 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD16-Allo25.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD16-Allo25.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser4
+			When:
+				promote CAD to 19 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD15-Allo19.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD15-Allo19.Id}" doGetItem="0">
+					<state>19</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser4
+			When:
+				promote CAD to 30 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD17-Allo30.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD17-Allo30.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD17-Allo30.Id}" doGetItem="0">
+					<state>30</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser4
+			When:
+				promote CAD to 28 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD18-Allo28.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD18-Allo28.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD18-Allo28.Id}" doGetItem="0">
+					<state>30</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD18-Allo28.Id}" doGetItem="0">
+					<state>28</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser4
+			When:
+				promote CAD to 29 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD19-Allo29.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="promoteItem" id="{CAD19-Allo29.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD19-Allo29.Id}" doGetItem="0">
+					<state>30</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD19-Allo29.Id}" doGetItem="0">
+					<state>28</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CAD19-Allo29.Id}" doGetItem="0">
+					<state>29</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Create a Part with a cad structure
+			Then:
+				Should create a Part with a cad structure
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part08-Parent.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part'][1]/@id" />
+			<Variable id="Part08-Parent.Name" action="set" xpath="Query/AML/Item[@type='Part'][1]/name" />
+			<Variable id="CAD14-Allo10.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][1]/related_id" />
+			<Variable id="CAD16-Allo25.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][2]/related_id" />
+			<Variable id="CAD15-Allo19.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][3]/related_id" />
+			<Variable id="CAD17-Allo30.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][4]/related_id" />
+			<Variable id="CAD18-Allo28.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][5]/related_id" />
+			<Variable id="CAD19-Allo29.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][6]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="add" doGetItem="0">
+					<name>Part08-Parent</name>
+					<classification>Mechanical Part/Assembly</classification>
+					<Relationships>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD14-Allo10.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD16-Allo25.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD15-Allo19.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD17-Allo30.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD18-Allo28.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD19-Allo29.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Create a Part with a cad structure
+			Then:
+				Should create a Part with a cad structure
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part08-Parent.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/@id" />
+			<Variable id="Part08-Parent.Name" action="apply" xpath="Query/AML/Item[@type='Part'][1]/item_number" />
+			<Variable id="Part08-Parent.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part'][1]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="edit" doGetItem="0" id="{Part08-Parent.Id}">
+					<item_number>{Part08-Parent.Name}</item_number>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="partCheckUser1:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				partCheckUser1
+			When:
+				add new GECO as partCheckUser1
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part08-Parent.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/related_id" />
+			<Variable id="GECO.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="add" doGetItem="0">
+					<classification>Release &amp; Change/Mechanical Part</classification>
+					<gag_sap_change_number>QQQQ11111111</gag_sap_change_number>
+					<gag_master_data_review_team>
+						<Item type="Identity" action="get" select="id">
+							<name>partCheckUser1</name>
+						</Item>
+					</gag_master_data_review_team>
+					<Relationships>
+						<Item action="add" type="GAG_GECO ExtReviewApprover">
+							<related_id>
+								<Item type="Identity" action="get">
+									<name>partCheckUser1</name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item action="add" type="GAG_GECO IntReviewApprover">
+							<related_id>
+								<Item type="Identity" action="get">
+									<name>partCheckUser1</name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled"  action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Release</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{Part08-Parent.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="{GECO1.Id}" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.Promotion.StartMechanicalPartTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.EvaluateActivityWithTwoTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.Promotion.StartReview"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+
+	<Request runAs="partCheckUser1:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Should return error
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query
+			srcName="Common.EvaluateActivityWithSingleTask.Query"
+			srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:i18n="http://www.aras.com/I18N">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault>
+						<faultcode>1</faultcode>
+						<faultactor />
+						<faultstring>6 errors in Part08-Parent:
+CAD14-Allo10 in 10 state.
+CAD16-Allo25 in 25 state.
+CAD15-Allo19 in 19 state.
+CAD17-Allo30 in 30 state.
+CAD18-Allo28 in 28 state.
+CAD19-Allo29 in 29 state.
+</faultstring>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+
+	<Request runAs="root:innovator">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Get Part CADs related to parent part
+			Then:
+				Should get Part CADs
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part08-Parent.Name" action="apply" xpath="Query/AML/Item[@type='Part CAD'][1]/source_id/Item[@type='Part'][1]/name" />
+			<Variable id="Part-CAD1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][1]/@id" />
+			<Variable id="Part-CAD2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][2]/@id" />
+			<Variable id="Part-CAD3.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][3]/@id" />
+			<Variable id="Part-CAD4.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][4]/@id" />
+			<Variable id="Part-CAD5.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][5]/@id" />
+			<Variable id="Part-CAD6.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][6]/@id" />
+			<Variable id="Part-CAD7.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][7]/@id" />
+			<Variable id="Part-CAD8.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][8]/@id" />
+			<Variable id="Part-CAD9.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][9]/@id" />
+			<Variable id="Part-CAD10.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][10]/@id" />
+			<Variable id="Part-CAD11.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][11]/@id" />
+			<Variable id="Part-CAD12.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][12]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Part CAD' action='get' select='id'>
+					<source_id>
+						<Item type='Part' action='get' select='id'>
+							<name>{Part08-Parent.Name}</name>
+						</Item>
+					</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="30CCC175F66549EAA931B58A2517F2A6">
+							<id keyed_name="30CCC175F66549EAA931B58A2517F2A6" type="Part CAD">30CCC175F66549EAA931B58A2517F2A6</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="083577A6600B4E7F91691AB7481BDE97">
+							<id keyed_name="083577A6600B4E7F91691AB7481BDE97" type="Part CAD">083577A6600B4E7F91691AB7481BDE97</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="1AAA4E94E8DB4FD99E77A14D2D206F2F">
+							<id keyed_name="1AAA4E94E8DB4FD99E77A14D2D206F2F" type="Part CAD">1AAA4E94E8DB4FD99E77A14D2D206F2F</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="CD153A58545149C5A135DAC3DC5BC778">
+							<id keyed_name="CD153A58545149C5A135DAC3DC5BC778" type="Part CAD">CD153A58545149C5A135DAC3DC5BC778</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="1231BED37C144DBEB382B8DD004673BF">
+							<id keyed_name="1231BED37C144DBEB382B8DD004673BF" type="Part CAD">1231BED37C144DBEB382B8DD004673BF</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="F5184E57EF7F4A2CAC18105C208E47F8">
+							<id keyed_name="F5184E57EF7F4A2CAC18105C208E47F8" type="Part CAD">F5184E57EF7F4A2CAC18105C208E47F8</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="30CCC175F66549EAA931B58A2517F2A6">
+							<id keyed_name="30CCC175F66549EAA931B58A2517F2A6" type="Part CAD">30CCC175F66549EAA931B58A2517F2A6</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="083577A6600B4E7F91691AB7481BDE97">
+							<id keyed_name="083577A6600B4E7F91691AB7481BDE97" type="Part CAD">083577A6600B4E7F91691AB7481BDE97</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="1AAA4E94E8DB4FD99E77A14D2D206F2F">
+							<id keyed_name="1AAA4E94E8DB4FD99E77A14D2D206F2F" type="Part CAD">1AAA4E94E8DB4FD99E77A14D2D206F2F</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="CD153A58545149C5A135DAC3DC5BC778">
+							<id keyed_name="CD153A58545149C5A135DAC3DC5BC778" type="Part CAD">CD153A58545149C5A135DAC3DC5BC778</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="1231BED37C144DBEB382B8DD004673BF">
+							<id keyed_name="1231BED37C144DBEB382B8DD004673BF" type="Part CAD">1231BED37C144DBEB382B8DD004673BF</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="F5184E57EF7F4A2CAC18105C208E47F8">
+							<id keyed_name="F5184E57EF7F4A2CAC18105C208E47F8" type="Part CAD">F5184E57EF7F4A2CAC18105C208E47F8</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="root:innovator">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Remove Part CADs
+			Then:
+				Should remove Part CADs
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part-CAD1.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][1]/@id" />
+			<Variable id="Part-CAD2.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][2]/@id" />
+			<Variable id="Part-CAD3.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][3]/@id" />
+			<Variable id="Part-CAD4.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][4]/@id" />
+			<Variable id="Part-CAD5.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][5]/@id" />
+			<Variable id="Part-CAD6.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][6]/@id" />
+			<Variable id="Part-CAD7.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][7]/@id" />
+			<Variable id="Part-CAD8.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][8]/@id" />
+			<Variable id="Part-CAD9.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][9]/@id" />
+			<Variable id="Part-CAD10.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][10]/@id" />
+			<Variable id="Part-CAD11.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][11]/@id" />
+			<Variable id="Part-CAD12.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][12]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part CAD" action="delete" id="{Part-CAD1.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD2.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD3.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD4.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD5.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD6.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD7.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD8.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD9.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD10.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD11.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD12.Id}" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="933DF35766054AC5B157FDB8E7C18911|BFD6C42F2D6E4164A8E3BC7B819ACEBB|661267EACFD24BDDA56A4EC2F54CD38E|968AE177F81C4102990A80DD0BC4D057|EAE543CB7C684A4FADDF9FF80EF6C5ED|F2852C1EFC654460930F913373DC2D55|E3DEAECDBE4B4D5F83A58075EFCCC010|EB9B1A00EA0C404BBB79255136933DD1|34C9297522824DA19D2AEA2B71BF83F3|4ACBCADAC14B4B97B0228F17CE36CAF3|7B6B09418BCF43B3B776A1DE7C1F62DB|85171863DCA14618829C00A099EA15CC" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+
+	<Request runAs="superMPCheckUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Create a Part with a cad structure
+			Then:
+				Should create a Part with a cad structure
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part08-Parent.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part'][1]/@id" />
+			<Variable id="Part08-Parent.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/@id" />
+			<Variable id="CAD14-Allo10.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][1]/related_id" />
+			<Variable id="CAD16-Allo25.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][2]/related_id" />
+			<Variable id="CAD15-Allo19.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][3]/related_id" />
+			<Variable id="CAD17-Allo30.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][4]/related_id" />
+			<Variable id="CAD18-Allo28.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][5]/related_id" />
+			<Variable id="CAD19-Allo29.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/Relationships/Item[@type='Part CAD'][6]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="edit" id="" doGetItem="0">
+					<Relationships>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD14-Allo10.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD16-Allo25.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD15-Allo19.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD17-Allo30.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD18-Allo28.Id}</related_id>
+						</Item>
+						<Item type="Part CAD" action="add">
+							<related_id>{CAD19-Allo29.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.Promotion.MasterDataReviewCompleted"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="partCheckUser1:1"
+		srcName="Common.Promotion.InternalReviewCompleted"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+
+	<Request runAs="partCheckUser1:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Should return error
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query
+			srcName="Common.EvaluateActivityWithSingleTask.Query"
+			srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:i18n="http://www.aras.com/I18N">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault>
+						<faultcode>1</faultcode>
+						<faultactor />
+						<faultstring>6 errors in Part08-Parent:
+CAD14-Allo10 in 10 state.
+CAD16-Allo25 in 25 state.
+CAD15-Allo19 in 19 state.
+CAD17-Allo30 in 30 state.
+CAD18-Allo28 in 28 state.
+CAD19-Allo29 in 29 state.
+</faultstring>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+
+	<Request runAs="root:innovator">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Get Part CADs related to parent part
+			Then:
+				Should get Part CADs
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part08-Parent.Name" action="apply" xpath="Query/AML/Item[@type='Part CAD'][1]/source_id/Item[@type='Part'][1]/name" />
+			<Variable id="Part-CAD1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][1]/@id" />
+			<Variable id="Part-CAD2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][2]/@id" />
+			<Variable id="Part-CAD3.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][3]/@id" />
+			<Variable id="Part-CAD4.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][4]/@id" />
+			<Variable id="Part-CAD5.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][5]/@id" />
+			<Variable id="Part-CAD6.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part CAD'][6]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Part CAD' action='get' select='id'>
+					<source_id>
+						<Item type='Part' action='get' select='id'>
+							<name>{Part08-Parent.Name}</name>
+						</Item>
+					</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="30CCC175F66549EAA931B58A2517F2A6">
+							<id keyed_name="30CCC175F66549EAA931B58A2517F2A6" type="Part CAD">30CCC175F66549EAA931B58A2517F2A6</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="083577A6600B4E7F91691AB7481BDE97">
+							<id keyed_name="083577A6600B4E7F91691AB7481BDE97" type="Part CAD">083577A6600B4E7F91691AB7481BDE97</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="1AAA4E94E8DB4FD99E77A14D2D206F2F">
+							<id keyed_name="1AAA4E94E8DB4FD99E77A14D2D206F2F" type="Part CAD">1AAA4E94E8DB4FD99E77A14D2D206F2F</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="CD153A58545149C5A135DAC3DC5BC778">
+							<id keyed_name="CD153A58545149C5A135DAC3DC5BC778" type="Part CAD">CD153A58545149C5A135DAC3DC5BC778</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="1231BED37C144DBEB382B8DD004673BF">
+							<id keyed_name="1231BED37C144DBEB382B8DD004673BF" type="Part CAD">1231BED37C144DBEB382B8DD004673BF</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+						<Item type="Part CAD" typeId="935DF68BCFD849EBB5C3A528F04C5B5B" id="F5184E57EF7F4A2CAC18105C208E47F8">
+							<id keyed_name="F5184E57EF7F4A2CAC18105C208E47F8" type="Part CAD">F5184E57EF7F4A2CAC18105C208E47F8</id>
+							<itemtype>935DF68BCFD849EBB5C3A528F04C5B5B</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+		</Comparison>
+	</Request>
+
+	<TestCaseCleanUp runAs="root:innovator">
+		<Variables>
+			<Variable id="GECO.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject'][1]/@id" />
+			<Variable id="Part-CAD1.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][1]/@id" />
+			<Variable id="Part-CAD2.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][2]/@id" />
+			<Variable id="Part-CAD3.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][3]/@id" />
+			<Variable id="Part-CAD4.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][4]/@id" />
+			<Variable id="Part-CAD5.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][5]/@id" />
+			<Variable id="Part-CAD6.Id" action="apply" xpath="Query/AML/Item[@type='Part CAD'][6]/@id" />
+			<Variable id="Part08-Parent.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/@id" />
+			<Variable id="CAD14-Allo10.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][1]/@id" />
+			<Variable id="CAD16-Allo25.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][2]/@id" />
+			<Variable id="CAD15-Allo19.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][3]/@id" />
+			<Variable id="CAD17-Allo30.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][4]/@id" />
+			<Variable id="CAD18-Allo28.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][5]/@id" />
+			<Variable id="CAD19-Allo29.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][6]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_SAPTransferLog" action="delete" where="[GAG_SAPTransferLog].created_by_id IN ('5769798D6AB448808B373414DDBDDEFB','DE2E38130C9F4A4E873EB330EACEA129', 'F36F0F8148AF4B12948C5FA99FECC4F3')" />
+				<Item type="GAG_EngineeringChangeObject" action="delete" id="{GECO.Id}" />
+				<Item type="Workflow Process" action="delete" where="[WORKFLOW_PROCESS].created_by_id IN ('5769798D6AB448808B373414DDBDDEFB','DE2E38130C9F4A4E873EB330EACEA129', 'F36F0F8148AF4B12948C5FA99FECC4F3')" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD1.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD2.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD3.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD4.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD5.Id}" />
+				<Item type="Part CAD" action="delete" id="{Part-CAD6.Id}" />
+				<Item type="CAD" action="delete" id="{CAD14-Allo10.Id}" />
+				<Item type="CAD" action="delete" id="{CAD16-Allo25.Id}" />
+				<Item type="CAD" action="delete" id="{CAD15-Allo19.Id}" />
+				<Item type="CAD" action="delete" id="{CAD17-Allo30.Id}" />
+				<Item type="CAD" action="delete" id="{CAD18-Allo28.Id}" />
+				<Item type="CAD" action="delete" id="{CAD19-Allo29.Id}" />
+				<Item type="Part" action="delete" id="{Part08-Parent.Id}" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

@@ -1,0 +1,58 @@
+﻿<AML>
+ <Item type="Method" id="4C9399B5DCAA40F28060274A6268D357" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var warningText = aras.getResource('../Modules/aras.innovator.CMF/', 'cmf_automigration_dataloss_warning');
+if (!aras.confirm(warningText)) {
+	return;
+}
+
+var params = {};
+params.aras = aras;
+params.itemtypeName = 'cmf_ElementType';
+params.multiselect = false;
+params.propertyId = this.getID();
+params.elementId = this.getProperty('source_id');
+params.type = 'SearchDialog';
+
+aras.getMostTopWindowWithAras(window).ArasModules.MaximazableDialog.show('iframe', params).promise.then(function(dlgRes) {
+	if (!dlgRes) {
+		return;
+	}
+	changeParentElement(dlgRes, this);
+});
+
+function changeParentElement(res, params) {
+	var innovator = aras.newIOMInnovator();
+
+	var elementItem = innovator.newItem('cmf_ElementType', 'get');
+	elementItem.setAttribute('select', 'source_id');
+	elementItem.setID(params.elementId);
+	elementItem = elementItem.apply();
+
+	var item = innovator.newItem('cmf_ContentType', '');
+	item.setID(elementItem.getProperty('source_id'));
+	item.setAttribute('method_action', 'ChangePropertyParent');
+	item.setProperty('property_id', params.propertyId);
+	item.setProperty('old_parent', params.elementId);
+	item.setProperty('new_parent', res.itemID);
+
+	var response = item.apply('cmf_SchemaDefinitionHandler');
+	if (response.isError()) {
+		aras.AlertError(response);
+		return;
+	}
+
+	var winOldParent = aras.uiFindWindowEx(params.elementId);
+	if (winOldParent) {
+		winOldParent.onRefresh();
+	}
+	var winNewParent = aras.uiFindWindowEx(res.itemID);
+	if (winNewParent) {
+		winNewParent.onRefresh();
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cmf_ChangeParentElement</name>
+ </Item>
+</AML>

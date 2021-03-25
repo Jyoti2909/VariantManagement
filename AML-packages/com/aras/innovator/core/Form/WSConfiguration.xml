@@ -1,0 +1,197 @@
+﻿<AML>
+ <Item type="Form" id="A52AF8D4D0D54232A88130BDC52E78B9" action="add">
+  <category_form>0</category_form>
+  <height>714</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>899</width>
+  <name>WSConfiguration</name>
+  <Relationships>
+   <Item type="Body" id="71CF8B95A1D9450FA6136278726DBE44" action="add">
+    <bg_color>#FFFFFF</bg_color>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="WSConfiguration" type="Form">A52AF8D4D0D54232A88130BDC52E78B9</source_id>
+    <Relationships>
+     <Item type="Field" id="55B41CC7EE3D4BBFBE37D6FC007699A9" action="add">
+      <border_width>0</border_width>
+      <display_length>114</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>checkbox</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Generate Wrappers for value types</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <propertytype_id keyed_name="compat_mode" type="Property">EC190BD237124717B6137FD6C97546AE</propertytype_id>
+      <sort_order>768</sort_order>
+      <source_id keyed_name="71CF8B95A1D9450FA6136278726DBE44" type="Body">71CF8B95A1D9450FA6136278726DBE44</source_id>
+      <tab_index>6144</tab_index>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>34</y>
+      <name>compat_mode</name>
+     </Item>
+     <Item type="Field" id="478EB6C96F71443CB5392AA2256F5E76" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>textarea</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Description</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <propertytype_id keyed_name="description" type="Property">D98683A4F1A04F86A95DE492194A8779</propertytype_id>
+      <sort_order>256</sort_order>
+      <source_id keyed_name="71CF8B95A1D9450FA6136278726DBE44" type="Body">71CF8B95A1D9450FA6136278726DBE44</source_id>
+      <tab_index>3200</tab_index>
+      <tab_stop>1</tab_stop>
+      <textarea_cols>323</textarea_cols>
+      <textarea_rows>54</textarea_rows>
+      <x>222</x>
+      <y>0</y>
+      <name>description</name>
+     </Item>
+     <Item type="Field" id="2FC99DBE678A45F19EDE6F6CF21DE0C2" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<script language="javascript">
+aras.uiAddConfigLink2Doc4Assembly(document, "WscEditor"); //because of control is used on the form
+</script>
+
+<script language="javascript" for="WscEditor" event="OnAdd()">
+	var params = {aras:aras, itemtypeName:'ItemType', multiselect:false, type: "SearchDialog"};
+
+	window.ArasModules.MaximazableDialog.show("iframe", params).promise.then(function (dlgRes) {
+		if (dlgRes == undefined) return false;
+
+		if (dlgRes.itemID) {
+			WscEditor.AddType(dlgRes.keyed_name);
+		}
+	});
+</script>
+
+<script language="javascript" for="WscEditor" event="OnFindCustomAction()">
+	var params = {aras:aras, itemtypeName:'Method', multiselect:false, type: "SearchDialog"};
+
+	window.ArasModules.MaximazableDialog.show("iframe", params).promise.then(function (dlgRes) {
+		if (dlgRes == undefined) return false;
+
+		if (dlgRes.itemID)
+		{
+			WscEditor.SetCustomAction(dlgRes.keyed_name);
+		}
+	});
+
+
+</script>
+
+<OBJECT id="WscEditor" height="500" width="700" classid="../cbin/WscEditor.dll#Aras.Client.Controls.WscEditor" 
+MAYSCRIPT></OBJECT>
+<script language="javascript">
+function customize_toolbar()
+{
+if(window.parent.frames.tearoff_menu==null) return;
+   var t= window.parent.frames.tearoff_menu.toolbar;
+  if(t== null)
+  {
+    window.setTimeout("customize_toolbar()", 30);  
+    return;
+  }
+  else
+  {
+	try
+    {
+      // somehow during loading process call to GetButtonLabelById trow exception "method don't exists"
+      t.GetButtonLabelById('publish');
+    }
+    catch(e)
+    {
+		window.setTimeout("customize_toolbar()", 30);  
+		return;
+    }
+    if(t.GetButtonLabelById('publish')==""||t.GetButtonLabelById('publish')==null)
+    {
+		window.setTimeout("customize_toolbar()", 30);  
+		return;
+    }
+  }
+   
+  window.parent.frames.tearoff_menu.toolbar.attachEvent('Onclick',OnPublishClick); 
+}
+customize_toolbar();
+
+var isSearchFormMode = (parent.formSearchItem && parent.formSearchItem.xml);
+if ( isSearchFormMode )
+{
+ window.document.WscEditor.style.display='none';
+}
+function OnPublishClick(tbItem){
+ var tbItemID = tbItem.getId();
+ if(tbItemID =='publish')
+ {
+    aras.evalMethod('WSPublish', document.item.xml);
+ }
+}
+</script>
+]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>512</sort_order>
+      <source_id keyed_name="71CF8B95A1D9450FA6136278726DBE44" type="Body">71CF8B95A1D9450FA6136278726DBE44</source_id>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>70</y>
+      <name>html0</name>
+     </Item>
+     <Item type="Field" id="461C33A8D7A646FBB5CEBD756E0B0D89" action="add">
+      <border_width>0</border_width>
+      <display_length>114</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>text</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Name</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <propertytype_id keyed_name="name" type="Property">209AFEF7E2594708B400216C2AC3EE8C</propertytype_id>
+      <sort_order>640</sort_order>
+      <source_id keyed_name="71CF8B95A1D9450FA6136278726DBE44" type="Body">71CF8B95A1D9450FA6136278726DBE44</source_id>
+      <tab_index>128</tab_index>
+      <tab_stop>1</tab_stop>
+      <x>1</x>
+      <y>0</y>
+      <name>name</name>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="Form Event" id="24D653CDFD9249B4BB3DB3637DA339AB" action="add">
+    <form_event>onformpopulated</form_event>
+    <related_id keyed_name="WSConfigurationFormPopulated" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>WSConfigurationFormPopulated</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="WSConfiguration" type="Form">A52AF8D4D0D54232A88130BDC52E78B9</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

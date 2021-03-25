@@ -1,0 +1,21 @@
+﻿<AML>
+ <Item type="Method" id="C9FC9C35E0C7460AA094631D47568EED" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (options.isPolymorphic) {
+	return {
+		hidden: true
+	};
+}
+const selectedConfigIds = options.selectedRowsIds.map(id =>
+	options.rows.get(id, 'config_id')
+);
+const selectedFavorites = options.favorites.getDataMap('Item', favorite =>
+	selectedConfigIds.includes(favorite.additional_data.id)
+);
+const hidden = selectedFavorites.size === 0;
+
+return { hidden };]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_pmig_remove_favorites_init</name>
+ </Item>
+</AML>

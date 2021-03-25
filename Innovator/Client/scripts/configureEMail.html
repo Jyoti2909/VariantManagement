@@ -1,0 +1,159 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2012. -->
+<html>
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="../styles/default.css">
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<script>
+		var dialogArguments = window.frameElement.dialogArguments;
+		var aras = dialogArguments.aras;
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../javascript/dojo'"></script>
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/include.aspx?classes=common.css";
+
+		html,body{
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+</head>
+<body class="claro">
+	<script type="text/javascript">
+		var distributionRelTypeID = dialogArguments.distributionRelTypeID;
+		var distributionITName = dialogArguments.distributionITName;
+		var editMode = dialogArguments.editMode;
+		var item = dialogArguments.item;
+		var emailItemId;
+
+		RelationshipsOverriddenFunctions = {
+			initItem: function(){
+				if (emailItemId){
+					var tmpItem = item.selectSingleNode(".//Item[@id='" + emailItemId + "']");
+					document.getElementById("distributionIFrame").contentWindow.item = tmpItem;
+					emailItemId = undefined;
+				} else {
+					document.getElementById("emailIFrame").contentWindow.item = item;
+				}
+				return true;
+			}
+		};
+
+		document.title = aras.getResource("", "configureemail.configure_email");
+
+		var itemID = item.getAttribute("id");
+		var ITName = dialogArguments.ITName;
+		window.viewMode = "tab view";
+		window.updateRootItem = function email_window_updateRootItem() { return true; }
+
+		var relTypeID = dialogArguments.relTypeID;
+
+		function getItem() {
+			return item;
+		}
+		
+		function setItem(value) {
+			item = value;
+		}
+		
+		function makeDistributionVisible(b) {
+			aras.getMostTopWindowWithAras(window).isDistributionVisible = b;
+			var display;
+			var height;
+			if (b)
+			{
+				display = "";
+				height = window.document.documentElement.clientHeight * 0.5 + "px";
+			}
+			else
+			{
+				display = "none";
+				height = window.document.documentElement.clientHeight + "px";
+			}
+
+			//wait edit mode in grid
+			setTimeout(function () {
+				document.getElementById("distributionTd").style.display = display;
+				document.getElementById("emailTd").style.height = height;
+			}, 0);
+		}
+
+		parent.fillDistribution = fillDistribution;
+		function fillDistribution(itemID)
+		{
+			emailItemId = itemID;
+			//emailIFrame for IE and emailIFrame.contentWindow for FF
+			var relNode = emailIFrame.relationships ? emailIFrame : emailIFrame.contentWindow;
+			var relControl = relNode.relationships.relationshipsControl;
+			var relIFrameID = relControl.currTabID;
+			var relGrid = relControl.iframesCollection[relIFrameID].contentWindow.grid;
+			if (relGrid.getRowCount() > 0)
+			{
+				if (!this.isDistributionVisible) {
+					makeDistributionVisible(true);
+				}
+				
+
+				var distributionIFrameLocation = document.getElementById("distributionIFrame").contentWindow.location;
+
+				var newUrl = 'relationships.html?db=' + aras.getDatabase() + '&ITName=' + distributionITName + '&itemID=' + itemID +
+					'&editMode=' + editMode + '&relTypeID=' + distributionRelTypeID + '&tabbar=0&toolbar=1&where=configureEMail';
+				if (this.newUrl != newUrl) {
+					distributionIFrameLocation.replace(newUrl);
+					this.newUrl = newUrl;
+				}
+			}
+		}
+
+		parent.onDeleteEMailRow = onDeleteEMailRow;
+		function onDeleteEMailRow()
+		{
+			// the lines are commented out because ondeleterow happens before row is deleted from relationships grid, thus selID is not empty always.
+			//var emailIFrame = document.frames.emailIFrame;
+			//var currTabID = emailIFrame.currTabID;
+			//var selID = emailIFrame.iframesCollection[currTabID].contentWindow.gridApplet.getSelectedId();
+			var selID = '';
+			if (selID == '')
+			{
+				makeDistributionVisible(false);
+			}
+		}
+
+		onload = function ()
+		{
+			makeDistributionVisible(false);
+		}
+
+		onresize = function ()
+		{
+			//NOTE: IR-012832 - "Relationships Grid is not displaing"
+			emailTd.style.height = window.document.documentElement.clientHeight * 0.5;
+			distributionTd.style.height = window.document.documentElement.clientHeight * 0.5;
+
+			emailTd.style.width = window.document.documentElement.clientWidth;
+			distributionTd.style.width = window.document.documentElement.clientWidth;
+		}
+
+	</script>
+	<div style="height: 100%; width: 100%;">
+		<div id="emailTd" style="height: 100%">
+			<script type="text/javascript">
+				document.write('<iframe id="emailIFrame" style="width:100%; height:100%;" scrolling="no" ' +
+				'frameborder="0" framespacing="0"  marginwidth="0" marginheight="0" ' +
+				'src="relationships.html?db=' + aras.getDatabase() + '&ITName=' + ITName + '&itemID=' + itemID +
+				'&editMode=' + editMode + '&relTypeID=' + relTypeID + '&tabbar=0&toolbar=1&where=lifecycletool"' + '></' + 'iframe>');
+			</script>
+		</div>
+		<div id="distributionTd" style="height: 50%; width: 100%; display: none;">
+			<iframe id="distributionIFrame" style="width: 100%; height: 100%;" scrolling="no"
+				frameborder="0" marginwidth="0" marginheight="0" src="blank.html"></iframe>
+		</div>
+	</div>
+</body>
+</html>

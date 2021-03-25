@@ -1,0 +1,70 @@
+﻿<AML>
+ <Item type="Method" id="52D12E96A8B345BBB509386064C505B6" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string classification = contextItem.getProperty("classification", string.Empty);
+				string workflowMapName;
+				switch (classification)
+				{
+					case "Pre-Release & Change/CAD Document":
+						workflowMapName = "GAG_CADDocumentPreReleaseWorkflow";
+						break;
+					case "Release & Change/CAD Document":
+						workflowMapName = "GAG_CADDocumentReleaseWorkflow";
+						break;
+					case "Pre-Release & Change/Mechanical Part":
+						workflowMapName = "GAG_MechanicalPartPreReleaseWorkflow";
+						break;
+					case "Release & Change/Mechanical Part":
+						workflowMapName = "GAG_MechanicalPartReleaseWorkflow";
+						break;
+					default:
+						return contextItem;
+				}
+
+				string workflowMapId = GetWorkflowMapIdByName(workflowMapName);
+				Item workflowProcess = _dal.InstantiateWorkflow(contextItem, workflowMapId);
+
+				if (workflowProcess.isError())
+				{
+					return workflowProcess;
+				}
+
+				workflowProcess.setAction("startWorkflow");
+				workflowProcess = _dal.ApplyItem(workflowProcess);
+
+				return workflowProcess.isError() ? workflowProcess : contextItem;
+			}
+
+			private string GetWorkflowMapIdByName(string name)
+			{
+				Item workflowMap = _dal.NewItem("Workflow Map", "get");
+				workflowMap.setProperty("name", name);
+				workflowMap.setPropertyCondition("name", "eq");
+				workflowMap.setAttribute("select", "id");
+				workflowMap = _dal.ApplyItem(workflowMap);
+
+				return workflowMap.isError()
+					? throw new ItemException(workflowMap)
+					: workflowMap.getID();
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_AssignWorkflowToGeco</name>
+ </Item>
+</AML>

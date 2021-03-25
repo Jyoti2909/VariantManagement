@@ -1,0 +1,36 @@
+﻿<AML>
+ <Item type="Method" id="6DA624D0E19A40C1AC486AFB9DCFFD2A" action="add">
+  <comments>Method for update file properties: team_id, owned_by_id, managed_by_id</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string fileId = this.getPropertyAttribute("body", "fileId");
+string teamId = this.getPropertyAttribute("body", "teamId");
+string managedById = this.getPropertyAttribute("body", "managedById");
+string ownedById = this.getPropertyAttribute("body", "ownedById");
+
+Item query = this.newItem("Permission", "get");
+query.setProperty("name", "FileInPackage");
+query = query.apply();
+string permissionId = query.getID();
+	
+query = this.newItem("File", "edit");
+query.setID(fileId);
+query.setProperty("permission_id", permissionId);
+query.setProperty("team_id", teamId);
+query.setProperty("managed_by_id", managedById);
+query.setProperty("owned_by_id", ownedById);
+query.setAttribute("version", "0");
+
+// get super user identity
+Aras.Server.Security.Identity identity = Aras.Server.Security.Identity.GetByName("Super User");
+bool permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(identity);
+
+query = query.apply();	
+
+if (permsWasSet)
+	Aras.Server.Security.Permissions.RevokeIdentity(identity);
+	
+return query;	]]></method_code>
+  <method_type>C#</method_type>
+  <name>FE_SetFilePackageProperties</name>
+ </Item>
+</AML>

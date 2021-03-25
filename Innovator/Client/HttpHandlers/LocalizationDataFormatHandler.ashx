@@ -1,0 +1,1 @@
+﻿<%@ WebHandler Language="C#"   Class="Aras.Client.HttpHandlers.LocalizationDataFormatHandler" Debug="true"%>

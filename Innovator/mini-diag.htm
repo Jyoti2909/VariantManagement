@@ -1,0 +1,57 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<!-- © Copyright by Aras Corporation, 2004-2007. -->
+<html>
+  <head>
+  <!-- CC -->
+  <TITLE>Innovator (C) Copyright by Aras Corporation, 2004-2007</TITLE>
+  </head>
+  <body>
+<P>
+
+<TABLE BORDER="1" CELLSPACING="2"><TR><TD>The client is now in <a href="Client/">Client/</a></TD>
+<TD><PRE><form method="get" action="Client/">user:<input name="username" value="">db:<input name="database" value="InnCore62">pass:<input name="password" type="text" length="32" value=""><input name="submit" type="submit" value="submit"></form></PRE></TD></TR></TABLE>
+
+<P>Diagnostic urls:
+
+<UL>
+<LI><A href="Client/scripts/innovator.aspx">Client Logon</a>
+<LI><a href="Client/trace.axd">Client ASP.NET Trace</a>
+<LI><a href="Server/trace.axd">Server ASP.NET Trace</a>
+<LI><a href="Vault/trace.axd">Vault ASP.NET Trace</a>
+<LI><a href="Server/dblist.aspx">DBLIST</a>
+<LI><a href="Server/ServerInfo.aspx">Server Info</a>
+<LI><a href="Client/ServerInfo.aspx">Client Info</a>
+<LI><a href="Client/Scripts/nash.aspx">Raw AML Client</a>
+</UL>
+
+<script language="JScript" src="client/javascript/md5.js"></script>
+<script language="JScript">
+
+function hashpassword(f) {
+
+var field = f.parentElement.AUTHPASSWORD;
+field.value = calcMD5(field.value);
+
+return(null);
+}
+
+</script>
+
+
+<HR>
+<FORM action="Server/innovatorserver.aspx" method="GET">
+DATABASE: <input name="DATABASE" size="40"> 
+<a href="Server/dblist.aspx">List</a><BR>
+USERNAME: <input name="AUTHUSER" size="40" value=""><BR>
+MD5 PASS: <input name="AUTHPASSWORD" size="40" value="">
+ <input type="button" value="HASH" onclick="hashpassword(this)" /><BR>
+SOAPACTION: <input name="SOAPACTION" value="ValidateUser" ><BR>
+REQUESTDOM: <input name="REQUESTDOM" SIZE=40 value="<Empty/>" ><BR>
+<input name="submit" type="submit" value="submit">
+
+</FORM>
+
+ </body>
+</html>
+

@@ -1,0 +1,34 @@
+﻿<AML>
+ <Item type="Method" id="BFCF427589F24AB1BC348DD456FC7D13" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[let queryDateStr = target.value;
+const today = aras.parse2NeutralEndOfDayStr(new Date());
+const queryType = control.data.get('searchview.commandbar.default.querytype').value;
+const params = {
+	aras: aras,
+	type: 'Date'
+};
+
+if (!queryDateStr) {
+	queryDateStr = today;
+}
+
+params.date = queryDateStr;
+
+const queryDateControl = control.querySelector('.aras-singular[data-id="searchview.commandbar.default.querydate"]');
+const clientRect = queryDateControl.getBoundingClientRect();
+
+const dateDialog = window.ArasModules.Dialog.show('iframe', params);
+dateDialog.promise.then(function(res) {
+	const queryType = control.data.get('searchview.commandbar.default.querytype').value;
+	const queryDate = res || null;
+	options.actions.updateQueryDate(queryDate);
+	aras.setVariable(window['varName_queryDate'], queryDate);
+	control.data.set(target.id, Object.assign({}, target, {value: queryDate}));
+	control.render();
+});
+dateDialog.move(clientRect.left, clientRect.bottom);]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_svcb_querydate_click</name>
+ </Item>
+</AML>

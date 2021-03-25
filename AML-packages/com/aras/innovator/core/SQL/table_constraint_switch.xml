@@ -1,0 +1,39 @@
+﻿<AML>
+ <Item type="SQL" id="77E2051D71B24623B3AE5809042693F7" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>table_constraint_switch</old_name>
+  <sqlserver_body><![CDATA[/* Name:    define-table-constraint-switch-procedure.sql
+   Purpose: turn off (NOCHECK) or on (CHECK) constraints so that
+            incremental changes to tables can be made more easily.
+   Created: 7-JAN-2005 George J. Carrette
+*/
+create procedure table_constraint_switch(@keyword varchar(32))
+AS
+BEGIN
+ DECLARE @LINES TABLE(LINE NVARCHAR(256))
+ DECLARE @WORKPTR CURSOR
+ SET @WORKPTR = CURSOR FOR SELECT NAME FROM SYSOBJECTS WHERE TYPE = 'U '
+ OPEN @WORKPTR
+ DECLARE @TBL_NAME VARCHAR(64)
+ FETCH NEXT FROM @WORKPTR INTO @TBL_NAME
+ WHILE @@FETCH_STATUS = 0
+  BEGIN
+    DECLARE @SQL NVARCHAR(256)
+    DECLARE @DCL NVARCHAR(256)
+    SET @SQL = 'ALTER TABLE [' + @TBL_NAME + '] ' + @KEYWORD + ' CONSTRAINT ALL'
+    SET @DCL = ''
+    execute sp_executesql @SQL,@DCL
+    INSERT INTO @LINES VALUES(@SQL)
+    FETCH NEXT FROM @WORKPTR INTO @TBL_NAME
+   END
+ CLOSE @WORKPTR
+ SELECT * FROM @LINES
+
+END
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>table_constraint_switch</name>
+ </Item>
+</AML>

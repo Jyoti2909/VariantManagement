@@ -1,0 +1,23 @@
+﻿@{
+	ViewBag.syncMode = 1;
+	Layout = "../../aras.innovator.core.ItemWindow/Views/Shared/_cuiTabItemViewLayout.cshtml";
+}
+
+@section extra_header
+{
+	<style type="text/css">
+		@@import "@Url.ContentWithSalt("~/Modules/aras.innovator.CMF/ThirdParty/dgrid/css/dgrid.css")";
+		@@import "@Url.ContentWithSalt("~/Modules/aras.innovator.CMF/ThirdParty/dgrid/css/skins/claro.css")";
+		@@import "@Url.ContentWithSalt("~/Modules/aras.innovator.CMF/Styles/cmfStyleFindControl.css")";
+		@@import "@Url.ContentWithSalt("~/javascript/include.aspx?classes=toolbarElements.css")";
+	</style>
+	<script type="text/javascript">
+		require(["dojo/ready", "dojo/parser", "dijit/dijit", "CMF/Scripts/CMFContainer", "CMF/Scripts/PublicApi/UIUtils"], function(ready, parser, dijit) {
+			ready(function() {
+				cmfContainer = new CMFContainer();
+				dijit.byId("viewers").createTab(cmfContainer, "editor_container");
+				cmfContainer.init();
+			});
+		});
+	</script>
+}

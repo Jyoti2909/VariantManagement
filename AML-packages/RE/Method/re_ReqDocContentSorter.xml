@@ -1,0 +1,285 @@
+﻿<AML>
+ <Item type="Method" id="ABC1A3CB0D28464B958B4AB69FAA4CD7" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string sortedItems = "";
+	string orderBy = (RequestState[_orderByPropertyName] ?? String.Empty).ToString();
+	string originalRequest = (RequestState[_requestPropertyName] ?? String.Empty).ToString();
+	CleanUpRequestState(RequestState);
+
+	if (!string.IsNullOrEmpty(orderBy))
+	{
+		Item originalRequestItem = this.newItem();
+		originalRequestItem.loadAML(string.Format(CultureInfo.InvariantCulture, _amlTemplate, originalRequest));
+		string pageSize = originalRequestItem.getAttribute(_pageSizePropertyName);
+
+		if (!string.IsNullOrEmpty(pageSize))
+		{
+			string pageNumber = originalRequestItem.getAttribute(_pageNumberPropertyName);
+
+			originalRequestItem.removeAttribute(_pageNumberPropertyName);
+			originalRequestItem.removeAttribute(_pageSizePropertyName);
+			Item contentItems = originalRequestItem.apply();
+			if (contentItems.isError())
+			{
+				return contentItems;
+			}
+
+			sortedItems = GetContentForSelectedPage(contentItems, pageSize, pageNumber);
+		}
+		else
+		{
+			List<string> columnsWithDirection = orderBy.Split(',').ToList();
+			// Detect position of chapter for sorting.
+			string chapterOrderBy = columnsWithDirection.FirstOrDefault(x => x.Contains("chapter "));
+			int chapterIndex = columnsWithDirection.IndexOf(chapterOrderBy);
+
+			// sort columns if chapter is first, other colums will be ignored because chapters are unique.
+			if (chapterIndex != -1)
+			{
+				bool alreadySortedByUniqueValues = false;
+				if (chapterIndex != 0)
+				{
+					for (int i = chapterIndex - 1; i >= 0; i--)
+					{
+						string columnDescriptor = columnsWithDirection[i];
+						string fieldName = GetFieldName(columnDescriptor);
+						XmlNodeList columns = this.dom.SelectNodes(string.Format(CultureInfo.InvariantCulture, _configurableItemsXPath, "/" + fieldName));
+						bool relatedField = false;
+						if (columns.Count == 0)
+						{
+							relatedField = true;
+							// column can belongs to related item
+							columns = this.dom.SelectNodes(string.Format(CultureInfo.InvariantCulture, _configurableRelatedItemXPath, fieldName));
+						}
+						IEnumerable<XmlNode> columnsList = columns.Cast<XmlNode>().Select(node => node);
+						int uniqueValuesCount = columnsList.Select(node => node.InnerText).Distinct().Count();
+
+						// all items are the same, no additional sorting needed
+						if (uniqueValuesCount == 1)
+						{
+							continue;
+						}
+
+						// all items are unique, no additional sorting needed
+						if (uniqueValuesCount == columns.Count)
+						{
+							alreadySortedByUniqueValues = true;
+							break;
+						}
+
+						if (uniqueValuesCount > 1)
+						{
+							sortedItems = SortSpecificGroupsByChapter(columnsList, chapterOrderBy, relatedField);
+							break;
+						}
+					}
+				}
+
+				if (!alreadySortedByUniqueValues && (chapterIndex == 0 || string.IsNullOrEmpty(sortedItems)))
+				{
+					sortedItems = SortPrimaryByChapter(columnsWithDirection[chapterIndex]);
+				}
+			}
+		}
+	}
+
+	return GenerateResult(sortedItems);
+}
+
+private Item GenerateResult(string resultString)
+{
+	if (!string.IsNullOrEmpty(resultString))
+	{
+		XmlNode resultNode = this.dom.SelectSingleNode(Item.XPathResult);
+		resultNode.InnerXml = resultString;
+	}
+
+	return this;
+}
+
+private const string _amlTemplate = "<AML>{0}</AML>";
+private const string _requestPropertyName = "original_request";
+private const string _orderByPropertyName = "order_by";
+private const string _pageNumberPropertyName = "page";
+private const string _pageSizePropertyName = "pagesize";
+private const string _chapterXPath = "chapter";
+private const string _itemsXPath = "//Result/Item";
+private const string _configurableItemsXPath = _itemsXPath + "{0}";
+private const string _configurableRelatedItemXPath = _itemsXPath + "/related_id/Item/{0}";
+
+private string SortChapters(string direction, List<XmlNode> itemsToSort)
+{
+	int itemsCount = itemsToSort.Count;
+	if (itemsCount == 1)
+	{
+		return itemsToSort.FirstOrDefault().OuterXml;
+	}
+
+	IEnumerable<XmlNode> sortedNodes =
+		itemsToSort.OrderBy(node => GetChapterFromNode(node), new ChapterComparer(string.IsNullOrEmpty(direction) || direction == "desc"));
+
+
+	return GetConcatenatedNodesAsString(sortedNodes);
+}
+
+private void CleanUpRequestState(Aras.Server.Core.IContextState requestState)
+{
+	requestState.Remove(_orderByPropertyName);
+	requestState.Remove(_requestPropertyName);
+}
+
+private string SortPrimaryByChapter(string column)
+{
+	string direction = GetSortingDirection(column);
+	XmlNodeList allItems = this.dom.SelectNodes(_itemsXPath);
+	if (allItems.Count != 0)
+	{
+		List<XmlNode> itemsList = allItems.Cast<XmlNode>().Select(node => node).ToList();
+		return SortChapters(direction, itemsList);
+	}
+
+	return null;
+}
+
+private string SortSpecificGroupsByChapter(IEnumerable<XmlNode> columnsList, string chapterOrderBy, bool isRelatedItem)
+{
+	// need to sort items in groups of duplicates
+	Dictionary<string, List<XmlNode>> groupedItems = new Dictionary<string, List<XmlNode>>();
+	foreach (XmlNode column in columnsList)
+	{
+		string colValue = column.InnerText;
+		if (!groupedItems.ContainsKey(colValue))
+		{
+			groupedItems.Add(colValue, new List<XmlNode>());
+		}
+
+		// column.ParentNode.ParentNode.ParentNode - column - property in item,
+		// ParentNode - Requirement Item, ParentNode - related_id node, ParentNode - re_Req_Doc_Item
+		// The last one should be returned to client
+		// TODO: Find better solution to get parent node.
+		groupedItems[colValue].Add(!isRelatedItem ? column.ParentNode : column.ParentNode.ParentNode.ParentNode);
+	}
+
+	string direction = GetSortingDirection(chapterOrderBy);
+	StringBuilder sb = new StringBuilder("");
+	foreach (string key in groupedItems.Keys)
+	{
+		List<XmlNode> nodesList = groupedItems[key];
+		string sorted = SortChapters(direction, nodesList);
+		sb.Append(sorted);
+	}
+
+	return sb.ToString();
+}
+
+private string GetContentForSelectedPage(Item contentItems, string pageSize, string pageNumber)
+{
+	int pageSizeValue = int.Parse(pageSize);
+	int actualPageNumber = int.Parse(pageNumber);
+	int page = 1;
+	List<XmlNode> itemsList = contentItems.dom.SelectNodes(_itemsXPath).Cast<XmlNode>().Select(node => node).ToList();
+	Dictionary<int, List<XmlNode>> allPages = new Dictionary<int, List<XmlNode>>()
+	{
+		{page, new List<XmlNode>()}
+	};
+
+	foreach (XmlNode item in itemsList)
+	{
+		if (allPages[page].Count == pageSizeValue)
+		{
+			page++;
+			if (page > actualPageNumber)
+			{
+				break;
+			}
+			allPages.Add(page, new List<XmlNode>());
+		}
+
+		allPages[page].Add(item);
+	}
+
+	return GetConcatenatedNodesAsString(allPages[actualPageNumber]);
+}
+
+private string GetSortingDirection(string columnDescriptor)
+{
+	string[] columnAndDirection = columnDescriptor.Split(' ');
+	return columnAndDirection[1]?.Trim();
+}
+
+private string GetFieldName(string columnDescriptor)
+{
+	string[] columnAndDirection = columnDescriptor.Split(' ');
+	return columnAndDirection[0]?.Trim();
+}
+
+private string GetChapterFromNode(XmlNode node)
+{
+	return node.SelectSingleNode(_chapterXPath).InnerText;
+}
+
+private string GetConcatenatedNodesAsString(IEnumerable<XmlNode> nodes)
+{
+	StringBuilder sb = new StringBuilder("");
+	foreach (XmlNode node in nodes)
+	{
+		sb.Append(node.OuterXml);
+	}
+
+	return sb.ToString();
+}
+
+public class ChapterComparer : IComparer<string>
+{
+	private int _direction;
+	public ChapterComparer(bool desc)
+	{
+		_direction = desc ? -1 : 1;
+	}
+	private int Compare(string[] x, string[] y)
+	{
+		if (x.Length > y.Length)
+		{
+			return -Compare(y, x);
+		}
+
+		for (int i = 0; i < x.Length; i++)
+		{
+			int cmp = int.Parse(x[i]).CompareTo(int.Parse(y[i]));
+			if (cmp != 0)
+			{
+				return cmp * _direction;
+			}
+		}
+		return -1;
+	}
+	public int Compare(string x, string y)
+	{
+		if (ReferenceEquals(x, y))
+		{
+			return 0;
+		}
+
+		if (x == null)
+		{
+			return -1 * _direction;
+		}
+
+		if (y == null)
+		{
+			return 1 * _direction;
+		}
+
+		try
+		{
+			return Compare(x.Split('.'), y.Split('.'));
+		}
+		catch (FormatException)
+		{
+			throw new ArgumentException();
+		}
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_ReqDocContentSorter</name>
+ </Item>
+</AML>

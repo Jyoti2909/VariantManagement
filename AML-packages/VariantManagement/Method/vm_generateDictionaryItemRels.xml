@@ -1,0 +1,37 @@
+﻿<AML>
+ <Item type="Method" id="A31182ACD43441669E3E8D7110DC6716" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Item expressionDefinitionItems = this.newItem("vm_ExpressionDefinition", "get");
+expressionDefinitionItems.setProperty("generation", "*");
+expressionDefinitionItems.setPropertyCondition("generation", "like");
+expressionDefinitionItems.setAttribute("select", "itemtype,definition");
+
+expressionDefinitionItems = expressionDefinitionItems.apply();
+if (expressionDefinitionItems.isError() && !string.Equals(expressionDefinitionItems.getErrorCode(), "0", StringComparison.Ordinal))
+{
+	return expressionDefinitionItems;
+}
+
+int expressionDefinitionItemCount = expressionDefinitionItems.getItemCount();
+for (int i = 0; i < expressionDefinitionItemCount; i++)
+{
+	Item expressionDefinitionItem = expressionDefinitionItems.getItemByIndex(i);
+
+	Item itemToGenerateDictionaryItemRels = this.newItem();
+	itemToGenerateDictionaryItemRels.setAction("vm_updateDictionaryItemRels");
+	itemToGenerateDictionaryItemRels.setID(expressionDefinitionItem.getID());
+	itemToGenerateDictionaryItemRels.setAttribute("typeId", expressionDefinitionItem.getProperty("itemtype"));
+	itemToGenerateDictionaryItemRels.setProperty("definition", expressionDefinitionItem.getProperty("definition"));
+
+	itemToGenerateDictionaryItemRels = itemToGenerateDictionaryItemRels.apply();
+	if (itemToGenerateDictionaryItemRels.isError())
+	{
+		return itemToGenerateDictionaryItemRels;
+	}
+}
+
+return this.getInnovator().newResult("Dictionary Item relationships generated successfully");]]></method_code>
+  <method_type>C#</method_type>
+  <name>vm_generateDictionaryItemRels</name>
+ </Item>
+</AML>

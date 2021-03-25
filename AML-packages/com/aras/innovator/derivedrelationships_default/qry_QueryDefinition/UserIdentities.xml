@@ -1,0 +1,113 @@
+﻿<AML>
+ <Item type="qry_QueryDefinition" id="7F26808935574EF2A81876F9FD7658AC" action="add">
+  <description>This Query Definition returns all Identities related to a User and is used by the User Identities Derived Relationship Family. This Query Definition should NOT be modified.</description>
+  <name>User Identities</name>
+  <Relationships>
+   <Item type="qry_QueryItem" id="9052E70DA44B4F149982DBD61C5E6930" action="add">
+    <item_type keyed_name="User" type="ItemType" name="User">45E899CD2859442982EB22BB2DF683E5</item_type>
+    <ref_id>1623A4A2BC13418793421863602E07D2</ref_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="User Identities" type="qry_QueryDefinition">7F26808935574EF2A81876F9FD7658AC</source_id>
+    <alias>User</alias>
+    <Relationships>
+     <Item type="qry_QueryItemSelectProperty" id="DC197994D43148FF9F5F7DA639827418" action="add">
+      <property_name>login_name</property_name>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="User" type="qry_QueryItem">9052E70DA44B4F149982DBD61C5E6930</source_id>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="qry_QueryItem" id="C00AA226809E4067AEA262F03774F796" action="add">
+    <item_type keyed_name="Alias" type="ItemType" name="Alias">4E355E04444B4676AE723B43DECA37DC</item_type>
+    <ref_id>8573A7225DE44CF495C7977F638C3D75</ref_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="User Identities" type="qry_QueryDefinition">7F26808935574EF2A81876F9FD7658AC</source_id>
+    <alias>Alias</alias>
+   </Item>
+   <Item type="qry_QueryItem" id="CB6A742843104404BB95C64A11DC3CCA" action="add">
+    <item_type keyed_name="Identity" type="ItemType" name="Identity">E582AB17663F4EF28460015B2BE9E094</item_type>
+    <ref_id>8422CBAFEE7A48EFA707A23B048DB101</ref_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="User Identities" type="qry_QueryDefinition">7F26808935574EF2A81876F9FD7658AC</source_id>
+    <alias>Identity</alias>
+    <Relationships>
+     <Item type="qry_QueryItemSelectProperty" id="E64C587C90964CB6A6F1BC53B8258589" action="add">
+      <property_name>name</property_name>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="Identity" type="qry_QueryItem">CB6A742843104404BB95C64A11DC3CCA</source_id>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="qry_QueryItem" id="3419DD262BA1486F89102E9F1D8D8AB2" action="add">
+    <item_type keyed_name="Member" type="ItemType" name="Member">7348E620D27E40D1868C54247B5DE8D1</item_type>
+    <ref_id>57F1AE2FED2C4FC6B039B7BB3247C4E9</ref_id>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="User Identities" type="qry_QueryDefinition">7F26808935574EF2A81876F9FD7658AC</source_id>
+    <alias>Member related_id</alias>
+   </Item>
+   <Item type="qry_QueryReference" id="5DF21B7E70E34AC7974E505AE75A939B" action="add">
+    <child_ref_id>1623A4A2BC13418793421863602E07D2</child_ref_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="User Identities" type="qry_QueryDefinition">7F26808935574EF2A81876F9FD7658AC</source_id>
+   </Item>
+   <Item type="qry_QueryReference" id="B866FFA8400D47A38BA1D64A94103D5F" action="add">
+    <child_ref_id>8573A7225DE44CF495C7977F638C3D75</child_ref_id>
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property name="id" query_items_xpath="parent::Item" />
+		<property name="source_id" />
+	</eq>
+</condition>]]></filter_xml>
+    <parent_ref_id>1623A4A2BC13418793421863602E07D2</parent_ref_id>
+    <ref_id>CC280DE3FDF34DD8818663838C92EB69</ref_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="User Identities" type="qry_QueryDefinition">7F26808935574EF2A81876F9FD7658AC</source_id>
+   </Item>
+   <Item type="qry_QueryReference" id="EED0519A75A84CD4BEB3615889A56A17" action="add">
+    <child_ref_id>8422CBAFEE7A48EFA707A23B048DB101</child_ref_id>
+    <filter_xml><![CDATA[<condition>
+	<or>
+		<eq>
+			<property name="related_id" query_items_xpath="parent::Item" />
+			<property name="id" />
+		</eq>
+		<eq>
+			<property name="name" />
+			<constant>World</constant>
+		</eq>
+	</or>
+</condition>]]></filter_xml>
+    <parent_ref_id>8573A7225DE44CF495C7977F638C3D75</parent_ref_id>
+    <ref_id>6068356AA2844E76B1C4B8DBB38C58D8</ref_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="User Identities" type="qry_QueryDefinition">7F26808935574EF2A81876F9FD7658AC</source_id>
+   </Item>
+   <Item type="qry_QueryReference" id="98D611209E9C4C43BE832F59536B9CCF" action="add">
+    <child_ref_id>57F1AE2FED2C4FC6B039B7BB3247C4E9</child_ref_id>
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property name="id" query_items_xpath="parent::Item" />
+		<property name="related_id" />
+	</eq>
+</condition>]]></filter_xml>
+    <parent_ref_id>8422CBAFEE7A48EFA707A23B048DB101</parent_ref_id>
+    <ref_id>9D2D718D8C9B4757AEC1B72C545EAD7D</ref_id>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="User Identities" type="qry_QueryDefinition">7F26808935574EF2A81876F9FD7658AC</source_id>
+   </Item>
+   <Item type="qry_QueryReference" id="5519F7E2500746EC89F2940D6D167874" action="add">
+    <child_ref_id>8422CBAFEE7A48EFA707A23B048DB101</child_ref_id>
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property name="source_id" query_items_xpath="parent::Item" />
+		<property name="id" />
+	</eq>
+</condition>]]></filter_xml>
+    <parent_ref_id>57F1AE2FED2C4FC6B039B7BB3247C4E9</parent_ref_id>
+    <ref_id>33B381B564BD4B97AEFC3DDA3913B907</ref_id>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="User Identities" type="qry_QueryDefinition">7F26808935574EF2A81876F9FD7658AC</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

@@ -1,0 +1,74 @@
+﻿<AML>
+ <Item type="Method" id="3220F69F213745A19EF2932BDCD453C4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const varsHash = {};
+
+const maxResults = pagination.maxResults;
+const pageSize = pagination.pageSize;
+if (pageSize || pageSize === 0) {
+	varsHash.page_size = pageSize;
+}
+if (maxResults || maxResults === 0) {
+	varsHash.max_records = maxResults;
+}
+
+varsHash.col_widths = window.grid.GetColWidths();
+varsHash.col_order = window.grid.getLogicalColumnOrder();
+
+let gridItemTypeId;
+let preferencesItemTypeName;
+const relationshipTypeId = options.relationshipTypeId;
+if (relationshipTypeId) {
+	gridItemTypeId = relationshipTypeId;
+	preferencesItemTypeName = 'Core_RelGridLayout';
+	const isRedlineActive = window.grid.redline_Experimental.isRedlineActive;
+	varsHash.redline_view = isRedlineActive ? '1' : '0';
+	if (window.grid._grid) {
+		varsHash.frozen_columns = window.grid._grid.settings.frozenColumns.toString();
+	}
+} else {
+	const itemTypeName = options.itemTypeName;
+	gridItemTypeId = aras.getItemTypeId(itemTypeName);
+	preferencesItemTypeName = 'Core_ItemGridLayout';
+
+	const itemTypeNode = aras.getItemTypeForClient(itemTypeName, 'name').node;
+	const isVersionableIT = aras.getItemProperty(itemTypeNode, 'is_versionable') === '1';
+	if (isVersionableIT) {
+		const searchToolbar = control;
+		const queryType = searchToolbar.data.get('searchview.commandbar.default.querytype').value;
+		varsHash.query_type = queryType;
+	}
+
+	if (window.previewPane) {
+		varsHash.preview_state = window.previewPane.getType();
+	}
+
+	varsHash.frozen_columns = window.grid._grid.settings.frozenColumns.toString();
+}
+
+const preferencesNode = aras.getPreferenceItem(preferencesItemTypeName, gridItemTypeId);
+const notify = aras.getNotifyByContext(window);
+const failedMessage = aras.getResource('', 'common.failed_to_save_layout');
+const failedOptions = {
+	type: 'error'
+};
+
+if (aras.setPreferenceItemProperties(preferencesItemTypeName, gridItemTypeId, varsHash)) {
+	const preferencesItemXml = aras.getXmlPreferenceItemWithUpdatedLayoutItem(preferencesNode);
+
+	return ArasModules.soap(preferencesItemXml, {method: 'ApplyItem', async: true}).then(function() {
+		notify(aras.getResource('', 'common.layout_saved'), {
+			type: 'success'
+		});
+	}).catch(function() {
+		notify(failedMessage, failedOptions);
+	});
+}
+
+notify(failedMessage, failedOptions);
+return Promise.resolve();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_common_savelayout_click</name>
+ </Item>
+</AML>

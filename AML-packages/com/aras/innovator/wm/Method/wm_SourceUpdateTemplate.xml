@@ -1,0 +1,95 @@
+﻿<AML>
+ <Item type="Method" id="5E9399F708BC4CCEBDF182F6B04B774D" action="add">
+  <comments>This is editable server method that illustrates how to create a source content update mehod</comments>
+  <execution_allowed_to keyed_name="Conversion Manager" type="Identity">694C8B27E5D940DAA8BD336E45EC3A63</execution_allowed_to>
+  <method_code><![CDATA[String contextItemType = this.getProperty("context_item_type");
+String contextItemId = this.getProperty("context_item_id");
+String wmTypeId = this.getProperty("wm_type");
+String sourceContentLocation = this.getProperty("source_content_location");
+String sourceContentId = this.getProperty("source_content_id");
+String newSourceContentId = this.getProperty("new_source_content_id");
+
+Item sourceContent, newSourceContent, relationshipItem, relationshipItemFile, result;
+String relationshipName, relationshipId, souceProperty;
+bool isValidParameters = true;
+
+Item wrongResult = this.newItem();
+wrongResult.setProperty("update_completed", "false");
+wrongResult.setProperty("log_message", "Updated not completed due to invalid parameter(s).");
+
+if (string.IsNullOrWhiteSpace(contextItemType) ||
+    string.IsNullOrWhiteSpace(contextItemId) ||
+    string.IsNullOrWhiteSpace(wmTypeId) ||
+    string.IsNullOrWhiteSpace(sourceContentLocation) ||
+    string.IsNullOrWhiteSpace(sourceContentId) ||
+    string.IsNullOrWhiteSpace(newSourceContentId)) {
+    isValidParameters = false;
+}
+if (!sourceContentLocation.Contains("=") || !sourceContentLocation.Contains("/")) {
+    isValidParameters = false;
+}
+
+if (!isValidParameters) {
+    return wrongResult;
+}
+int index1 = sourceContentLocation.IndexOf("=", StringComparison.Ordinal);
+int index2 = sourceContentLocation.IndexOf("/", StringComparison.Ordinal);
+relationshipName = sourceContentLocation.Substring(0, index1);
+relationshipId = sourceContentLocation.Substring(++index1, index2 - index1);
+souceProperty = sourceContentLocation.Substring(++index2);
+
+relationshipItem = this.newItem(relationshipName, "get");
+relationshipItem.setProperty("id", relationshipId);
+relationshipItem.setProperty("source_id", contextItemId);
+relationshipItem = relationshipItem.apply();
+
+sourceContent = this.newItem("File", "get");
+sourceContent.setProperty("id", sourceContentId);
+sourceContent = sourceContent.apply();
+
+newSourceContent = this.newItem("File", "get");
+newSourceContent.setProperty("id", newSourceContentId);
+newSourceContent = newSourceContent.apply();
+
+if (sourceContent.isEmpty() || newSourceContent.isEmpty() ||
+    !string.Equals(contextItemType, "Document") || relationshipItem.isEmpty()) {
+    isValidParameters = false;
+    return wrongResult;
+}
+
+if (relationshipItem.getProperty(souceProperty) != sourceContentId) {
+    result = this.newItem();
+    result.setProperty("update_completed", "false");
+    result.setProperty("log_message", "Updated not completed. Source content file has changed.");
+    return result;
+}
+
+bool superUserPermsWasSet = false;
+Aras.Server.Security.Identity superUserIdentity = Aras.Server.Security.Identity.GetById("6B14D33C4A7D41C188CCF2BC15BD01A3");
+
+try
+{
+	superUserPermsWasSet = Aras.Server.Security.Permissions.GrantIdentity(superUserIdentity);
+
+	relationshipItemFile = this.newItem(relationshipName, "edit");
+	relationshipItemFile.setAttribute("id", relationshipId);
+	relationshipItemFile.setProperty(souceProperty, newSourceContentId);
+	relationshipItemFile = relationshipItemFile.apply();
+}
+finally
+{
+	if (superUserPermsWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(superUserIdentity);
+	}
+}
+
+result = this.newItem();
+result.setProperty("update_completed", "true");
+result.setProperty("log_message", "Updated completed successfully.");
+return result;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>wm_SourceUpdateTemplate</name>
+ </Item>
+</AML>

@@ -1,0 +1,59 @@
+﻿<AML>
+ <Item type="Method" id="6E26D1CEA9B24BDC9823672DD16E9A38" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const departuresResultInput = document.getElementsByName('departures')[0];
+
+const query = aras.newIOMItem('dr_RelationshipFamily', 'dr_RemediateDRs');
+query.setID(aras.getItemProperty(parent.args.item, 'id'));
+
+const getDepartureItemTypeId = function() {
+	const queryDefinitionId = aras.getItemProperty(parent.args.item, 'query_definition_id');
+	const queryDefinition = aras.itemsCache.getItem(queryDefinitionId) || aras.getItemById('qry_QueryDefinition', queryDefinitionId);
+
+	if (!queryDefinition) {
+		return;
+	}
+	if (!queryDefinition.getElementsByTagName('Item').length) {
+		aras.getItemRelationshipsEx(queryDefinition, 'qry_QueryReference');
+		aras.getItemRelationshipsEx(queryDefinition, 'qry_QueryItem');
+	}
+	const rootQueryReference = queryDefinition.selectSingleNode('Relationships/Item[@type=\'qry_QueryReference\' and not(parent_ref_id)]');
+	const rootQueryItem = queryDefinition.selectSingleNode('Relationships/Item[ref_id=\'' + aras.getItemProperty(rootQueryReference, 'child_ref_id') + '\']');
+	return aras.getItemProperty(rootQueryItem, 'item_type');
+};
+
+if (departuresResultInput.value == 'all') {
+	query.setProperty('departure_ids', '*');
+	const queryResult = query.apply();
+	if (queryResult.isError()) {
+		aras.AlertError(queryResult.getErrorString());
+	}
+	parent.args.dialog.close();
+}
+
+if (departuresResultInput.value == 'particular') {
+	const topWnd = aras.getMostTopWindowWithAras();
+	const departureItemTypeId = getDepartureItemTypeId();
+	const dialogParams = {
+		aras: aras,
+		type: 'SearchDialog',
+		itemtypeID: departureItemTypeId,
+		multiselect: true,
+		itemContext: parent.args.item,
+	};
+
+	topWnd.ArasModules.MaximazableDialog.show('iframe', dialogParams).promise.then(function(searchResult) {
+		if (searchResult && searchResult.length > 0) {
+			query.setProperty('departure_ids', Array.prototype.join.call(searchResult, ','));
+			const queryResult = query.apply();
+			if (queryResult.isError()) {
+				aras.AlertError(queryResult.getErrorString());
+			}
+			parent.args.dialog.close();
+		}
+	});
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>dr_RemediateFormBtnOkClick</name>
+ </Item>
+</AML>

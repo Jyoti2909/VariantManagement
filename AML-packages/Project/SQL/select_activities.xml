@@ -1,0 +1,36 @@
+﻿<AML>
+ <Item type="SQL" id="7404BAD4D84D42EEA19FA9653BF479FA" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_activities</old_name>
+  <sqlserver_body><![CDATA[/* Name:    select_activities.sql
+   Purpose: computes project activities schedule values using 
+            the Critical Path Method.
+   Created: 29-SEP-2005 George J. Carrette
+   Input:   a WBS_ID.
+   Output:  a table of activities
+
+   Algorithm: (1) seed the set of wbs elements with the root WBS_ID.
+              (2) compute the transitive closure of wbs elements set.
+              (3) compute the set of activities.
+*/
+create function innovator.SELECT_ACTIVITIES(@WBS_ID CHAR(32))
+ RETURNS @ACTIVITIES TABLE(ID CHAR(32) COLLATE database_default primary key)
+AS
+begin
+ DECLARE @WBS_ELEMENTS TABLE(ID CHAR(32) COLLATE database_default primary key)
+ INSERT @WBS_ELEMENTS SELECT ID FROM SELECT_WBS_ELEMENTS(@WBS_ID)
+
+ INSERT @ACTIVITIES
+ SELECT RELATED_ID
+ FROM [WBS_ACTIVITY2] 
+ WHERE RELATED_ID IS NOT NULL AND SOURCE_ID IN (SELECT ID FROM @WBS_ELEMENTS)
+ RETURN
+end
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_activities</name>
+ </Item>
+</AML>

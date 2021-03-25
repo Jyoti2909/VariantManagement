@@ -1,0 +1,35 @@
+﻿<AML>
+ <Item type="Method" id="ED0DBE05F512482994BFA573B46CA9BC" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+	Item alreadyPresentCheck = inn.newItem("Server Event","get");
+	alreadyPresentCheck.setProperty("source_id", this.getProperty("on_type"));
+
+	Item setPropertyValuesMethod = inn.newItem("Method","get");
+	setPropertyValuesMethod.setProperty("name","cdv_setClassDefaultValues");
+
+	alreadyPresentCheck.setRelatedItem(setPropertyValuesMethod);
+	alreadyPresentCheck = alreadyPresentCheck.apply();
+
+	if(alreadyPresentCheck.isError()){
+		Item updateType = inn.newItem("ItemType","edit");
+		updateType.setID(this.getProperty("on_type"));
+		
+		Item onBeforeAdd = inn.newItem("Server Event","add");
+		onBeforeAdd.setProperty("server_event","onBeforeAdd");
+		onBeforeAdd.setRelatedItem(setPropertyValuesMethod);
+		
+		Item onBeforeUpdate = inn.newItem("Server Event","add");
+		onBeforeUpdate.setProperty("server_event","onBeforeUpdate");
+		onBeforeUpdate.setRelatedItem(setPropertyValuesMethod);
+		
+		updateType.addRelationship(onBeforeAdd);
+		updateType.addRelationship(onBeforeUpdate);
+		return updateType.apply();
+	}else{
+		return this;
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>cdv_addServerEventsToTargetType</name>
+ </Item>
+</AML>

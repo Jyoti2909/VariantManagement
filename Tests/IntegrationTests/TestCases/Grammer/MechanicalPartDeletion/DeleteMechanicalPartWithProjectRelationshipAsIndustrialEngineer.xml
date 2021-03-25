@@ -1,0 +1,176 @@
+﻿<TestCase author='apetrovsky@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>
+		Create Parent item as industrial engineer.
+		Add Project item into Parent item as relationship as industrial engineer.
+		Delete Parent item and get error as industrial engineer.
+	</Description>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial Engineer identity
+			When:
+				The user tries to create a part with Mechanical Part/Component classification.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='EF51F0F7CA734A4EA2BD8C6063BB9AC3' doGetItem='0'>
+					<classification>Mechanical Part/MBOM only Part</classification>
+					<name>Parent Item</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='EF51F0F7CA734A4EA2BD8C6063BB9AC3' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='root:innovator'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial Engineer identity
+			When:
+				The user tries to create a project.
+			Then:
+				The user should create the project.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Project' id='5A21E7F2F3AD4E04A5FD893ADB2DAE32' action='add' doGetItem='0'>
+					<date_due_sched>2120-09-02T00:00:00</date_due_sched>
+					<date_due_target>2120-09-02T00:00:00</date_due_target>
+					<date_start_sched>2020-09-01T00:00:00</date_start_sched>
+					<date_start_target>2020-09-01T00:00:00</date_start_target>
+					<project_update_mode>1</project_update_mode>
+					<scheduling_method keyed_name='server_update_schedule' type='Method'>7DC85B0668134E949B9212D7CE199265</scheduling_method>
+					<scheduling_mode>1</scheduling_mode>
+					<scheduling_type>Forward</scheduling_type>
+					<update_method keyed_name='individualUpdate' type='Method'>6E1133AB87A44D529DF5F9D1FD740100</update_method>
+					<wbs_id keyed_name='1324' type='WBS Element'>C144A3DA3CC241F98AA0552238DF18A0</wbs_id>
+					<project_number>1324</project_number>
+					<name>123</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Project' id='5A21E7F2F3AD4E04A5FD893ADB2DAE32' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial Engineer identity
+			When:
+				The user tries to add Project Item into Parent Item.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='GAG_Part Project' action='add' id='3456EFBFCAE24028BC376C65A880643C' doGetItem='0'>
+					<related_id>5A21E7F2F3AD4E04A5FD893ADB2DAE32</related_id>
+					<source_id>EF51F0F7CA734A4EA2BD8C6063BB9AC3</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='GAG_Part Project' id='3456EFBFCAE24028BC376C65A880643C'>
+							<related_id>5A21E7F2F3AD4E04A5FD893ADB2DAE32</related_id>
+						</Item>
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial Engineer identity
+			When:
+				The user tries to delete item with the Project relationship.
+			Then:
+				The request should return error.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='delete' id='EF51F0F7CA734A4EA2BD8C6063BB9AC3' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/' xmlns:i18n='http://www.aras.com/I18N'>
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault>
+						<faultcode>1</faultcode>
+						<faultactor />
+						<faultstring>1 generation of this item cannot be deleted because it has linked relationships.</faultstring>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='GAG_Part Project' action='delete' id='3456EFBFCAE24028BC376C65A880643C' />
+				<Item type='Project' action='delete' id='5A21E7F2F3AD4E04A5FD893ADB2DAE32' />
+				<Item type='Part' action='delete' id='EF51F0F7CA734A4EA2BD8C6063BB9AC3' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

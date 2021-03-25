@@ -1,0 +1,41 @@
+﻿<AML>
+ <Item type="Method" id="67BE765EC195472DBA3E3F1816CEA334" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (this.work && this.work.grid) {
+	var workFrame = this.work;
+	var selectedIds = workFrame.grid.getSelectedItemIds();
+	if (selectedIds.length === 0 || selectedIds.length > 1) {
+		return;
+	}
+
+	var itemNode = aras.getItemById(workFrame.itemTypeName, selectedIds[0], 0);
+	if (itemNode) {
+		var discoverOnlyFlg = (itemNode.getAttribute('discover_only') == '1');
+		var lockedBy = aras.getItemProperty(itemNode, 'locked_by_id');
+
+		var userID = aras.getCurrentUserID();
+		var viewFlg = (lockedBy != userID && !discoverOnlyFlg);
+		var isViewEnabled = viewFlg && !isFunctionDisabled(workFrame.itemTypeName, 'View');
+
+		if (isViewEnabled) {
+			if (workFrame.onViewCommand) {
+				workFrame.onViewCommand();
+			}
+		} else {
+			var isTemp = aras.isTempEx(itemNode);
+			var editFlg = ((isTemp || lockedBy == userID) && !discoverOnlyFlg);
+			var lockFlg = aras.uiItemCanBeLockedByUser(itemNode, workFrame.isRelationshipIT, workFrame['use_src_accessIT']);
+			var isEditEnabled = ((lockFlg || editFlg) && !discoverOnlyFlg) && !isFunctionDisabled(workFrame.itemTypeName, 'Edit');
+			if (isEditEnabled) {
+				if (workFrame.onEditCommand) {
+					workFrame.onEditCommand();
+				}
+			}
+		}
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_mws_ctrl_enter</name>
+ </Item>
+</AML>

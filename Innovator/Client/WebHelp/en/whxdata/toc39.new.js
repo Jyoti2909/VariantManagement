@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"About Configuration Management","type":"item","url":"About_Configuration_Management.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

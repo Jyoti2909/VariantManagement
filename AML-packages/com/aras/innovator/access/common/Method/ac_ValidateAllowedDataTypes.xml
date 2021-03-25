@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="52905DD3BC934428902896D0C9085454" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+var supportedDataTypes = new List<string>
+{
+	"string",
+	"integer",
+	"boolean",
+	"item",
+	"list"
+};
+
+string dataType = this.getProperty("type");
+
+if (string.IsNullOrEmpty(dataType))
+{
+	return this;
+}
+
+if (!supportedDataTypes.Contains(dataType))
+{
+	string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("ac_UnsupportedDataType"), dataType);
+	return inn.newError(message);
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>ac_ValidateAllowedDataTypes</name>
+ </Item>
+</AML>

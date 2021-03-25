@@ -1,0 +1,88 @@
+﻿<AML>
+ <Item type="SQL" id="FD545CF6DB154F93B80054F99AA6137D" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>Business_Workday</old_name>
+  <sqlserver_body><![CDATA[/*This is the slow function that uses the BUSINESS_CALENDAR_YEAR,BUSINESS_CALENDAR_EXCEPTION
+tables. It returns 1 for working days, 0 for non-working days. If the value
+is outside of the available business calendar years then it returns a default
+calculation based on the standard weekend computation.
+
+Please, pay attention that @IN_DATE arg should be local datetime, in a difference with other business
+functions. It was done due to performance issues.*/
+CREATE FUNCTION [Business_workday](@IN_DATE DATETIME,
+                                   @TZ_NAME NVARCHAR(50) = NULL)
+RETURNS BIT
+AS
+  BEGIN
+      IF @IN_DATE IS NULL
+        RETURN NULL
+
+      /* Check if @WEEKDAY is a week-end.
+	Different cultures define different first day of a week. Sunday in USA, Monday in Germany.
+	The formula below sets @WEEKDAY = 1 if @DAY is Monday, sets @WEEKDAY = 2 if @DAY is Tuesday and so on.*/
+      DECLARE @Business_Workday BIT
+      DECLARE @WEEKDAY INT;
+
+      SET @WEEKDAY = Datepart(WEEKDAY, @IN_DATE) + ( @@DATEFIRST - 1 ); -- @@DATEFIRST returns 1 for Monday, 2 for Tuesday, ..., 7 for Sunday
+      IF @WEEKDAY > 7
+        SET @WEEKDAY = @WEEKDAY - 7;
+
+      IF @WEEKDAY < 6
+        SET @Business_Workday = 1
+      ELSE
+        SET @Business_Workday = 0;
+
+      /* --- check if @DAY is a week-end */
+      DECLARE @YEAR INT
+
+      SET @YEAR = Datepart(YEAR, @IN_DATE)
+
+      DECLARE @YEAR_ID CHAR(32)
+
+      SET @YEAR_ID = (SELECT ID
+                      FROM   [innovator].BUSINESS_CALENDAR_YEAR
+                      WHERE  YEAR = @YEAR)
+
+      IF @YEAR_ID IS NULL
+        RETURN @Business_Workday
+
+      DECLARE @DAY_ID CHAR(32)
+
+      IF (SELECT Count(*)
+          FROM   [innovator].BUSINESS_CALENDAR_EXCEPTION
+          WHERE  SOURCE_ID = @YEAR_ID) > 0
+        BEGIN
+            SET @IN_DATE = (SELECT value
+                            FROM   [innovator].[ConvertFromLocal_Table](@IN_DATE, @TZ_NAME))
+            SET @IN_DATE = (SELECT value
+                            FROM   [innovator].[Roundtomidnight](@IN_DATE, @TZ_NAME))
+            SET @DAY_ID = (SELECT ID
+                           FROM   [innovator].BUSINESS_CALENDAR_EXCEPTION
+                           WHERE  SOURCE_ID = @YEAR_ID
+                                  AND DAY_DATE = @IN_DATE)
+        END
+
+      IF @DAY_ID IS NULL
+        BEGIN
+            IF (SELECT weekend_days_off
+                FROM   [innovator].BUSINESS_CALENDAR_YEAR
+                WHERE  ID = @YEAR_ID) = '1'
+              RETURN @Business_Workday
+            ELSE
+              RETURN 1
+        END
+
+      IF (SELECT day_off
+          FROM   [innovator].BUSINESS_CALENDAR_EXCEPTION
+          WHERE  ID = @DAY_ID) = '1'
+        RETURN 0
+
+      RETURN 1
+  END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>Business_Workday</name>
+ </Item>
+</AML>

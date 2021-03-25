@@ -1,0 +1,205 @@
+﻿<AML>
+ <Item type="Method" id="B28E9221209649E4AE29D175A2E09B50" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[ChangeBlockConditionDialog = function() {
+	var self = this;
+	var topWindow = aras.getMostTopWindowWithAras(window);
+
+	this.aras = aras;
+	this.dialogArguments = parent.frameElement.dialogArguments || topWindow.dialogArguments;
+
+	document.isEditMode = true;
+
+	var filterGroupBoxId = document.fieldsTab.filterGroupBox;
+
+	var container;
+	require(['dojo/query'], function(query) {
+		container = query('#' + filterGroupBoxId + ' .sys_groupbox_content_vertical')[0];
+	});
+
+	var optionFamilies = this.dialogArguments.optionFamilies;
+	this.condition = this.dialogArguments.condition;
+	this.externalcondition = this.dialogArguments.externalcondition;
+	this.isDisabled = this.dialogArguments.isDisabled ? 1 : 0;
+
+	var applyBtnNode = document.getElementsByName('buttonApply')[0];
+	if (!this.isDisabled) {
+		applyBtnNode.onclick = function() {
+			self.Apply();
+		};
+	} else {
+		applyBtnNode.style.visibility = 'hidden';
+	}
+
+	var optionFamily;
+	var optionValues;
+	var _conditions = this.condition;
+
+	var fieldObject;
+
+	this.fieldHash = {};
+
+	var documentViewOptionValues;
+
+	for (optionFamily in optionFamilies) {
+		optionValues = optionFamilies[optionFamily];
+		fieldObject = this.CreateOptionFamily(optionFamily, optionValues, _conditions[optionFamily]);
+		container.appendChild(fieldObject.node);
+
+		this.fieldHash[fieldObject.id] = fieldObject;
+	}
+};
+
+ChangeBlockConditionDialog.prototype.CreateOptionFamily = function(optionFamily, optionValues, settedCondition) {
+	var fieldID = 'id' + this.aras.generateNewGUID();
+	var select = new CheckedMultiSelect();
+
+	var fieldDom = this.aras.createXMLDocument();
+	var fieldAML = '' +
+	'<Item type="Field" id="' + fieldID + '">' +
+	'	<border_width>0</border_width>' +
+	'	<display_length_unit>px</display_length_unit>' +
+	'	<field_type>checkedMultiSelect</field_type>' +
+	'	<font_color>#000000</font_color>' +
+	'	<font_family>arial, helvetica, sans-serif</font_family>' +
+	'	<font_size>8pt</font_size>' +
+	'	<font_weight>bold</font_weight>' +
+	'	<is_disabled>0</is_disabled>' +
+	'	<is_visible>1</is_visible>' +
+	'	<label>' + optionFamily + '</label>' +
+	'	<label_position>left</label_position>' +
+	'	<list_no_blank>0</list_no_blank>' +
+	'	<positioning>relative</positioning>' +
+	'	<sort_order>128</sort_order>' +
+	'	<tab_stop>1</tab_stop>' +
+	'	<text_align>left</text_align>' +
+	'	<name>option_family_dropdown</name>' +
+	'</Item>';
+
+	fieldDom.loadXML(fieldAML);
+
+	var html = select.initWrapper(fieldDom.documentElement, null);
+	var el = document.createElement('div');
+	el.innerHTML = html;
+
+	var fieldNode = el.querySelector('#' + fieldID + 'span');
+	var dropdownNode = el.querySelector('#' + 'div_select_' + fieldID);
+
+	var optionValueIndex = -1;
+	var optionValue;
+	var optionLabel;
+
+	var selectIndex;
+	var isExternalyUsedOption = false;
+	var xmlCheckbox = '';
+	var xmlLabel = '';
+	var boxID = null;
+
+	for (optionValueIndex in optionValues) {
+		optionValue = optionValues[optionValueIndex];
+		optionLabel = optionValue;
+		selectIndex = (settedCondition) ? settedCondition.indexOf(optionValue) + 1 : 0;
+
+		isExternalyUsedOption = false;
+		var externalValues = this.externalcondition[optionFamily];
+		if (externalValues) {
+			isExternalyUsedOption = (externalValues.indexOf(optionValue) != -1);
+		}
+		if (isExternalyUsedOption) {
+			optionLabel = optionValue + ' [External]';
+		}
+		boxID = fieldID + '_box_' + optionValueIndex;
+
+		xmlCheckbox += '' +
+			'	<input class="arasCheckboxOrRadio" type="checkbox" id="' + boxID + '"' + ' checked="' +
+			((selectIndex) ? 'true' : 'false') + '"' + ' disabled="' + ((this.isDisabled) ? 'true' : 'false') + '"/>';
+		xmlLabel += '' +
+			'	<label value="' + optionValue + '"' + ' for="' + boxID + '">' + optionLabel + '</label>';
+	}
+
+	var xml = '' +
+		'<options>' +
+		'<checkboxes>' +
+		xmlCheckbox +
+		'</checkboxes>' +
+		'<labels>' +
+		xmlLabel +
+		'</labels>' +
+		'</options>';
+
+	select.init(dropdownNode, xml);
+
+	return {
+		id: fieldID,
+		optionFamily: optionFamily,
+		node: fieldNode,
+		select: select
+	};
+};
+
+ChangeBlockConditionDialog.prototype.GetOptionFamilyValue = function(fieldID) {
+	var fieldObject = this.fieldHash[fieldID];
+
+	var dropdownNode = fieldObject.select;
+	var _value = dropdownNode.getValueOfCheckedItems();
+
+	return _value;
+};
+
+ChangeBlockConditionDialog.prototype._IsOptionFamilyConflicts = function(optionFamiliy) {
+	var externalOptionFamilyValues = this.externalcondition[optionFamiliy];
+	if (externalOptionFamilyValues && externalOptionFamilyValues.length > 0) {
+		return true;
+	} else {
+		return false;
+	}
+};
+
+ChangeBlockConditionDialog.prototype._GetConflictOptionFamilies = function(condition) {
+	var optionFamily;
+	var optionFamilyValues;
+
+	var conflictOptionFamilies = [];
+
+	for (optionFamily in condition) {
+		optionFamilyValues = condition[optionFamily];
+		if (optionFamilyValues && optionFamilyValues.length > 0) {
+			if (this._IsOptionFamilyConflicts(optionFamily)) {
+				conflictOptionFamilies.push(optionFamily);
+			}
+		}
+	}
+
+	return conflictOptionFamilies;
+};
+
+ChangeBlockConditionDialog.prototype.Apply = function() {
+	var conditionSelected = {};
+
+	var fieldID;
+	for (fieldID in this.fieldHash) {
+		var fieldObject = this.fieldHash[fieldID];
+		var fieldValue = this.GetOptionFamilyValue(fieldID);
+		if (fieldValue) {
+			conditionSelected[fieldObject.optionFamily] = fieldValue;
+		}
+	}
+
+	var conflictOptionFamilies = this._GetConflictOptionFamilies(conditionSelected);
+
+	if (conflictOptionFamilies && conflictOptionFamilies.length > 0) {
+		var res = this.aras.confirm(this.aras.getResource('../Modules/aras.innovator.TDF', 'includes.overrideconditions', conflictOptionFamilies.join('\',\'')));
+		if (!res) {
+			return;
+		}
+	}
+
+	this.dialogArguments.dialog.close(conditionSelected);
+};
+
+changeBlockConditionDialog = new ChangeBlockConditionDialog();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>tp_ChangeBlockCondition_API</name>
+ </Item>
+</AML>

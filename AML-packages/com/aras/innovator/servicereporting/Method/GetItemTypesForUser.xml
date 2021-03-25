@@ -1,0 +1,223 @@
+﻿<AML>
+ <Item type="Method" id="9505FBB581ED44769E66F95178861A07" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	var requestType = this.getProperty("request_type");
+
+	Item result;
+	if (requestType.Equals("featured"))
+	{
+		result = GetFeaturedItemTypes(CCO.DB.InnDatabase);
+	}
+	else if (requestType.Equals("all"))
+	{
+		result = GetAllItemTypes();
+	}
+	else
+	{
+		result = GetEmptyListOfItemTypes();
+	}
+
+	if (result.isError())
+	{
+		return result;
+	}
+
+	AppendAliasesForSsrUI(result);
+
+	return result;
+}
+
+private const string PropertiesRequired = "name, label, id, open_icon, instance_data";
+
+private static void AddItemTypeToDictionary(Dictionary<string, List<Item>> aliasItemTypes, string alias, Item ItemType)
+{
+	List<Item> listOfItemTypes;
+	aliasItemTypes.TryGetValue(alias, out listOfItemTypes);
+	if (listOfItemTypes == null)
+	{
+		listOfItemTypes = new List<Item>();
+		aliasItemTypes.Add(alias, listOfItemTypes);
+	}
+
+	listOfItemTypes.Add(ItemType);
+}
+
+//the method is marked as internal in order to be accessible for unit tests
+internal static void AppendAliasesForSsrUI(Item itemTypes)
+{
+	IEnumerable<Tuple<string, Item>> pairs = GetAliasesForSsrUI(itemTypes);
+	foreach (Tuple<string, Item> pair in pairs)
+	{
+		string aliasForSsrUI = pair.Item1;
+		Item ItemType = pair.Item2;
+		ItemType.setAttribute("aliasForSsrUI", aliasForSsrUI);
+	}
+}
+
+private static void FixNotUniqueAlias(string oldAlias, Dictionary<string, List<Item>> aliasItemTypes)
+{
+	List<Item> ItemTypesWithNotUniqueAlias = aliasItemTypes[oldAlias];
+	aliasItemTypes.Remove(oldAlias);
+
+	int NumberOfItemTypesWhichUseNameAsAnAliasAlready = 0;
+
+	foreach (Item ItemType in ItemTypesWithNotUniqueAlias)
+	{
+		string newAlias = ItemType.getProperty("name");
+		AddItemTypeToDictionary(aliasItemTypes, newAlias, ItemType);
+
+		if (string.Equals(newAlias, oldAlias, StringComparison.Ordinal))
+		{
+			NumberOfItemTypesWhichUseNameAsAnAliasAlready++;
+		}
+		else
+		{
+			if (ThereAreSeveralItemTypesWithTheAlias(newAlias, aliasItemTypes))
+			{
+				FixNotUniqueAlias(newAlias, aliasItemTypes);
+			}
+		}
+	}
+
+	if (NumberOfItemTypesWhichUseNameAsAnAliasAlready > 1)
+	{
+		throw new Aras.Server.Core.InnovatorServerException("More than one Item Type with the same name occurred");
+	}
+}
+
+private static IEnumerable<Tuple<string, Item>> GetAliasesForSsrUI(Item itemTypes)
+{
+	Dictionary<string, List<Item>> aliasItemTypes = new Dictionary<string, List<Item>>();
+	int L = itemTypes.getItemCount();
+	for (int i = 0; i < L; i++)
+	{
+		Item ItemType = itemTypes.getItemByIndex(i);
+		string alias = ItemType.getProperty("label") ?? ItemType.getProperty("name");
+		AddItemTypeToDictionary(aliasItemTypes, alias, ItemType);
+	}
+	// We need to fill dictionary to the end before we try to make aliases unique.
+	// If we will run FixNotUniqueAlias method after adding each Item, we will get following problem:
+	// If we have 3 ItemTypes ("A", "B", "C") with the same label "D", after running this algorithm we will
+	// get pairs {ITName, aliasForSsrUI}: {"A", "A"}, {"B", "B"}, {"C", "D"} (correct is {"C", "C"})
+	foreach (string alias in aliasItemTypes.Keys.ToArray())
+	{
+		if (ThereAreSeveralItemTypesWithTheAlias(alias, aliasItemTypes))
+		{
+			FixNotUniqueAlias(alias, aliasItemTypes);
+		}
+	}
+
+	return aliasItemTypes.Select(kvp => new Tuple<string, Item>(kvp.Key, kvp.Value.First()));
+}
+
+private Item GetAllItemTypes()
+{
+	return this.getInnovator().applyAML("<AML><Item type=\"ItemType\" action=\"get\" select=\"" + System.Security.SecurityElement.Escape(PropertiesRequired) + "\"></Item></AML>");
+}
+
+private Item GetEmptyListOfItemTypes()
+{
+	return this.getInnovator().newResult("");
+}
+
+private Item GetFeaturedItemTypes(Aras.Server.Core.IInnovatorDatabase InnDatabase)
+{
+	var userId = this.getInnovator().getUserID();
+	var userIdentities = Aras.Server.Security.Permissions.GetIdentitiesList(InnDatabase, userId);
+
+	return GetFeaturedItemTypes(userIdentities);
+}
+
+//the method is marked as internal in order to be accessible for unit tests
+internal Item GetFeaturedItemTypes(string userIdentities)
+{
+	#region get from settings
+	List<string> featuredIds = new List<string>();
+
+	var userFeaturedSettings = this.newItem("SelfServiceReportFeatured", "get");
+	userFeaturedSettings.setProperty("identity_id", userIdentities);
+	userFeaturedSettings.setPropertyCondition("identity_id", "in");
+	userFeaturedSettings = userFeaturedSettings.apply();
+
+	if (!userFeaturedSettings.isError())
+	{
+		for (var i = 0; i < userFeaturedSettings.getItemCount(); i++)
+		{
+			var currentSettings = userFeaturedSettings.getItemByIndex(i);
+			var featuredFromItem = currentSettings.getProperty("featured_itemtypes");
+
+			if (!string.IsNullOrEmpty(featuredFromItem))
+			{
+				featuredIds.AddRange(featuredFromItem.Split('|'));
+			}
+		}
+	}
+	#endregion get from settings
+
+	#region get TOC Accessible
+	var toc = this.newItem("TOC Access", "get");
+	toc.setAttribute("select", "source_id(" + PropertiesRequired + ")");
+	toc.setProperty("related_id", userIdentities);
+	toc.setPropertyCondition("related_id", "in");
+	toc = toc.apply();
+	if (toc.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(toc.dom);
+	}
+
+	var nodes = toc.dom.SelectNodes("//Item/source_id/Item[@type='ItemType']");
+	var itemStr = "";
+	foreach (XmlNode node in nodes)
+	{
+		if (itemStr.IndexOf(string.Format(CultureInfo.InvariantCulture, "id=\"{0}\"", node.Attributes["id"].Value), StringComparison.Ordinal) < 0)
+		{
+			itemStr += node.OuterXml;
+		}
+	}
+	var tocAccessibleItemTypes = this.newItem();
+	tocAccessibleItemTypes.loadAML("<Result>" + itemStr + "</Result>");
+	#endregion get TOC Accessible
+
+	if (userFeaturedSettings.isError())
+	{
+		return tocAccessibleItemTypes;
+	}
+
+	for (var i = 0; i < tocAccessibleItemTypes.getItemCount(); i++)
+	{
+		featuredIds.Add(tocAccessibleItemTypes.getItemByIndex(i).getID());
+	}
+
+	featuredIds = featuredIds.Distinct().ToList();
+
+	if (featuredIds.Count > 0)
+	{
+		var itemTypes = this.newItem("ItemType", "get");
+		itemTypes.setProperty("id", string.Join(",", featuredIds));
+		itemTypes.setPropertyCondition("id", "in");
+		itemTypes.setAttribute("select", PropertiesRequired);
+		return itemTypes.apply();
+	}
+	else
+	{
+		return GetEmptyListOfItemTypes();
+	}
+}
+
+private static bool ThereAreSeveralItemTypesWithTheAlias(string alias, Dictionary<string, List<Item>> aliasItemTypes)
+{
+	List<Item> itemTypesWithTheAlias;
+	aliasItemTypes.TryGetValue(alias, out itemTypesWithTheAlias);
+	bool res = (itemTypesWithTheAlias != null && itemTypesWithTheAlias.Count > 1);
+	return res;
+}
+
+private ItemMethod(): this(null)
+{
+	//this fake constructor is required here only to simplify writing of new routines inside this Innovator Method.
+	//this constructor is expected to be the last lines in the method_code of this Innovator Method.
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetItemTypesForUser</name>
+ </Item>
+</AML>

@@ -1,0 +1,129 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project name="SettingsHelper">
+	<property name="Do.Deploy.Innovator.Database" overwrite="false" value="true" />
+
+    <target name="Get.Link.To.LicenseKeyService.Based.On.MAC.Address">
+		<property name="Link.To.LicenseKeyService" value="http://www.aras.com/support/LicenseKeyService/?mac-address=${aras::get-mac-address()}" />
+	</target>
+
+	<target name="Evaluate.Innovator.License.String">
+		<choose>
+			<when test="${not property::exists('Innovator.License.String') or string::get-length(Innovator.License.String) == 0}">
+				<call target="Validate.License.Fields" />
+				<property name="Innovator.License.Company.Attribute" value="" />
+				<property name="Innovator.License.Company.Attribute" value='company="${Innovator.License.Company}"' if="${string::get-length(Innovator.License.Company) != 0}" />
+
+				<property name="Innovator.License.String" value='&lt;License lic_type="${Innovator.License.Type}" ${Innovator.License.Company.Attribute} lic_key="${Innovator.License.Key}" act_key="${Innovator.Activation.Key}"/&gt;' />
+			</when>
+			<otherwise>
+				<echo>Use Innovator.License.String passed to this script from outside. No need to evaluate or validate.</echo>
+			</otherwise>
+		</choose>
+	</target>
+
+	<target name="SetupParameters.For.Common.Task" depends="Evaluate.Innovator.License.String">
+		<fail if="${not property::exists('Name.Of.Innovator.Instance') or string::get-length(Name.Of.Innovator.Instance) == 0}"
+			  message="Specify property 'Name.Of.Innovator.Instance' in order to use it as Innovator instance and database names" />
+		<property name="Is.Development.Build.Type" value="${property::exists('Build.Type') and Build.Type == 'Development'}" />
+
+		<property name="Path.To.Installed.Innovator" value="${path::get-full-path(path::combine(Path.To.Sandbox.Directory, Name.Of.Innovator.Instance))}" if="${not environment::variable-exists('Path.To.Installed.Innovator')}" />
+		<mkdir dir="${Path.To.Installed.Innovator}" unless="${directory::exists(Path.To.Installed.Innovator)}" />
+
+		<property name="Path.To.Installed.Agent" overwrite="false" value="${Path.To.Installed.Innovator}" />
+		<property name="Path.To.Installed.Conversion" overwrite="false" value="${Path.To.Installed.Innovator}" />
+		<property name="Path.To.Installed.OAuth" overwrite="false" value="${Path.To.Installed.Innovator}" />
+		<property name="Path.To.Installed.Vault" overwrite="false" value="${Path.To.Installed.Innovator}" />
+
+		<!--Database properties-->
+		<property name="MSSQL.Database.Name" value="${Name.Of.Innovator.Instance}" if="${not environment::variable-exists('MSSQL.Database.Name')}" />
+		<property name="MSSQL.Database.Name.ToSqlObject" value="${string::replace(MSSQL.Database.Name, ']', ']]')}" />
+		<property name="MSSQL.Database.Name.ToSqlString" value="${string::replace(MSSQL.Database.Name, '''', '''''')}" />
+
+		<!--IIS properties-->
+		<property name="IIS.VirtualDir.For.Temporary.Instance" value="${Name.Of.Innovator.Instance}" />
+		<property name="Url.Of.Installed.Innovator" value="${Url.Of.Deployment.Server}${Deployment.Server.Port.String}/${IIS.VirtualDir.For.Temporary.Instance}" />
+
+		<!--Aras Agent Service-->
+		<property name="Agent.Service.Name" value="ArasInnovatorAgent_AgentService_${Name.Of.Innovator.Instance}" if="${not environment::variable-exists('Agent.Service.Name')}" />
+		<property name="Agent.Service.Host.Name" value="." />
+
+		<!-- Set credentials to environment variables  -->
+		<setenv>
+			<variable name="Password.Of.Root.Innovator.User" value="${Password.Of.Root.Innovator.User}" unless="${environment::variable-exists('Password.Of.Root.Innovator.User')}" />
+			<variable name="App.Pool.Identity.Password" value="${App.Pool.Identity.Password}" unless="${environment::variable-exists('App.Pool.Identity.Password')}" />
+			<variable name="MSSQL.SA.Password" value="${MSSQL.SA.Password}" unless="${environment::variable-exists('MSSQL.SA.Password')}" />
+			<variable name="MSSQL.Innovator.Password" value="${MSSQL.Innovator.Password}" unless="${environment::variable-exists('MSSQL.Innovator.Password')}" />
+			<variable name="MSSQL.Innovator.Regular.Password" value="${MSSQL.Innovator.Regular.Password}" unless="${environment::variable-exists('MSSQL.Innovator.Regular.Password')}" />
+			<variable name="Path.To.DB.Bak" value="${Path.To.DB.Bak}" unless="${environment::variable-exists('Path.To.DB.Bak')}" />
+			<variable name="Path.To.CodeTree" value="${Path.To.Unzipped.Code.Tree}" unless="${environment::variable-exists('Path.To.CodeTree')}" />
+			<variable name="Version.Of.Installed.Innovator" value="${Version.Of.Installed.Innovator}" unless="${environment::variable-exists('Version.Of.Installed.Innovator')}" />
+			<variable name="Innovator.License.String" value="${Innovator.License.String}" unless="${environment::variable-exists('Innovator.License.String')}" />
+		</setenv>
+		<if test="${directory::exists(path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\tools\Aras.Deployment.Tool'))}">
+			<call target="Setup.Deploy.Tool.Configs" />
+		</if>
+	</target>
+
+	<target name="SetupParameters.For.Continuous.Task" depends="Build.Deployment.Tool">
+		<property name="Build.Type" value="ContinuousIntegration" />
+		<property name="Build.Identifier" overwrite="false" value="${This.Script.Start.Time.As.Sortable.Date}" />
+		<property name="Name.Of.Innovator.Instance" overwrite="false" value="CI-${Project.Prefix}-${Build.Identifier}" />
+		<property name="Path.To.Instance.Deploy.Template" overwrite="false" value="${path::combine(Path.To.Instance.Templates, 'InstanceTemplate.deploy.ci.xml')}" />
+		<call target="SetupParameters.For.Common.Task" />
+	</target>
+
+	<target name="SetupParameters.For.Deploy.Task">
+		<property name="Build.Type" value="Deployment" />
+		<fail if="${not property::exists('Commit.Pointer') or string::get-length(Commit.Pointer) == 0}"
+					message="Specify property 'Commit.Pointer' in order to evaluate Innovator instance and database names" />
+		<fail if="${not property::exists('Build.Number') or string::get-length(Build.Number) == 0}"
+					message="Specify property 'Build.Number' in order to evaluate Innovator instance and database names" />
+
+		<property name="Prefix.Of.Innovator.Instance" overwrite="false" value="${Project.Prefix}-${Commit.Pointer}" />
+		<property name="Name.Of.Innovator.Instance" overwrite="false" value="${Prefix.Of.Innovator.Instance}-${Build.Number}" />
+		<property name="Path.To.Instance.Deploy.Template" overwrite="false" value="${path::combine(Path.To.Instance.Templates, 'InstanceTemplate.deploy.sit.xml')}" />
+		<call target="SetupParameters.For.Common.Task" />
+	</target>
+
+	<target name="SetupParameters.For.Developer.Environment" depends="Build.Deployment.Tool">
+		<property name="Build.Type" value="Development" />
+		<fail if="${not property::exists('Commit.Pointer') or string::get-length(Commit.Pointer) == 0}"
+					message="Specify property 'Commit.Pointer' in order to evaluate Innovator instance and database names" />
+		<fail if="${not property::exists('Local.Machine.Name') or string::get-length(Local.Machine.Name) == 0}"
+					message="Specify property 'Local.Machine.Name' in order to evaluate Innovator database name" />
+
+		<property name="Name.Of.Innovator.Instance" overwrite="false" value="${Local.Machine.Name}-${Project.Prefix}-${Commit.Pointer}" />
+		<call target="SetupParameters.For.Common.Task" />
+	</target>
+
+	<target name="Setup.Deploy.Tool.Configs">
+		<property name="Path.To.Instance.Setup.Template" overwrite="false" value="${path::combine(Path.To.Instance.Templates, 'InstanceTemplate.setup.xml')}" />
+		<property name="Path.To.Instance.Setup.Config" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\tools\Aras.Deployment.Tool\Instance.setup.xml')}" />
+		<property name="Path.To.Instance.Deploy.Template" overwrite="false" value="${path::combine(Path.To.Instance.Templates, 'InstanceTemplate.deploy.xml')}" />
+		<property name="Path.To.Instance.Deploy.Config" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\tools\Aras.Deployment.Tool\Instance.deploy.xml')}" />
+
+		<property name="Path.To.Instance.Template" value="${Path.To.Instance.Setup.Template}" />
+		<property name="Path.To.Instance.Config" value="${Path.To.Instance.Setup.Config}" />
+		<call target="Setup.Instance.Config" />
+
+		<property name="Path.To.Instance.Template" value="${Path.To.Instance.Deploy.Template}" />
+		<property name="Path.To.Instance.Config" value="${Path.To.Instance.Deploy.Config}" />
+		<call target="Setup.Instance.Config" />
+	</target>
+
+	<target name="Setup.Instance.Config">
+		<property name="Deployment.Server.Name" overwrite="false" value="${aras::get-host-from-url(Url.Of.Deployment.Server)}" />
+		<loadfile file="${Path.To.Instance.Template}" property="Instance.Config.Content">
+			<filterchain>
+				<expandproperties />
+			</filterchain>
+		</loadfile>
+		<echo message="${Instance.Config.Content}" file="${Path.To.Instance.Config}" />
+	</target>
+
+	<target name="Evaluate.Agent.Service.Binding.Endpoint">
+		<property name="Agent.Service.Binding.Endpoint.Port" value="8734" />
+		<property name="Agent.Service.Binding.Endpoint.Port" value="8735" if="${string::starts-with(Url.Of.Deployment.Server, 'https://')}" />
+		<property name="Agent.Service.Binding.Endpoint" value="${Url.Of.Deployment.Server}:${Agent.Service.Binding.Endpoint.Port}/${Agent.Service.Name}" />
+	</target>
+</project>

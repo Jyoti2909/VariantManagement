@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="SQL" id="2A46F1E272C44CD39F35CA666735B3EB" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>affectedItemFloatNewItem</old_name>
+  <sqlserver_body><![CDATA[create procedure affectedItemFloatNewItem(@affectedItemID char(32), @newVersionItemID char(32))
+AS
+BEGIN		
+	UPDATE [AFFECTED_ITEM] 
+	SET NEW_ITEM_ID = @newVersionItemID
+	WHERE
+		ID = @affectedItemID
+		AND
+		(
+		NOT EXISTS(select eeco.id from [EXPRESS_ECO] eeco where eeco.id = (select SOURCE_ID from [EXPRESS_ECO_AFFECTED_ITEM] where RELATED_ID = @affectedItemID) AND (eeco.STATE = 'Released'))
+		AND
+		NOT EXISTS(select edco.id from [EXPRESS_DCO] edco where edco.id = (select SOURCE_ID from [EXPRESS_DCO_AFFECTED_ITEM] where RELATED_ID = @affectedItemID) AND (edco.STATE = 'Released'))
+		AND
+		NOT EXISTS(select ecn.id from [ECN] ecn where ecn.id = (select SOURCE_ID from [ECN_AFFECTED_ITEM] where RELATED_ID = @affectedItemID) AND (ecn.STATE = 'Released'))
+		AND
+		NOT EXISTS(select seco.id from [SIMPLE_ECO] seco where seco.id = (select SOURCE_ID from [SIMPLE_ECO_AFFECTED_ITEM] where RELATED_ID = @affectedItemID) AND (seco.STATE = 'Released'))
+		AND
+		NOT EXISTS(select ecr.id from [ECR] ecr where ecr.id = (select SOURCE_ID from [ECR_AFFECTED_ITEM] where RELATED_ID = @affectedItemID) AND (ecr.STATE = 'Released'))
+		)
+
+  select * from [AFFECTED_ITEM] where id = @affectedItemID
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>affectedItemFloatNewItem</name>
+ </Item>
+</AML>

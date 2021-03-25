@@ -1,0 +1,216 @@
+﻿<AML>
+ <Item type="Method" id="674366FA99734CD79EC4768B86D6CB83" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string itemTypeId = this.getProperty("item_type_id");
+	Innovator inn = this.getInnovator();
+	IDataAccessLayer dataAccessLayer = new DataAccessLayer(inn);
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer, inn);
+	return businessLogic.GetActionsMenuButtons(itemTypeId);
+}
+
+internal class BusinessLogic
+{
+	private IDataAccessLayer dataAccessLayer;
+	private Innovator innovator;
+	const string actionsMenuId = "2AF1AF72B16840E5B5676AADF357A148";
+	private static string[] ActionTypes = {
+		"item",
+		"itemtype"
+	};
+
+	// 'cui_svicm_actions_click' - name of default click method for action
+	const string ActionsClickMethodName = "cui_svicm_actions_click";
+	// 'cui_init_action_menu_popup' - name of common init method for action
+	const string ActionsInitMethodName = "cui_init_action_menu_popup";
+
+	internal BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+		this.innovator = innovator;
+	}
+
+	public Item GetActionsMenuButtons(string itemTypeId)
+	{
+		Item items = null;
+
+		if (!string.IsNullOrEmpty(itemTypeId))
+		{
+			string clickMethodId = this.dataAccessLayer.GetActionsMethodId(ActionsClickMethodName);
+			string initMethodId = this.dataAccessLayer.GetActionsMethodId(ActionsInitMethodName);
+			Item actions = this.dataAccessLayer.GetItemActions(itemTypeId);
+			items = HandleMenuButtons(actions, clickMethodId, initMethodId);
+		}
+
+		return items ?? this.innovator.newResult("");
+	}
+
+	private static IDictionary<string, IList<Item>> SeparateActionsByType(Item actions)
+	{
+		Dictionary<string, IList<Item>> result = new Dictionary<string, IList<Item>>();
+
+		foreach (string actionType in ActionTypes)
+		{
+			result[actionType] = new List<Item>();
+		}
+
+		for (int i = 0; i < actions.getItemCount(); i++)
+		{
+		    Item itemAction = actions.getItemByIndex(i);
+			Item action = itemAction.getRelatedItem();
+			string actionType = action.getProperty("type");
+
+			if (ActionTypes.Contains(actionType))
+			{
+				result[actionType].Add(itemAction);
+			}
+		}
+
+		return result;
+	}
+
+	private Item HandleMenuButtons(Item actions, string clickMethodId, string initMethodId)
+	{
+		Item resultItems = this.innovator.newItem();
+
+		IDictionary<string, IList<Item>> actionsDictionary = SeparateActionsByType(actions);
+
+		foreach (string actionType in ActionTypes)
+		{
+			int actionsCount = actionsDictionary[actionType].Count;
+
+			if (actionsCount > 0)
+			{
+				Item separator = this.innovator.newItem("CommandBarMenuSeparator");
+				separator.setProperty("parent_menu", actionsMenuId);
+				separator.setProperty("name", "cui_actions_sep");
+				separator.setID("cui_actions_sep");
+				resultItems.appendItem(separator);
+
+				foreach (Item currentAction in actionsDictionary[actionType])
+				{
+					resultItems.appendItem(HandleMenuButton(currentAction, clickMethodId, initMethodId));
+				}
+			}
+		}
+
+		if (resultItems.getItemCount() == 1)
+		{
+			return null;
+		}
+
+		resultItems.removeItem(resultItems.getItemByIndex(0));
+		return resultItems;
+	}
+
+	private Item HandleMenuButton(Item currentItemAction, string clickMethodId, string initMethodId)
+	{
+		string actionTemplate = "action:{0}:{1}";
+		Item currentAction = currentItemAction.getRelatedItem();
+		Item menu = this.innovator.newItem("CommandBarMenuButton");
+
+		string itemTypeId = currentItemAction.getProperty("source_id");
+		string actionId = currentAction.getID();
+		string actionName = string.Format(CultureInfo.InvariantCulture, actionTemplate, actionId, itemTypeId);
+		menu.setProperty("name", actionName);
+		menu.setProperty("label", currentAction.getProperty("label") ?? currentAction.getProperty("name"));
+		menu.setProperty("parent_menu", actionsMenuId);
+
+		string canExecuteMethodName = currentAction.getPropertyAttribute("can_execute", "keyed_name");
+		string location = currentAction.getProperty("location");
+		string actionType = currentAction.getProperty("type");
+		menu.setProperty("additional_data", "{\"canExecuteMethodName\": \"" + canExecuteMethodName + "\", \"location\": \"" + location +
+			"\", \"actionId\": \"" + actionId + "\", \"itemTypeId\": \"" + itemTypeId + "\", \"actionType\": \"" + actionType + "\"}");
+
+		menu.setProperty("on_init_handler", initMethodId);
+		menu.setPropertyAttribute("on_init_handler", "keyed_name", ActionsInitMethodName);
+
+		menu.setProperty("on_click_handler", clickMethodId);
+		menu.setPropertyAttribute("on_click_handler", "keyed_name", ActionsClickMethodName);
+		menu.setPropertyAttribute("on_click_handler", "type", "Method");
+		menu.setPropertyAttribute("on_init_handler", "type", "Method");
+
+		menu.setProperty("action", "Add");
+		menu.setID(actionId);
+		menu.removeAttribute("isNew");
+		menu.removeAttribute("isTemp");
+
+		return menu;
+	}
+}
+
+internal interface IDataAccessLayer
+{
+	string GetActionsMethodId(string methodName);
+
+	Item GetItemActions(string itemTypeId);
+}
+
+internal class DataAccessLayer : IDataAccessLayer
+{
+	private Innovator innovator;
+
+	internal DataAccessLayer(Innovator innovator)
+	{
+		this.innovator = innovator;
+	}
+
+	public string GetActionsMethodId(string methodName)
+	{
+		Item method = this.innovator.newItem("Method", "get");
+		method.setAttribute("select", "id");
+		method.setProperty("name", methodName);
+		method = method.apply();
+
+		return method.getID();
+	}
+
+	public Item GetItemActions(string itemTypeId)
+	{
+		Item itemTypeItem = this.innovator.newItem();
+		itemTypeItem.loadAML(@"<AML>
+	<Item type='ItemType' action='get' select='id'>
+		<Relationships>
+			<Item type='Item Action' action='get' select='source_id,related_id(name,label,can_execute,location,type)'>
+				<related_id>
+					<Item type='Action' action='get'>
+						<OR>
+							<type>itemtype</type>
+							<type>item</type>
+						</OR>
+					</Item>
+				</related_id>
+			</Item>
+			<Item type='Morphae' action='get' select='related_id'>
+				<related_id>
+					<Item type='ItemType' action='get' select='id'>
+						<Relationships>
+							<Item type='Item Action' action='get' select='source_id,related_id(name,label,can_execute,location,type)'>
+								<related_id>
+									<Item type='Action' action='get'>
+										<OR>
+											<type>itemtype</type>
+											<type>item</type>
+										</OR>
+									</Item>
+								</related_id>
+							</Item>
+						</Relationships>
+					</Item>
+				</related_id>
+			</Item>
+		</Relationships>
+	</Item>
+</AML>");
+
+		itemTypeItem.setID(itemTypeId);
+		itemTypeItem = itemTypeItem.apply();
+
+		Item itemActions = itemTypeItem.getItemsByXPath(
+			"./Relationships/Item[@type='Item Action']|./Relationships/Item[@type='Morphae']/related_id/Item/Relationships/Item[@type='Item Action']");
+
+		return itemActions;
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>CuiMainWindowContextMenuActions</name>
+ </Item>
+</AML>

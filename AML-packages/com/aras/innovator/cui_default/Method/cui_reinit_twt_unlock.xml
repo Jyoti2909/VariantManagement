@@ -1,0 +1,34 @@
+﻿<AML>
+ <Item type="Method" id="6EB13A3F8DE745C4BE715EADEEAA4C14" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (inArgs.isReinit) {
+	//Workflow Map, Form, Life Cycle Map, CMF Admin Panel Toolbar
+	var node;
+	if (window.itemTypeName === 'Form' || window.itemTypeName === 'cmf_ContentType' || window.itemTypeName === 'Life Cycle Map') {
+		node = window.item;
+	} else {
+		node = window.currWFNode;
+	}
+
+	if (node) {
+		var isRootAdmin = aras.getLoginName().search(/^admin$|^root$/) === 0;
+		var isLocked = aras.isLocked(node);
+		var isTemp = aras.isTempEx(node);
+		return {'cui_disabled': !((isEditMode || isRootAdmin  && isLocked) && !isTemp)};
+	}
+	//Normal Toolbar
+	if (Object.getOwnPropertyNames(inArgs.eventState).length === 0) {
+		var states = aras.evalMethod('cui_reinit_calc_tearoff_states');
+		var keys = Object.keys(states);
+		for (var i = 0; i < keys.length; i++) {
+			inArgs.eventState[keys[i]] = states[keys[i]];
+		}
+	}
+	return {'cui_disabled': !inArgs.eventState.canUnlock};
+}
+return {};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_reinit_twt_unlock</name>
+ </Item>
+</AML>

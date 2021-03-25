@@ -1,0 +1,155 @@
+﻿<AML>
+ <Item type="Method" id="82176470825D4E739DAA6969428A83DF" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' getActivitiesNumbers.vb.txt CVS/Solutions/Solutions/Project/Methods Revision 1.1
+'System.Diagnostics.Debugger.Break()
+
+Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+Dim rs As Aras.Server.Core.InnovatorDataSet
+Dim sql As String
+
+Dim rootWbsId As String = System.Security.SecurityElement.Escape(Me.dom.SelectSingleNode("//rootWBS").innerText)
+
+Dim resDOM As XmlDocument = CCO.XML.CreateXMLDocument()
+resDOM.loadXML("<Envelope><Body><Result/></Body></Envelope>")
+Dim rootNode As XmlElement = resDOM.SelectSingleNode("//Result")
+
+Dim awNode As XmlElement = CType(rootNode.AppendChild(resDOM.createNode("element","w","")),XmlElement)
+awNode.SetAttribute("id",rootWbsId)
+
+Dim wbsIDs As ArrayList = New ArrayList()
+Dim oneLevelElements = New ArrayList()
+
+Dim parentItem As XmlElement
+
+wbsIDs.Add(rootWbsId)
+
+Dim i As Integer
+Dim counter As Integer
+Dim activitiesCount As Integer
+Dim wbsCount As Integer
+
+Do
+  parentItem = Nothing
+  
+  Dim tmpWbsId = wbsIDs.Item(0)
+  wbsIDs.RemoveAt(0)
+
+  Dim args As Hashtable = New Hashtable()
+  args.Add("@wbsId",tmpWbsId)
+  rs = conn.CallSelect("GetActivitiesNumbers_select_wbs", args)
+  
+  parentItem = rootNode.SelectSingleNode("//w[@id='" & tmpWbsId & "']")
+
+  wbsCount = 0
+  While Not rs.Eof()
+    wbsCount = wbsCount + 1
+    awNode = CType(parentItem.AppendChild(resDOM.createNode("element","w","")),XmlElement)
+    awNode.SetAttribute("id",rs.Value("id1"))
+    awNode.SetAttribute("prev_item",rs.Value("prev_item",""))
+    wbsIDs.Insert(0,rs.Value(0))
+    rs.MoveNext()
+  End While
+  
+  tmpWbsId = If(string.IsNullOrEmpty(tmpWbsId), tmpWbsId, tmpWbsId.Replace("'", "''"))
+  sql = "SELECT act.id,act.prev_item FROM wbs_activity2 rel LEFT JOIN activity2 act ON " & _
+        " (act.id=rel.related_id) WHERE rel.source_id = '" & tmpWbsId & "'"
+  rs = conn.ExecuteSelect(sql)
+  
+  activitiesCount = 0
+  While Not rs.Eof()
+    activitiesCount = activitiesCount + 1
+    awNode = CType(parentItem.AppendChild(resDOM.createNode("element","a","")),XmlElement)
+    awNode.SetAttribute("id",rs.Value("id"))
+    awNode.SetAttribute("prev_item",rs.Value("prev_item",""))
+    rs.MoveNext()
+  End While
+  
+  Dim insrtNode As XmlNode = parentItem.selectSingleNode("*[@prev_item='']")
+  If Not IsNothing(insrtNode) Then
+    Dim aftrNode As XmlNode = parentItem.insertBefore(insrtNode,parentItem.FirstChild)
+    Dim insrtID As String = CType(insrtNode,XmlElement).getAttribute("id")
+    insrtNode = parentItem.SelectSingleNode("*[@prev_item='" & insrtID & "']")
+    While Not IsNothing(insrtNode)
+      aftrNode = parentItem.insertAfter(insrtNode,aftrNode)
+      insrtID = CType(insrtNode,XmlElement).getAttribute("id")
+      insrtNode = parentItem.SelectSingleNode("*[@prev_item='" & insrtID & "']")
+    End While
+  End If
+
+  ' Move nodes after their prev_items. Because wbs can be after activities vise versa.
+  Dim prevId As String
+  Dim nodesWithPrevItem As XmlNodeList
+  Dim prevNode As XmlNode
+  Dim loopIterations As Integer
+  If activitiesCount = 0 or wbsCount = 0
+    loopIterations = -1
+  ElseIf activitiesCount > wbsCount
+    loopIterations = wbsCount - 1
+  Else
+    loopIterations = activitiesCount - 1
+  End If
+  If loopIterations >= 0
+    nodesWithPrevItem = parentItem.SelectNodes("*[not(@prev_item='')]")
+  End If
+  ' Loop is to fix border situation when wbs has prev_id on activity which has prev_id on another wbs...
+  For counter = 0 to loopIterations
+    Dim insertsCount As Integer = 0
+    For i = 0 To nodesWithPrevItem.Count - 1
+      awNode = CType(nodesWithPrevItem.Item(i), XmlElement)
+      prevId = CType(awNode, XmlElement).getAttribute("prev_item")
+
+      prevNode = awNode.PreviousSibling
+      If Not IsNothing(prevNode) Then
+         If CType(prevNode, XmlElement).getAttribute("id") = prevId
+           Continue For
+         End If
+      End If
+
+      prevNode = parentItem.SelectSingleNode("*[@id='" & prevId & "']")
+
+      If Not IsNothing(prevNode) Then
+        parentItem.insertAfter(awNode, prevNode)
+        insertsCount = insertsCount + 1
+      End If
+    Next i
+    ' No need to reorder if nodes already sorted
+    If insertsCount = 0
+       Exit For
+    End If
+
+  Next counter
+
+Loop While wbsIDs.Count > 0
+
+Dim aNodes As XmlNodeList = rootNode.SelectNodes("/descendant::a")
+For i=0 To aNodes.Count-1
+  awNode = CType(aNodes.Item(i),XmlElement)
+  awNode.SetAttribute("number",i+1)
+Next
+
+Dim nodes As XmlNodeList = rootNode.SelectNodes("//*")
+For i=0 To nodes.Count-1
+  awNode = CType(nodes.Item(i),XmlElement)
+  awNode.RemoveAttribute("prev_item")
+Next
+
+nodes = rootNode.SelectNodes("w/descendant::w[not(a) and not(w)]")
+For i=0 To nodes.Count-1
+  Dim nd As XmlNode = nodes.Item(i)
+  Dim ndId As String = CType(nd,XmlElement).GetAttribute("id")
+  While nd.ChildNodes.Count = 0 And ndId <> rootWbsId
+    Dim prnt As XmlNode = nd.parentNode
+    prnt.RemoveChild(nd)
+    nd = prnt
+    ndId = CType(nd,XmlElement).GetAttribute("id")
+  End While
+Next
+
+Dim resItem As Aras.IOM.Item = New Item(Me.ServerConnection)
+resItem.loadAML(resDOM.outerXML)
+Return resItem]]></method_code>
+  <method_type>VB</method_type>
+  <name>GetActivitiesNumbers</name>
+ </Item>
+</AML>

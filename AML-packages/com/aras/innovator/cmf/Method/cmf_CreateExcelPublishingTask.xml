@@ -1,0 +1,79 @@
+﻿<AML>
+ <Item type="Method" id="0EF028BC0CE24BF2A6AA83C3BF725CCE" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = getInnovator();
+Item ruleItem = innovator.newItem("ConversionRule", "get");
+ruleItem.setProperty("name", "cmf_ExcelPublishingRule");
+ruleItem.setAttribute("levels", "1");
+ruleItem = ruleItem.apply();
+
+if (ruleItem.isError())
+{
+	return ruleItem;
+}
+
+string documentTypeId = getProperty("documentTypeId");
+string documentId = System.Security.SecurityElement.Escape(getProperty("documentId"));
+
+Item contentType = innovator.newItem("cmf_ContentType", "get");
+contentType.setID(documentTypeId);
+contentType = contentType.apply();
+
+var docmentItemTypeId = System.Security.SecurityElement.Escape(contentType.getProperty("linked_item_type"));
+
+Item resultItem = innovator.applyAML("<AML><Item action=\"get\" typeId=\"" + docmentItemTypeId + "\" id=\"" + documentId + "\" select=\"id\" /></AML>");
+if (resultItem.isError())
+{
+	return resultItem;
+}
+
+var documentTypeName = resultItem.getAttribute("type");
+
+var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+string userId = CCO.Variables.GetUserID();
+string username = GetUsername(userId);
+var taskData = new Dictionary<string, string>
+{
+	{"documentId", documentId},
+	{"documentTypeName", documentTypeName},
+	{"username", username}
+};
+
+var publishingRule = new Aras.ConversionFramework.Models.ConversionRule() { Item = ruleItem };
+var conversionManager = new Aras.ConversionFramework.Management.InnovatorConversionManager(innovator.getConnection());
+
+Aras.Server.Security.Identity conversionManagerIdentity = Aras.Server.Security.Identity.GetById("694C8B27E5D940DAA8BD336E45EC3A63");
+bool conversionManagerPermsWasSet = Aras.Server.Security.Permissions.GrantIdentity(conversionManagerIdentity);
+string taskId;
+try
+{
+	taskId = conversionManager.CreateConversionTask(publishingRule, task =>
+	{
+		task.UserData = serializer.Serialize(taskData);
+	});
+}
+finally
+{
+	if (conversionManagerPermsWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(conversionManagerIdentity);
+	}
+}
+return innovator.newResult(taskId);
+}
+
+private string GetUsername(string userId)
+{
+	string aml = string.Format(@"      <AML>
+	<Item type='User' action='get' select='keyed_name'>
+	<id>{0}</id>
+	</Item>
+	</AML>", System.Security.SecurityElement.Escape(userId));
+	Item request = newItem();
+	request.loadAML(aml);
+	Item response = request.apply();
+	return response.getProperty("keyed_name");]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_CreateExcelPublishingTask</name>
+ </Item>
+</AML>

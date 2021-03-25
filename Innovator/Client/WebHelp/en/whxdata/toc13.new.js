@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"View and Markup Modes","type":"book","url":"View_and_Markup_Toolbars.htm","key":"toc14"},{"name":"Creating a Snapshot Comment","type":"item","url":"Creating_a_Markup_Comment.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

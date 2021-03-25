@@ -1,0 +1,232 @@
+﻿<AML>
+ <Item type="Method" id="D8F3787FA52A4FFF9EA17047CC5C864C" action="add">
+  <comments>Implementation of EID_VerifyConnection functionality for AAD provider</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+	return businessLogic.Run(this);
+}
+
+//[PartialPath("BusinessLogic/BusinessLogic")]
+	internal class BusinessLogic
+	{
+		private readonly IDataAccessLayer dal;
+		private readonly IDictionary<string, string> inpParamsD;
+
+		public BusinessLogic(IDataAccessLayer dataAccessLayer)
+		{
+			dal = dataAccessLayer;
+			inpParamsD = new Dictionary<string, string>();
+		}
+
+		public Item Run(Item contextItem)
+		{
+			bool isCollectSuccess = collectInputParams(contextItem, out StringBuilder collectErrMess);
+			if (!isCollectSuccess)
+			{
+				return dal.NewError(collectErrMess != null ?
+					collectErrMess.ToString() : "Undefined parameters collection error");
+			}
+			if (collectErrMess != null)
+			{
+				return dal.NewResult(collectErrMess.ToString());
+			}
+			
+			bool isVerifySuccess = verifyConnection(out StringBuilder verifyErrMess);
+			if (!isVerifySuccess)
+			{
+				return dal.NewResult(verifyErrMess != null ?
+					verifyErrMess.ToString() : "Undefined verification error");
+			}
+			return dal.NewResult("OK");
+		}
+
+		private bool collectInputParams(Item contextItem, out StringBuilder errMess)
+		{
+			errMess = null;
+			XmlNode paramsNd = contextItem.node.SelectSingleNode("params");
+			if (paramsNd == null)
+			{
+				errMess = new StringBuilder("No parameters are provided by client.");
+				return false;
+			}
+			foreach (XmlNode parNd in paramsNd)
+			{
+				if (parNd.NodeType != XmlNodeType.Element)
+				{
+					continue;
+				}
+				if (parNd.FirstChild.NodeType == XmlNodeType.Text)
+				{
+					inpParamsD.Add(parNd.Name, parNd.FirstChild.Value);
+				} else
+				{
+					if (errMess == null)
+					{
+						 errMess = new StringBuilder("Invalid parameters: ");
+					} else
+					{
+						errMess.Append(", ");
+					}
+					errMess.Append(parNd.Name);
+				}
+			}
+			return true;	
+		}
+
+		private bool verifyConnection(out StringBuilder errMess)
+		{
+			errMess = null;
+			string eidConnectionString = null, eidUserName = null, eidPasswordKey = null;
+			if (!inpParamsD.TryGetValue("eid_connection_string", out eidConnectionString)
+				|| !inpParamsD.TryGetValue("eid_user_name", out eidUserName)
+				|| !inpParamsD.TryGetValue("eid_password_key", out eidPasswordKey))
+			{
+				errMess = new StringBuilder("Missing parameters:");
+				if (string.IsNullOrEmpty(eidConnectionString))
+				{
+					errMess.Append(" eid_connection_string");
+				}
+				if(string.IsNullOrEmpty(eidUserName))
+				{
+					errMess.Append(" eid_user_name");
+				}
+				if(string.IsNullOrEmpty(eidPasswordKey))
+				{
+					errMess.Append(" eid_password_key");
+				}
+			}
+			if (errMess != null)
+			{
+				return false;
+			}
+			
+						
+			bool isGotten = tryGetAzureAccessToken(eidConnectionString, eidUserName,
+				eidPasswordKey, out errMess);
+			if (!isGotten)
+			{
+				if (errMess == null)
+				{
+					errMess = new StringBuilder("Cannot get Azure access token.");
+				} else
+				{
+					errMess.Insert(0, "Cannot get Azure access token." + Environment.NewLine);
+				}
+			}
+			return errMess == null;
+		}
+		
+		private static bool tryGetAzureAccessToken(string tenantId, string clientId,
+			string clientSecret, out StringBuilder errMess)
+		{
+			errMess = null;
+			string accessToken = null;
+			bool res = true;
+			Uri url = new Uri($"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token");
+
+			Dictionary<string, string> urlParameters = new Dictionary<string, string>
+			{
+				{ "grant_type", "client_credentials" },
+				{ "response_type", "code" },
+				{ "client_id", clientId },
+				{ "client_secret", clientSecret },
+				{ "scope", "https://graph.microsoft.com/.default" }
+			};
+
+			System.Net.Http.HttpClient httpClient = new System.Net.Http.HttpClient();
+			httpClient.BaseAddress = url;
+			httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+			httpClient.DefaultRequestHeaders.TryAddWithoutValidation(
+				"Content-Type", "application/x-www-form-urlencoded");
+
+			System.Net.Http.FormUrlEncodedContent encodContent = 
+				new System.Net.Http.FormUrlEncodedContent(urlParameters);
+			try{
+				System.Threading.Tasks.Task<System.Net.Http.HttpResponseMessage> task = 
+					httpClient.PostAsync(url, encodContent);
+				System.Net.Http.HttpResponseMessage response = task.Result;
+				if (!response.IsSuccessStatusCode)
+				{
+					res = false;
+				}
+				System.Net.Http.HttpContent respContent = response.Content;
+				System.Threading.Tasks.Task<string> respTask = respContent.ReadAsStringAsync();
+				try
+				{
+					string respContentResult = respTask.Result;
+					Newtonsoft.Json.Linq.JObject jo = Newtonsoft.Json.Linq.JObject.Parse(respContentResult);
+					if (jo != null && jo["access_token"] != null)
+					{
+						accessToken = jo["access_token"].ToString();   
+					} else if (jo != null && jo["error_description"] != null)
+					{
+						errMess  = new StringBuilder(jo["error_description"].ToString());
+					}
+				} catch (AggregateException agEx)
+				{
+					errMess = new StringBuilder(typeof(AggregateException).Name);
+					errMess.Append(Environment.NewLine).Append('"').Append(agEx.Message).Append('"');
+				}
+			}
+			catch (ArgumentNullException argNullEx)
+			{
+				errMess = new StringBuilder(typeof(ArgumentNullException).Name);
+				errMess.Append(Environment.NewLine).Append('"').Append(argNullEx.Message).Append('"');
+			}
+			catch (System.Net.Http.HttpRequestException hrEx)
+			{
+				errMess = new StringBuilder(typeof(System.Net.Http.HttpRequestException).Name);
+				errMess.Append(Environment.NewLine).Append('"').Append(hrEx.Message).Append('"');
+			}				
+			catch (System.Threading.Tasks.TaskCanceledException tcEx)
+			{
+				errMess = new StringBuilder(typeof(System.Threading.Tasks.TaskCanceledException).Name);
+				errMess.Append(Environment.NewLine).Append('"').Append(tcEx.Message).Append('"');
+			}
+			finally
+			{
+				encodContent.Dispose();
+				httpClient.Dispose();
+			}
+
+			if (res)
+			{
+				res = !string.IsNullOrEmpty(accessToken);
+			}
+			return res;
+		}
+	}
+
+//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+	internal interface IDataAccessLayer
+	{
+		Item NewResult(string textMessage);
+		Item NewError(string errorMessage);
+	}
+
+//[PartialPath("DataAccessLayer/DataAccessLayer")]
+	internal class DataAccessLayer : IDataAccessLayer
+	{
+		private Innovator innovator;
+
+		internal DataAccessLayer(Innovator innovator)
+		{
+			this.innovator = innovator;
+		}
+
+		public Item NewResult(string textMessage)
+		{
+			return innovator.newResult(textMessage);
+		}
+
+		public Item NewError(string errorMessage)
+		{
+			return innovator.newError(errorMessage);
+		}
+	//}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_VerifyConnectionAAD</name>
+ </Item>
+</AML>

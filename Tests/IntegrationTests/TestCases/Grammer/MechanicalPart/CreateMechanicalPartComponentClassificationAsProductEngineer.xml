@@ -1,0 +1,45 @@
+﻿<TestCase author='apetrovsky@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>Create Item of Item Type Part with Mechanical Part/Component classification as Product Engineer, created in 'Setup Test.xml'</Description>
+	<Request runAs='petestuser:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer identity
+			When:
+				The user tries to create a part with Mechanical Part/Component classification.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='BDD13D16F6154AA99D18FF3DE1C92B75' doGetItem='0'>
+					<classification>Mechanical Part/Component</classification>
+					<name>TestName</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='BDD13D16F6154AA99D18FF3DE1C92B75' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs='petestuser:1'>
+		<Query>
+			<AML>
+				<Item type='Part' id='BDD13D16F6154AA99D18FF3DE1C92B75' action='delete' />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

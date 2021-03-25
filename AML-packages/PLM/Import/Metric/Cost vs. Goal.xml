@@ -1,0 +1,211 @@
+﻿<AML>
+ <Item type="Metric" id="4E05801669A345C48EB5C81BE836BAFB" action="add">
+  <color>#5492ff</color>
+  <frequency>Quarterly</frequency>
+  <label>Cost Vs. Goal</label>
+  <stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:exslt="http://exslt.org/common" extension-element-prefixes="exslt" xmlns:aras="http://www.aras-corp.com">
+ <xsl:output method="xml" omit-xml-declaration="yes"/>
+ <xsl:template match="/">
+  <xsl:variable name="cost_scores">
+   <xsl:for-each select="//Item[@type='Part']">
+    <xsl:variable name="cost" select="cost"/>
+    <xsl:variable name="target_value" select="Relationships/Item/target_value"/>
+    <cost_score>
+     <xsl:value-of select="($cost div $target_value)*100"/>
+    </cost_score>
+   </xsl:for-each>
+  </xsl:variable>
+  <xsl:variable name="num_of_items" select="count(//Item[@type='Part'])"/>
+  <Result>
+   <xsl:variable name="result">
+    <xsl:choose>
+     <xsl:when test="function-available('exslt:node-set')">
+       <xsl:value-of select="sum(exslt:node-set($cost_scores)/cost_score) div $num_of_items" />
+     </xsl:when>
+     <xsl:when test="function-available('msxsl:node-set')">
+       <xsl:value-of select="sum(msxsl:node-set($cost_scores)/cost_score) div $num_of_items" />
+     </xsl:when>
+    </xsl:choose>
+   </xsl:variable>
+   <xsl:choose>
+    <xsl:when test="number($result) or number($result+1)">
+     <xsl:value-of select="$result"/>
+    </xsl:when>
+    <xsl:otherwise>100</xsl:otherwise>
+   </xsl:choose>
+  </Result>
+ </xsl:template>
+</xsl:stylesheet>]]></stylesheet>
+  <name>Cost vs. Goal</name>
+  <Relationships>
+   <Item type="Metric Value" id="28F25E6BBA2A4050945404946CE52E63" action="add">
+    <calculate>1</calculate>
+    <color>#96ff88</color>
+    <label>Q4 '04</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,cost" page="1" pagesize="10000">
+  <release_date condition="gt">2004-10-01</release_date>
+  <release_date condition="lt">2005-01-01</release_date>
+  <cost condition="is not null"/>
+  <cost_basis condition="ne">Target</cost_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Cost</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>1</sort_order>
+    <source_id keyed_name="Cost vs. Goal" type="Metric">4E05801669A345C48EB5C81BE836BAFB</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="9A5E16079147461CBC3504F93234F92C" action="add">
+    <calculate>1</calculate>
+    <color>#daeaff</color>
+    <label>Q1 '05</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,cost" page="1" pagesize="10000">
+  <release_date condition="gt">2005-01-01</release_date>
+  <release_date condition="lt">2005-04-01</release_date>
+  <cost condition="is not null"/>
+  <cost_basis condition="ne">Target</cost_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Cost</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>2</sort_order>
+    <source_id keyed_name="Cost vs. Goal" type="Metric">4E05801669A345C48EB5C81BE836BAFB</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="A2269ED1E05543C595521FD794683D4C" action="add">
+    <calculate>1</calculate>
+    <color>#ffa624</color>
+    <label>Q2 '05</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,cost" page="1" pagesize="10000">
+  <release_date condition="gt">2005-04-01</release_date>
+  <release_date condition="lt">2005-07-01</release_date>
+  <cost condition="is not null"/>
+  <cost_basis condition="ne">Target</cost_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Cost</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>3</sort_order>
+    <source_id keyed_name="Cost vs. Goal" type="Metric">4E05801669A345C48EB5C81BE836BAFB</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="3456BC008AC3498BB9160C68E40A385A" action="add">
+    <calculate>1</calculate>
+    <color>#78c8ff</color>
+    <label>Q3 '05</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,cost" page="1" pagesize="10000">
+  <release_date condition="gt">2005-07-01</release_date>
+  <release_date condition="lt">2005-10-01</release_date>
+  <cost condition="is not null"/>
+  <cost_basis condition="ne">Target</cost_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Cost</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>4</sort_order>
+    <source_id keyed_name="Cost vs. Goal" type="Metric">4E05801669A345C48EB5C81BE836BAFB</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="0E725293F0924D53AE8B6B0601A52281" action="add">
+    <calculate>1</calculate>
+    <color>#daffe6</color>
+    <label>Q4 '05</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,cost" page="1" pagesize="10000">
+  <release_date condition="gt">2005-10-01</release_date>
+  <release_date condition="lt">2006-01-01</release_date>
+  <cost condition="is not null"/>
+  <cost_basis condition="ne">Target</cost_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Cost</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>5</sort_order>
+    <source_id keyed_name="Cost vs. Goal" type="Metric">4E05801669A345C48EB5C81BE836BAFB</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="6FDAF40D47BC470CB671F7E4B79C8307" action="add">
+    <calculate>1</calculate>
+    <color>#ff64a2</color>
+    <label>Q1 '06</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,cost" page="1" pagesize="10000">
+  <release_date condition="gt">2006-01-01</release_date>
+  <release_date condition="lt">2006-04-01</release_date>
+  <cost condition="is not null"/>
+  <cost_basis condition="ne">Target</cost_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Cost</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>6</sort_order>
+    <source_id keyed_name="Cost vs. Goal" type="Metric">4E05801669A345C48EB5C81BE836BAFB</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="6BE998834BC84AF2B9066C26E375ACF1" action="add">
+    <calculate>1</calculate>
+    <color>#6e62ff</color>
+    <label>Q2 '06</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,cost" page="1" pagesize="10000">
+  <release_date condition="gt">2006-04-01</release_date>
+  <release_date condition="lt">2006-07-01</release_date>
+  <cost condition="is not null"/>
+  <cost_basis condition="ne">Target</cost_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Cost</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>7</sort_order>
+    <source_id keyed_name="Cost vs. Goal" type="Metric">4E05801669A345C48EB5C81BE836BAFB</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="5D39BF427AC84B009E87FA82A9B0FF05" action="add">
+    <calculate>1</calculate>
+    <color>#ca23c3</color>
+    <label>Current</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,cost" page="1" pagesize="10000">
+  <release_date condition="gt">2006-07-01</release_date>
+  <release_date condition="lt">2006-10-01</release_date>
+  <cost condition="is not null"/>
+  <cost_basis condition="ne">Target</cost_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Cost</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>8</sort_order>
+    <source_id keyed_name="Cost vs. Goal" type="Metric">4E05801669A345C48EB5C81BE836BAFB</source_id>
+    <value>100</value>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

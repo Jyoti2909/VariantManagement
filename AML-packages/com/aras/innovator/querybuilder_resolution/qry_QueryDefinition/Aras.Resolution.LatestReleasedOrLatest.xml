@@ -1,0 +1,125 @@
+﻿<AML>
+ <Item type="qry_QueryDefinition" id="63B86840AE1A480AB722123BDD5BE950" action="add">
+  <name>Aras.Resolution.LatestReleasedOrLatest</name>
+  <Relationships>
+   <Item type="qry_QueryItem" id="C7B8BC82501F400AA8ADCFD209B8763E" action="add">
+    <item_type keyed_name="qry_StructureResolutionModel" type="ItemType" name="qry_StructureResolutionModel">F67FCAABD4774D2CBD34739FEFB5B83A</item_type>
+    <ref_id>0EDDFB4CD773406E8F480C23E34241D5</ref_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Aras.Resolution.LatestReleasedOrLatest" type="qry_QueryDefinition">63B86840AE1A480AB722123BDD5BE950</source_id>
+    <alias>ResolutionTarget</alias>
+   </Item>
+   <Item type="qry_QueryItem" id="B288759D63DD42DCAE59C3A905D3A58D" action="add">
+    <filter_xml><![CDATA[<condition>
+	<or>
+		<and>
+			<eq>
+				<property name="generation" />
+				<max>
+					<query_reference_path>A0E3C072C5FF4E6889E238C14F030F7F</query_reference_path>
+					<child_property_name>generation</child_property_name>
+				</max>
+			</eq>
+			<gt>
+				<count>
+					<query_reference_path>A0E3C072C5FF4E6889E238C14F030F7F</query_reference_path>
+				</count>
+				<constant>0</constant>
+			</gt>
+		</and>
+		<and>
+			<eq>
+				<property name="generation" />
+				<max>
+					<query_reference_path>2C04F19F41FF4A4C9BEE579A5AF45153</query_reference_path>
+					<child_property_name>generation</child_property_name>
+				</max>
+			</eq>
+			<eq>
+				<count>
+					<query_reference_path>A0E3C072C5FF4E6889E238C14F030F7F</query_reference_path>
+				</count>
+				<constant>0</constant>
+			</eq>
+		</and>
+	</or>
+</condition>]]></filter_xml>
+    <item_type keyed_name="qry_StructureResolutionModel" type="ItemType" name="qry_StructureResolutionModel">F67FCAABD4774D2CBD34739FEFB5B83A</item_type>
+    <ref_id>BDD192CCE8A64A5484B48C30E4D95F3D</ref_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Aras.Resolution.LatestReleasedOrLatest" type="qry_QueryDefinition">63B86840AE1A480AB722123BDD5BE950</source_id>
+    <alias>ResolutionTargetResolved</alias>
+   </Item>
+   <Item type="qry_QueryItem" id="5E71BAB92AEB48609C460D4934141304" action="add">
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property name="is_current" />
+		<constant>1</constant>
+	</eq>
+</condition>]]></filter_xml>
+    <item_type keyed_name="qry_StructureResolutionModel" type="ItemType" name="qry_StructureResolutionModel">F67FCAABD4774D2CBD34739FEFB5B83A</item_type>
+    <ref_id>80568E8CC96546CEB7B4D47C6B8AA2E7</ref_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="Aras.Resolution.LatestReleasedOrLatest" type="qry_QueryDefinition">63B86840AE1A480AB722123BDD5BE950</source_id>
+    <alias>FilterLatest</alias>
+   </Item>
+   <Item type="qry_QueryItem" id="4AD05073A0CB46A29F10612E606CBA81" action="add">
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property name="is_released" />
+		<constant>1</constant>
+	</eq>
+</condition>]]></filter_xml>
+    <item_type keyed_name="qry_StructureResolutionModel" type="ItemType" name="qry_StructureResolutionModel">F67FCAABD4774D2CBD34739FEFB5B83A</item_type>
+    <ref_id>DB98AD2A6F724B808C17D70F7A237750</ref_id>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="Aras.Resolution.LatestReleasedOrLatest" type="qry_QueryDefinition">63B86840AE1A480AB722123BDD5BE950</source_id>
+    <alias>FilterLatestReleased</alias>
+   </Item>
+   <Item type="qry_QueryReference" id="DA3C73EC5BE24C648826B7D4792FF266" action="add">
+    <child_ref_id>0EDDFB4CD773406E8F480C23E34241D5</child_ref_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Aras.Resolution.LatestReleasedOrLatest" type="qry_QueryDefinition">63B86840AE1A480AB722123BDD5BE950</source_id>
+   </Item>
+   <Item type="qry_QueryReference" id="DAFD2960291043E4A4C185B557EFE1E7" action="add">
+    <child_ref_id>BDD192CCE8A64A5484B48C30E4D95F3D</child_ref_id>
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property name="config_id" query_items_xpath="parent::Item" />
+		<property name="config_id" />
+	</eq>
+</condition>]]></filter_xml>
+    <parent_ref_id>0EDDFB4CD773406E8F480C23E34241D5</parent_ref_id>
+    <ref_id>95C3C78EEC2D4719ACB61BBD92CF7622</ref_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Aras.Resolution.LatestReleasedOrLatest" type="qry_QueryDefinition">63B86840AE1A480AB722123BDD5BE950</source_id>
+   </Item>
+   <Item type="qry_QueryReference" id="D90D052A86684B7585280C35D972F4CA" action="add">
+    <child_ref_id>80568E8CC96546CEB7B4D47C6B8AA2E7</child_ref_id>
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property name="config_id" query_items_xpath="parent::Item" />
+		<property name="config_id" />
+	</eq>
+</condition>]]></filter_xml>
+    <parent_ref_id>BDD192CCE8A64A5484B48C30E4D95F3D</parent_ref_id>
+    <ref_id>2C04F19F41FF4A4C9BEE579A5AF45153</ref_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="Aras.Resolution.LatestReleasedOrLatest" type="qry_QueryDefinition">63B86840AE1A480AB722123BDD5BE950</source_id>
+   </Item>
+   <Item type="qry_QueryReference" id="8ECBECF9438048288ADE5F896EB4F17E" action="add">
+    <child_ref_id>DB98AD2A6F724B808C17D70F7A237750</child_ref_id>
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property name="config_id" query_items_xpath="parent::Item" />
+		<property name="config_id" />
+	</eq>
+</condition>]]></filter_xml>
+    <parent_ref_id>BDD192CCE8A64A5484B48C30E4D95F3D</parent_ref_id>
+    <ref_id>A0E3C072C5FF4E6889E238C14F030F7F</ref_id>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="Aras.Resolution.LatestReleasedOrLatest" type="qry_QueryDefinition">63B86840AE1A480AB722123BDD5BE950</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

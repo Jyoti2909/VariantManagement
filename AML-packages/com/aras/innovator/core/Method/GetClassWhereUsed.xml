@@ -1,0 +1,384 @@
+﻿<AML>
+ <Item type="Method" id="E93DEA7ED7D84D7EAAB138C2A29B7FA2" action="add">
+  <comments>Returns info about impact made by change in class structure</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+
+  Innovator inn = this.getInnovator();
+  RequestProcessor rp = new RequestProcessor(inn, CCO.DB.InnDatabase);
+  
+  Item impactData = rp.getImpactData( this.getItemsByXPath("//Item[@type='Method']/Item"));
+  Item result = inn.newResult("");
+  XmlNode resultNode = result.dom.SelectSingleNode(Item.XPathResult);
+  resultNode.AppendChild(result.dom.ImportNode(impactData.node, true));
+  
+  return result;
+}
+/// <summary>
+/// It's assumed that the format of the input XML is the following:
+/// <![CDATA[
+/// <Item type='{Item type name}' action='getClassStrImpactData'>
+///   <request>
+///     <class>{id}[+]</class>
+///     <verbosity>count | details</verbosity>
+///     <types>{Item type name} | View | Can Add | Property | ItemType Life Cycle | all</types>
+///   </request>
+///   ...
+/// </Item>
+/// ]]]]><![CDATA[>
+/// where:
+/// - if <c>class</c> is not specified the root class of the class structure is assumed. Note that 
+///   ID with ending '+' means 'this class and all it's children on all levels'
+/// - if <c>verbosity</c> is not specified the 'count' is assumed
+/// - if <c>types</c> is not specified the 'all' is assumed; it's possible to specify more than
+///   one type (comma separated; e.g. 'View, Can Add').
+/// Note also that it's assumed that:
+/// - it could be multiple 'request' tags.
+/// - each 'class' node of the class structure has ID
+/// - ID of the root class of the class structure has the ID of the parent item type.
+/// - references to classes of the class structure are relative XPath, e.g. 'Mechanical' instead of '/Part/Mechanical'
+/// The response XML has the following format:
+/// <![CDATA[
+/// <Result>
+///   <type name='{Item type name} | View | Can Add | Property | ItemType Life Cycle' count='{N}'>
+///     <Item id='{id}' reference='{XPath of the class structure that the item references}' />
+///     ...
+///   </type>
+///   ...
+/// </Result>
+/// ]]]]><![CDATA[>
+/// where:
+/// - 'Item' tags are returned only if 'verbosity = details'.
+/// - number 'Item' tags under single 'type' tag equals to 'count' attribute of the 'type'; N must be >= 1.
+/// </summary>
+class RequestProcessor
+{
+	private String[] metaDataTypes = new string[] { "Property", "View", "Can Add", "ItemType Life Cycle" };
+
+	private enum eVerbosity
+	{
+		count = 1,
+		details = 2
+	}
+
+	private Innovator _inn;
+	private string _typeId;
+	private string _typeName;
+	private string _class_structure;
+	private string _icon;
+	private Aras.Server.Core.InnovatorDatabase _innDatabase;
+
+	internal RequestProcessor(Innovator inn, Aras.Server.Core.InnovatorDatabase innDatabase)
+	{
+		this._innDatabase = innDatabase;
+		this._inn = inn;
+	}
+
+	/// <summary>
+	/// The main method of the class that process the request and returns the result with impact data.
+	/// </summary>
+	/// <param name="input">
+	/// Input defines what class of the class structure was deleted; which impacted references to search for; 
+	/// verbosity of the expected response; etc. The format of the input XML is defined in the class comments above.
+	/// </param>
+	/// <returns>
+	/// Returns the impact data of the specified change. The format of the returned XML is defined in the class comments above.
+	/// </returns>
+	internal Item getImpactData(Item input)
+	{
+		this._typeName = input.getType();
+		if (String.IsNullOrEmpty(this._typeName))
+			throw new ArgumentException(String.Format("Type name must be specified in the input XML - {0}", input.node.OuterXml));
+
+		Item result = this._inn.newItem(this._typeName);
+		result.setProperty("relatedItems", "");
+		result.removeAttribute("isNew");
+		result.removeAttribute("isTemp");
+
+		XmlNodeList rlist = input.node.SelectNodes("request");
+		if (rlist.Count == 0)
+			return result;
+
+		// Get class structure of the item type as well as ID of the item type
+		_getItemTypeProperties();
+
+		result.setAttribute("keyed_name", this._typeName);
+		result.setAttribute("icon", this._icon);
+		result.setAttribute("loaded", "1");
+		// In case the item type does not have a class structure just return empty result
+		if (String.IsNullOrEmpty(this._class_structure))
+			return result;
+
+		// Process each request; i.e. each 'request' element of the input XML.
+		foreach (XmlNode request in rlist)
+		{
+			// In case the class ID is not explicitly specified the root class is assumed.
+			String class_id;
+			XmlNode clNode = request.SelectSingleNode("class");
+			if (clNode == null)
+				class_id = this._typeId;
+			else
+				class_id = clNode.InnerText;
+
+			eVerbosity verbosity = eVerbosity.count;
+			XmlNode vNode = request.SelectSingleNode("verbosity");
+			if (vNode != null)
+				verbosity = (eVerbosity)Enum.Parse(typeof(eVerbosity), vNode.InnerText);
+
+			String types = "all";
+			XmlNode tNode = request.SelectSingleNode("types");
+			if (tNode != null)
+			{
+				types = tNode.InnerText;
+			}
+
+			_processSingleRequest(class_id, types, verbosity, result);
+		}
+
+		return result;
+	}
+
+	private void _getItemTypeProperties()
+	{
+		String aml = String.Format("<Item type='ItemType' action='get' select='class_structure,open_icon'><name>{0}</name></Item>",
+			System.Security.SecurityElement.Escape(this._typeName));
+		Item request = this._inn.newItem();
+		request.loadAML(aml);
+		Item response = request.apply();
+		if (response.isError())
+			return;
+
+		this._class_structure = response.getProperty("class_structure", "");
+		this._typeId = response.getID();
+		this._icon = response.getProperty("open_icon", "");
+	}
+
+	private void _processSingleRequest(String class_id, String types, eVerbosity verbosity, Item result)
+	{
+		// If 'null' is returned it means that class with the specified ID 
+		// does not exist in the existing class structure of the item type.
+		String[] cIDs = _getChildIds(class_id, verbosity);
+		if (cIDs == null)
+			return;
+
+		// Get list of types that has to be check for referencing the class structure
+		String[] tList = _getTypeList(types);
+
+		// Find references to each class ID in each requested type
+		foreach (String t in tList)
+		{
+			foreach (String id in cIDs)
+			{
+				_findReferencesToClass(id.Trim(), t.Trim(), verbosity, result);
+			}
+		}
+	}
+
+	private String[] _getTypeList(String types)
+	{
+		if (types.ToLower().Equals("all"))
+		{
+			types = "";
+			foreach (String t in metaDataTypes)
+			{
+				types += t + ", ";
+			}
+			types += this._typeName;
+		}
+
+		if (types.IndexOf(",") > -1)
+		{
+			return types.Split(',');
+		}
+		else
+		{
+			return new String[] { types };
+		}
+	}
+
+	private String[] _getChildIds(string class_id, eVerbosity verbosity)
+	{
+		// First check that the class with the specified ID exists in the class structure.
+		// If not then just return 'null'.
+		XmlDocument clstr = new XmlDocument();
+		clstr.XmlResolver = null;
+		clstr.LoadXml(this._class_structure);
+		bool withChildren = class_id.EndsWith("+");
+		if (withChildren)
+		{
+			class_id = class_id.Substring(0, class_id.Length - 1);
+		}
+		XmlNode cNode = clstr.SelectSingleNode(String.Format("//class[@id='{0}']", class_id));
+		if (cNode == null)
+			return null;
+
+		// In case only the summary\count of references is required we do not need to 
+		// search for references to each of child classes; instead it's enough to just
+		// find out references that have starts with the XPath to the specified class.
+		// For instance, if verbosity == "count" and class_id == X+ where X is the class
+		// ID of "Mechanical", then it's not require to look for references to, let's say,
+		// "Mechanical/Pipe" and "Mechanical/Bolt" because it's enough to just find all the
+		// references which XPath starts with "Mechanical". In case the verbosity == "details"
+		// we have to look for references to each child class because the result must contain
+		// explicit information that, let's say, Part_001 references class "Mechanical\Pipe". 
+		if (!withChildren || verbosity == eVerbosity.count)
+			return new String[] { class_id };
+		else
+		{
+			XmlNodeList nodes = cNode.SelectNodes("descendant-or-self::class");
+			String[] ids = new String[nodes.Count];
+			int i = 0;
+			foreach (XmlNode n in nodes)
+			{
+				ids[i++] = ((XmlElement)n).GetAttribute("id");
+			}
+
+			return ids;
+		}
+	}
+
+	private void _findReferencesToClass(String cId, String type, eVerbosity verbosity, Item result)
+	{
+		String pname = _getPropertyNameForType(type);
+
+		// For performance reason we would like to skip server events as all we need is to get reference
+		// to class structure (e.g. property 'class_path'). Theoretically the property of interest could be
+		// modified in one of server events of 'get' action but this is highly unlikely.
+		// NOTE: the initial implementation of the algorithm was done on client. Providing that the 
+		//       code is running on server we might use direct SQL into database instead of AML request 
+		//       with 'where' condition; SQL is probably a bit faster although not by much in this particular case.
+		String aml = String.Format("<Item type=\"{0}\" serverEvents=\"0\" select=\"{1}, keyed_name\" action=\"get\"",
+			System.Security.SecurityElement.Escape(type), System.Security.SecurityElement.Escape(pname));
+		String xpath = _getXPathForClass(cId);
+
+		// Empty XPath means that it's the root class. In case it's the root class of the structure 
+		// we just have to search for any not null\empty references; otherwise we need to search 
+		// using 'like' condition.
+		if (String.IsNullOrEmpty(xpath))
+		{
+			aml += String.Format(" where=\"{0} IS NOT NULL AND {0} != '' ", System.Security.SecurityElement.Escape(pname));
+		}
+		else
+		{
+			String suffix = (verbosity == eVerbosity.count) ? "%" : "";
+			
+			String likeQuery = _innDatabase.QuoteValue(xpath); // prepare for SQL string format
+			//http://msdn.microsoft.com/en-us/library/ms179859.aspx
+			//Using Wildcard Characters As Literals
+			likeQuery = likeQuery.Replace("[", "[[]");
+			likeQuery = likeQuery.Replace("_", "[_]");
+			likeQuery = likeQuery.Replace("%", "[%]");
+			
+			likeQuery = System.Security.SecurityElement.Escape(likeQuery); // prepare for XPath string format
+            
+			aml += String.Format(" where=\"{0} like '{1}{2}' ", System.Security.SecurityElement.Escape(pname), System.Security.SecurityElement.Escape(likeQuery), System.Security.SecurityElement.Escape(suffix));
+		}
+
+		if (!type.Equals(this._typeName))
+		{
+			aml += String.Format("AND source_id = '{0}' \" />", System.Security.SecurityElement.Escape(_innDatabase.QuoteValue(this._typeId)));
+		}
+		else
+		{
+			aml += "\"/>";
+		}
+
+		Item request = this._inn.newItem();
+		request.loadAML(aml);
+		Item response = request.apply();
+		if (response.isError())
+		{
+			if (response.getErrorCode() == "0")
+				return;
+			else
+				throw new Exception(String.Format("Error executing the following AML: '{0}'. ERROR: {1}", aml, response.getErrorString()));
+		}
+
+		int rCount = response.getItemCount();
+
+		if (verbosity == eVerbosity.count)
+		{
+			Item items = result.getItemsByXPath(String.Format("relatedItems/Item[@type='{0}']", type));
+			Item typeItem;
+			if (items.getItemCount() == 0)
+			{
+				typeItem = this._inn.newItem(type);
+				typeItem.removeAttribute("isNew");
+				typeItem.removeAttribute("isTemp");
+				typeItem.setAttribute("count", "0");
+
+				XmlNode relatedNodes = result.node.SelectSingleNode("relatedItems");
+
+				// Update count attribute on the result node
+				typeItem.setAttribute("count", (Int32.Parse(typeItem.getAttribute("count")) + rCount).ToString());
+
+				relatedNodes.AppendChild(result.dom.ImportNode(typeItem.node, true));
+			}
+			else
+			{
+				typeItem = items.getItemByIndex(0);
+				// Update count attribute on the result node
+				typeItem.setAttribute("count", (Int32.Parse(typeItem.getAttribute("count")) + rCount).ToString());
+			}
+		}
+
+		// Add details if required
+		if (verbosity == eVerbosity.details)
+		{
+			Item iType = this._inn.newItem("ItemType", "get");
+			iType.setAttribute("select", "open_icon");
+			iType.setProperty("name", type);
+			iType = iType.apply();
+
+			for (int i = 0; i < rCount; i++)
+			{
+				Item item = response.getItemByIndex(i);
+				Item typeItem = this._inn.newItem(type);
+				typeItem.removeAttribute("isNew");
+				typeItem.removeAttribute("isTemp");
+
+				typeItem.setID(item.getID());
+				typeItem.setAttribute("keyed_name", String.Format("{0}-{1}", type, item.getProperty("keyed_name")));
+				typeItem.setAttribute("icon", iType.getProperty("open_icon", ""));
+				typeItem.setAttribute("loaded", "1");
+
+				XmlNode relatedNodes = result.node.SelectSingleNode("relatedItems");
+				relatedNodes.AppendChild(result.dom.ImportNode(typeItem.node, true));
+			}
+		}
+	}
+
+	private String _getPropertyNameForType(String tname)
+	{
+		if (tname.Equals("Property") || tname.Equals("Can Add") || tname.Equals("ItemType Life Cycle"))
+			return "class_path";
+		else if (tname.Equals("View"))
+			return "form_classification";
+		else
+			return "classification";
+	}
+
+	private String _getXPathForClass(String cId)
+	{
+		// At this point we've already checked that class with the specified ID exists in the class structure.
+		XmlDocument clstr = new XmlDocument();
+		clstr.XmlResolver = null;
+		clstr.LoadXml(this._class_structure);
+		XmlElement cNode = (XmlElement)clstr.SelectSingleNode(String.Format("//class[@id='{0}']", cId));
+
+		String xpath = string.Empty;
+		String separator = string.Empty;
+
+		while (cNode.GetAttribute("id") != this._typeId)
+		{
+			xpath = String.Format("{0}{1}{2}", cNode.GetAttribute("name"), separator, xpath);
+			cNode = (XmlElement)cNode.ParentNode;
+			separator = "/";
+		}
+
+		return xpath;
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetClassWhereUsed</name>
+ </Item>
+</AML>

@@ -1,0 +1,76 @@
+﻿<AML>
+ <Item type="Method" id="9EA800887807445193961422C9846C98" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[    var reportId = this.getID();
+	if (string.IsNullOrEmpty(reportId))
+	{
+		return this.getInnovator().newError("Report Id should not be empty.");
+	}
+
+	var report = this.newItem("SelfServiceReport", "get");
+	report.setID(reportId);
+
+	var userId = this.getInnovator().getUserID();
+	var userIdentities = Aras.Server.Security.Permissions.GetIdentitiesList(CCO.DB.InnDatabase, userId);
+	var selfServiceReportSharedWith = this.newItem("SelfServiceReportSharedWith", "get");
+	selfServiceReportSharedWith.setProperty("related_id", userIdentities);
+	selfServiceReportSharedWith.setPropertyCondition("related_id", "in");
+
+	report.addRelationship(selfServiceReportSharedWith);
+
+
+	report = report.apply();
+	if (report.isError())
+	{
+		return report;
+	}
+
+	if (report.getProperty("created_by_id") == userId)
+	{
+		return this.getInnovator().newResult(ShareReportDef.full.ToString());
+	}
+
+	var rels = report.getRelationships();
+	var shareReport = ShareReportDef.none;
+	for (var i = 0; i < rels.getItemCount(); i++)
+	{
+		var current = rels.getItemByIndex(i);
+		var currentAccess = ConvertToShareReportDefinition(current.getProperty("access_rights"));
+		if (currentAccess > shareReport)
+		{
+			shareReport = currentAccess;
+		}
+	}
+
+	return this.getInnovator().newResult(shareReport.ToString());
+}
+
+private ShareReportDef ConvertToShareReportDefinition(string accessRights)
+{
+	switch (accessRights)
+	{
+		case "full":
+			return ShareReportDef.full;
+		case "readonly":
+			return ShareReportDef.read_only;
+		case "viewonly":
+			return ShareReportDef.viewonly;
+		case "locked":
+			return ShareReportDef.locked;
+		case "none":
+		default:
+			return ShareReportDef.none;
+	}
+}
+
+private enum ShareReportDef
+{
+	none = 0,
+	locked = 1,
+	viewonly = 2,
+	read_only = 3,
+	full = 4]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetReportAccessRights</name>
+ </Item>
+</AML>

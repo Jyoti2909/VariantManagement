@@ -1,0 +1,362 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<title></title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<style type="text/css">
+		@import "../../../javascript/dojo/resources/dojo.css";
+		@import "../../../javascript/dijit/themes/claro/claro.css";
+		@import "../../../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../../../javascript/include.aspx?classes=common.css";
+		@import "../../../styles/default.css";
+
+		html, body
+		{
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+		
+		#gridTD{
+			position: absolute;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+		}
+		
+	</style>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=ScriptSet2"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=ScriptSet6"></script>
+</head>
+<body class="claro">
+	<script type="text/javascript">
+		var aras = window.parent.aras;
+		var mainWnd = aras.getMainWindow();
+		if (!mainWnd.Cache) {
+			mainWnd.Cache = mainWnd.aras.newObject();
+		}
+
+		const topWnd = aras.getMostTopWindowWithAras();
+
+		//global variables
+		var itemTypeName = QueryString("ITName").toString();
+		var resolution = QueryString("resolution").toString();
+		var reverseItemTypeName = QueryString("reverseITName").toString();
+		var reversePropertyName = QueryString("reversePropertyName").toString();
+		var reverseRelationshipName = QueryString("reverseRelationshipName").toString();
+		var reversItemTypeID = aras.getItemTypeId(reverseItemTypeName);
+		var itemTypeId = aras.getItemTypeId(itemTypeName);
+		var gridInitialized = false;
+	</script>
+	<script type="text/javascript">
+		//top.aras.evalMethod("ReverseItemMethod", "</Item type='" + itemTypeName + "'>");
+
+		// Generic TreeView - HTML-code
+		// this is a skeleton
+		// additional functions are needed am to be loaded from methods attached to
+		//
+		// the must contain these functions:
+		//	 window.initFormWithGrid(grid)
+		//	 window.loadGridToolbarHTML()
+		//
+		// and all Click Handlers treeGrid1_XXXX ()  listed in this HTML
+		//
+		// FormEvent = onLoad
+		//
+		// ====================================================================================================================
+		var tbControl = null;
+		var gridExperimental = null;
+
+		window.addEventListener("DOMContentLoaded", function () {
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", { id: "top_toolbar", connectId: "toolbarContainer", ImageBase: "../../../cbin/" }, function(control) {
+				tbControl = control;
+				clientControlsFactory.on(tbControl, {
+					"onClick": grid_onToolbarClick
+				});
+				//tbControl.startup();
+
+				document.tbControl = tbControl;
+				tbControl.loadXml(aras.getI18NXMLResource("ReverseItemsGrid_toolbar.xml", aras.getBaseURL() + "/Solutions/RE/ViewsHTML/"));
+				tbControl.show();
+			});
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", undefined, function(control) {
+				gridExperimental = control;
+				clientControlsFactory.on(gridExperimental, {
+					"gridMenuClick": onRelationshipPopupMenuClicked,
+					"gridMenuInit": onMenuCreate,
+					"gridClick": onSelectItem,
+					"gridDoubleClick": onDoubleClick,
+					"gridKeyPress": onKeyPress
+				});
+				initForm();
+				refreshGridSize();
+			});
+
+			window.interval = window.setInterval(fixGridHeight, 100);
+			window.addEventListener("beforeunload", onbeforeunload_handler, false);
+		});
+
+		onresize = function onresize_handler() {
+			fixGridHeight();
+		}
+
+		var onbeforeunload_handler = function () {
+			if (window.interval) {
+				clearInterval(interval);
+			}
+		}
+
+		function onKeyPress(key) {
+			return true;
+		}
+
+		function fixGridHeight() {
+			var el = document.getElementById("gridTD");
+			aras.fixLiquidContainerHeight(document, el);
+		}
+
+		function initForm() {
+			var res = initFormWithGrid();
+		}
+
+		function initFormWithGrid(inGridControl) {
+			InitGridByRevereseItems();
+			grid_initToolbar();
+		}
+
+		function grid_initToolbar() {
+			grid_setTbControlEnabled("view_item", true);
+			grid_setTbControlEnabled("download_file", true);
+
+			var val = aras.getVariable('ShowLabels') == 'true';
+			tbControl.showLabels(val);
+		}
+
+		function grid_setTbControlEnabled(ctrlName, b) {
+			var AT = tbControl.getActiveToolbar();
+			b = b ? Boolean(b) : true;
+			try {
+				var tbi = AT.getElement(ctrlName);
+				if (tbi) {
+					tbi.setEnabled(b);
+				}
+			}
+			catch (excep) {
+				alert('exception during grid_setTbControlEnabled()');
+			}
+		}
+
+		function grid_onViewItem() {
+			var selectedId = gridExperimental.getSelectedId();
+			if (!selectedId) {
+				return;
+			}
+			aras.uiShowItem(reverseItemTypeName, selectedId);
+		}
+
+		function grid_onReloadAll() {
+			window.initFormWithGrid();
+		}
+
+		function onSelectItem(row, c) {
+			grid_setTbControlEnabled("view_item", true);
+		}
+
+		function onMenuCreate(rowId) {
+			var mnu = gridExperimental.getMenu();
+			mnu.removeAll();
+			mnu.add("view_item", "View Item");
+
+			window.focus();
+			return true;
+		}
+
+		function onRelationshipPopupMenuClicked(menuChoice) {
+			if (menuChoice == "view_item") {
+				grid_onViewItem();
+			}
+		}
+
+		function onDoubleClick(row) {
+			grid_onViewItem();
+		}
+
+		function grid_onToolbarClick(tbItem) {
+			switch (tbItem.getId()) {
+				case "reload":
+					grid_onReloadAll();
+					break;
+				case "view_item":
+					grid_onViewItem();
+					break;
+			}
+		}
+
+		function CheckReverseProperty(ItemTypeDOM) {
+			var reverseproperty = ItemTypeDOM.selectSingleNode(aras.XPathResult() + "/Item/Relationships/Item[@type='Property' and name = '" + reversePropertyName + "' and data_source = '" + itemTypeId + "']")
+			if (reverseproperty == null) {
+				aras.AlertError(aras.getResource("PLM", "plm_reversegrid.invalidreverseproperty"));
+				return false;
+			}
+			return true;
+		}
+
+		function ClassReverseGrid() {
+			this.GetReverseItems = function () {
+				alert('Should be overrided');
+			}
+
+			this.CheckQueryParameter = function () {
+				alert('Should be overrided');
+			}
+
+			var isrelationshipReverse = false;
+			if (reversePropertyName != "") {
+				isrelationshipReverse = false;
+				this.GetReverseItems = GetReverseItemsFromProperty; //override
+				this.CheckQueryParameter = CheckPropertyQueryParameter; //override
+			}
+			else if (reverseRelationshipName != "") {
+				isrelationshipReverse = true;
+				this.GetReverseItems = GetReverseItemsFromRelationship; //override
+				this.CheckQueryParameter = CheckRelationshipQueryParameter; //override
+			}
+			else {
+				aras.AlertError(aras.getResource("", "plm_reversegrid.invalidqueryparameters"));
+				return;
+			}
+
+			function GetReverseItemsFromRelationship(itemId) {
+				if (!resolution) {
+					resolution = "Version";
+				}
+
+				var aml = "" +
+					"<AML>" +
+					"	<Item type='" + itemTypeName + "' id='" + itemId + "' resolution='" + resolution + "' action='PE_GetRelatedParts'>" +
+					"		<Relationships>" +
+					"			<Item type='" + reverseRelationshipName + "'>" +
+					"				<source_id>" +
+					"					<Item type='" + reverseItemTypeName + "'>" +
+					"					</Item>" +
+					"				</source_id>" +
+					"			</Item>" +
+					"		</Relationships>" +
+					"	</Item>" +
+					"</AML>";
+
+				return GetReverseItemsResult(aml);
+			}
+
+			function GetReverseItemsFromProperty(itemId) {
+				var aml = "" +
+					"<AML>" +
+					"	<Item type='" + reverseItemTypeName + "' action='get'>" +
+					"		<" + reversePropertyName + " condition='eq'>" + itemId + "</" + reversePropertyName + ">" +
+					" </Item>" +
+					"</AML>";
+
+				return GetReverseItemsResult(aml);
+			}
+
+			function GetReverseItemsResult(aml) {
+				var amlDOM = aras.createXMLDocument();
+				amlDOM.loadXML(aml);
+
+				var res = aras.soapSend('ApplyAML', amlDOM.xml);
+
+				if (res.getFaultCode() != 0) {
+					aras.AlertError(res.getFaultString(), res.getFaultDetails(), res.getFaultActor());
+					return;
+				}
+
+				return res.getResult().ownerDocument;
+			}
+
+			function CheckPropertyQueryParameter(ItemTypeDOM) {
+				var reverseproperty = ItemTypeDOM.selectSingleNode(aras.XPathResult() + "/Item/Relationships/Item[@type='Property' and name = '" + reversePropertyName + "' and data_source = '" + itemTypeId + "']")
+				if (reverseproperty == null) {
+					aras.AlertError(aras.getResource("PLM", "plm_reversegrid.invalidreverseproperty"));
+					return false;
+				}
+
+				return true;
+			}
+
+			function CheckRelationshipQueryParameter(ItemTypeDOM) {
+				var reverseproperty = ItemTypeDOM.selectSingleNode(aras.XPathResult() + "/Item/Relationships/Item[@type='RelationshipType' and name = '" + reverseRelationshipName + "' and related_id = '" + itemTypeId + "']")
+				if (reverseproperty == null) {
+					aras.AlertError(aras.getResource("PLM", "plm_reversegrid.invalidreverserelationship"));
+					return false;
+				}
+
+				return true;
+			}
+		}
+
+		function InitGridByRevereseItems() {
+			var reversegrid = new ClassReverseGrid();
+
+			const itemId = topWnd.item.getAttribute('id');
+			const resDom = reversegrid.GetReverseItems(itemId);
+			if (!resDom) {
+				return;
+			}
+			var currItemType = aras.getItemTypeDictionary(reverseItemTypeName);
+			if (!currItemType) {
+				aras.AlertError(aras.getResource("", "revisiondlg.failed_get_it", itemTypeName));
+				return;
+			}
+
+			var currItemTypeNode = currItemType.node;
+
+			if (!reversegrid.CheckQueryParameter(currItemTypeNode)) {
+				return;
+			}
+			var xpath = "Relationships/Item[@type=\"Property\" and (not(is_hidden) or is_hidden=0)]";
+			var visiblePropNds = currItemTypeNode.selectNodes(xpath);
+
+			visiblePropNds = aras.sortProperties(visiblePropNds);
+			if (!gridInitialized) {
+				aras.uiInitItemsGridSetups(currItemTypeNode, visiblePropNds);
+				gridInitialized = true;
+			}
+
+			const columnObjects = aras.uiPrepareDOM4XSLT(resDom, reversItemTypeID, "IT_");
+			const grid_xml = aras.uiGenerateItemsGridXML(resDom, visiblePropNds, reversItemTypeID, {
+				columnObjects: columnObjects
+			});
+			gridExperimental.InitXML(grid_xml);
+		}
+		
+		function refreshGridSize() {
+	        if (gridExperimental && gridExperimental['grid_Experimental']) {
+	            var toolbarPanel = document.getElementById("toolbarContainer"),
+                    currentGridTop = toolbarPanel.offsetHeight;
+
+	            if (document.gridPreviousTop !== currentGridTop) {
+	                document.getElementById("gridTD").style.top = currentGridTop + "px";
+	                document.gridPreviousTop = currentGridTop;
+	                gridExperimental['grid_Experimental'].render();
+	            }
+	        }
+	    }
+		
+	</script>
+	<table style="width: 100%; height: 100%;" cellspacing="0" cellpadding="0">
+		<tr style="vertical-align: top;">
+			<td id="toolbarContainer" style="height: 30px;">
+			</td>
+		</tr>
+		<tr style="vertical-align: top;">
+			<td id="gridTD">
+			</td>
+		</tr>
+	</table>
+</body>
+</html>

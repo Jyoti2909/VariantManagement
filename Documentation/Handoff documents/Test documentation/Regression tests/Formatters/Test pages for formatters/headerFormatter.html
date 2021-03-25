@@ -1,0 +1,171 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Grid Header Formatter Test</title>
+	<link href="../../styles/common.css" rel="stylesheet"/>
+	<link href="styles/vmGridFormatters.css" rel="stylesheet"/>
+	<script src="../../vendors/regeneratorRuntime.js"></script>
+	<script src="../../Modules/polyfills/polyfillsBundle.min.js"></script>
+	<script src="../../Modules/polyfills/matchesAndClosest.js"></script>
+	<script src="../../Modules/polyfills/customEvent.js"></script>
+	<script src="../../Modules/polyfills/promises.js"></script>
+	<script src="../../Modules/polyfills/document-register-element.js"></script>
+	<script src="../../Modules/polyfills/smoothscroll.min.js"></script>
+	<script src="../../vendors/hyperhtml-element.min.js"></script>
+	<script src="../../vendors/inferno.min.js"></script>
+	<script src="../../jsBundles/core.js"></script>
+	<script src="Scripts/vmGridFormatters.js"></script>
+	<style>
+		.aras-grid-head-cell,
+		.aras-grid-search-row-cell,
+		.aras-grid-row-cell {
+			border: 1px solid #aaaaaa;
+		}
+
+		.aras-grid-active-cell_showed {
+			display: none;
+		}
+	</style>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			const columns = [
+				{
+					label: 'One',
+					width: 32
+				},
+				{
+					label: 'Super cool feature with two options',
+					width: 64
+				},
+				{
+					label: 'Three',
+					width: 96
+				},
+				{
+					label: 'Four',
+					width: 128
+				},
+				{
+					label: 'Five',
+					width: 160
+				}
+			];
+
+			let head = new Map();
+			let rows = new Map();
+
+			for (let j = 0; j < columns.length; j++) {
+				head.set(j, columns[j]);
+			}
+
+			rows.set(0, {
+				0: {
+					Option1: false
+				},
+				1: {
+					Option2: true,
+					Option3: true
+				},
+				2: {
+					Option4: true,
+					Option5: true,
+					Option6: false
+				},
+				3: { 
+					Option7: true,
+					Option8: false,
+					Option9: true,
+					Option10: false
+				},
+				4: {
+					Option11: true,
+					Option12: false,
+					Option13: true,
+					Option14: false,
+					Option15: false
+				}
+			});
+
+			rows.set(1, {
+				0: {
+					Option1: false
+				},
+				1: {
+					Option2: true,
+					Option3: true
+				},
+				2: {
+					Option4: true,
+					Option5: true,
+					Option6: false
+				},
+				3: { 
+					Option7: true,
+					Option8: false,
+					Option9: true,
+					Option10: false
+				},
+				4: {
+					Option11: true,
+					Option12: false,
+					Option13: true,
+					Option14: false,
+					Option15: false
+				}
+			});
+
+			rows.set(2, {
+				0: {
+					Option1: false
+				},
+				1: {
+					Option2: true,
+					Option3: true
+				},
+				2: {
+					Option4: true,
+					Option5: true,
+					Option6: false
+				},
+				3: { 
+					Option7: true,
+					Option8: false,
+					Option9: true,
+					Option10: false
+				},
+				4: {
+					Option11: true,
+					Option12: false,
+					Option13: true,
+					Option14: false,
+					Option15: false
+				}
+			});
+
+			let grid = new Grid(document.getElementById('grid'), {editable: true});
+			grid.head = head;
+			grid.rows = rows;
+
+			const metadata = {
+				focusedBoolean: {}
+			};
+
+			grid.getCellMetadata = function(headId, rowId, type) {
+				return metadata;
+			};
+
+			grid.getCellType = function(headId, rowId, value, type) {
+				return 'vm_multipleBooleanValuesSelection';
+			};
+
+			grid.getEditorType = function() {
+				return 'nonEditable';
+			};
+		});
+	</script>
+</head>
+<body>
+	<div id="grid"></div>
+</body>
+</html>

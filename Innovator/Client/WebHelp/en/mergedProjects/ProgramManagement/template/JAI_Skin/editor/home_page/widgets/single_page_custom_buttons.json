@@ -1,0 +1,203 @@
+{
+  "id" : "single_page_custom_buttons",
+  "type"  : "wrapperGroup",
+  "extraclass": "skin-component-properties",
+  "wrapper": "divElement",
+  "items" : [
+    {
+      "type": "collapsible",
+      "label": "Buttons",
+      "expanded": "@uiStates.single_page_custom_buttons_buttons",
+      "defaultState": true,
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "coral-Form coral-Form--vertical",
+          "items": [
+            {
+              "type": "multifield",
+              "extraclass": "user-buttons",
+              "on-change": {"name": "multifieldChanged", "args": { "name": "customButtonChanged"}},
+              "data": "attrs.custom_buttons_names",
+              "itemConfig": {
+                "type": "textfield",
+                "placeholder": "Button Label",
+                "on-focusout": {"name": "multifieldChanged", "args": { "name": "updateValidCustomButtons"}}
+              }
+            },
+            {
+              "type": "button",
+              "enabled": "@attrs.can_add_custom_button",
+              "extraclass": "coral-FieldLabel",
+              "on-click": {"name": "buttonClicked", "args": {"name": "addCustomButton"}},
+              "label": "Add Button"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "divElement2",
+      "show": "@attrs.has_custom_button",
+      "wrapperClass": "_coral-Multifield",
+      "extraclass": "group",
+      "items": [
+        {
+          "type": "label",
+          "label": "Select button: "
+        },
+        {
+          "type": "select",
+          "data": "attrs.custom_buttons_name_list",
+          "selected": "attrs.cur_custom_button_index",
+          "on-change": {"name": "selectChanged", "args": {"name": "curCustomButtonChanged"}}
+        }
+      ]
+    },
+    {
+      "type": "collapsible",
+      "show": "@attrs.has_custom_button",
+      "label": "General",
+      "expanded": "@uiStates.single_page_custom_buttons_general",
+      "defaultState": true,
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Button Image"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "custom_button_image",
+              "inputModel": {
+                "basePath": "@basePath",
+                "filePath": "@attrs.custom_button_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Selected Button Image"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "custom_button_selected_image",
+              "inputModel": {
+                "basePath": "@basePath",
+                "filePath": "@attrs.custom_button_selected_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Title"
+            },
+            {
+              "type": "textfield",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.custom_button_title",
+              "on-change": {"name": "textChanged", "args": {"attr": "custom_button_title"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Link"
+            },
+            {
+              "type": "textfield",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.custom_button_link",
+              "on-change": {"name": "textChanged", "args": {"attr": "custom_button_link"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "collapsible",
+      "label": "JavaScript",
+      "expanded": "@uiStates.single_page_custom_buttons_javascript",
+      "defaultState": true,
+      "show": "@attrs.has_custom_button",
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "OnLoad"
+            },
+            {
+              "type": "textfield",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.custom_button_on_load",
+              "on-change": {"name": "textChanged", "args": {"attr": "custom_button_on_load"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "OnClick"
+            },
+            {
+              "type": "textfield",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.custom_button_on_click",
+              "on-change": {"name": "textChanged", "args": {"attr": "custom_button_on_click"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "OnMouseOver"
+            },
+            {
+              "type": "textfield",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.custom_button_on_mouse_over",
+              "on-change": {"name": "textChanged", "args": {"attr": "custom_button_on_mouse_over"}}
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

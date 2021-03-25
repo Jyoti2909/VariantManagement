@@ -1,0 +1,177 @@
+﻿<html>
+<head>
+	<link rel="stylesheet" type="text/css" href="../../styles/common.min.css">
+	<style type="text/css">
+		@import "../../javascript/dojo/resources/dojo.css";
+		@import "../../javascript/dijit/themes/claro/claro.css";
+		@import "../../javascript/include.aspx?classes=common.css";
+		@import "../../styles/default.css";
+
+		html, body {
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+		#workspaceContainer {
+			position: absolute;
+			top: 30px;
+			left:0px;
+			right:0px;
+			bottom:0px;
+			width: 100%;
+		}
+		#dataContainer {
+			visibility: hidden;
+			position: absolute;
+			top: 0px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+			padding: 4px;
+		}
+	</style>
+	<script>var aras = parent.aras;</script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=XmlDocument,ArasModules"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../javascript/dojo'"></script>
+	<script src="API.js"></script>
+	<script type="text/javascript" src="../../javascript/PopulateDocByLabels.js"></script>
+
+	<script type="text/javascript">
+		onload = function () {
+			var request = {};
+			var responseObj;
+			request.handleAs = "xml";
+			request.sync = true;
+			if (parent.parent.item && typeof(parent.parent.item) != "object") {
+				// Set visibility to no-data container
+				document.getElementById('noDataContainer').style.visibility = 'visible';
+				aras.AlertError(aras.getResource("", "reporttool.report_tool_is_not_applicable"));
+
+				return false;
+			}
+			else {
+				// Set visibility to no-data container
+				document.getElementById('dataContainer').style.visibility = 'visible';
+			}
+
+			// If the Report item has an XSL stylesheet then load that into the xslDOM object.
+			var item = parent.parent.item;
+			var xsl_stylesheet = aras.getItemProperty(item, "xsl_stylesheet");
+
+			if (xsl_stylesheet != "") {
+				API.xslDOM.loadXML(xsl_stylesheet);
+			}
+			else {
+				// Otherwise load a template starter stylesheet.
+				// TODO: This will need to become a select from the user interface...
+				var xslFile = 'ReportTool/ReportTemplates/single_cell.xsl';
+				request.url = aras.getScriptsURL() + xslFile;
+				responseObj = dojo.xhrGet(request).ioArgs.xhr;
+				API.xslDOM.loadXML(responseObj.responseText);
+			}
+
+			if (API.xslDOM.parseError.errorCode) {
+				aras.AlertError(aras.getResource("", "default.stylesheet_err", API.xslDOM.parseError.reason));
+				return false;
+			}
+
+			// Augment the XSL stylesheet with the global CSS styles.
+			// TODO: This should become items in Innovator.
+			if (!API.xslDOM.selectSingleNode('//*[local-name()=\'html\']/style[@userData="Global"]')) {
+				var filename = 'ReportTool/ReportTemplates/css_styles.xml';
+				request.url = aras.getScriptsURL() + filename;
+				responseObj = dojo.xhrGet(request).ioArgs.xhr;
+				API.cssDOM.loadXML(responseObj.responseText);
+				if (API.cssDOM.parseError.errorCode) {
+					aras.AlertError(aras.getResource("", "default.css_err", API.cssDOM.parseError.reason, filename));
+				}
+				var htmlNode = API.xslDOM.selectSingleNode('//*[local-name()=\'html\']');
+				if (!htmlNode) {
+					htmlNode = API.xslDOM.selectSingleNode("//*[local-name()='html']");
+				}
+				if (!htmlNode) {
+					aras.AlertError("HTML node not found in your report.");
+					return false;
+				}
+				htmlNode.insertBefore(API.cssDOM.firstChild, API.xslDOM.selectSingleNode('//body'));
+			}
+
+			// Augment the XSL stylesheet with the aras functions.
+			// TODO: This should become items in Innovator.
+			if (!API.xslDOM.selectSingleNode('//*[@implements-prefix="aras"]')) {
+				var filename = 'ReportTool/ReportTemplates/aras_funcs.xml';
+				request.url = aras.getScriptsURL() + filename;
+				responseObj = dojo.xhrGet(request).ioArgs.xhr;
+				var tmpDOM = aras.createXMLDocument();
+				tmpDOM.loadXML(responseObj.responseText);
+				if (tmpDOM.parseError.errorCode) {
+					aras.AlertError(aras.getResource("", "default.aras_functions_err", tmpDOM.parseError.reason, filename));
+					return false;
+				}
+				var output = API.xslDOM.selectSingleNode("/*/*");
+				if (output) {
+					output.parentNode.appendChild(tmpDOM.firstChild);
+				}
+			}
+			// Register standard shortcuts
+			aras.getMostTopWindowWithAras(window).ITEM_WINDOW.registerStandardShortcuts(window, true);
+			return true;
+		}
+
+		function populateUI() {
+			var populateUI = document.getElementById("workspace").populateUI;
+			if (populateUI) {
+				populateUI();
+			}
+		}
+
+		var tabApplet = null;
+		clientControlsFactory.createControl("Aras.Client.Controls.Experimental.SimpleTabbar", undefined, function(control) {
+			tabApplet = control;
+			tabApplet.addTab("report", aras.getResource("", "reporttool.report"));
+			tabApplet.addTab("stylesheet", aras.getResource("", "reporttool.stylesheet"));
+			tabApplet.selectTab("report");
+			onClick('report');
+			clientControlsFactory.on(tabApplet, {
+				"onClick": onClick
+			});
+		});
+
+		/***
+		 * Event fired when user click on tab
+		 * @param tabId selected tab ID
+		 */
+		function onClick(tabId) {
+			if (tabId == "report") {
+				// Receive form from server
+				var mode = (parent.parent.isEditMode ? "edit" : "view");
+				var repTabForm = aras.getFormForDisplay(aras.getFormId("Report_Tab_Report"), mode);
+				aras.uiShowItemInFrameEx(document.getElementById("workspace"), parent.parent.item, mode, undefined, repTabForm.node);
+			}
+			else {
+				// Load stylesheet form from html
+				var workSpace = document.getElementById("workspace");
+				if (workSpace) {
+					workSpace.src = tabId + '.html';
+				}
+			}
+		}
+
+		PopulateDocByLabels();
+	</script>
+</head>
+
+<body class="claro">
+<div id="dataContainer">
+	<aras-tabs movable id="tabs-container" class="aras-flex-grow"></aras-tabs>
+	<div id="workspaceContainer">
+		<iframe id="workspace" style="border: 0;width: 100%;height: 100%" onload="populateUI();"></iframe>
+	</div>
+</div>
+<div id="noDataContainer" style="visibility: hidden">
+	<h2 aras_ui_resource_key="reporttool.report_tool_is_not_applicable" style="text-align: center"></h2>
+</div>
+</body>
+</html>

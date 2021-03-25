@@ -1,0 +1,193 @@
+{
+  "id" : "single_page_header",
+  "type"  : "wrapperGroup",
+  "extraclass": "skin-component-properties",
+  "wrapper": "divElement",
+  "items" : [
+    {
+      "type": "collapsible",
+      "expanded": "@uiStates.single_page_header_general",
+      "defaultState": true,
+      "label": "General",
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Show Header on Mobile"
+            },
+            {
+              "type": "switch",
+              "on-change": {"name": "switchChanged", "args": {"attr": "show_header_on_mobile"}},
+              "data": "attrs.show_header_on_mobile",
+              "value": true
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Background Color"
+            },
+            {
+              "type": "colorpicker",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.header_bgcolor",
+              "on-change": {"name": "colorChanged", "args": {"attr": "header_bgcolor"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Title Font Color"
+            },
+            {
+              "type": "colorpicker",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.header_font_color",
+              "on-change": {"name": "colorChanged", "args": {"attr": "header_font_color"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Title Font Family"
+            },
+            {
+              "id": "font_family",
+              "type": "widget",
+              "changeEvent": "comboboxChanged",
+              "inputModel": {
+                "metadata": {"attr": "title_font_family"},
+                "fontFamily": "@attrs.title_font_family",
+                "extraclass": "coral-Form-field"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "collapsible",
+      "expanded": "@uiStates.single_page_header_general",
+      "defaultState": true,
+      "label": "Logo",
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Logo"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "logo",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.logo"
+              }
+            }
+          ]
+        },
+        {
+          "show": "@isDeviceDesktop",
+          "type": "divElement",
+          "extraclass": "group",
+          "hide":"@attrs.do_not_preserve_ar",
+          "items": [
+            {
+              "type": "divElement2",
+              "extraclass": [ "height", "coral-Form-field"],
+              "items": [
+                {
+                  "type": "label",
+                  "label": "Height",
+                  "extraclass": "coral-FieldLabel"
+                },
+                {
+                  "id": "size",
+                  "type": "widget",
+                  "changeEvent": "sizeChanged",
+                  "inputModel": {
+                    "metadata": {"attr": "logo_height"},
+                    "size": "@attrs.logo_height",
+                    "title": "Height"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "show": "@isDeviceDesktop",
+          "type": "divElement",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "divElement2",
+              "extraclass": [ "height", "coral-Form-field"],
+              "items": [
+                {
+                  "type": "label",
+                  "label": "Width",
+                  "extraclass": "coral-FieldLabel"
+                },
+                {
+                  "id": "size",
+                  "type": "widget",
+                  "changeEvent": "sizeChanged",
+                  "inputModel": {
+                    "metadata": {"attr": "logo_width"},
+                    "size": "@attrs.logo_width",
+                    "title": "Width"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "show": "@isDeviceDesktop",
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Preserve Aspect Ratio"
+            },
+            {
+              "type": "switch",
+              "on-change": {"name": "switchChanged", "args": {"attr": "do_not_preserve_ar"}},
+              "data": "@attrs.do_not_preserve_ar",
+              "value": true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

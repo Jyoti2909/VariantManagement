@@ -1,0 +1,27 @@
+﻿<AML>
+ <Item type="Method" id="BA52F2FC5A8D4C348836F2820826B637" action="add">
+  <comments>Methpd for promote package to state 'Complete'</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Item packageFile = this.newItem("FileExchangePackageFile", "get");
+packageFile.setAttribute("select", "related_id(id)");
+Item query = this.newItem("FileExchangePackage", "get");
+query.setID(this.getID());
+query.addRelationship(packageFile);
+query = query.apply();
+if (query.isError())
+{
+	return query;	
+}
+
+Item files = query.getRelationships("FileExchangePackageFile");
+if (files.getItemCount() == 0)
+{
+	Innovator inn = this.getInnovator();
+	return inn.newError("You must add some file(s) to the package before promote");		
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>FE_PromoteFileExchangePackage</name>
+ </Item>
+</AML>

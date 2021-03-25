@@ -1,0 +1,40 @@
+﻿<AML>
+ <Item type="Method" id="54E27AB24F954F80AED67D3EB23B0649" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[grid.setNewItemCreationEnabled(false);
+grid.overrideMethod("lockItemBeforeEditStart", "return true;");
+
+var nds = this.dom.documentElement.selectNodes("Item[@type='Activity2 Task']");
+var nd;
+var v;
+for (var i=0; i<nds.length; i++)
+{
+  nd = nds[i];
+  v = (getItmProp(nd, "percent_compl")=="100") ? "1" : "0";
+  setItmProp(nd, "fake_verified", v);
+}
+
+function setItmProp(itm, propNm, propVal)
+{
+  var nd = itm.selectSingleNode(propNm);
+  if (!nd)
+  {
+    nd = itm.appendChild(itm.ownerDocument.createElement(propNm));
+  }
+  nd.text = propVal;
+}
+
+function getItmProp(itm, propNm, defaultVal)
+{
+  var retVal = defaultVal;
+  var nd = itm.selectSingleNode(propNm);
+  if (nd)
+  {
+    retVal = nd.text;
+  }
+  return retVal;
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PM_ACW_cfgTasksGridOnLoad</name>
+ </Item>
+</AML>

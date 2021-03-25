@@ -1,0 +1,77 @@
+﻿<TestCase author='apetrovsky@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>Create Item of Item Type Part with Mechanical Part/Assembly classification as Product Engineer after that Industrial Engineer tries to delete this part</Description>
+	<Request runAs='petestuser:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer identity
+			When:
+				The user tries to create a part with Mechanical Part/Assembly classification.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='BDD13D16F6154AA99D18FF3DE1C91111' doGetItem='0'>
+					<classification>Mechanical Part/Assembly</classification>
+					<name>TestName</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='BDD13D16F6154AA99D18FF3DE1C91111' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='ietestuser:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Industrial Engineer identity
+			When:
+				The user tries to delete a part which created by Product Engineer.
+			Then:
+				The innovator should return permission error.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' id='BDD13D16F6154AA99D18FF3DE1C91111' action='delete' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server.InsufficientPermissionsException</faultcode>
+						<faultstring><![CDATA[You have insufficient permissions to perform 'delete' operation.]]></faultstring>
+						<detail>
+							<af:legacy_detail><![CDATA[You have insufficient permissions to perform 'delete' operation.]]></af:legacy_detail>
+							<af:exception message="You have insufficient permissions to perform 'delete' operation." type="Aras.Server.Core.InsufficientPermissionsException" />
+							<af:permission type="can_delete" itemtype="Part" id="BDD13D16F6154AA99D18FF3DE1C91111" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<TestCaseCleanUp runAs='petestuser:1'>
+		<Query>
+			<AML>
+				<Item type='Part' id='BDD13D16F6154AA99D18FF3DE1C91111' action='delete' />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

@@ -1,0 +1,104 @@
+@import 'core/variables';
+
+@indent-size: 12px;
+
+body {
+	background: @neutral-fb;
+	box-sizing: border-box;
+	display: grid;
+	grid-template-rows: max-content 1fr;
+	grid-template-columns: 100%;
+	padding: @indent-size;
+	padding-left: 0;
+	padding-bottom: 0;
+}
+.aras-item-view {
+	&__toolbars {
+		grid-row: 1;
+		margin-left: @indent-size;
+	}
+
+	&__viewers-tabs {
+		height: auto;
+		margin-left: @indent-size;
+	}
+
+	&__container {
+		grid-row: 2;
+		padding-bottom: @indent-size;
+		overflow: hidden;
+
+		.aras-invisible {
+			position: absolute;
+		}
+	}
+
+	&__content,
+	&__form-content-pane,
+	&__form-layout,
+	&__placeholder-pane,
+	&__viewers.simpleTabContainer {
+		height: 100%;
+	}
+
+	&__right-sidebar {
+		min-width: 350px;
+		width: 350px;
+	}
+
+	&__form-tab {
+		box-sizing: border-box;
+		padding: @indent-size;
+		padding-top: 0;
+		padding-bottom: 0;
+
+		.aras-accordion {
+			margin-top: @indent-size;
+
+			&:first-child {
+				margin-top: 0;
+			}
+		}
+
+		.aras-scroller__wrapper {
+			margin-top: @indent-size;
+
+			&:first-child {
+				margin-top: 0;
+			}
+		}
+
+		// https://github.com/w3c/csswg-drafts/issues/129#issuecomment-521936665
+		& > :last-child {
+			margin-bottom: 12px;
+		}
+	}
+
+	&__relationship-content {
+		height: 600px;
+	}
+	&__relationship-accordion {
+		&.aras-hide {
+			display: none;
+		}
+		.aras-tabs {
+			overflow: hidden;
+		}
+	}
+}
+
+.sidebar {
+	margin-left: @indent-size;
+
+	.sidebarAllFilesDropDownButton .dijitArrowButtonInner {
+		display: none;
+	}
+}
+
+#viewers .graphViewer,
+#viewers .tgvViewer {
+	height: 100%;
+	padding: 0 0 12px 12px;
+	margin: 0;
+	overflow: hidden;
+}

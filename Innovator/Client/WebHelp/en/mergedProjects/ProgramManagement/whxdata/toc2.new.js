@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Workflow, LifeCycle, and Project","type":"book","key":"toc3"},{"name":"Project Management","type":"book","key":"toc4"},{"name":"PolyItem","type":"book","key":"toc5"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

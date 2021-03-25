@@ -1,0 +1,5 @@
+define('dojo/nls/commonForToolbarAndGrid_ja-jp',{
+'dijit/nls/loading':{"_localized":{},"loadingState":"ロード中...","errorState":"エラーが発生しました。"}
+,
+'dijit/form/nls/validate':{"invalidMessage":"入力した値は無効です。","rangeMessage":"この値は範囲外です。","_localized":{},"missingMessage":"この値は必須です。"}
+});

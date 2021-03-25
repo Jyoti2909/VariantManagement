@@ -1,0 +1,78 @@
+﻿<AML>
+ <Item type="Method" id="A69D7D0D3E23408AA66046495286F0F5" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+' MethodTemplateName=VBScriptMainUpgrade;
+
+Sub MethodMainSubroutine()
+  Dim innovator As Innovator = New Innovator(Me.InnovatorObject)
+  ' Search for all Identities that have no parent Identities
+  Dim identities As Item = innovator.newItem("Identity", "get")
+  identities.setAttribute("where", "[IDENTITY].id not in (SELECT related_id from [MEMBER])")
+  identities.setAttribute("select", "name,is_alias")
+  identities = identities.apply()
+  If identities.isError() Then
+    outDom.LoadXml(identities.dom.OuterXml)
+    Exit Sub
+  End If
+  ' Loop through the top_level Identities and call a subroutine to build the structure 
+  Dim i As Integer
+  For i = 0 To identities.getItemCount() - 1
+    buildStruct(identities.getItemByIndex(i).node, 1)
+  Next
+  ' Return the deep Identity structure using the outDom
+  outDom.LoadXml(identities.dom.OuterXml)
+End Sub
+
+' Recursive subroutine to build the structure
+Sub buildStruct(ByRef thisNode As XmlElement, ByVal level As Integer)
+  Const maxLevel As Integer = 25
+  If thisNode.SelectSingleNode("@id") Is Nothing Then Exit Sub
+  Dim thisDom As XmlDocument = thisNode.OwnerDocument
+  Dim identID As String = thisNode.SelectSingleNode("@id").InnerText
+  ' If the Identity with the current ID has already been queried for, don't do it again
+  If Not thisNode.SelectSingleNode("preceding::Item[@id='" + identID + "']") Is Nothing Then
+    If Not thisNode.SelectSingleNode("preceding::Item[@id='" + identID + "'][Relationships/Item]") Is Nothing Then
+      thisNode.AppendChild(thisNode.SelectSingleNode("preceding::Item[@id='" + identID + "']/Relationships").Clone())
+    End If
+  Else
+    'Query for the current Identity and its Members
+    Dim tempItem As Item = (New Innovator(Me.InnovatorObject)).newItem()
+    tempItem.setType("Identity")
+    tempItem.setAction("get")
+    tempItem.setID(identID)
+    Dim tempRelItem As Item = tempItem.newItem("Member", "get")
+    tempRelItem.setAttribute("select", "sort_order,related_id(name,is_alias)")
+    tempItem.addRelationship(tempRelItem)
+    tempItem = tempItem.apply()
+    If tempItem.isError() Then
+      thisDom.LoadXml(tempItem.dom.OuterXml)
+      Exit Sub
+    End If
+    ' Loop through the Members and add them to the main DOM
+    Dim rels As Item = tempItem.getItemsByXPath("Relationships/Item[@type='Member']")
+    Dim rels_count As Integer = rels.getItemCount()
+    Dim thisRel As XmlElement
+    Dim ir As Integer
+    For ir = 0 To rels_count - 1
+      thisRel = rels.getItemByIndex(ir).node
+      If thisNode.SelectSingleNode("Relationships") Is Nothing Then thisNode.AppendChild(thisDom.CreateElement("Relationships"))
+      Dim rel As XmlElement = CType(thisDom.ImportNode(thisRel, True), XmlElement)
+      thisNode.SelectSingleNode("Relationships").AppendChild(rel)
+      If thisRel.SelectSingleNode("related_id/Item/@id") Is Nothing Then
+        Dim thisErr As Item = tempItem.getInnovator().newError("Related Item not found while building structure")
+        thisDom.LoadXml(thisErr.dom.OuterXml)
+        Exit Sub
+      End If
+      ' Call buildStruct recursively for each child Identity 
+      If level < maxLevel Then
+        buildStruct(CType(rel.SelectSingleNode("related_id/Item"), XmlElement), level + 1)
+      End If
+    Next
+  End If
+End Sub
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>Identity Membership Report</name>
+ </Item>
+</AML>

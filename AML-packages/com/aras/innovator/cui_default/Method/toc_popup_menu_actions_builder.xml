@@ -1,0 +1,122 @@
+﻿<AML>
+ <Item type="Method" id="B1EA5D53AB1E4902AFCCA5C2458779CA" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Innovator innovator = this.getInnovator();
+	Item itemActions = GetItemActions(innovator);
+	if (itemActions.isError())
+	{
+		return innovator.newResult(string.Empty);
+	}
+
+	Dictionary<string, string> methodIds = GetMethodIds(innovator);
+	HashSet<string> actionMenuNames = new HashSet<string>();
+
+	const string SeparatorName = "cui_toc_popup_menu_actions_separator";
+	Item cuiItems = CreateNewItem(innovator, "CommandBarSeparator", SeparatorName, SeparatorName);
+
+	int itemActionsCount = itemActions.getItemCount();
+	for (int i = 0; i < itemActionsCount; i++)
+	{
+		Item itemAction = itemActions.getItemByIndex(i);
+		Item action = itemAction.getRelatedItem();
+		string actionId = action.getID();
+		string itemTypeId = itemAction.getProperty("source_id");
+		string actionMenuName = string.Join("_", itemTypeId, actionId);
+		if (actionMenuNames.Contains(actionMenuName))
+		{
+			continue;
+		}
+		actionMenuNames.Add(actionMenuName);
+		Item actionMenu = CreateNewItem(innovator, "CommandBarMenu", actionId, actionMenuName);
+
+		string canExecuteMethodName = action.getPropertyAttribute("can_execute", "keyed_name");
+		string location = action.getProperty("location");
+		string actionMenuLabel = action.getProperty("label") ?? action.getProperty("name");
+		Newtonsoft.Json.Linq.JObject additionalData = new Newtonsoft.Json.Linq.JObject();
+		additionalData["actionId"] = actionId;
+		additionalData["canExecuteMethodName"] = canExecuteMethodName;
+		additionalData["itemTypeId"] = itemTypeId;
+		additionalData["location"] = location;
+		actionMenu.setProperty("additional_data", additionalData.ToString());
+		actionMenu.setProperty("label", actionMenuLabel);
+
+		AttachEventHandler(actionMenu, "on_init_handler", methodIds, InitMethodName);
+		AttachEventHandler(actionMenu, "on_click_handler", methodIds, ClickMethodName);
+
+		cuiItems.appendItem(actionMenu);
+	}
+
+	return cuiItems;
+}
+
+private const string InitMethodName = "cui_toc_popup_menu_actions_init";
+private const string ClickMethodName = "cui_toc_popup_menu_actions_click";
+
+private static void AttachEventHandler(Item item, string handler, Dictionary<string, string> methodIds, string methodName)
+{
+	string methodId = methodIds[methodName];
+	if (string.IsNullOrEmpty(methodId))
+	{
+		return;
+	}
+
+	item.setProperty(handler, methodId);
+	item.setPropertyAttribute(handler, "keyed_name", methodName);
+	item.setPropertyAttribute(handler, "type", "Method");
+}
+
+private static Item CreateNewItem(Innovator innovator, string type, string id, string name)
+{
+	Item newItem = innovator.newItem(type);
+	newItem.setID(id);
+	newItem.setProperty("name", name);
+	newItem.removeAttribute("isNew");
+	newItem.removeAttribute("isTemp");
+	return newItem;
+}
+
+private static Dictionary<string, string> GetMethodIds(Innovator innovator)
+{
+	Dictionary<string, string> methodIds = new Dictionary<string, string>
+	{
+		{ InitMethodName, string.Empty },
+		{ ClickMethodName, string.Empty }
+	};
+
+	Item eventHandlers = innovator.newItem("Method", "get");
+	Item logicOr = eventHandlers.newOR();
+
+	foreach( KeyValuePair<string, string> entry in methodIds)
+	{
+		logicOr.setProperty("name", entry.Key);
+	}
+	eventHandlers = eventHandlers.apply();
+
+	if (eventHandlers.isError())
+	{
+		return methodIds;
+	}
+
+	int itemsCount = eventHandlers.getItemCount();
+	for (int i = 0; i < itemsCount; i++)
+	{
+		Item method = eventHandlers.getItemByIndex(i);
+		string name = method.getProperty("name");
+		methodIds[name]= method.getID();
+	}
+
+	return methodIds;
+}
+
+private static Item GetItemActions(Innovator innovator)
+{
+	Item itemAction = innovator.newItem("Item Action", "get");
+	itemAction.setAttribute("select", "related_id,source_id");
+	Item action = itemAction.createPropertyItem("related_id", "Action", "get");
+	action.setProperty("type", "itemtype");
+	action.setAttribute("select", "name,label,can_execute,location");
+	return itemAction.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>toc_popup_menu_actions_builder</name>
+ </Item>
+</AML>

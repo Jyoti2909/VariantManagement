@@ -1,0 +1,57 @@
+﻿<AML>
+ <Item type="Method" id="DD5103BCE1D34ABB8F897974CBB66C96" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string sourceId = GetSourceDiscussionTemplateId(CCO);
+const string discussionTemplateId = "9D257D4D16AC480493571BBF816D13BE";
+if (string.Equals(sourceId, discussionTemplateId, StringComparison.OrdinalIgnoreCase))
+{
+	string action = this.getAction();
+	if (string.Equals(action, "add", StringComparison.OrdinalIgnoreCase))
+	{
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_ForumDTCantHaveNonDefaultFeedTemplate"));
+	}
+	else if (string.Equals(action, "edit", StringComparison.OrdinalIgnoreCase) || string.Equals(action, "update", StringComparison.OrdinalIgnoreCase))
+	{
+		return this;
+	}
+	else
+	{
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_ForumDTDefaultFeedTemplateCantBeRemoved"));
+	}
+}
+return this;
+}
+
+private string GetSourceDiscussionTemplateId(Aras.Server.Core.CallContext CCO)
+{
+	string sourceId = this.getProperty("source_id");
+	if (String.IsNullOrEmpty(sourceId))
+	{
+		string action = this.getAction();
+		//if "add" item doesn't have source_id it is epic fail by default
+		if (!string.Equals(action,"add",StringComparison.OrdinalIgnoreCase))
+		{
+			sourceId = GetSourceDiscussionIdByTemplateId(this.getID(), CCO);
+		}
+		else throw new Exception(CCO.ErrorLookup.Lookup("SSVC_SourceIdFeedTemplate"));
+	}
+	return sourceId;
+}
+
+private string GetSourceDiscussionIdByTemplateId(string templateId, Aras.Server.Core.CallContext CCO)
+{
+	Item item = this.newItem("FeedTemplate", "get");
+	item.setID(templateId);
+	item.setAttribute("select", "source_id");
+	item = item.apply();
+	if (item.isError())
+	{
+		throw new Exception(String.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_FailedGetFeedTemplate"), templateId, item.getErrorString()));
+	}
+	return item.getProperty("source_id");
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_ForumFeedTemplNoChange</name>
+ </Item>
+</AML>

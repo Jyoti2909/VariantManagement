@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"About Configurable Grids","type":"item","url":"About_Configurable_Grids.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

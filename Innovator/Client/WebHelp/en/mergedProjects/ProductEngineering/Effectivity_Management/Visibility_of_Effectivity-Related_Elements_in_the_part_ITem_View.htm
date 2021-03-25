@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = "..";
+  gCommonRootRelPath = "..";
+  gTopicId = "11.0_14";
+
+//]]></script>
+
+<script type="text/javascript" src="../template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="../template/scripts/common.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="../assets/css/default.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Visibility of Effectivity-Related Elements in the part ITem View</title>
+  <meta name="topic-status" content="Draft"/>
+  
+</head>
+<body>
+  <div>
+  <h1>Visibility of Effectivity-Related Elements in the Part Item View</h1>
+  <p>The <strong>BOM Structure</strong> accordion tab associated with the <strong>Part </strong>item view has the following Effectivity Management UI elements out-of-the-box:</p>
+  <ul class="Disc">
+    <li>The <strong>Set Effectivity Criteria</strong> button in the BOM Structure toolbar.</li>
+    <li>The <strong>View Effectivity </strong>menu item in the control menu of a Part.</li>
+    <li>The <strong>Effectivity </strong>column.</li>
+  </ul>
+  <p class="Figure_indented"><img alt="" src="../assets/images/parentpart.jpg" style="width: 100%; max-width: 575px;"/></p>
+  <p>If you do not see these elements that means they are hidden; i.e., the <strong>PE_BomStructure</strong> Query definition and Tree Grid View are configured not to show them and not to call Effectivity filtering.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/parentpart2.jpg" style="width: 100%; max-width: 385px;"/></p>
+  <p>The configuration specifications for the <strong>PE_BomStructure</strong> Query definition and Tree Grid View show these UI elements and also calls Effectivity filtering. To hide the discussed elements, remove the described configuration from the Tree Grid View and then from the Query definition. If you need to re-display the discussed elements after you remove them, configure the Query definition and the Tree Grid View according to the given specifications. Log back into Aras Innovator to confirm the change.</p>
+  <h3>PE_BomStructure TGV Configuration for Visibility of Effectivity-Related Elements</h3>
+  <p>To show the Effectivity-related UI elements on the <strong>BOM Structure</strong> accordion tab of the part item view, you must configure the <strong>PE_BomStructure</strong> Tree Grid View as follows.</p>
+  <p>The <strong>PE_BomStructure</strong> Tree Grid View uses the <strong>PE_BomStructure Presentation Configuration</strong>.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/pebomtgv.jpg" style="width: 100%; max-width: 480px;"/></p>
+  <p>The <strong>PE_BomStructure Presentation Configuration</strong> is configured to show the <strong>Set Effectivity Criteria</strong> toolbar button and the <strong>VIew Effectivity</strong> context menu item to the <strong>World </strong>identity:</p>
+  <ul class="Disc">
+    <li><strong>effs_tgvToolbarCustomization</strong> located on <strong>TGV_Toolbar</strong> with sort order <strong>128</strong>.</li>
+    <li><strong>effs_tgvContextMenuCustomization</strong> located on <strong>TGV_ContextMenu</strong> with sort order <strong>256</strong>.</li>
+  </ul>
+  <p class="Figure_indented"><img alt="" src="../assets/images/pebom2.jpg" style="width: 100%; max-width: 441px;"/></p>
+  <p>If you remove the command bar sections from the <strong>PE_BomStructure Presentation Configuration</strong>, the button and menu items do not appear.</p>
+  <p>To show the Effectivity column on the <strong>BOM Structure</strong> accordion tab in the <strong>Part </strong>item view, the <strong>Effectivity </strong>column appears between the <strong>Name </strong>and <strong>Reference Designator</strong> columns. It displays data of the <strong>Text </strong>type according to the<strong> {Part BOM.eff_expression_string_notation}</strong> text template.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/pebom3.jpg" style="width: 100%; max-width: 616px;"/></p>
+  <p>If you remove the <strong>Effectivity </strong>column in the Tree Grid View editor, the <strong>BOM Structure</strong> accordion tab no longer displays the <strong>Effectivity </strong>column.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/parentpart3.jpg" style="width: 100%; max-width: 324px;"/></p>
+  <p>To hide all the Effectivity-related UI elements on the <strong>BOM Structure</strong> accordion tab, remove both <strong>effs_tgvToolbarCustomization</strong> and <strong>effs_tgvContextMenuCustomization</strong> from the <strong>PE_BomStructure Presentation Configuration</strong> as well as the <strong>Effectivity </strong>column in the TGV Editor and reconfigure the <strong>PE_BomStructure</strong> Query definition. To redisplay these elements after they were hidden, reconfigure the<strong> PE_BomStructure</strong> Query definition and add the command bar sections and <strong>Effectivity </strong>column as specified.</p>
+  <h3>PE_BomStructure TGV Configuration for Visibility of Effectivity-Related Elements</h3>
+  <p>Use the following procedure to configure the <strong>PE_BomStructure</strong> Tree Grid View to show the Effectivity-related UI elements on the <strong>BOM Structure </strong>accordion tab of the Part item view. The PE_BomStructure Tree Grid View uses the <strong>PE_BomStructure Presentation Configuration</strong>.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/pebomstruct4.jpg" style="width: 100%; max-width: 580px;"/></p>
+  <p>The <strong>PE_BomStructure Presentation Configuration</strong> is configured to show the <strong>Set Effectivity Criteria</strong> toolbar button and the <strong>View Effectivity</strong> context menu item to the World identity:</p>
+  <ul class="Disc">
+    <li><strong>effs_tgvToolbarCustomization</strong> located on the <strong>TGV_Toolbar</strong> with sort order <strong>128</strong>.</li>
+    <li><strong>effs_tgvContextMenuCustomization</strong> located on the <strong>TGV_ContextMenu</strong> with sort order <strong>256</strong>.</li>
+  </ul>
+  <p class="Figure_indented"><img alt="" src="../assets/images/pebomstructurepresent.jpg" style="width: 100%; max-width: 836px;"/></p>
+  <p>If you remove these command bar sections from the <strong>PE_BomStructure Presentation Configuration</strong> the button and menu items no longer appear.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/parentpart4.jpg" style="width: 100%; max-width: 627px;"/></p>
+  <p>The <strong>Effectivity </strong>column displays Text type data according to the <strong>{Part BOM.eff_expression_string_notation}</strong> text template.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/partbomeffec.jpg" style="width: 100%; max-width: 888px;"/></p>
+  <p>If you remove the <strong>Effectivity </strong>column in the Tree Grid View editor, the <strong>BOM Structure</strong> accordion tab no longer displays it.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/parentpart5.jpg" style="width: 100%; max-width: 397px;"/></p>
+  <p>Remove <strong>effs_tgvToolbarCustomization</strong> and <strong>effs_tgvContextMenuCustomization</strong> from the <strong>PE_BomStructure Presentation Configuration</strong> to hide all of the Effectivity-related UI elements on the <strong>BOM Structure</strong> accordion tab. Reconfigure the <strong>PE_BomStructure</strong> Query Definition. You can redisplay the hidden elements by reconfiguring the <strong>PE_BomStructure</strong> Query Definition and adding the command bar sections and the <strong>Effectivity </strong>column.</p>
+  <h3>PE_BomStructure Query Definition Configuration for Visiblity of Effectivity-Related Elements</h3>
+  <p>To show the Effectivity-related UI elements in the <strong>BOM Structure </strong>accordion tab of the Part item view, configure the <strong>PE_BomStructure </strong>Query Definition as follows:</p>
+  <ul class="Disc">
+    <li>The <strong>qry_QueryDefinitionEvent</strong> relationship tab has an <strong>OnBeforeExecute </strong>event for the <strong>effs_mergeQueryDefinition</strong> method.</li>
+  </ul>
+  <p class="Note">Refer to Understanding Query Definitions for Effectivity Resolution for information about this method. You can also see information about hiding and displaying tabs in the Query Definition Item view.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/pebom4.jpg" style="width: 100%; max-width: 464px;"/></p>
+  <ul class="Disc">
+    <li>The top<strong> Part BOM</strong> item in the Query Definition editor has the <strong>Expression </strong>and <strong>ID </strong>properties.</li>
+  </ul>
+  <p class="Figure_indented"><img alt="" src="../assets/images/pebom5.jpg" style="width: 100%; max-width: 471px;"/></p>
+  <p>When hiding the Effectivity-related UI elements on the <strong>BOM Structure</strong> accordion tab of the <strong>Part Item</strong> view, remove the <strong>effs_mergeQueryDefinition </strong>method and the <strong>Expression </strong>and <strong>ID </strong>properties after reconfiguring the <strong>PE_BomStructure</strong> Tree Grid View. To redisplay the elements, add the method and properties back before reconfiguring the <strong>PE_BomStructure</strong> Tree Grid View.</p>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

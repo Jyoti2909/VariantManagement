@@ -1,0 +1,56 @@
+﻿<AML>
+ <Item type="Method" id="6BAE55BA08934C0C91180C79E49F476C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[function IsValid(_name) {
+	var fvar = '<WSConfiguration action=\'verify\' name=\'' + _name + '\' />';
+	var xmlResp = aras.applyMethod('VerifyWSConfiguration', fvar);
+
+	var d = aras.createXMLDocument();
+	d.loadXML(xmlResp);
+	var nd = d.selectSingleNode('./Result/type');
+	return (nd === null) ? true : d.xml;
+}
+var d = aras.createXMLDocument();
+d.loadXML(inDom.xml);
+var nd = d.selectSingleNode('.//Item[@type=\'WSConfiguration\']/name');
+if (nd === null) {
+	aras.AlertError(aras.getResource('', 'imports_core.ws_save_configuration_xml__please_save'));
+	return null;
+}
+var name = nd.text;
+
+// is changes saved?
+var isDirty = d.selectSingleNode('.//Item[@type=\'WSConfiguration\' and @isDirty]');
+if (isDirty !== null) {
+	aras.AlertError(aras.getResource('', 'imports_core.ws_save_configuration_xml__please_save'));
+	return null;
+}
+// validate
+
+var res = IsValid(name);
+if (res !== true) {
+	res = res.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+	aras.AlertError(aras.getResource('', 'imports_core.ws_configuration_is_invalid') + '\n Validation result:\n' + res);
+	return null;
+}
+
+// save config
+fvar = '<WSConfiguration action=\'generate_config\' name=\'' + name + '\' />';
+var xmlConfItem = aras.applyMethod('CreateWebServiceConfigXml', fvar);
+
+d.loadXML(xmlConfItem);
+nd = d.selectSingleNode('.//Result/service_config');
+var vaultApplet = aras.vault;
+var fn = vaultApplet.fileCreateWithSaveAsDialog('WSC_', 'xml');
+if (fn !== '') {
+	f = vaultApplet.fileOpenWrite(fn);
+	vaultApplet.fileWriteLine(nd.xml);
+	vaultApplet.fileClose();
+}
+
+return xmlConfItem;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>WSSave configuration xml</name>
+ </Item>
+</AML>

@@ -1,0 +1,136 @@
+﻿<AML>
+ <Item type="Report" id="B932166880F84F30BB02C62E0C29CBEF" action="add">
+  <description />
+  <location>client</location>
+  <method keyed_name="PE_executeCostingRepAndApplyXslt" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>PE_executeCostingRepAndApplyXslt</name>
+   </Item>
+  </method>
+  <report_query />
+  <target>one window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:aras="http://www.aras-corp.com">
+ <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes"></xsl:output>
+ <xsl:variable name="MaxDepth">
+  <xsl:for-each select="Result/Item[@alias='Part']/depth">
+   <xsl:sort select="." data-type="number" order="descending"/>
+   <xsl:if test="position() = 1">
+    <xsl:value-of select="."/>
+   </xsl:if>
+  </xsl:for-each>
+ </xsl:variable>
+ <xsl:template match="/">
+  <html>
+   <head></head>
+   <body topmargin="50" leftmargin="50">
+    <div class="print_button_wrapper">
+     <img id="print_button" src="../images/Print.svg" onclick="printReport(window);" />
+     <a href="#" onclick="printReport(window); return false;">Print</a>
+    </div>
+    <div class="table_wrapper">
+     <div class="report_name">
+      Bill of Materials Costing Report
+     </div>
+     <div class="report_generation_time"></div>
+     <table border="0" cellspacing="0" cellpadding="0">
+      <tr>
+       <th colspan="{$MaxDepth + 1}">BOM Level</th>
+       <th>Part Number</th>
+       <th>Name</th>
+       <th>Quantity</th>
+       <th>Cost</th>
+       <th>Cost Basis</th>
+      </tr>
+       <xsl:call-template name="Levels"></xsl:call-template>
+     </table>
+    </div>
+   </body>
+   <script>
+    function loadScript(url)
+    {
+     const loadedJS = document.createElement('script');
+     loadedJS.src = url;
+     document.getElementsByTagName('head')[0].appendChild(loadedJS);
+    }
+    function loadStyle(url)
+    {
+     const link = document.createElement('link');
+     link.setAttribute('rel', 'stylesheet');
+     link.setAttribute('href', url);
+     document.getElementsByTagName('head')[0].appendChild(link)
+    }
+    loadScript(parent.aras.getBaseURL('/Solutions/PLM/javascript/report.js'));
+    loadStyle(parent.aras.getBaseURL('/Solutions/PLM/styles/report.css'));
+   </script>
+  </html>
+ </xsl:template>
+ 
+ <!-- Find the Part Level and pass as the 'Depth' param to the next template -->
+ <xsl:template name="Levels">
+  <xsl:for-each select="Result/Item[@alias='Part']">
+   <xsl:apply-templates mode="PartBOM" select=".">
+    <xsl:with-param name="Depth" select="depth"/>
+   </xsl:apply-templates>
+  </xsl:for-each>
+ </xsl:template>
+
+ <xsl:template name="IndentureLevel">
+  <xsl:param name="currentDepth" select="0" />
+  <xsl:if test="$currentDepth = 0">
+   <td width="20px" style="padding: 5px 0px 5px 10px" align="center">
+    <xsl:if test="depth=$currentDepth"><xsl:value-of select="depth"/></xsl:if>
+   </td>
+  </xsl:if>
+  <xsl:if test="$currentDepth != 0">
+   <td width="20px" style="padding: 5px 0" align="center">
+    <xsl:if test="depth=$currentDepth"><xsl:value-of select="depth"/></xsl:if>
+   </td>
+  </xsl:if>
+  <xsl:if test="not($currentDepth = $MaxDepth)">
+   <xsl:call-template name="IndentureLevel">
+    <xsl:with-param name="currentDepth" select="$currentDepth + 1"/>
+   </xsl:call-template>
+  </xsl:if>
+ </xsl:template>
+
+ <xsl:template mode="PartBOM" match="Result/Item[@alias='Part']">
+  <xsl:param name="Depth"></xsl:param>
+  <tr>
+   <xsl:call-template name="IndentureLevel" />
+   <td>
+    <xsl:value-of select="item_number"></xsl:value-of>
+    <xsl:if test="item_number='' or not(item_number)"><xsl:text>&#160;</xsl:text></xsl:if>
+   </td>
+   <td>
+    <xsl:value-of select="name"></xsl:value-of>
+    <xsl:if test="name='' or not(name)"><xsl:text>&#160;</xsl:text></xsl:if>
+   </td>
+   <xsl:choose>
+    <xsl:when test="$Depth = '0'">
+     <td>1</td>
+    </xsl:when>
+    <xsl:when test="quantity != '0'">
+     <td>
+      <xsl:value-of select="quantity"></xsl:value-of>
+      <xsl:if test="quantity='' or not(quantity)"><xsl:text>&#160;</xsl:text></xsl:if>
+     </td>
+    </xsl:when>
+    <xsl:otherwise>
+     <td>0</td>
+    </xsl:otherwise>
+   </xsl:choose>
+   <td>
+    <xsl:value-of select="cost"></xsl:value-of>
+    <xsl:if test="cost='' or not(cost)"><xsl:text>&#160;</xsl:text></xsl:if>
+   </td>
+   <td>
+    <xsl:value-of select="cost_basis"></xsl:value-of>
+    <xsl:if test="cost_basis='' or not(cost_basis)"><xsl:text>&#160;</xsl:text></xsl:if>
+   </td>  </tr>
+ </xsl:template>
+</xsl:stylesheet>
+]]></xsl_stylesheet>
+  <name>BOM Costing Report</name>
+ </Item>
+</AML>

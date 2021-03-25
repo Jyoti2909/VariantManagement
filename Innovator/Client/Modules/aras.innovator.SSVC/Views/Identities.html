@@ -1,0 +1,204 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<script type="text/javascript" src="../../../javascript/dialog.js"></script>
+		<style type="text/css">
+			@import "../../../javascript/dojo/resources/dojo.css";
+			@import "../../../javascript/dijit/themes/claro/claro.css";
+			@import "../../../javascript/dojox/grid/resources/claroGrid.css";
+			@import "../../../javascript/include.aspx?classes=common.css";
+			@import "../../../styles/default.css";
+		</style>
+		<style type="text/css">
+		html, body
+		{
+			padding: 0;
+			margin: 0;
+			text-align: center;
+			overflow: hidden;
+		}
+		#container
+		{
+			margin: 0 auto;
+		}
+		#buttonsRow
+		{
+			width: 100%;
+			padding: 5px;
+			text-align: center;
+		}
+		#identityGrid 
+		{
+			width: 100%; 
+			height: 100%;
+			overflow: auto;
+		}
+		</style>
+		<script type="text/javascript">
+			var argsWindow = window.frameElement.dialogArguments;
+			var dialog = argsWindow.dialog;
+			var onCancelClick = dialog.close.bind(argsWindow.dialog);
+			var aras = argsWindow.aras;
+			//objects to track changes on the page and apply them on OK click
+			var identityChanges = {};
+			var identityGridControl;
+			var result = argsWindow.prevResult || [];
+
+			function onOkClick() {
+				ApplyIdentityChanges();
+				dialog.close(result);
+
+				function ApplyIdentityChanges() {
+					for (var id in identityChanges) {
+						if (!identityChanges[id].reverted) {
+							if (identityChanges[id].doShare) {
+								result.push(id);
+							} else {
+								var index = result.indexOf(id);
+								result.splice(index, 1);
+							}
+						}
+					}
+				}
+			}
+
+			window.onload = function onLoadHandler()
+			{
+				window.aras = aras;
+				setupTranslatableValues();
+				setupIdentityTab();
+				setupIdentityGridControl();
+				
+				function setupTranslatableValues() {
+					document.getElementById("identityTab").setAttribute("title", aras.getResource("", "ssvc.forum.share_with_identities"));
+					document.getElementById("okBtn").value = aras.getResource("", "common.ok");
+					document.getElementById("cancelBtn").value = aras.getResource("", "common.cancel");
+				}
+				
+				function setupIdentityTab()
+				{
+					var tabContainer;
+					require([
+					"dojo/dom-attr", "dojo/query",
+					"dijit/layout/TabContainer", "dijit/layout/ContentPane",
+					"dojo/domReady!"
+						], function(attr, query, TabContainer, ContentPane){
+							query(".tab").forEach(function(n){
+								new ContentPane({
+									// just pass a title: attribute, this, we're stealing from the node
+									title: attr.get(n, "title"),
+									baseClass: "dijitContentPaneNoPadding"
+								}, n);
+							});
+							tabContainer = new TabContainer({
+								style: attr.get("tabRow", "style")
+							}, "tabRow");
+							tabContainer.startup();
+						});
+				}
+				
+				function setupIdentityGridControl()
+				{
+					clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", {connectId: "identityGrid" }, function(control) {
+						identityGridControl = grid = control;
+						clientControlsFactory.on(identityGridControl, {
+							"onApplyEdit_Experimental": onIdentityGridApllyEdit, 
+							"gridXmlLoaded": function () { identityGridControl.setMultiselect(false); }
+						});
+						initIdentityGrid(identityGridControl);
+					});
+					
+					function initIdentityGrid(grid)
+					{
+						grid.setLayout_Experimental([{ field: "selected", name: "I", width: "30px", styles: "text-align: center;", headerStyles: "text-align: center;", editable: true },
+										{ field: "identityName", name: "Name", width: "210px", styles: "text-align: left;", headerStyles: "text-align: left;" }
+						]);
+						var items = createRowsListForIdentities();
+						grid.setArrayData_Experimental(items);
+
+						function createRowsListForIdentities()
+						{
+							var resultArray = new Array();
+							var identities = getIdentitiesExceptTeamAndSystem();
+							if (identities.isError())
+							{
+								return resultArray;
+							}
+							for (var i = 0, count = identities.getItemCount(); i < count; i++)
+							{
+								var identity = identities.getItemByIndex(i);
+								var id = identity.getID();
+								var oIdentity = {};
+								oIdentity.uniqueId = id;
+								oIdentity.identityName = identity.getProperty("name");
+								oIdentity.selected = false;
+								if (result.length > 0)
+								{
+									if (doesArrayContain(result, id))
+									{
+										oIdentity.selected = true;
+									}
+								}
+								
+								resultArray.push(oIdentity);
+							}
+							return resultArray;
+
+							function doesArrayContain(/*array*/ array, /*string*/ value) {
+								var i = array.length;
+								while (i--) {
+									if (array[i] === value)
+									{
+										return true;
+									}
+								}
+								return false;
+							}
+
+							function getIdentitiesExceptTeamAndSystem()
+							{
+								var identities = aras.newIOMItem();
+								identities.loadAML("" +
+								"<AML>\n" +
+								"	<Item type='Method' action='VC_GetIdentExceptTeamSystemOwn' />\n" +
+								"</AML>");
+								return identities.apply();
+							}
+						}
+					}
+				}
+			}
+
+			function onIdentityGridApllyEdit(rowId, column, value)
+			{
+				if (identityChanges[rowId])
+				{
+					identityChanges[rowId].doShare = value;
+					identityChanges[rowId].reverted = !identityChanges[rowId].reverted;
+				}
+				else
+				{
+					identityChanges[rowId] = {doShare: value, reverted: false };
+				}
+			}
+		</script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../../../javascript/dojo'"></script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,ScriptSet1"></script>
+	</head>
+	<body class="claro">
+		<div id="container">
+			<div id="tabRow" style="width:100%; height:210px;">
+				<div class="tab" id="identityTab">
+					<div id="identityGrid">
+					</div>
+				</div>
+			</div>
+			<div id="buttonsRow">
+				<input type="submit" class="btn" name="ok" id="okBtn"  onclick="onOkClick()"/>
+				<input type="submit" class="btn" name="cancel" id="cancelBtn" onclick="onCancelClick()"/>
+			</div>
+		</div>
+	</body>
+</html>

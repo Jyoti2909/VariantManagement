@@ -1,0 +1,75 @@
+﻿<TestCase author="pponkrashov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../TestCase.xsd">
+	<Description>Setup for GECO affected items tests</Description>
+	<Request runAs="root:innovator">
+		<Query>
+			<AML>
+				<Item type="User" id="75BF86DB956C47C7A797F1B23D7C156A" action="add" doGetItem="0">
+					<login_name>cadMPUser1</login_name>
+					<password>c4ca4238a0b923820dcc509a6f75849b</password>
+					<confirm_password>c4ca4238a0b923820dcc509a6f75849b</confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type="Member" id="91BA322A621844E79BA5EC5F2DAEDE91" action="add" doGetItem="0">
+					<related_id>
+						<Item type="Identity" action="get" select="id">
+							<keyed_name>cadMPUser1</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>65CBCEA10A1F4D7B99BC6180FA2AF7DF</source_id>
+				</Item>
+				<Item type="Member" id="F2D062E4E6D9474895F957353C48FEC9" action="add" doGetItem="0">
+					<related_id>
+						<Item type="Identity" action="get" select="id">
+							<keyed_name>cadMPUser1</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>D8190B09A2604895AB3F6F35AC7DAF4D</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="User" id="75BF86DB956C47C7A797F1B23D7C156A" />
+						<Item type="Member" id="91BA322A621844E79BA5EC5F2DAEDE91">
+							<related_id>
+								<Item type="Identity" typeId="E582AB17663F4EF28460015B2BE9E094" id="774525D04D9C4FBAAA21E3DEFE023C55">
+									<id keyed_name="cadMPUser1" type="Identity">774525D04D9C4FBAAA21E3DEFE023C55</id>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type="Member" id="F2D062E4E6D9474895F957353C48FEC9">
+							<related_id>
+								<Item type="Identity" typeId="E582AB17663F4EF28460015B2BE9E094" id="774525D04D9C4FBAAA21E3DEFE023C55">
+									<id keyed_name="cadMPUser1" type="Identity">774525D04D9C4FBAAA21E3DEFE023C55</id>
+								</Item>
+							</related_id>
+						</Item>
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Member']/related_id/Item" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs="root:innovator">
+		<Query>
+			<AML>
+				<Item type="Member" id="91BA322A621844E79BA5EC5F2DAEDE91" action="delete" />
+				<Item type="Member" id="F2D062E4E6D9474895F957353C48FEC9" action="delete" />
+
+				<Item type="History" action="delete" where="[History].created_by_id = '75BF86DB956C47C7A797F1B23D7C156A'" />
+				<Item type="History Container" action="delete" where="[History_Container].created_by_id = '75BF86DB956C47C7A797F1B23D7C156A'" />
+
+				<Item type="User" id="75BF86DB956C47C7A797F1B23D7C156A" action="delete" />
+
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

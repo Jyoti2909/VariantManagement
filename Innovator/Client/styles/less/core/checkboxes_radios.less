@@ -1,0 +1,227 @@
+﻿@checkbox-size: 4/3rem;
+@checkbox-margin-right: 1/2rem;
+
+@check-width: 2/3rem;
+@check-height: 1/4rem;
+@check-margin-top: -1/5rem;
+
+@radio-circle-size: 1/3rem;
+
+.aras-form-boolean {
+	display: inline-block;
+	cursor: pointer;
+	user-select: none;
+	vertical-align: middle;
+
+	input[type='checkbox'],
+	input[type='radio'] {
+		display: none;
+
+		& + span {
+			display: block;
+			font-size: 0;
+			float: left;
+			height: @checkbox-size;
+			width: @checkbox-size;
+			text-align: center;
+			margin-right: @checkbox-margin-right;
+			border: 1px solid @border-color;
+			box-sizing: border-box;
+			background-color: @controls-bg;
+		}
+
+		& + span:before {
+			content: '';
+			display: inline-block;
+			vertical-align: middle;
+		}
+
+		& + span:after {
+			content: '';
+			display: inline-block;
+			vertical-align: middle;
+			height: 100%;
+		}
+
+		&:required + span {
+			background-color: @blue-disable;
+		}
+
+		&:disabled + span {
+			border-color: @gray-disable;
+		}
+
+		&[type='checkbox']:checked + span::before {
+			width: @check-width;
+			height: @check-height;
+			margin-top: @check-margin-top;
+			border: 2px solid @blue;
+			border-top-width: 0;
+			border-right-width: 0;
+			transform: rotate(-45deg);
+		}
+
+		&[type='checkbox']:checked:disabled + span::before {
+			border-color: @gray-disable;
+		}
+
+		&[type='radio'] + span {
+			border-radius: 50%;
+			text-align: center;
+			vertical-align: middle;
+		}
+
+		&[type='radio'] + span:before {
+			width: @radio-circle-size;
+			height: @radio-circle-size;
+			border: 1px solid @border-color;
+			border-radius: 50%;
+		}
+
+		&[type='radio']:disabled + span:before {
+			border-color: @gray-disable;
+		}
+
+		&[type='radio']:checked + span::before {
+			border-color: @blue;
+			background-color: @blue;
+		}
+
+		&[type='radio']:checked:disabled + span::before {
+			border-color: @gray-disable;
+			background-color: @gray-disable;
+		}
+	}
+}
+
+.aras-radio,
+.aras-checkbox {
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+	user-select: none;
+	font: @font-12-med;
+
+	&__input {
+		display: none;
+	}
+}
+
+.checkbox-radio-btn {
+	display: inline-flex;
+	height: @checkbox-size;
+	width: @checkbox-size;
+	margin-right: 8px;
+	border: 2px solid @neutral-5;
+	box-sizing: border-box;
+	background-color: @controls-bg;
+	position: relative;
+
+	&::before {
+		content: '';
+		position: absolute;
+	}
+}
+
+.aras-checkbox {
+	&__check-button {
+		border-radius: 15%;
+		.checkbox-radio-btn;
+	}
+
+	&__input:checked + &__check-button {
+		background-color: @color-16;
+		border: none;
+
+		&::before {
+			width: 55%;
+			height: 25%;
+			transform: rotate(-45deg) translate(-6%, 70%);
+			border: 2px solid @controls-bg;
+			border-top-width: 0;
+			border-right-width: 0;
+		}
+	}
+
+	&__input:required + &__check-button {
+		background-color: @color-sel-1;
+	}
+
+	&__input:required:checked + &__check-button {
+		background-color: @color-12;
+
+		&::before {
+			border-color: @color-sel-1;
+		}
+	}
+
+	&__input:disabled + &__check-button {
+		opacity: 0.3;
+	}
+
+	&__input:indeterminate + &__check-button {
+		align-items: center;
+		justify-content: center;
+		background-color: @controls-bg;
+		border: 2px solid @neutral-5;
+
+		&::before {
+			background-color: @color-12;
+			border: none;
+			width: 50%;
+			height: 50%;
+			transform: none;
+			margin: 0;
+		}
+	}
+
+	&__input:required:indeterminate + &__check-button {
+		background-color: @color-sel-1;
+	}
+
+	&_hard &__check-button {
+		border: 3px solid @color-16;
+	}
+
+	&_hard &__input:checked + &__check-button {
+		background-color: @color-20;
+		border: none;
+
+		&::before {
+			border-color: @color-8;
+		}
+	}
+
+	&_hard &__input:indeterminate + &__check-button {
+		background-color: @controls-bg;
+		border: 3px solid @color-16;
+
+		&::before {
+			width: 60%;
+			height: 60%;
+			background-color: @color-20;
+		}
+	}
+}
+
+.aras-radio {
+	&__radio-button {
+		border-radius: 50%;
+		.checkbox-radio-btn;
+	}
+
+	&__input:checked + &__radio-button {
+		border-color: @color-16;
+
+		&::before {
+			width: calc(100% - 4px);
+			height: calc(100% - 4px);
+			background-color: @color-16;
+			border: 2px solid @controls-bg;
+			top: 50%;
+			left: 50%;
+			border-radius: inherit;
+			transform: translate(-50%, -50%);
+		}
+	}
+}

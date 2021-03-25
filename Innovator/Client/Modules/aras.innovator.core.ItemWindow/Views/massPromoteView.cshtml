@@ -1,0 +1,90 @@
+﻿@{
+	Layout = "Shared/_Layout.cshtml";
+}
+
+@section init_widgets
+{
+}
+
+@section header
+{
+	<style type="text/css">@@import "@Url.ContentWithSalt("~/Modules/aras.innovator.MassPromote/Styles/MassPromoteStyle.css")";</style>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/Modules/aras.innovator.core.ItemWindow/Scripts/massPromoteView.js")"></script>
+	<script type="text/javascript" id="asd" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=ToolbarWrapper")"></script>
+}
+
+@section load_widgets
+{
+	<base href="@Url.ContentWithSalt("~/scripts/")">
+}
+
+@section body
+{
+	<iframe id="dimmer_spinner" src="@Url.ContentWithSalt("~/scripts/spinner.html")"></iframe>
+		<div id="bannerPanel"></div>
+		<div id="centerContainer" class="aras-flex">
+			<div id="settingsPanel">
+				<div id="lifeCycleMap" class="mpo-settings-module">
+					<div class="mpo-settings-module-header">Life Cycle Map</div>
+					<div class="mpo-settings-module-content">
+						<div id="lifeCycleMapSelect" class="aras-form dropdowns"></div>
+						<span id="showLifeCycleMapButton" class="aras-compat-toolbar__button">
+							<svg>
+								<use xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="" />
+							</svg>
+						</span>
+					</div>
+				</div>
+				<div id="targetState" class="mpo-settings-module">
+					<div class="mpo-settings-module-header">Target State</div>
+					<div class="mpo-settings-module-content">
+						<div id="targetStateSelect" class="control, aras-form dropdowns"></div>
+					</div>
+				</div>
+				<div id="transitionComment" class="mpo-settings-module">
+					<div class="mpo-settings-module-header">Comment</div>
+					<div>
+						<textarea id="transitionCommentTextArea" class="control mpo-settings-module-transition-comment" placeholder="Type comment here"></textarea>
+					</div>
+				</div>
+				<div id="resolveConflicts" class="mpo-settings-module">
+					<div class="mpo-settings-module-header">All Invalid Items</div>
+					<div class="mpo-settings-module-content">
+						<div class="aras-form radiobuttons">
+							<label class="aras-form-boolean">
+								<input name="resolveConflictsMethod" type="radio" value="move-to-another" checked disabled>
+								<span></span>
+								<span id="mpo_moveToAnotherSession">Move to another promote session</span>
+							</label>
+							<label class="aras-form-boolean">
+								<input name="resolveConflictsMethod" type="radio" value="remove" disabled>
+								<span></span>
+								<span id="mpo_removeInvalid">Remove</span>
+							</label>
+						</div>
+						<input id="apply" class="aras-btn" type="button" value="Apply" disabled>
+					</div>
+				</div>
+				<div id="execute" class="mpo-settings-module mpo-execute-panel">
+					<div class="mpo-execute-buttons">
+						<center>
+							<input id="executeButton" class="aras-btn" type="button" disabled value="Execute">
+							<input id="cancelButton" class="aras-btn btn_cancel" type="button" value="Cancel">
+						</center>
+					</div>
+					<div id="status">
+						<div id="mpo_statusWrapper">
+							<pre id="statusText"></pre>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div id="gridPanel">
+				<div id="gridtoolbar"></div>
+				<div id="grid"></div>
+			</div>
+		</div>
+	<div id="bottom">
+		<div id="bottom_statusBar"></div>
+	</div>
+}

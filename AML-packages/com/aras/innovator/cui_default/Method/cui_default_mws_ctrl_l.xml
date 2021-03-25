@@ -1,0 +1,59 @@
+﻿<AML>
+ <Item type="Method" id="A0F2DF3F1F094797AE391443741664DB" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (this.work && this.work.grid) {
+	var workFrame = this.work;
+	var selectedIds = workFrame.grid.getSelectedItemIds();
+	if (selectedIds.length) {
+		var lockObj = {isLockEnabled: true, isUnlockEnabled: true};
+		var isLockFuncDisabled = isFunctionDisabled(workFrame.itemTypeName, 'Lock');
+		var isUnlockFuncDisabled = isFunctionDisabled(workFrame.itemTypeName, 'Unlock');
+		var userId = aras.getCurrentUserID();
+		var isAdmin = aras.isAdminUser();
+		for (var i = 0; i < selectedIds.length; i++) {
+			var itemNode = aras.getItemById(workFrame.itemTypeName, selectedIds[i], 0);
+			if (!itemNode) {
+				return;
+			}
+
+			var isLock = isLockAvailable(workFrame, itemNode, isLockFuncDisabled);
+			if (!isLock) {
+				lockObj.isLockEnabled = isLock;
+			}
+
+			var isUnlock = isUnlockAvailable(itemNode, userId, isAdmin, isUnlockFuncDisabled);
+			if (!isUnlock) {
+				lockObj.isUnlockEnabled = isUnlock;
+			}
+
+			if (!lockObj.isLockEnabled && !lockObj.isUnlockEnabled) {
+				return;
+			}
+		}
+
+		if (lockObj.isLockEnabled) {
+			if (workFrame.onLockCommand) {
+				workFrame.onLockCommand();
+			}
+		} else if (lockObj.isUnlockEnabled) {
+			if (workFrame.onUnlockCommand) {
+				workFrame.onUnlockCommand();
+			}
+		}
+	}
+}
+
+function isLockAvailable(workFrame, itemNode, isFuncDisabled) {
+	return aras.uiItemCanBeLockedByUser(itemNode, workFrame.isRelationshipIT, workFrame['use_src_accessIT']) && !isFuncDisabled;
+}
+
+function isUnlockAvailable(itemNode, userId, isAdmin, isFuncDisabled) {
+	var lockedBy = aras.getItemProperty(itemNode, 'locked_by_id');
+	var isTemp = aras.isTempEx(itemNode);
+	return (lockedBy == userId || (!isTemp && lockedBy !== '' && isAdmin)) && !isFuncDisabled;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_mws_ctrl_l</name>
+ </Item>
+</AML>

@@ -1,0 +1,224 @@
+﻿@import 'Controls/Filter.less';
+
+@mass-expand-arrow-image: url('../../../../../../Images/Arrow.svg');
+
+@default-text-size: 12px;
+@default-text-color: #444444;
+@link-color: #3668b1;
+@mass-expand-color: #0303b0;
+
+.not-selectable() {
+	user-select: none;
+	-ms-user-select: $user-select;
+	-moz-user-select: $user-select;
+	-webkit-user-select: $user-select;
+}
+
+.filtersPanelContainer {
+	height: 100%;
+	position: relative;
+}
+
+.filtersPanelHeaderContainer {
+	height: 98px;
+	padding: 12px;
+	box-sizing: border-box;
+
+	& > button {
+		float: left;
+		width: 45%;
+		height: 32px;
+		font-size: @default-text-size;
+		font-weight: bold;
+		box-sizing: border-box;
+
+		&:last-of-type {
+			float: right;
+			margin-right: 0;
+		}
+	}
+
+	.aras-button_d {
+		padding: 3px;
+		border: 1px solid transparent;
+	}
+}
+
+.filterItemContainer {
+	overflow: hidden;
+	padding: 5px 12px 8px;
+}
+
+.filtersPanelLinkButton {
+	color: @link-color;
+	cursor: pointer;
+	font-size: @default-text-size;
+	text-decoration: underline;
+	.not-selectable();
+}
+
+.filterItemOptionsContainer {
+	margin: 7px 0 0 18px;
+}
+
+.filterItemCollapsed {
+	.filterItemExpandCollapseArrow {
+		transform: rotate(-90deg);
+		-ms-transform: $transform;
+		-webkit-transform: $transform;
+	}
+
+	& > .filterItemOptionsContainer,
+	& > .filterItemMoreOptionsLinkContainer {
+		display: none;
+	}
+}
+
+.filterItemHeader {
+	width: 100%;
+	line-height: 21px;
+	display: inline-block;
+
+	img {
+		width: 16px;
+		height: $width;
+		cursor: pointer;
+		margin: 2px 2px 0 0;
+		vertical-align: top;
+	}
+
+	& > * {
+		display: inline;
+	}
+}
+
+.filtersPanelRightControls {
+	float: right;
+
+	img {
+		width: 20px;
+		height: $width;
+		margin-top: 0;
+	}
+
+	& > * {
+		vertical-align: text-bottom;
+	}
+}
+
+.filterItemLabel {
+	color: @default-text-color;
+	font-size: @default-text-size;
+	font-weight: bold;
+	word-break: break-all;
+
+	.topFilterItem & {
+		color: #e78e46;
+	}
+}
+
+.filterItemOptionContainer {
+	width: 100%;
+	display: flex;
+	flex-shrink: 0;
+	padding: 4px 0;
+	min-height: 18px;
+	align-items: center;
+
+	& > label {
+		color: @default-text-color;
+		cursor: pointer;
+		font-size: @default-text-size;
+		line-height: 10px;
+
+		& > input[type='checkbox'] {
+			margin-right: 8px;
+		}
+	}
+}
+
+.filterOptionCountLabel {
+	color: #999999;
+	font-size: @default-text-size;
+	margin-left: 4px;
+	position: relative;
+	.not-selectable();
+}
+
+.filterItemMoreOptionsLinkContainer {
+	font-size: @default-text-size;
+	line-height: 16px;
+	display: inline-block;
+}
+
+.filtersPanelTextBox {
+	float: right;
+	margin: 0 0 0 8px;
+	width: calc(100% - 40px);
+}
+
+.filtersPanelFilterOptionsContainer {
+	overflow: auto;
+	height: calc(100% - 62px);
+}
+
+.selectedFilter {
+	background-color: #f7f7f7;
+}
+
+.filtersPanelOptionsContainer {
+	overflow-y: auto;
+	padding-right: 0;
+	height: calc(100% - 98px);
+
+	.noScroll & {
+		overflow: hidden;
+
+		// this pseudo element will create necessary fake scroll width inside filters panel
+		&:before {
+			content: '';
+			float: right;
+			height: 9999999px;
+			overflow-y: scroll;
+			visibility: hidden;
+		}
+	}
+}
+
+.filtersPanelFakeScroll {
+	right: 0;
+	bottom: 0;
+	z-index: 1;
+	display: none;
+	position: absolute;
+	overflow-y: scroll;
+	height: calc(100% - 98px);
+
+	.noScroll & {
+		display: block;
+	}
+}
+
+#filtersPanelMassExpandImage {
+	background-color: @mass-expand-color;
+	-webkit-mask-image: @mass-expand-arrow-image;
+	mask-image: @mass-expand-arrow-image;
+
+	&[data-state='expanded'] {
+		transform: rotate(0deg);
+	}
+
+	&[data-state='collapsed'] {
+		transform: rotate(-90deg);
+	}
+
+	&[data-state='intermediate'] {
+		transform: rotate(-45deg);
+	}
+}
+
+.filtersPanelControlsContainer {
+	float: left;
+	width: 100%;
+	margin-top: 10px;
+}

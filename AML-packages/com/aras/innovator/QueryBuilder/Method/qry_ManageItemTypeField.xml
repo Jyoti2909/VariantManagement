@@ -1,0 +1,74 @@
+﻿<AML>
+ <Item type="Method" id="C9AF48BE125B49FA9C6BF6D079721AFA" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var iFrm = document.getElementById('qb_iframe');
+if (!iFrm) {
+	return;
+}
+iFrm.addEventListener('load', function() {
+	var itemTypeField = iFrm.closest('div[name="item_type"]');
+	var fieldComponent = this.contentWindow.getFieldComponentByName('item_type');
+	var dom = fieldComponent.dom.querySelector('.aras-dropdown');
+	var observer = new MutationObserver(function(mutations) {
+		mutations.forEach(function(mutation) {
+			const isOpened = mutation.target.classList.contains('aras-dropdown_opened');
+			itemTypeField.style.zIndex = isOpened ? 1000 : '';
+		});
+	});
+	this.contentWindow.document.body.style.background = 'none';
+	observer.observe(dom, {
+		attributes: true,
+		attributeFilter: ['class']
+	});
+});
+var aras = parent.aras;
+var formNm = 'qry_QueryItemForQueryDefinition';
+var formNd = aras.getItem('Form', 'name="' + formNm + '"', '<name>' + formNm + '</name>');
+if (!formNd) {
+	return;
+}
+formNd = aras.getFormForDisplay(formNd.getAttribute('id')).node;
+var qryDefinition = document.thisItem;
+if (!formNd || !qryDefinition) {
+	return;
+}
+var rootQryReferenceXpath = 'Relationships/Item[@type="qry_QueryReference" and (parent_ref_id="" or not(parent_ref_id))]';
+var rootQryReference = qryDefinition.getItemsByXPath(rootQryReferenceXpath);
+if (!rootQryReference.node) {
+	qryDefinition.fetchRelationships('qry_QueryReference');
+	rootQryReference = qryDefinition.getItemsByXPath(rootQryReferenceXpath);
+}
+var childRefId;
+var rootQryItem;
+if (rootQryReference.node) {
+	childRefId = rootQryReference.getProperty('child_ref_id');
+	var rootQryItemXpath = 'Relationships/Item[@type="qry_QueryItem" and ref_id="' + childRefId + '"]';
+	rootQryItem = qryDefinition.getItemsByXPath(rootQryItemXpath);
+	if (!rootQryItem.node) {
+		qryDefinition.fetchRelationships('qry_QueryItem');
+		rootQryItem = qryDefinition.getItemsByXPath(rootQryItemXpath);
+	}
+	if (!rootQryItem.node && qryDefinition.getAction() !== 'add') {
+		aras.AlertError(aras.getResource('../Modules/aras.innovator.QueryBuilder/', 'error_wrong_configuration_qry_def'));
+		return;
+	}
+} else if (qryDefinition.getAction() !== 'add') {
+	aras.AlertError(aras.getResource('../Modules/aras.innovator.QueryBuilder/', 'error_wrong_configuration_qry_def'));
+	return;
+} else {
+	rootQryItem = aras.newIOMItem('qry_QueryItem', 'add');
+	rootQryReference = aras.newIOMItem('qry_QueryReference', 'add');
+	var itemRefId = aras.IomInnovator.getNewID();
+	rootQryItem.setProperty('ref_id', itemRefId);
+	rootQryReference.setProperty('child_ref_id', itemRefId);
+	qryDefinition.addRelationship(rootQryItem);
+	qryDefinition.addRelationship(rootQryReference);
+}
+var isItemTypeSet = rootQryItem.getProperty('item_type');
+var isNewItem = aras.isNew(qryDefinition);
+var formType = isItemTypeSet && !isNewItem ? 'view' : 'edit';
+aras.uiShowItemInFrameEx(iFrm, rootQryItem.node, formType, 0, formNd);]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>qry_ManageItemTypeField</name>
+ </Item>
+</AML>

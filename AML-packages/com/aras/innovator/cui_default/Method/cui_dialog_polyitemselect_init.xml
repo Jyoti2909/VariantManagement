@@ -1,0 +1,36 @@
+﻿<AML>
+ <Item type="Method" id="F04E22E359A64B889D41083055B4C994" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!options.polyItemType) {
+	return {
+		hidden: true
+	};
+}
+
+const polyItemType = options.polyItemType;
+const morphae = aras.getMorphaeList(polyItemType);
+const currItemId = aras.getItemProperty(polyItemType, 'id');
+let currItemLabel = aras.getItemProperty(polyItemType, 'label');
+if (!currItemLabel) {
+	currItemLabel = aras.getItemProperty(polyItemType, 'name');
+}
+
+morphae.unshift({
+	id: currItemId,
+	label: currItemLabel
+});
+
+return {
+	value: options.selectedPolyItemId || itemTypeID,
+	options: morphae.map(function(option) {
+		return {
+			value: option.id,
+			label: option.label
+		};
+	})
+};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_dialog_polyitemselect_init</name>
+ </Item>
+</AML>

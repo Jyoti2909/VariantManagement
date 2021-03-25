@@ -1,0 +1,27 @@
+﻿<AML>
+ <Item type="Method" id="53FA263895E647DE9DA5D7B2B7DC6673" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const arasInstance = window.aras;
+const redlineViewController = window.redlineController;
+const shouldSearchDialogEventBeInvoked = window.searchContainer._onSearchDialogEventMustBeInvoked();
+const initProperties = {
+	value: currentSearchMode && currentSearchMode.id,
+	disabled: (redlineViewController && redlineViewController.isRedlineActive) || shouldSearchDialogEventBeInvoked
+};
+
+if (!target.options || !target.options.length) {
+	const searchModes = arasInstance.getSearchModes() || [];
+
+	initProperties.options = searchModes.map(function(currentMode) {
+		return {
+			label: arasInstance.getItemProperty(currentMode, 'label') || arasInstance.getItemProperty(currentMode, 'name'),
+			value: arasInstance.getItemProperty(currentMode, 'id')
+		};
+	});
+}
+
+return initProperties;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_common_searchmode_init</name>
+ </Item>
+</AML>

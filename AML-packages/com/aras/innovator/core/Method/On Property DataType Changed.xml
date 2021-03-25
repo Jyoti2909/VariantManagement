@@ -1,0 +1,42 @@
+﻿<AML>
+ <Item type="Method" id="81609BA70FBC4B9EAA30129CAE69C11D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*version:3*/
+var propstToReset = new Array('item_behavior', 'data_source', 'stored_length', 'prec', 'scale');
+var val  = [];
+for (var i = 0; i < propstToReset.length; i++) {
+	val[propstToReset[i]] = getRelationshipProperty(relationshipID, propstToReset[i]);
+}
+
+function resetRelationshipProperties(resetArr) {
+	for (var i = 0; i < propstToReset.length; i++) {
+		if (val[propstToReset[i]] !== '') {
+			for (var j = 0; j < resetArr.length; j++) {
+				if (resetArr[j] == propstToReset[i]) {
+					setRelationshipProperty(relationshipID, propstToReset[i], '');
+					resetArr.splice(j, 1);
+					break;
+				}
+			}
+		}
+	}
+}
+
+var newDataType = getRelationshipProperty(relationshipID, 'data_type');
+if (newDataType == 'string') {
+	resetRelationshipProperties(new Array('item_behavior', 'data_source', 'prec', 'scale'));
+} else if ((newDataType == 'float') || (newDataType == 'decimal')) {
+	resetRelationshipProperties(new Array('item_behavior', 'data_source', 'stored_length'));
+} else if ((newDataType == 'list') || (newDataType == 'filter list') || (newDataType == 'color list') || (newDataType == 'sequence') ||
+	(newDataType == 'item') || (newDataType == 'foreign')) {
+	resetRelationshipProperties(new Array('data_source', 'stored_length', 'prec', 'scale'));
+} else {
+	resetRelationshipProperties(new Array('item_behavior', 'data_source', 'stored_length', 'prec', 'scale'));
+}
+
+return true;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>On Property DataType Changed</name>
+ </Item>
+</AML>

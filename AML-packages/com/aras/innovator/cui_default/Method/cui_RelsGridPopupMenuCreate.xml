@@ -1,0 +1,168 @@
+﻿<AML>
+ <Item type="Method" id="DE8863A1F6F2495F88665A98E5C2ADC3" action="add">
+  <comments>Sets up popup menu item basing on container rich context</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var needToAddSeparator = false;
+var items = aras.newIOMItem();
+
+function addSeparator() {
+	var separator = aras.newIOMItem('CommandBarSeparator');
+	separator.setProperty('sort_order', 0);
+	items.appendItem(separator);
+}
+
+function canAddSeparator() {
+	return needToAddSeparator || items.getItemCount() > 1;
+}
+
+function addItem(name, label) {
+	if (needToAddSeparator) {
+		addSeparator();
+		needToAddSeparator = false;
+	}
+
+	var item = aras.newIOMItem('CommandBarMenuButton');
+	item.setProperty('name', name);
+	item.setProperty('label', label);
+	item.setProperty('sort_order', 0);
+	items.appendItem(item);
+}
+
+function getNegativeResult() {
+	return aras.newIOMItem('False');
+}
+
+function getPositiveResult() {
+	if (items.getItemCount() > 1) { // remove 1st tmp item that is not a collection
+		items.removeItem(items.getItemByIndex(0));
+	}
+	return items;
+}
+
+function hasPreaddedMenuItems(customItems) {
+	for (var i = customItems.getItemCount() - 1; i >= 0; i--) {
+		var item = customItems.getItemByIndex(i);
+		if (item.getAttribute('type') !== 'CommandBarSection') {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+if (inArgs.rowID === 'header_row') {
+	return getPositiveResult();
+} else {
+	var selectedRows = inArgs.grid.getSelectedItemIds();
+	if (selectedRows.indexOf(inArgs.rowID) === -1) {
+		inArgs.grid.setSelectedRow(inArgs.rowID, false, false);
+		inArgs.onSelectItem(inArgs.rowID, null, false, false);
+	}
+}
+
+if (inArgs.col == -1 || inArgs.grid['isRedlineRow_Experimental'](inArgs.rowID)) {
+	return getNegativeResult();
+}
+
+var rel = inArgs.item.selectSingleNode('Relationships/Item[@id=\'' + inArgs.rowID + '\' and (not(action) or (action!=\'delete\' and action!=\'purge\'))]');
+if (!rel) {
+	if (!aras.getItemRelationship(inArgs.item, inArgs['RelType_Nm'], inArgs.rowID, true)) {
+		aras.AlertError(aras.getResource('', 'relationshipsgrid.failed_get_item', inArgs['RelType_Nm']), null, null, window);
+		return getNegativeResult();
+	}
+	rel = inArgs.item.selectSingleNode('Relationships/Item[@id=\'' + inArgs.rowID + '\' and (not(action) or (action!=\'delete\' and action!=\'purge\'))]');
+
+	if (!rel) {
+		return getNegativeResult();
+	}
+}
+
+var relFiles = aras.getItemsOfFileProperties(rel, inArgs['DescByItemType_Nd']);
+var relatedItm = rel.selectSingleNode('related_id/Item');
+var relatedFiles;
+if (inArgs['RelatedItemType_Nd'] && relatedItm) {
+	relatedFiles = aras.getItemsOfFileProperties(relatedItm, inArgs['RelatedItemType_Nd']);
+}
+
+inArgs.updateControls(inArgs.rowID, null, relFiles, relatedFiles);
+
+needToAddSeparator = hasPreaddedMenuItems(inArgs['cui_items']);
+
+if (inArgs.RELATED_IT_NAME && inArgs.hasRelatedItem(inArgs.rowID)) {
+	if (inArgs.computeCorrectControlState('show_item')) {
+		addItem('show_item', aras.getResource('', 'relationshipsgrid.view', inArgs.RELATED_IT_LABEL));
+	}
+}
+
+if (inArgs.computeCorrectControlState('show_relationship')) {
+	addItem('show_relationship', aras.getResource('', 'relationshipsgrid.view', inArgs['RelType_Lbl']));
+}
+
+if (inArgs.propsArr[inArgs.col]['data_source'] == aras.getFileItemTypeID()) {
+	addItem('show_file', aras.getResource('', 'relationshipsgrid.view_file'));
+}
+needToAddSeparator = canAddSeparator();
+
+// 'postfix' necessary to identification relationshipTypeActions OR relationshipActions
+function AddRTActions(RTActions, postfix) {
+	if (RTActions) {
+		for (var menuEntry in RTActions) {
+			addItem(RTActions[menuEntry] + postfix, RTActions[menuEntry] + postfix);
+		}
+	}
+}
+
+//IR-006609 Error if new workflow process is added to item of item type
+if (QueryString('WorkFlowProc').toString() != 1) {
+	if (inArgs.CONTROLS_STATE_ARRAY['pick_replace']) {
+		addItem('pick_replace', aras.getResource('', 'relationshipsgrid.pickreplace', inArgs.RELATED_IT_LABEL));
+	}
+	if (inArgs.computeCorrectControlState('remove', rel.selectSingleNode('related_id[.!=\'\' or (./*)]') !== null)) {
+		addItem('remove', aras.getResource('', 'relationshipsgrid.remove', inArgs.RELATED_IT_LABEL));
+	}
+	needToAddSeparator = canAddSeparator();
+
+	if (inArgs.computeCorrectControlState('new')) {
+		addItem('new', aras.getResource('', 'common.new'));
+	}
+	if (inArgs.CONTROLS_STATE_ARRAY['delete']) {
+		addItem('delete', aras.getResource('', 'common.delete'));
+	}
+	needToAddSeparator = canAddSeparator();
+
+	if (!inArgs.isSpecialItemType()) {
+		if (!inArgs.isWorkflowTool() && !inArgs.isFunctionDisabled(inArgs['RelType_Nm'], 'Copy')) {
+			addItem('copy2clipboard', aras.getResource('', 'common.copy'));
+		}
+		if (inArgs.getPasteFlg()) {
+			addItem('paste', aras.getResource('', 'common.paste'));
+		}
+		if (inArgs.getPasteFlg(true)) {
+			addItem('paste_special', aras.getResource('', 'common.paste_special'));
+		}
+		needToAddSeparator = canAddSeparator();
+	}
+
+	if (relatedItm) {
+		if (inArgs.computeCorrectControlState('lock', rel, relFiles, relatedFiles)) {
+			addItem('lock', aras.getResource('', 'common.lock'));
+		}
+
+		if (inArgs.getUnlockFlg()) {
+			addItem('unlock', aras.getResource('', 'common.unlock'));
+		}
+
+		needToAddSeparator = canAddSeparator();
+	}
+
+	var _RelTypeID = aras.getItemProperty(inArgs['RelType_Nd'], 'id');
+	AddRTActions(inArgs.relationshipTypeActions[_RelTypeID], ' ');
+	AddRTActions(inArgs.relationshipActions[_RelTypeID], '  ');
+}
+
+return getPositiveResult();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_RelsGridPopupMenuCreate</name>
+ </Item>
+</AML>

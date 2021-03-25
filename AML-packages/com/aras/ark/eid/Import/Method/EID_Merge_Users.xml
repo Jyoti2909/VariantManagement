@@ -1,0 +1,541 @@
+﻿<AML>
+ <Item type="Method" id="28E10D594B134A019439984F5B448DEA" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="EID_External Identity Configurator" type="Identity">5400BE2B4462465F820166CED8DA03CB</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+		}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer dal;
+			internal const string Prop_SelectedUsersId = "gag_selected_users_id";
+			internal const string Prop_Definition_Id = "eid_definition_id";
+			internal const string Prop_ExternalUid = "eid_ext_unique_id";
+			internal const string Prop_Logon_Enabled = "logon_enabled";
+			internal const string Prop_Login_Name = "login_name";
+			internal const string Attr_Uid = "unique_id";
+			internal const string Attr_Enabled = "enabled";
+			internal const string Attr_UserAccountControl = "userAccountControl";
+
+			private readonly int[] disabledUserCodes = new int[]
+			{
+				514,
+				546,
+				66050,
+				66082,
+				262658,
+				262690,
+				328194,
+				328226
+			};
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				dal = dataAccessLayer;
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1031:DoNotCatchGeneralExceptionTypes")]
+			public Item Run(Item contextItem)
+			{
+				string eidDefinitionId = contextItem.getProperty(Prop_Definition_Id);
+				string extUniqueId = contextItem.getProperty("eid_unique_id");
+				string[] selectedUsersId = GetSelectedUsersId(contextItem.getProperty(Prop_SelectedUsersId, null));
+				Item eidUserMapping = GetEidUserMapping(eidDefinitionId);
+				if (eidUserMapping.isError())
+				{
+					return eidUserMapping;
+				}
+
+				Dictionary<string, string> userPropertyMapping = GetUserPropertyMapping(eidUserMapping);
+				try
+				{
+					string eidResult = contextItem.getProperty("eid_results");
+					IEnumerable<Item> affectedUsers = AddOrUpdateUsers(eidResult, userPropertyMapping, eidDefinitionId);
+
+					var itemQueries = new StringBuilder();
+
+					foreach (var aml in affectedUsers.Select(usr => usr.dom.OuterXml))
+					{
+						itemQueries.Append(aml);
+					}
+
+					itemQueries.Append(GetDeleteUsersQuery(eidResult, eidDefinitionId, selectedUsersId, userPropertyMapping));
+					Item result;
+					if (itemQueries.Length > 0)
+					{
+						result = dal.ApplyAML($"<AML>{itemQueries}</AML>");
+						if (result.isError() && !result.isEmpty())
+						{
+							return result;
+						}
+					}
+
+					itemQueries = new StringBuilder();
+					itemQueries.Append(UpdateIdentities(eidDefinitionId, eidResult, selectedUsersId));
+					itemQueries.Append(GetDisableUsersQuery(eidResult, selectedUsersId));
+
+					if (itemQueries.Length > 0)
+					{
+						result = dal.ApplyAML($"<AML>{itemQueries}</AML>");
+						if (result.isError() && !result.isEmpty())
+						{
+							return result;
+						}
+					}
+
+					return dal.NewResult(string.Empty);
+				}
+				catch (Exception ae)
+				{
+					return dal.NewError(ae.Message);
+				}
+			}
+
+			private Item GetEidUserMapping(string eidDefinitionId)
+			{
+				Item eidUserMapping = dal.NewItem("EID_User Property Mapping", "get");
+				eidUserMapping.setAttribute("select", "eid_ext_user_attribute,eid_user_property");
+				eidUserMapping.setProperty("source_id", eidDefinitionId);
+				return dal.ApplyItem(eidUserMapping);
+			}
+
+			private string GetDeleteUsersQuery(string serializedUsers, string eidDefinitionId, string[] selectedUsersId, Dictionary<string, string> userPropertyMapping)
+			{
+				string loginNameAttribute = GetUserLoginNameRelativeAttribute(userPropertyMapping);
+				IEnumerable<string> loginNames = GetExternalUsersFromString(serializedUsers)
+					.Where(x => x.ContainsKey(loginNameAttribute))
+					.Select(x => x[loginNameAttribute]);
+
+				if (!loginNames.Any())
+				{
+					return string.Empty;
+				}
+
+				Item users = GetExternalUsersQuery(eidDefinitionId);
+				if (selectedUsersId.Length > 0)
+				{
+					users.setAttribute("idlist", string.Join(",", selectedUsersId));
+				}
+
+				users = dal.ApplyItem(users);
+
+				if (users.isError())
+				{
+					return users.isEmpty()
+						? string.Empty
+						: throw new InvalidOperationException(users.getErrorDetail());
+				}
+
+				StringBuilder deletionAml = new StringBuilder();
+				foreach (Item user in users.Enumerate())
+				{
+					string loginName = user.getProperty(Prop_Login_Name);
+					if (!loginNames.Contains(loginName))
+					{
+						Item deleteUserQuery = dal.NewItem("User", "edit");
+						deleteUserQuery.setAttribute("doGetItem", "0");
+						deleteUserQuery.setID(user.getID());
+						deleteUserQuery.setProperty(Prop_Logon_Enabled, "0");
+						deletionAml.Append(deleteUserQuery.dom.OuterXml);
+					}
+				}
+
+				return deletionAml.ToString();
+			}
+
+			private IEnumerable<Item> AddOrUpdateUsers(string serializedUsers, Dictionary<string, string> propertyMapping, string eidDefinitionId)
+			{
+				if (string.IsNullOrWhiteSpace(serializedUsers))
+				{
+					return new List<Item>();
+				}
+
+				IEnumerable<Dictionary<string, string>> extUsers = GetExternalUsersFromString(serializedUsers).Where(c => c.ContainsKey(Attr_Uid));
+				string loginNameAttributeName = GetUserLoginNameRelativeAttribute(propertyMapping);
+
+				Item user = dal.NewItem("user", "get");
+				user.setAttribute("select", string.Join(",", propertyMapping.Keys));
+				user.setProperty(Prop_Definition_Id, eidDefinitionId);
+				user.setProperty(Prop_Login_Name, string.Join(",", extUsers.Select(c => $"'{c[loginNameAttributeName]}'")));
+				user.setPropertyCondition(Prop_Login_Name, "in");
+
+				Item usersResult = dal.ApplyItem(user);
+
+				return
+					from extUser in extUsers
+					join existingUser in Helper.ConvertToEnumerable(usersResult)
+										on extUser[loginNameAttributeName].ToUpperInvariant() equals existingUser.getProperty(Prop_Login_Name).ToUpperInvariant()
+										into grpJoin
+					from item in grpJoin.DefaultIfEmpty(null)
+					select AddOrUpdateUser(item, extUser, propertyMapping, eidDefinitionId) into result
+					where result != null
+					select result;
+
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1303:DoNotPassLiteralsAsLocalizedParameters")]
+			private static IEnumerable<Dictionary<string, string>> GetExternalUsersFromString(string serializedString)
+			{
+				if (string.IsNullOrWhiteSpace(serializedString))
+				{
+					return new List<Dictionary<string, string>>();
+				}
+
+				var des = new System.Web.Script.Serialization.JavaScriptSerializer();
+				List<Dictionary<string, string>> users = des.Deserialize<List<Dictionary<string, string>>>(serializedString);
+				return users;
+			}
+
+			private Item AddOrUpdateUser(Item existingUser, Dictionary<string, string> externalUser, IReadOnlyDictionary<string, string> propertyMappings, string eidDefinitionId)
+			{
+				// mappedProperty contains internalUserProperty --> External user property
+
+				bool valueChanged = false;
+				bool isAdd = existingUser == null;
+
+				Item user = dal.NewItem("user");
+				user.setAttribute("doGetItem", "0");
+
+				foreach (var propertyMap in propertyMappings)
+				{
+					string usrProperty = propertyMap.Key;
+					string extValue = externalUser[propertyMap.Value];
+
+					if (isAdd || !string.Equals(extValue, existingUser.getProperty(usrProperty), StringComparison.Ordinal))
+					{
+						user.setProperty(usrProperty, extValue);
+						valueChanged |= true;
+					}
+				}
+
+				if (!valueChanged)
+					return null;
+
+				if (isAdd)
+				{
+					user.setAction("add");
+					user.setProperty(Prop_Definition_Id, eidDefinitionId);
+				}
+				else
+				{
+					user.setAction("edit");
+					user.setID(existingUser.getID());
+				}
+
+				return user;
+			}
+
+			private string UpdateIdentities(string eidDefinitionId, string serializedUsers, string[] selectedUsersId)
+			{
+				Item gagRoleMapping = dal.NewItem("GAG_RoleMapping", "get");
+				gagRoleMapping.setProperty("source_id", eidDefinitionId);
+				gagRoleMapping.setAttribute("select", "gag_group_dn,gag_identity");
+				gagRoleMapping = dal.ApplyItem(gagRoleMapping);
+
+				if (gagRoleMapping.isError() && !gagRoleMapping.isEmpty())
+				{
+					throw new InvalidOperationException(gagRoleMapping.getErrorDetail());
+				}
+
+				IEnumerable<KeyValuePair<string, string>> roleMapping = gagRoleMapping.Enumerate()
+					.Select(x =>
+						new KeyValuePair<string, string>(
+							x.getProperty("gag_group_dn"),
+							x.getProperty("gag_identity")));
+				IEnumerable<Dictionary<string, string>> usersProperties = GetExternalUsersFromString(serializedUsers);
+
+				if (!roleMapping.Any() || !usersProperties.Any())
+				{
+					return string.Empty;
+				}
+
+				Item users = GetExternalUsersQuery(eidDefinitionId);
+				Item aliasQuery = dal.NewItem("Alias", "get");
+				aliasQuery.setAttribute("select", "related_id");
+				Item identityQuery = dal.NewItem("Identity", "get");
+				identityQuery.setAttribute("select", "id");
+
+				aliasQuery.setRelatedItem(identityQuery);
+				users.addRelationship(aliasQuery);
+				if (selectedUsersId.Length > 0)
+				{
+					users.setAttribute("idlist", string.Join(",", selectedUsersId));
+				}
+
+				users = dal.ApplyItem(users);
+				if (users.isError())
+				{
+					return users.isEmpty()
+						? string.Empty
+						: throw new InvalidOperationException(users.getErrorDetail());
+				}
+
+				StringBuilder aml = new StringBuilder();
+				foreach (Item user in users.Enumerate())
+				{
+					Item userRelationships = user.getRelationships();
+
+					if (userRelationships.isEmpty())
+					{
+						continue;
+					}
+
+					string[] aliasIds = userRelationships
+						.Enumerate().
+						Select(x =>
+						{
+							Item identity = x.getRelatedItem();
+							return identity.getID();
+						})
+						.ToArray();
+
+					if (!aliasIds.Any())
+					{
+						continue;
+					}
+
+					RemoveMemebers(aliasIds);
+					string eidExtUniqueId = user.getProperty(Prop_ExternalUid);
+					Dictionary<string, string> currentUserProperties = usersProperties
+						.FirstOrDefault(x => x.ContainsKey(Attr_Uid) && x[Attr_Uid] == eidExtUniqueId);
+					if (currentUserProperties == null)
+					{
+						continue;
+					}
+
+					IEnumerable<string> memberOfAttributes = currentUserProperties["memberof"].Split(';');
+					IEnumerable<KeyValuePair<string, string>> roles = roleMapping.Where(x => memberOfAttributes.Contains(x.Key));
+					if (!roles.Any())
+					{
+						continue;
+					}
+					aml.Append(AddMembers(aliasIds, roles));
+				}
+				return aml.ToString();
+			}
+
+			private Item GetExternalUsersQuery(string definitionId)
+			{
+				string select = string.Join(",", Prop_ExternalUid, Prop_Login_Name);
+				Item users = dal.NewItem("User", "get");
+				users.setProperty(Prop_Definition_Id, definitionId);
+				users.setAttribute("select", select);
+				return users;
+			}
+
+			private string AddMembers(string[] aliasIds, IEnumerable<KeyValuePair<string, string>> roles)
+			{
+				var aml = new StringBuilder();
+				foreach (KeyValuePair<string, string> role in roles)
+				{
+					foreach (string aliasId in aliasIds)
+					{
+						Item member = dal.NewItem("Member", "add");
+						member.setProperty("source_id", role.Value);
+						Item identity = dal.NewItem("Identity");
+						identity.setID(aliasId);
+						member.setRelatedItem(identity);
+						aml.Append(member.dom.OuterXml);
+					}
+				}
+
+				return aml.ToString();
+			}
+
+			private string GetDisableUsersQuery(string serializedUsers, string[] selectedUsersId)
+			{
+				IEnumerable<(string uniqueId, int userAccountControl)> extUsers = GetExternalUsersFromString(serializedUsers)
+					.Where(x => x.ContainsKey(Attr_Uid) && x.ContainsKey(Attr_UserAccountControl))
+					.Select(x => (uniqueId: x[Attr_Uid], userAccountControl: int.Parse(x[Attr_UserAccountControl], CultureInfo.CurrentCulture)));
+
+				string[] usersDn = extUsers
+					.Where(x => disabledUserCodes.Contains(x.userAccountControl))
+					.Select(x => x.uniqueId)
+					.ToArray();
+
+				//If we didn't find dn of users and we have users from AD, we will skip this.
+				if (usersDn.Length == 0 && !string.IsNullOrWhiteSpace(serializedUsers))
+				{
+					return string.Empty;
+				}
+
+				Item users = dal.NewItem("User", "get");
+				users.setAttribute("select", "id");
+				if (usersDn.Length > 1)
+				{
+					string condition = string.Join(",", usersDn.Select(x => $@"'{x}'"));
+					users.setAttribute("where", $"{Prop_ExternalUid} in ({condition})");
+				}
+				else if (usersDn.Length == 0)
+				{
+					users.setPropertyCondition(Prop_ExternalUid, "is not null");
+				}
+				else
+				{
+					users.setProperty(Prop_ExternalUid, usersDn[0]);
+				}
+
+				if (selectedUsersId.Length > 0)
+				{
+					users.setAttribute("idlist", string.Join(",", selectedUsersId));
+				}
+
+				users.setProperty(Prop_Logon_Enabled, "1");
+				users = dal.ApplyItem(users);
+				if (users.isError())
+				{
+					return users.isEmpty()
+						? string.Empty
+						: throw new InvalidOperationException(users.getErrorDetail());
+				}
+
+				var aml = new StringBuilder();
+				foreach (Item user in users.Enumerate())
+				{
+					Item disabledUser = dal.NewItem("User", "edit");
+					disabledUser.setID(user.getID());
+					disabledUser.setProperty(Prop_Logon_Enabled, "0");
+					aml.Append(disabledUser.dom.OuterXml);
+				}
+
+				return aml.ToString();
+			}
+
+			private static string[] GetSelectedUsersId(string selectedUsersIdJson)
+			{
+				if (string.IsNullOrWhiteSpace(selectedUsersIdJson))
+				{
+					return Array.Empty<string>();
+				}
+
+				System.Web.Script.Serialization.JavaScriptSerializer serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+				return serializer.Deserialize<string[]>(selectedUsersIdJson);
+			}
+
+			private void RemoveMemebers(string[] aliasIds)
+			{
+				Item members = dal.NewItem("Member", "get");
+				Item related = dal.NewItem("Identity");
+				related.setAttribute("idlist", string.Join(",", aliasIds));
+
+				members.setRelatedItem(related);
+				members = dal.ApplyItem(members);
+
+				if (members.isError())
+				{
+					if (members.isEmpty())
+					{
+						return;
+					}
+					else
+					{
+						throw new InvalidOperationException(members.getErrorDetail());
+					}
+				}
+
+				StringBuilder aml = new StringBuilder();
+				foreach (Item member in members.Enumerate())
+				{
+					member.setAction("delete");
+					Item deleteQuery = dal.NewItem("Member", "delete");
+					deleteQuery.setID(member.getID());
+					aml.Append(deleteQuery.dom.OuterXml);
+				}
+				if (aml.Length > 0)
+				{
+					dal.ApplyAML($"<AML>{aml.ToString()}</AML>");
+				}
+			}
+
+			private Dictionary<string, string> GetUserPropertyMapping(Item eidUserMapping)
+			{
+				Dictionary<string, string> propertyMapping = Helper.ConvertToEnumerable(eidUserMapping)
+					.Where(it => !new[] { Prop_ExternalUid, Prop_Logon_Enabled }.Contains(it.getPropertyAttribute("eid_user_property", "keyed_name")))
+					.ToDictionary(it => it.getPropertyAttribute("eid_user_property", "keyed_name"),
+						it => it.getProperty("eid_ext_user_attribute"));
+
+				propertyMapping.Add(Prop_ExternalUid, Attr_Uid);
+				propertyMapping.Add(Prop_Logon_Enabled, Attr_Enabled);
+
+				return propertyMapping;
+			}
+
+			private string GetUserLoginNameRelativeAttribute(Dictionary<string, string> userPropertyMapping)
+			{
+				return userPropertyMapping[Prop_Login_Name];
+			}
+		}
+		//[PartialPath("Helpers/Helper")]
+		internal static class Helper
+		{
+			internal static IEnumerable<Item> ConvertToEnumerable(Item item)
+			{
+				int count = item.getItemCount();
+				for (int i = 0; i < count; i++)
+				{
+					yield return item.getItemByIndex(i);
+				}
+			}
+		}
+		//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+		internal interface IDataAccessLayer
+		{
+			Item NewItem(string type = null, string action = null);
+			Item ApplyItem(Item item);
+			Item ApplyAML(string aml);
+			Item NewResult(string textMessage);
+			Item NewError(string errorMessage);
+		}
+
+		//[PartialPath("DataAccessLayer/DataAccessLayer")]
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this.innovator = innovator;
+			}
+
+			public Item NewItem(string type = null, string action = null)
+			{
+				if (string.IsNullOrEmpty(type))
+				{
+					return innovator.newItem();
+				}
+				if (string.IsNullOrEmpty(action))
+				{
+					return innovator.newItem(type);
+				}
+
+				return innovator.newItem(type, action);
+			}
+
+			public Item NewResult(string textMessage)
+			{
+				return innovator.newResult(textMessage);
+			}
+
+			public Item NewError(string errorMessage)
+			{
+				return innovator.newError(errorMessage);
+			}
+
+			public Item ApplyItem(Item item)
+			{
+				return item.apply();
+			}
+
+			public Item ApplyAML(string aml)
+			{
+				return innovator.applyAML(aml);
+			}
+
+			]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_Merge_Users</name>
+ </Item>
+</AML>

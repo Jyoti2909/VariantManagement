@@ -1,0 +1,355 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.Cryptography</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.Cryptography.AesCryptoAlgorithm">
+            <summary>
+            This class implements encryption and decryption a string with AES algorithm.
+            </summary>
+        </member>
+        <member name="F:Aras.Cryptography.AesCryptoAlgorithm.LengthOfDynamicPrefixForEncryption">
+            <summary>
+            The prefix length in encrypted string
+            </summary>
+        </member>
+        <member name="F:Aras.Cryptography.AesCryptoAlgorithm.DefaultContainerName">
+            <summary>
+            Default container name
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.AesCryptoAlgorithm.#ctor(System.String,System.Boolean)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="keyContainerName">Container name</param>
+            <param name="useMachineKeyStore">Indicating where container presents in the computer's key store or the user profile store.</param>
+        </member>
+        <member name="M:Aras.Cryptography.AesCryptoAlgorithm.Encrypt(System.String)">
+            <summary>
+            Encrypt a string
+            </summary>
+            <param name="input">String for encryption.</param>
+            <returns>The encrypted string.</returns>
+        </member>
+        <member name="M:Aras.Cryptography.AesCryptoAlgorithm.Decrypt(System.String)">
+            <summary>
+            Decrypt a crypted string.
+            </summary>
+            <param name="input">The crypted string.</param>
+            <returns>The decrypted string.</returns>
+        </member>
+        <member name="T:Aras.Cryptography.Certificates.Certificate">
+            <summary>
+            Allows to load <see cref="T:System.Security.Cryptography.X509Certificates.X509Certificate2"/>  certificates
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.Certificates.Certificate.Load(System.String)">
+            <summary>
+            Load certificate without password
+            </summary>
+            <param name="path">Full certificate file name</param>
+            <returns>Certificate</returns>
+        </member>
+        <member name="M:Aras.Cryptography.Certificates.Certificate.Load(System.String,System.String)">
+            <summary>
+            Load certificate
+            </summary>
+            <param name="path">Full certificate file name</param>
+            <param name="password">Password</param>
+            <returns>Certificate</returns>
+        </member>
+        <member name="T:Aras.Cryptography.ConfigDecryption">
+            <summary>
+            Encrypt or decrypt configurstion file helper
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.ConfigDecryption.Decrypt(System.String)">
+            <summary>
+            Try decrypt the encrypted string
+            </summary>
+            <param name="content">String with encrypted data</param>
+            <returns>Decrypted string or input content</returns>
+        </member>
+        <member name="M:Aras.Cryptography.ConfigDecryption.Encrypt(System.String)">
+            <summary>
+            Encrypt the string
+            </summary>
+            <param name="content">String for encryption</param>
+            <returns>Encrypted string or input content</returns>
+        </member>
+        <member name="M:Aras.Cryptography.ConfigDecryption.Encrypt(System.String,System.String,System.Boolean)">
+            <summary>
+            Encrypt the string
+            </summary>
+            <param name="content">String for encryption</param>
+            <param name="keyContainerName">Container name</param>
+            <param name="useMachineKeyStore">Indicating where container presents in the computer's key store or the user profile store</param>
+            <returns>Encrypted string or input content</returns>
+        </member>
+        <member name="T:Aras.Cryptography.ConfigDecryptor">
+            <summary>
+            Decrypts string values.
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.ConfigDecryptor.Decrypt(System.String)">
+            <summary>
+            Decrypts encrypted string.
+            </summary>
+            <param name="value">Encrypted string.</param>
+            <returns>Decrypted string.</returns>
+        </member>
+        <member name="M:Aras.Cryptography.HashAlgorithmExtensions.ComputeHash(Aras.Cryptography.IHashAlgorithm,System.String)">
+            <summary>
+            Computes hash value for given data.
+            </summary>
+            <param name="hasher">Hash algorithm to use.</param>
+            <param name="data">Data to be hashed.</param>
+            <returns>
+            Hash value of the data as byte array.
+            </returns>
+            <remarks>
+            UTF-8 encoding used to convert string to bytes.
+            </remarks>
+        </member>
+        <member name="M:Aras.Cryptography.HashAlgorithmExtensions.ComputeHash(Aras.Cryptography.IHashAlgorithm,System.String,System.Text.Encoding)">
+            <summary>
+            Computes hash value for given data.
+            </summary>
+            <param name="hasher">Hash algorithm to use.</param>
+            <param name="data">Data to be hashed.</param>
+            <param name="encoding">Preferred encoding.</param>
+            <returns>
+            Hash value of the data as byte array.
+            </returns>
+        </member>
+        <member name="T:Aras.Cryptography.HashKeyDerivationFunction">
+            <summary>
+            This class implements rfc5869 HMAC-based Extract-and-Expand Key Derivation Function (HKDF) using HMACSHA256."
+            </summary>
+        </member>
+        <member name="F:Aras.Cryptography.HashKeyDerivationFunction.OutputKeyLength">
+            <summary>
+            Output key length
+            </summary>
+        </member>
+        <member name="F:Aras.Cryptography.HashKeyDerivationFunction.ApplicationSpecificInformation">
+            <summary>
+            Application-specific information
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.HashKeyDerivationFunction.DeriveKey(System.Byte[],System.Byte[],System.Byte[],System.Int32)">
+            <summary>
+            Generates a pseudorandom number of the length specified.  This number is suitable for use as an encryption key, HMAC validation key or other uses of a cryptographically secure pseudorandom number.
+            </summary>
+            <param name="salt">Non-secret random value. If less than 64 bytes it is padded with zeros. Can be reused but the output is stronger if not reused.</param>
+            <param name="inputKeyMaterial">Material that is not necessarily random that will be used with the HMACSHA256 hash function and the salt to produce a 32-byte pseudorandom number.</param>
+            <param name="info">(Optional) context and application-specific information. Allows the output to be bound to application context-related information. Pass 0 length byte array to omit.</param>
+            <param name="outputLength">Length of output in bytes.</param>
+            <returns>Pseudorandom number of the length specified.</returns>
+        </member>
+        <member name="T:Aras.Cryptography.IAesCryptoAlgorithm">
+            <summary>
+            Interface of "encryption and decryption a string with AES algorithm"
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.IAesCryptoAlgorithm.Encrypt(System.String)">
+            <summary>
+            Encrypt a string
+            </summary>
+            <param name="input">String for encryption.</param>
+            <returns>The encrypted string.</returns>
+        </member>
+        <member name="M:Aras.Cryptography.IAesCryptoAlgorithm.Decrypt(System.String)">
+            <summary>
+            Decrypt a crypted string.
+            </summary>
+            <param name="input">The crypted string.</param>
+            <returns>The decrypted string.</returns>
+        </member>
+        <member name="T:Aras.Cryptography.IConfigDecryptor">
+            <summary>
+            Decrypts string values.
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.IConfigDecryptor.Decrypt(System.String)">
+            <summary>
+            Decrypts encrypted string.
+            </summary>
+            <param name="value">Encrypted string.</param>
+            <returns>Decrypted string.</returns>
+        </member>
+        <member name="T:Aras.Cryptography.IHashKeyDerivationFunction">
+            <summary>
+            Intarface of "rfc5869 HMAC-based Extract-and-Expand Key Derivation Function (HKDF) using HMACSHA256."
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.IHashKeyDerivationFunction.DeriveKey(System.Byte[],System.Byte[],System.Byte[],System.Int32)">
+            <summary>
+            Generates a pseudorandom number of the length specified.  This number is suitable for use as an encryption key, HMAC validation key or other uses of a cryptographically secure pseudorandom number.
+            </summary>
+            <param name="salt">Non-secret random value. If less than 64 bytes it is padded with zeros. Can be reused but the output is stronger if not reused.</param>
+            <param name="inputKeyMaterial">Material that is not necessarily random that will be used with the HMACSHA256 hash function and the salt to produce a 32-byte pseudorandom number.</param>
+            <param name="info">(Optional) context and application-specific information. Allows the output to be bound to application context-related information. Pass 0 length byte array to omit.</param>
+            <param name="outputLength">Length of output in bytes.</param>
+            <returns>Pseudorandom number of the length specified.</returns>
+        </member>
+        <member name="M:Aras.Cryptography.ProgressiveMD5Algorithm.#ctor">
+            <summary>
+            Creates an MD5 object and initializes the Context
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.ProgressiveMD5Algorithm.ComputeHash(System.Byte[],System.Int32,System.Int32)">
+            <summary>
+            hashes A part of A byte array
+            </summary>
+            <param name="input">byte array</param>
+            <param name="index">start hashing at</param>
+            <param name="count">number of bytes to hash</param>
+            <returns>MD5 hash in A byte array</returns>
+        </member>
+        <member name="M:Aras.Cryptography.ProgressiveMD5Algorithm.ComputeHash(System.Byte[])">
+            <summary>
+            hashes A byte array
+            </summary>
+            <param name="input">byte array</param>
+            <returns>MD5 hash in A byte array</returns>
+        </member>
+        <member name="M:Aras.Cryptography.ProgressiveMD5Algorithm.ComputeHash(System.IO.Stream)">
+             <summary>
+            
+             </summary>
+             <param name="stream"></param>
+             <returns></returns>
+        </member>
+        <member name="M:Aras.Cryptography.ProgressiveMD5Algorithm.Initialize">
+            <summary>
+            (re) initalizes the Context
+            </summary>
+        </member>
+        <member name="T:Aras.Cryptography.RijndaelAlgorithm">
+            <summary>
+            Helper class that initialize RijndaelManaged algorithm and Encrypt method for convenient use.
+            Additionally it provides Key and IV values only in encrypted way by RSACryptoAlgorithm.
+            </summary>
+        </member>
+        <member name="T:Aras.Cryptography.RSACryptoAlgorithm">
+            <summary>
+            Helper class that initialize RSACryptoServiceProvider with public key from assembly embedded resource
+            and wrap it's method for convenient use.
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.RSACryptoAlgorithm.InitializeByPublicKey(System.Security.Cryptography.RSACryptoServiceProvider)">
+            <summary>
+            Initialize crypto provider
+            </summary>
+            <remarks></remarks>
+        </member>
+        <member name="M:Aras.Cryptography.RSACryptoAlgorithm.InitializeCryptoProvider(System.Security.Cryptography.RSACryptoServiceProvider)">
+            <summary>
+            Initialize an instance of System.Security.Cryptography.RSACryptoServiceProvider by publik key.
+            </summary>
+            <param name="provider">instance of System.Security.Cryptography.RSACryptoServiceProvider</param>
+        </member>
+        <member name="T:Aras.Cryptography.SymmetricCryptoAlgorithmBuilder">
+            <summary>
+            This builder create and initialize FIPS-complaint SymmetricAlgorithm. Internally it uses AesCryptoServiceProvider.
+            </summary>
+        </member>
+        <member name="T:Aras.Cryptography.Hashes.Md5">
+            <summary>
+            MD5 calculations
+            </summary>
+        </member>
+        <member name="F:Aras.Cryptography.Hashes.Md5.Md5HashRegex">
+            <summary>
+            This regular expression validates a string as an Md5 hash
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.Hashes.Md5.ComputeHash(System.String)">
+            <summary>
+            Computes the Md5 hash value for the specified string.
+            </summary>
+            <param name="val">String to be encoded.</param>
+            <returns>Md5 hash value.</returns>
+        </member>
+        <member name="M:Aras.Cryptography.Hashes.Md5.ComputeHash(System.String,System.Text.Encoding,System.Boolean)">
+            <summary>
+            Computes the Md5 hash value for the specified string.
+            </summary>
+            <param name="val">String to be encoded.</param>
+            <param name="encoding">Encoder to get val bytes. ASCIIEncoding will be used if null (ignored for the NETFX CORE)</param>
+            <param name="toLower">true to convert hash value to lower case, false - to upper case</param>
+            <returns>Md5 hash value.</returns>
+        </member>
+        <member name="M:Aras.Cryptography.Hashes.Md5.IsHash(System.String)">
+            <summary>
+            Method validates a string as an Md5 hash
+            </summary>
+            <param name="hashLike">Hash to be checked</param>
+            <returns>true if value is an Md5 hash</returns>
+        </member>
+        <member name="T:Aras.Cryptography.Hashes.Sha256">
+            <summary>
+            SHA256 calculations
+            </summary>
+        </member>
+        <member name="F:Aras.Cryptography.Hashes.Sha256.Sha256HashRegex">
+            <summary>
+            This regular expression validates a string as an Sha256 hash
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.Hashes.Sha256.ComputeHash(System.String)">
+            <summary>
+            Computes the Sha256 hash value for the specified string.
+            </summary>
+            <param name="val">String to be encoded.</param>
+            <returns>Sha256 hash value.</returns>
+        </member>
+        <member name="M:Aras.Cryptography.Hashes.Sha256.ComputeHash(System.String,System.Text.Encoding,System.Boolean)">
+            <summary>
+            Computes the Sha256 hash value for the specified string.
+            </summary>
+            <param name="val">String to be encoded.</param>
+            <param name="encoding">Encoder to get val bytes. ASCIIEncoding will be used if null (ignored for the NETFX CORE)</param>
+            <param name="toLower">true to convert hash value to lower case, false - to upper case</param>
+            <returns>Md5 hash value.</returns>
+        </member>
+        <member name="M:Aras.Cryptography.Hashes.Sha256.ComputeHash(System.Byte[])">
+            <summary>
+            Computes the Sha256 hash.
+            </summary>
+            <param name="bytes">Bytes to hash.</param>
+            <returns>Hashed bytes.</returns>
+        </member>
+        <member name="M:Aras.Cryptography.Hashes.Sha256.IsHash(System.String)">
+            <summary>
+            Method validates a string as an Sha256 hash
+            </summary>
+            <param name="hashLike">Hash to be checked</param>
+            <returns>true if value is an Sha256 hash</returns>
+        </member>
+        <member name="T:Aras.Cryptography.ParoleHash">
+            <summary>
+            Class calculates Md5 or Sha256 hash of parole if parole value is not hashed.
+            </summary>
+        </member>
+        <member name="M:Aras.Cryptography.ParoleHash.#ctor(System.String)">
+            <summary>
+            Creates an instance of <see cref="T:Aras.Cryptography.ParoleHash"/> class.
+            </summary>
+            <param name="parole">The parole value, can contain hashed or not hashed password.</param>
+        </member>
+        <member name="P:Aras.Cryptography.ParoleHash.Value">
+            <summary>
+            Parole hash value.
+            </summary>
+        </member>
+        <member name="P:Aras.Cryptography.ParoleHash.HashingMode">
+            <summary>
+            Hashing mode of hashed parole value.
+            </summary>
+        </member>
+    </members>
+</doc>

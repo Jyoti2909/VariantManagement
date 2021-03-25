@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="4BF0E874A8F0406D948F002B2064DDAA" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (inArgs.isReinit) {
+	//Workflow Map, Form, Life Cycle Map, CMF Admin Panel Toolbar
+	var node;
+	if (window.itemTypeName === 'Form' || window.itemTypeName === 'cmf_ContentType' || window.itemTypeName === 'Life Cycle Map') {
+		node = window.item;
+	} else {
+		node = window.currWFNode;
+	}
+
+	if (node) {
+		return {'cui_disabled': !isEditMode};
+	}
+	//Normal Toolbar
+	if (Object.getOwnPropertyNames(inArgs.eventState).length === 0) {
+		var states = aras.evalMethod('cui_reinit_calc_tearoff_states');
+		var keys = Object.keys(states);
+		for (var i = 0; i < keys.length; i++) {
+			inArgs.eventState[keys[i]] = states[keys[i]];
+		}
+	}
+	return {'cui_disabled': !inArgs.eventState.canSave};
+}
+return {};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_reinit_twt_save</name>
+ </Item>
+</AML>

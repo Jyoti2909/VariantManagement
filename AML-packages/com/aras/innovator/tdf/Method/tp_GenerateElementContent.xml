@@ -1,0 +1,107 @@
+﻿<AML>
+ <Item type="Method" id="DA594B9D910248F5888FC6CB24AC4DB1" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovatorInstance = this.getInnovator();
+String schemaId = this.getProperty("xml_schema");
+String languageCode = this.getProperty("language_code");
+Item generationResult = innovatorInstance.newResult("");
+
+if (!String.IsNullOrEmpty(schemaId))
+{
+	String generationAction = this.getProperty("generationAction");
+	if (!String.IsNullOrEmpty(generationAction))
+	{
+		System.Web.Script.Serialization.JavaScriptSerializer jsSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+		Aras.TDF.Base.SchemaElementFactory factory = CreateFactory(this, innovatorInstance, schemaId);
+		factory.CustomContentEnabled = true;
+		factory.DefaultLanguageCode = !String.IsNullOrEmpty(languageCode) ? languageCode : "en";
+
+		switch (generationAction)
+		{
+			case "new":
+				String elementNameProperty = this.getProperty("element_name");
+				if (!String.IsNullOrEmpty(elementNameProperty))
+				{
+					Aras.TDF.Base.DocumentSchemaNode newElement = factory.NewElement(elementNameProperty);
+					generationResult = innovatorInstance.newResult(factory.ExportElementToXml(newElement));
+				}
+
+				break;
+			case "static":
+				String elementNodeProperty = this.getProperty("element_node");
+				if (!String.IsNullOrEmpty(elementNodeProperty))
+				{
+					String referenceNodesProperty = this.getProperty("reference_nodes");
+					if (!String.IsNullOrEmpty(referenceNodesProperty)) {
+						List<String> referenceNodesXmlList = jsSerializer.Deserialize<List<String>>(referenceNodesProperty);
+
+						foreach (String referenceXml in referenceNodesXmlList) {
+							factory.AddReference(referenceXml);
+						}
+					}
+
+					Aras.TDF.Base.DocumentSchemaNode targetElement = factory.ParseElement(elementNodeProperty);
+					factory.GenerateCustomContent((Aras.TDF.Base.DocumentSchemaElement) targetElement);
+
+					generationResult = innovatorInstance.newResult(factory.ExportElementToXml(targetElement));
+				}
+				else
+				{
+					generationResult = innovatorInstance.newError(CCO.ErrorLookup.Lookup("tp_SpecifyInputData"));
+				}
+
+				break;
+			case "dynamic":
+				String elementNodesProperty = this.getProperty("element_nodes");
+				if (!String.IsNullOrEmpty(elementNodesProperty))
+				{
+					String referenceNodesProperty = this.getProperty("reference_nodes");
+					if (!String.IsNullOrEmpty(referenceNodesProperty)) {
+						List<String> referenceNodesXmlList = jsSerializer.Deserialize<List<String>>(referenceNodesProperty);
+
+						foreach (String referenceXml in referenceNodesXmlList) {
+							factory.AddReference(referenceXml);
+						}
+					}
+
+					List<String> elementNodesXmlList = jsSerializer.Deserialize<List<String>>(elementNodesProperty);
+					List<Aras.TDF.Base.DocumentSchemaNode> elementsList = new List<Aras.TDF.Base.DocumentSchemaNode>();
+
+					foreach (String elementXml in elementNodesXmlList) {
+						elementsList.Add(factory.ParseElement(elementXml));
+					}
+
+					generationResult = innovatorInstance.newResult(factory.ExportElementsToXml(elementsList));
+				}
+				else
+				{
+					generationResult = innovatorInstance.newError(CCO.ErrorLookup.Lookup("tp_SpecifyInputData"));
+				}
+
+				break;
+		}
+	}
+}
+else
+{
+	generationResult = innovatorInstance.newError(CCO.ErrorLookup.Lookup("tp_SpecifySchemaId"));
+}
+
+return generationResult;
+		}
+
+		public static Aras.TDF.Base.SchemaElementFactory CreateFactory(Item thisItem, Innovator innovatorInstance, string schemaId)
+		{
+			if (thisItem == null)
+			{
+				throw new ArgumentException("thisItem should be not null");
+			}
+
+			var executionContext = new Aras.TDF.Base.SchemaElementExecutionContext(thisItem.getProperty("document_id"), thisItem.getProperty("documentItemType"), thisItem.getProperty("contentBuilderMethod"));
+			var factory = new Aras.TDF.Base.SchemaElementFactory(innovatorInstance, schemaId, executionContext);
+			return factory;
+			]]></method_code>
+  <method_type>C#</method_type>
+  <name>tp_GenerateElementContent</name>
+ </Item>
+</AML>

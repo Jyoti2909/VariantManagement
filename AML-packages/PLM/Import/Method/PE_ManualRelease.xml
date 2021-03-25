@@ -1,0 +1,48 @@
+﻿<AML>
+ <Item type="Method" id="B5119D8F8FDB4F80A2FBD362E10FD994" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// PE_ManualRelease
+// Called from a server action. Releases an item outside of change control
+
+Innovator inn = this.getInnovator();
+string thisType = this.getType();
+string thisName = this.getProperty("keyed_name", "");
+string state = this.getProperty("state", "");
+bool isInPreliminaryState = String.Equals(state, "Preliminary", StringComparison.Ordinal);
+bool isInManualChangeState = String.Equals(state, "Manual Change", StringComparison.Ordinal);
+
+// Item must be in Preliminary or Manual Change state
+if (!isInPreliminaryState && !isInManualChangeState)
+{
+	return inn.newError(CCO.ErrorLookup.Lookup("PE_ManualRelease_MustBeInPreliminaryState", thisType));
+}
+
+// Make sure the current user is in the Owner identity
+string ownedById = this.getProperty("owned_by_id");
+if (!CCO.Permissions.IdentityListHasId(Aras.Server.Security.Permissions.Current.IdentitiesList, ownedById))
+{
+	return inn.newError(CCO.ErrorLookup.Lookup("PE_ManualRelease_YouMustBeAMember", this.getPropertyAttribute("owned_by_id","keyed_name","Owner")));
+}
+
+Item checkResult = this.apply("PE_CheckChangeItemUsage");
+if(checkResult.isError())
+{
+  	return checkResult;
+}
+
+// Promote the item to Released
+Item resItem = this.promote("Released", "Manual Release");
+if(resItem.isError())
+{
+  return resItem;
+}
+
+Item promoteditem = this.newItem(thisType, "get");
+promoteditem.setID(this.getID());
+promoteditem = promoteditem.apply();
+
+return resItem;]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_ManualRelease</name>
+ </Item>
+</AML>

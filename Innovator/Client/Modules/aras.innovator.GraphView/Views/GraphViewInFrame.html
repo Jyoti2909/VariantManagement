@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<base href="../../../">
+	<link rel="stylesheet" href="../styles/common.min.css"/>
+	<link rel="stylesheet" href="Modules/aras.innovator.GraphView/styles/graphView.min.css"/>
+	<script type="text/javascript" src="vendors/d3.min.js"></script>
+	<script type="text/javascript" src="javascript/include.aspx?classes=ArasModules,XmlDocument"></script>
+	<script type="text/javascript" src="jsBundles/graphView.js"></script>
+	<script type="text/javascript" src="jsBundles/cui.js"></script>
+	<script>
+		const initCuiLayout = function() {
+			const layoutNode = document.getElementById('cuiLayout');
+			window.layout = new CuiLayout(layoutNode, 'RelationshipGraphView', {
+				itemTypeName: window.itemTypeName
+			});
+			window.addEventListener('unload', () => window.layout.destroy());
+			return window.layout.init();
+		};
+		document.addEventListener('DOMContentLoaded', initCuiLayout);
+		const topWindow = TopWindowHelper.getMostTopWindowWithAras(window);
+		window.aras = topWindow.aras;
+	</script>
+</head>
+<body class="graph-view graph-view_relship">
+	<div id="cuiLayout" class="cui-toolbars"></div>
+	<div id="graphView" class="graph-view__graph-container"></div>
+</body>
+</html>

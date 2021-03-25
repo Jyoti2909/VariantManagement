@@ -1,0 +1,95 @@
+﻿<AML>
+ <Item type="Method" id="BC75D55E6EDB4D91AC2CEA8A7783DA8C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*
+purpose: promote some items of Activity2 Assignment type to state Active.
+         Initially the method is used as pre method in Activity2 LCM (before Active state)
+         and onAfterAdd of Activity2 Assignment item to promote it if need.
+input parameters:
+         this - Activity2 (its assignments will be promoted to Active or 
+                Activity2 Assignment item (the item is promoted to Active if need)
+*/
+
+Innovator tmpInn = this.getInnovator();
+string thisItemID = this.getID();
+string thisItemTypeName = this.getAttribute("type");
+string atc2assmnt = "Activity2 Assignment";
+
+Item q;
+Item r, activityAssignments;
+
+switch (thisItemTypeName)
+{
+  case "Activity2" :
+      //+++ set date_activated
+      string act2DatePattern = "yyyy-MM-ddTHH:mm:ss";
+      string dt = DateTime.UtcNow.ToString(act2DatePattern, System.Globalization.DateTimeFormatInfo.InvariantInfo);
+      dt = tmpInn.getI18NSessionContext().ConvertUtcDateTimeToNeutral(dt, act2DatePattern);
+      Item qryItem = tmpInn.newItem("Activity2","edit");
+      qryItem.setID(this.getID());
+      qryItem.setAttribute("serverEvents", "0");
+      qryItem.setAttribute("doGetItem", "0");
+      qryItem.setProperty("date_activated", dt);
+      activityAssignments = qryItem.apply();
+      if (activityAssignments.isError()) return activityAssignments;
+      //--- set date_activated
+           
+      q = tmpInn.newItem(atc2assmnt, "get");
+      q.setProperty("source_id", thisItemID);
+      q.setProperty("state", "Pending");
+      q.setAttribute("select", "id,locked_by_id,related_id(keyed_name)");
+      activityAssignments = q.apply();
+    break;
+  case "Activity2 Assignment" :
+      q = tmpInn.newItem("Activity2 Assignment", "get");
+      q.setID(this.getID());
+      q.setAttribute("select", "source_id, role");
+      activityAssignments = q.apply();
+      if (activityAssignments.getItemCount() != 1) return tmpInn.newError("100: Incorrect item count");
+      
+      string source_id = activityAssignments.getItemByIndex(0).getProperty("source_id");
+      string act2AssXml = activityAssignments.node.OuterXml;
+      tmpInn.applyMethod("PM_onAfterUpdateAct2Assgmnts", act2AssXml);
+      if (source_id == "") source_id = "UNKNOWN_ID";
+      
+      q = tmpInn.newItem("Activity2", "get");
+      q.setProperty("id", source_id);
+      q.setProperty("state", "Active");
+      q.setAttribute("select", "id");
+      activityAssignments = q.apply();
+      int c = activityAssignments.getItemCount();
+      if (c == 0) {
+        //nothing to do
+      } else if (c == 1)
+        activityAssignments = this;
+      else
+      return tmpInn.newError("110: Assignment belongs to several activities. It's very strainge");
+    break;
+  default :
+    return tmpInn.newError("120: Incorrect Input Item Type Name");
+}
+
+Item itm;
+q = tmpInn.newItem(atc2assmnt, "unlock");
+for (int i = 0; i < activityAssignments.getItemCount(); i++)
+{
+  itm = activityAssignments.getItemByIndex(i);
+  if (itm.getProperty("locked_by_id", "") != "" && itm.getProperty("locked_by_id", "") != null)
+  {
+    q.setAction("unlock");
+    q.setID(itm.getID());
+    r = q.apply();
+    if (r.isError()) return r;
+  }
+  q.setAction("PromoteItem");
+  q.setProperty("state", "Active");
+  q.setID(itm.getID());
+  r = q.apply();
+  if (r.isError()) return r;
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Project_promoteActivity2Assgnmts</name>
+ </Item>
+</AML>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = "..";
+  gCommonRootRelPath = "..";
+  gTopicId = "11.0_2";
+
+//]]></script>
+
+<script type="text/javascript" src="../template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="../template/scripts/common.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="../assets/css/default.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Configuring BOM Reports</title>
+  <meta name="topic-status" content="Draft"/>
+  
+</head>
+<body>
+  <div>
+  <h1>Configuring BOM Reports</h1>
+  <p>The following BOM Reports retrieve data using Query definitions:</p>
+  <ul class="Disc">
+    <li><strong>BOM Costing Report</strong> - PE_costingReport</li>
+    <br/>
+    <li><strong>Multilevel BOM Report</strong> - PEmultilevelReport</li>
+    <br/>
+    <li><strong>BOM Quality Rollup Report</strong> - PE_quantityReport</li>
+  </ul>
+  <p class="Figure_indented"><img alt="" src="../assets/images/BOMreport.jpg" style="width: 100%; max-width: 273px;"/></p>
+  <p>To customize these reports you have to change their Query Definitions and Stylesheets. Select <strong>Administration&gt;Reports</strong> from the TOC. </p>
+  <p>By default, BOM reports are limited to 1000000 rows. Opening a larger BOM structure causes an error similar to the following:</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/errormessage.jpg" style="width: 100%; max-width: 464px;"/></p>
+  <p>If your company manages smaller BOM structures, you can limit BOM Reports to a specific number of rows using the following procedure:</p>
+  <ol class="Decimal">
+    <li>Search for the <strong>PE_ExecuteQdReportMethod </strong>method and open its item view for editing.</li>
+    <br/>
+    <li>Go to the <strong>PE_ExecuteQdReportMethod</strong> method editor.</li>
+    <br/>
+    <li>Change 1000000 to the specific number of all occurrences of the following if statement:</li>
+  </ol>
+  <p class="Code_Sample" style="margin-left:40px">if (_partsTree.Count &gt;= 1000000)<br/>
+    {<br/>
+         throw new<br/>
+         Aras.Server.Core.InnovatorServerException (errorLookup.Lookup (&quot;PE_ReportIsVeryLarge&quot;));<br/>
+    }</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/peexec.jpg" style="width: 100%; max-width: 777px;"/></p>
+  <ol class="Decimal" start="4">
+    <li>Click <img src="../assets/images/done.jpg" style="width: 100%; max-width: 76px;"/> on the <strong>PE_ExecuteQdReportMethod</strong> method toolbar and close the item view.</li>
+  </ol>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

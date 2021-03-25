@@ -1,0 +1,45 @@
+﻿<AML>
+ <Item type="SQL" id="95A5985084014ABB899A39F90EA3C49A" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>EvaluatePermissionPropertyValue_ExplicitlyDefined</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION EvaluatePermissionPropertyValue_ExplicitlyDefined
+(
+	@type VARCHAR(32),
+	@propdef_id CHAR(32),
+	@itemtype_id CHAR(32),
+	@identity_list VARCHAR(MAX)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+        SELECT MAX (CASE 
+                      WHEN ( (acs.can_update = '1' OR value_permission_behavior = N'no_check')
+                             AND @type = 'can_update' ) THEN 9 
+                      -- can_update permissions only  
+                      WHEN ( (acs.can_get = '1' OR value_permission_behavior = N'no_check')
+                             AND @type = 'can_get' ) THEN 9 
+                      -- can_delete permissions only  
+                      WHEN ( (acs.can_change_access = '1' OR value_permission_behavior = N'no_check')
+                             AND @type = 'can_change_access' ) THEN 9 
+                      -- can_change_access permissions only  
+                      ELSE NULL 
+                    -- No permissions on specified for specified access right  
+                    END) p 
+        FROM   (SELECT acs.can_get, 
+                       acs.can_update,
+                       acs.can_change_access,
+                       value_permission_behavior
+                FROM [ITEMTYPE_XPROPERTYDEFINITION] as it_xpd
+                LEFT OUTER JOIN [ACCESS_PROPERTYVALUE] acs
+                    ON it_xpd.value_permission_behavior <> N'no_check' AND acs.SOURCE_ID = it_xpd.value_permission_id
+                WHERE it_xpd.[related_id] = @propdef_id AND it_xpd.[source_id] = @itemtype_id AND
+                       (it_xpd.value_permission_behavior = N'no_check' OR CHARINDEX(acs.[related_id] COLLATE Latin1_General_BIN2, @identity_list) > 0)
+               ) acs
+)]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>EvaluatePermissionPropertyValue_ExplicitlyDefined</name>
+ </Item>
+</AML>

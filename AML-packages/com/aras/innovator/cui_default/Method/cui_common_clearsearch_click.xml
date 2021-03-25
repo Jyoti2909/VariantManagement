@@ -1,0 +1,37 @@
+﻿<AML>
+ <Item type="Method" id="9396C4CB3EDB4DC2916A110E9DEDFEBF" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (window.isVersionableIT) {
+	const controlData = control.data;
+	const queryTypeControl = controlData.get('searchview.commandbar.default.querytype');
+	if (queryTypeControl) {
+		const queryDateControl = controlData.get('searchview.commandbar.default.querydate');
+		controlData.set(queryTypeControl.id, Object.assign({}, queryTypeControl, {value: 'Current'}));
+		controlData.set(queryDateControl.id, Object.assign({}, queryDateControl, {value: '', disabled: true}));
+		control.render();
+		aras.setPreferenceItemProperties('Core_ItemGridLayout', itemTypeID, {query_type: 'Current'});
+		aras.setVariable(varName_queryDate, null);
+		options.actions.updateQueryType('Current');
+	}
+}
+
+const searchMode = window.currentSearchMode;
+
+searchMode.removeCacheItem('itemmax');
+searchMode.removeCacheItem('pagemax');
+searchMode.removeCacheItem('itemsWithNoAccessCount');
+searchMode.removeCacheItem('criteriesHash');
+searchMode.clearSearchCriteria();
+
+if (options.columnSelectionMediator) {
+	// Defined as 'let' so doesn't accessible as window property
+	options.columnSelectionMediator.xClassBarWrapper.setQueryText();
+}
+
+if (window.refreshGridSize) {
+	window.refreshGridSize();
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_common_clearsearch_click</name>
+ </Item>
+</AML>

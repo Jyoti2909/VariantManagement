@@ -1,0 +1,308 @@
+﻿@{
+	Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel='stylesheet' href='../../javascript/dojo/../dijit/themes/claro/claro.css'>
+	<link rel='stylesheet' href='../../styles/common.min.css'>
+	<link rel='stylesheet' href='../../styles/controls/toolbar.css'>
+	<link rel='stylesheet' href='../../styles/controls/menu.css'>
+	<link rel='stylesheet' href='../../styles/formElements.css'>
+	<link rel='stylesheet' href='../RE/Styles/RequirementTitle.css'>
+	<link rel='stylesheet' href='../../Modules/aras.innovator.TDF/Styles/SearchComponent.css'>
+	<style type='text/css'>
+		html, body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			overflow: hidden;
+
+			font-family: Tahoma;
+			color: #444444;
+			font-size: 12px;
+		}
+
+		#borderContainer {
+			width: 100%;
+			height: 100%;
+		}
+
+		#toolbarContainer {
+			height: 30px;
+		}
+
+		.dijitBorderContainer-dijitContentPane {
+			padding: 0px !important;
+		}
+
+		.dijitEditorIFrameContainer {
+			padding: 0px !important;
+		}
+
+		.dijitTreeContainer {
+			width: 100% !important;
+		}
+
+		.dijitTreeRow {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			width: inherit !important;
+		}
+
+		.requirementEditor .dijitEditor {
+			border-top-color: none;
+			border-bottom-color: none;
+			border-right-color: none;
+			border-top-width: 0px;
+			border-bottom-width: 0px;
+			border-right-width: 0px;
+		}
+
+		.dijitToolbar.ArasToolbar {
+			white-space: normal !important;
+		}
+
+		.SearchComponent {
+			float: right;
+			margin: 4px 5px 0px 0px;
+		}
+	</style>
+	<script type='text/javascript' src='../../javascript/include.aspx?classes=/dojo.js' data-dojo-config='packages: [{ name: "TechDoc", location: "../../Modules/aras.innovator.TDF/Scripts" }, { name: "RE", location: "../../Solutions/RE" }], isDebug: false, parseOnLoad: false, async: true, baseUrl:"../../javascript/dojo"'></script>
+	<script type='text/javascript' src='../../javascript/include.aspx?classes=XmlDocument,polyfillsBundle'></script>
+	<script type='text/javascript' src='../../javascript/include.aspx?classes=QueryString'></script>
+	<script>
+	var structuredDocument = null;
+	var aras = parent.aras;
+	var toolbarHelper;
+	var searchControl;
+
+	function getRequirementItem() {
+		var topWnd = aras.getMostTopWindowWithAras(window);
+		var reqItem = topWnd.item;
+		return reqItem;
+	}
+
+	require(['dojo/ready', 'dojo/parser',
+		'RE/Scripts/Classes/Toolbar',
+		'RE/Scripts/Classes/Helper/ToolbarHelper',
+		'RE/Scripts/Model/RequirementStructuredDocument',
+		'TechDoc/Aras/Client/Controls/TechDoc/UI/Search/SearchComponent',
+		'TechDoc/Aras/Client/Controls/TechDoc/UI/Search/TextSchemaElementsSearchEngine',
+		'TechDoc/Aras/Client/Controls/TechDoc/ViewModel/DocumentationEnums',
+		'dojo/aspect', 'dojox/html/entities', 'dojo/domReady!'],
+		function (ready, parser, REToolbar, ToolbarHelper, ReqStructuredDocument, SearchComponent, TextSearchEngine, Enums, aspect, entities) {
+			ready(function () {
+				var topWnd = aras.getMostTopWindowWithAras(window);
+				var reqItem = getRequirementItem();
+				var defaultLanguageCode = topWnd.getDefaultLanguage();
+				structuredDocument = new ReqStructuredDocument({
+					aras: aras,
+					item: reqItem,
+					defaultLanguageCode: defaultLanguageCode,
+					isEditMode: topWnd.isEditMode
+				});
+
+				var toolbar = new REToolbar({
+					id: 'toolbar',
+					connectId: 'toolbarContainer',
+					structuredDocument: structuredDocument,
+					styleSheet: '../../Modules/aras.innovator.TDF/Scripts/Aras/Client/Controls/TechDoc/themes/Toolbar.css'});
+				topWnd.cui.initToolbarEvents(toolbar, reqItem, {viewmodel: structuredDocument});
+
+				var contextParams = {
+					toolbarApplet: toolbar,
+					locationName: 'RE_Toolbar',
+					item_classification: 'ReqTextEditor'
+				};
+
+				parser.parse().then(function() {
+					return topWnd.cui.loadToolbarFromCommandBarsAsync(contextParams);
+				}).then(function() {
+					toolbar.showToolbar('$EmptyClassification');
+					toolbar.initToolbar();
+
+					// Created after toolbar initialization to inject into toolbar DOM
+					searchControl = initSearchControl({
+						searchControl: SearchComponent,
+						searchEngine: TextSearchEngine,
+						containerNode: toolbar.getCurrentToolBarDomNode_Experimental()
+					});
+
+					// Register search control for editor
+					const editorControl = dijit.byId('requirementHtmlEditor');
+					editorControl.setSearchControl(searchControl);
+
+					structuredDocument._updateTitleAndNumberElement(reqItem);
+				});
+
+				toolbarHelper = new ToolbarHelper({toolbar: toolbar});
+				topWnd.document.addEventListener('commandBarChanged', function (evnt) {
+					const topWnd = aras.getMostTopWindowWithAras(window);
+					if (evnt.commandBarTarget === 'req_show_editor' && evnt.changeType === 'click') {
+						var windowItem = getRequirementItem();
+						structuredDocument._updateTitleAndNumberElement(windowItem);
+					}
+					if (evnt.commandBarTarget == 'show_form' && evnt.changeType === 'click') {
+						var frame = topWnd.findInstanceFrame();
+						var inputId = frame.document.fieldsTab['req_title'];
+						var titleInput = frame.document.querySelector('[id="' + inputId +'"] input');
+						titleInput.value = aras.getItemProperty(structuredDocument._item, 'req_title');
+					}
+				});
+
+				aspect.after(structuredDocument, 'OnInvalidate', function (sender, earg) {
+					var isItemChange = (earg.invalidationList.length != 0);
+					window.setTimeout(function () {
+						if (isItemChange) {
+							var currentLanguage = structuredDocument.CurrentLanguageCode(),
+								currentDomXml = structuredDocument.origin.ownerDocument.xml;
+
+							if (structuredDocument.IsEqualEditableLevel(Enums.EditLevels.IgnoreExternal)) {
+								var savedDomXml = structuredDocument.getSavedDocumentXml(currentLanguage),
+									oldContent = GetContentPartFromXml(savedDomXml),
+									newContent = GetContentPartFromXml(currentDomXml);
+
+								// comparing only old and new content nodes, this will prevent from setting 'isDirty' attribute if
+								// only refences were updated during reload event
+								if (oldContent.length != newContent.length || oldContent != newContent) {
+									var structureDocumentItem = structuredDocument.getDocumentItem();
+									structuredDocument.saveDocumentXml(currentDomXml, currentLanguage);
+
+									if (!aras.isDirtyEx(structureDocumentItem)) {
+										structureDocumentItem.setAttribute('isDirty', '1');
+										structureDocumentItem.setAttribute('action', 'update');
+
+										if (topWnd.updateItemsGrid) {
+											topWnd.updateItemsGrid(structureDocumentItem);
+										}
+									}
+								}
+							}
+							var customEvent = document.createEvent('Event');
+							customEvent.initEvent('change:item', true, true);
+							window.dispatchEvent(customEvent);
+						}
+					}, 0);
+				}, true);
+
+				registerViewShortcuts();
+
+				const setItemEventHandler = function(forceReload) {
+					if (forceReload || structuredDocument.getDocumentItem() !== topWnd.item) {
+						structuredDocument.SuspendInvalidation();
+						structuredDocument.Reload(topWnd.item, {
+							isEditMode: topWnd.isEditMode,
+							forceInvalidate: true,
+							forceReload: true
+						});
+						structuredDocument.ResumeInvalidation();
+					}
+
+					setTimeout( function() {
+						aras.browserHelper.toggleSpinner(topWnd.document, false);
+					},0);
+				};
+
+				topWnd.registerCommandEventHandler(topWnd, function() {
+					if (aras.isLockedByUser(topWnd.item)) {
+						const afterEditEventKey = topWnd.registerCommandEventHandler(topWnd, function() {
+							setItemEventHandler(true);
+							topWnd.unregisterCommandEventHandler(afterEditEventKey);
+						}, 'after', 'edit');
+					}
+				}, 'before', 'edit');
+
+				aspect.after(topWnd, 'setItem', setItemEventHandler);
+			});
+		});
+
+		function initSearchControl(initParameters) {
+			initParameters = initParameters || {};
+
+			const SearchControl = initParameters.searchControl;
+			const SearchEngine = initParameters.searchEngine;
+			const containerNode = initParameters.containerNode || document.getElementById(initParameters.containerId);
+
+			if (SearchControl && SearchEngine && containerNode) {
+				const createdControl = new SearchControl({
+					containerNode: containerNode,
+					searchSource: structuredDocument,
+					searchEngine: new SearchEngine(),
+					collapseOnSpaceLack: true,
+					resourceStrings: {
+						placeholderText: aras.getResource('../Modules/aras.innovator.TDF', 'search.placeholderText'),
+						prevButtonTitle: aras.getResource('../Modules/aras.innovator.TDF', 'search.prevButtonTitle'),
+						nextButtonTitle: aras.getResource('../Modules/aras.innovator.TDF', 'search.nextButtonTitle'),
+						toggleButtonTitle: aras.getResource('../Modules/aras.innovator.TDF', 'search.toggleButtonTitle'),
+						toggleButtonActiveTitle: aras.getResource('../Modules/aras.innovator.TDF', 'search.toggleButtonActiveTitle'),
+						noMatchesLabel: aras.getResource('../Modules/aras.innovator.TDF', 'search.noMatchesLabel'),
+						notEnoughSpaceAlert: aras.getResource('../Modules/aras.innovator.TDF', 'search.notEnoughSpaceAlert')
+					}
+				});
+
+				return createdControl;
+			}
+		}
+
+		function registerViewShortcuts() {
+			// ctrl+f shortcut registration
+			aras.shortcutsHelperFactory.getInstance(window).subscribe({shortcut: 'ctrl+f', preventBlur: true, handler: function() {
+				if (!searchControl.isActive()) {
+					searchControl.setActiveState(true);
+
+					setTimeout(function() {
+						searchControl.focus();
+					}, 200);
+				} else {
+					searchControl.focus();
+				}
+			}, context: window}, true);
+		}
+
+	GetContentPartFromXml = function (documentXml) {
+		var contentNodeXPath = 'aras:document/aras:content',
+			contentNode;
+
+		if (typeof documentXml == 'string') {
+			var tempDocument = new XmlDocument(),
+				contentNode;
+
+			tempDocument.preserveWhiteSpace = true;
+			tempDocument.loadXML(documentXml);
+
+			if (dojo.isIE || aras.Browser.isIe()) {
+				tempDocument.setProperty('SelectionNamespaces', 'xmlns:aras="http://aras.com/ArasTechDoc"');
+			}
+			else {
+				tempDocument.documentElement.setAttribute('xmlns:aras', 'http://aras.com/ArasTechDoc');
+			}
+			contentNode = tempDocument.selectSingleNode(contentNodeXPath);
+		}
+		else if (typeof documentXml == 'object') {
+			contentNode = documentXml.selectSingleNode(contentNodeXPath)
+		}
+
+		return contentNode.xml || '';
+	};
+
+	ExecuteActionFromToolbar = function(toolbarElement) {
+		var controlId = toolbarElement.GetId();
+		toolbarHelper.GetControl(controlId).ExecuteToolbarAction(controlId);
+	}
+	</script>
+</head>
+<body class='claro techDocEditor'>
+	<div data-dojo-type='dijit/layout/BorderContainer' data-dojo-props='design:"headline", gutters:false' id='borderContainer'>
+		<div data-dojo-type='dijit/layout/ContentPane' baseClass='dijitContentPaneNoPadding' data-dojo-props='region:"top"' id='toolbarContainer'></div>
+		<div data-dojo-type='dijit/layout/BorderContainer' baseClass='dijitContentPaneNoPadding' data-dojo-props='region:"center", gutters:false' id='editorAndTitleContainer' style='border: 1px solid #b5bcc7'>
+			<div data-dojo-type='RE/Scripts/Classes/RequirementEditor' data-dojo-props='region:"center", splitter:true, structuredDocument: structuredDocument,
+				styleSheet: "../../Modules/aras.innovator.TDF/Scripts/Aras/Client/Controls/TechDoc/themes/Editor.css"' id='requirementHtmlEditor' style='border: none;'></div>
+		</div>
+		<div data-dojo-type='dijit/layout/ContentPane' style='padding: 5px 2px 0 7px; width:300px; height:100%;' data-dojo-props='region:"left", splitter:true' baseClass='dijitContentPaneNoPadding'>
+			<div data-dojo-type='RE/Scripts/Classes/Tree' data-dojo-props='structuredDocument: structuredDocument,
+				styleSheet: "../RE/Styles/Tree.css"' id='requirementTree' style='height:100%;'></div>
+		</div>
+	</div>
+</body>
+</html>

@@ -1,0 +1,41 @@
+﻿<AML>
+ <Item type="Method" id="54882DB53BBC40D5BAA14CD9A1B2DCFE" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinesLogic businesLogic = new BusinesLogic(dataAccessLayer);
+			return businesLogic.Run();
+}
+
+		//[PartialPath("BusinesLogic/BusinesLogic")]
+		internal class BusinesLogic
+		{
+			private const string DefinitionId = "666A717D01E74384AF10F0B8CE339FE9";
+			private readonly IDataAccessLayer dal;
+
+			public BusinesLogic(IDataAccessLayer dataAccessLayer)
+			{
+				dal = dataAccessLayer;
+			}
+
+			public Item Run()
+			{
+				try
+				{
+					Item item = dal.NewItem("EID_External Identity Def", "EID_Sync_External_Users");
+					item.setID(DefinitionId);
+					return dal.ApplyItem(item);
+				}
+				catch (ItemException exception)
+				{
+					return exception.ErrorItem ?? dal.NewError(exception.Message);
+				}
+				catch (InvalidOperationException exception)
+				{
+					return dal.NewError(exception.Message);
+				}
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_SynchronizeADUsers</name>
+ </Item>
+</AML>

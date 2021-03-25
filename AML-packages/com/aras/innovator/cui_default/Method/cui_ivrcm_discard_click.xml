@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="9825091103554512AF637C785DCAB139" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (window.grid) {
+	const dialogSettings = {
+		title: window.aras.getResource('', 'common.discard_confirmationtitle')
+	};
+	const dialogMessage = window.aras.getResource('', 'common.discard_confirmationmessage');
+	const selectedIds = window.grid.getSelectedItemIds();
+	const idsArray = selectedIds.map(function(id) {
+		return '@id="' + id + '"';
+	});
+	const relatedItems = window.item.selectNodes('Relationships/Item[' + idsArray.join(' or ') + ']/related_id/Item');
+	for (let itemIntex = 0; itemIntex < relatedItems.length; itemIntex++) {
+		const item = relatedItems[itemIntex];
+		if (window.aras.isDirtyEx(item)) {
+			const topWindow = window.aras.getMostTopWindowWithAras();
+			topWindow.ArasModules.Dialog.confirm(dialogMessage, dialogSettings).then(function(result) { // jshint ignore:line
+				if (result === 'ok') {
+					window.aras.unlockItemEx(item, false);
+				}
+			});
+		} else {
+			window.aras.unlockItemEx(item, false);
+		}
+	}
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivrcm_discard_click</name>
+ </Item>
+</AML>

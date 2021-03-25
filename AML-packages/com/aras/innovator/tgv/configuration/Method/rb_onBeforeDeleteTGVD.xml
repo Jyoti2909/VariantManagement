@@ -1,0 +1,42 @@
+﻿<AML>
+ <Item type="Method" id="3696360BE5D346C2AE94942A83EAAD1B" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string tgvdId = this.getID();
+
+Item relView = this.newItem("Relationship View", "get");
+relView.setAttribute("select", "parameters, source_id");
+relView.setProperty("parameters", "%tgvdId=" + tgvdId + "%");
+relView.setPropertyCondition("parameters", "like");
+Item relType = this.newItem("RelationshipType", "get");
+relType.setAttribute("select", "source_id(name)");
+relView.setPropertyItem("source_id", relType);
+
+relView = relView.apply();
+
+if (relView.isError())
+{
+	if (relView.getErrorCode() == "0")  
+	{
+		return this;
+	}
+	throw new Aras.Server.Core.InnovatorServerException(relView.getErrorString());
+}
+
+List<string> assignedItemTypes = new List<string>();
+for (int i = 0; i < relView.getItemCount(); i++)
+{
+	Item currentRelView = relView.getItemByIndex(i);
+	Item assignedItemType = currentRelView.getItemsByXPath("source_id/Item[@type='RelationshipType']/source_id/Item[@type='ItemType']");
+	string itemTypeLabel = string.IsNullOrEmpty(assignedItemType.getProperty("label")) ? assignedItemType.getProperty("name") : assignedItemType.getProperty("label");
+	if (!assignedItemTypes.Contains(itemTypeLabel))
+	{
+		assignedItemTypes.Add(itemTypeLabel);
+	}
+}
+
+throw new Aras.Server.Core.InnovatorServerException(CCO.ErrorLookup.Lookup("rb_FailedDeleteTGVIsUsed", tgvdId, string.Join(", ", assignedItemTypes)));
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>rb_onBeforeDeleteTGVD</name>
+ </Item>
+</AML>

@@ -1,0 +1,1 @@
+<%@ Page  CodePage="65001" explicit="true" Inherits="Aras.Web.Server.Notifications" Language="C#" strict="true" EnableSessionState="false" %>

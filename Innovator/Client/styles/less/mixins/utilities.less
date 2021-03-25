@@ -1,0 +1,34 @@
+.background-svg(@name, @fill-new) {
+	@url: '../svg/@{name}.svg';
+	@fill-default: @blue;
+	@escape-fill-default: escape(@fill-default);
+	@escape-fill-new: escape(@fill-new);
+	@data-uri: data-uri('image/svg+xml;charset=UTF-8', '@{url}');
+	@replace-src: replace(
+		'@{data-uri}',
+		'@{escape-fill-default}',
+		'@{escape-fill-new}',
+		'gi'
+	);
+	background: e(@replace-src) right top no-repeat;
+}
+
+.color-with-alpha(@color, @alpha, @background: white) {
+	@r1: red(@color);
+	@g1: green(@color);
+	@b1: blue(@color);
+
+	@r2: red(@background);
+	@g2: green(@background);
+	@b2: blue(@background);
+
+	@r3: @alpha* @r1 + (1 - @alpha) * @r2;
+	@g3: @alpha* @g1 + (1 - @alpha) * @g2;
+	@b3: @alpha* @b1 + (1 - @alpha) * @b2;
+
+	background-color: rgb(@r3, @g3, @b3);
+}
+
+.pxToRem(@px, @htmlFontSize: 12px) {
+	@rem: unit(round(unit(@px) / unit(@htmlFontSize), 3), rem);
+}

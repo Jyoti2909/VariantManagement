@@ -1,0 +1,39 @@
+﻿<AML>
+ <Item type="Method" id="4C4C5A8D14B6423AAC9F096B50BD66E9" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.TDF.ContentGenerator(Strict);
+ItemDocumentElement targetItem = targetElement as ItemDocumentElement;
+
+if (targetItem != null) {
+	targetItem.ClearChilds();
+
+	// if referenced item was set, then
+	if (!targetItem.IsEmpty)
+	{
+		TableDocumentElement tableElement = (TableDocumentElement) this.Factory.NewTable("Table", 3, 5);
+		tableElement.GetCell(0, 0).AddChild(this.Factory.NewText("Title", "Item Info Table"));
+
+		for (int i = 0; i < tableElement.CellCount; i++)
+		{
+			tableElement.MergeCells(0, i, MergeDirection.Right);
+		}
+
+		tableElement.GetCell(1, 0).AddChild(this.Factory.NewText("Title", "Id"));
+		tableElement.GetCell(1, 1).AddChild(this.Factory.NewText("Title", "Name"));
+		tableElement.GetCell(1, 2).AddChild(this.Factory.NewText("Title", "Classification"));
+		tableElement.GetCell(1, 3).AddChild(this.Factory.NewText("Title", "Status"));
+		tableElement.GetCell(1, 4).AddChild(this.Factory.NewText("Title", "Date of creation"));
+
+		tableElement.GetCell(2, 0).AddChild(this.Factory.NewText("Title", targetItem.ItemId));
+		tableElement.GetCell(2, 1).AddChild(this.Factory.NewText("Title", targetItem.GetItemProperty("name", " ")));
+		tableElement.GetCell(2, 2).AddChild(this.Factory.NewText("Title", targetItem.GetItemProperty("classification", " ")));
+		tableElement.GetCell(2, 3).AddChild(this.Factory.NewText("Title", targetItem.GetItemProperty("state", " ")));
+		tableElement.GetCell(2, 4).AddChild(this.Factory.NewText("Title", targetItem.GetItemProperty("created_on")));
+
+		targetItem.AddChild(tableElement);
+	}
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>tp_ItemInfoContentGenerator</name>
+ </Item>
+</AML>

@@ -1,0 +1,20 @@
+﻿<AML>
+ <Item type="Method" id="07C6E9BB6DCA48AB95917F504AD27487" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (grid.getRowCount() > 0) {
+
+	var rootItem = parent.thisItem;
+	var relItem = rootItem.getItemsByXPath('//Item[@id=\'' + relationshipID + '\']').getItemByIndex(0);
+
+	if (rootItem !== null && relItem !== null) {
+		rootItem.removeRelationship(relItem);
+		alert('It\'s not allowed to add more that one ' + relItem.getType() + ' row.');
+	}
+
+	return false;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_RowCanBeAddedCheck</name>
+ </Item>
+</AML>

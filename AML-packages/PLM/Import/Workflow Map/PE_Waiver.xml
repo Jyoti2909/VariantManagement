@@ -1,0 +1,277 @@
+﻿<AML>
+ <Item type="Workflow Map" id="5A761D5B2C014C949A2AA74F950FB282" action="add">
+  <description xml:lang="en">PE - Waiver Workflow</description>
+  <node_bg_color>       </node_bg_color>
+  <node_label1_color>       </node_label1_color>
+  <node_label1_font />
+  <node_label2_color>       </node_label2_color>
+  <node_label2_font />
+  <node_name_color>       </node_name_color>
+  <node_name_font />
+  <node_size />
+  <process_owner keyed_name="Creator" type="Identity">
+   <Item type="Identity" action="get" select="id">
+    <name>Creator</name>
+   </Item>
+  </process_owner>
+  <transition_line_color>       </transition_line_color>
+  <transition_name_color>       </transition_name_color>
+  <transition_name_font />
+  <name>PE_Waiver</name>
+  <Relationships>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Waiver Approved" type="Activity Template">
+     <Item type="Activity Template" id="A7FB39F4175246D3A77E6DA15EE33A5D" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Workflow End</message>
+      <priority>1</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>638</x>
+      <y>77</y>
+      <name>Waiver Approved</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="1A811F2D0FBA4973BEEBAFF9F014516D" action="add">
+        <controlled_itemtype keyed_name="PE_Waiver" type="ItemType" name="PE_Waiver">CD84AA40803F444CBF06843D26F6EC6A</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="7B737FA4AFCC484F874474D05395C7A9" type="Life Cycle Transition">7B737FA4AFCC484F874474D05395C7A9</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Waiver Approved" type="Activity Template">A7FB39F4175246D3A77E6DA15EE33A5D</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="PE_Waiver" type="Workflow Map">5A761D5B2C014C949A2AA74F950FB282</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Start" type="Activity Template">
+     <Item type="Activity Template" id="E00E059145C044E7B8FEB591E4233713" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/WorkflowStart.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>0</is_end>
+      <is_start>1</is_start>
+      <message xml:lang="en">Workflow Start</message>
+      <priority>2</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>29</x>
+      <y>76</y>
+      <name>Start</name>
+      <Relationships>
+       <Item type="Workflow Map Path" id="6FC5A4C9295840DE957BC2999D951CAB" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>0</is_override>
+        <name>Go</name>
+        <related_id>E01CF778509C4691B73221CAC1CE59DC</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Start" type="Activity Template">E00E059145C044E7B8FEB591E4233713</source_id>
+        <x>0</x>
+        <y>0</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="PE_Waiver" type="Workflow Map">5A761D5B2C014C949A2AA74F950FB282</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Review Waiver" type="Activity Template">
+     <Item type="Activity Template" id="5A000365698D49B7943B2DFD2375CBA7" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review the Waiver</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>322</x>
+      <y>78</y>
+      <name>Review Waiver</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="5E62DA565354427F98133F49EFAF120A" action="add">
+        <related_id keyed_name="Manufacturing" type="Identity">BABF5AE8735447B48C26489922E585FE</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Waiver" type="Activity Template">5A000365698D49B7943B2DFD2375CBA7</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Task" id="D178908567274175AF48FEEB7761DC4C" action="add">
+        <description xml:lang="en">Check Waiver for completeness</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Waiver" type="Activity Template">5A000365698D49B7943B2DFD2375CBA7</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="80E2E408F7454E0EA8426628EF5E49E0" action="add">
+        <description xml:lang="en">Vote "Approve" to send the Waiver for approval or "Reject" if the Waiver should be rejected</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review Waiver" type="Activity Template">5A000365698D49B7943B2DFD2375CBA7</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="C1BCF0F66DA343028ECB857CE4DF1C6E" action="add">
+        <controlled_itemtype keyed_name="PE_Waiver" type="ItemType" name="PE_Waiver">CD84AA40803F444CBF06843D26F6EC6A</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="C596EDF8DA52428F9378D95BDB3EF456" type="Life Cycle Transition">C596EDF8DA52428F9378D95BDB3EF456</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Waiver" type="Activity Template">5A000365698D49B7943B2DFD2375CBA7</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="32FE199CB3674E649BEB7E6364EC2B06" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Approve</name>
+        <related_id>A7FB39F4175246D3A77E6DA15EE33A5D</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Waiver" type="Activity Template">5A000365698D49B7943B2DFD2375CBA7</source_id>
+        <x>20</x>
+        <y>3</y>
+       </Item>
+       <Item type="Workflow Map Path" id="188066A81D5D4B65AF71E28902914F84" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Reject</name>
+        <related_id>65DAFF1CBD5744B193547FE9DCF4B30A</related_id>
+        <segments />
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review Waiver" type="Activity Template">5A000365698D49B7943B2DFD2375CBA7</source_id>
+        <x>5</x>
+        <y>18</y>
+       </Item>
+       <Item type="Workflow Map Path" id="2D4C837D6ED845BABB7EC3F00FEB39CD" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Rework</name>
+        <related_id>E01CF778509C4691B73221CAC1CE59DC</related_id>
+        <segments>292,168|209,169</segments>
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Review Waiver" type="Activity Template">5A000365698D49B7943B2DFD2375CBA7</source_id>
+        <x>-97</x>
+        <y>96</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="PE_Waiver" type="Workflow Map">5A761D5B2C014C949A2AA74F950FB282</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Submit Waiver" type="Activity Template">
+     <Item type="Activity Template" id="E01CF778509C4691B73221CAC1CE59DC" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please submit the Waiver</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>167</x>
+      <y>77</y>
+      <name>Submit Waiver</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="AB7042BD761A4F319F097A996453C8E2" action="add">
+        <related_id keyed_name="Creator" type="Identity">
+         <Item type="Identity" action="get" select="id">
+          <name>Creator</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Waiver" type="Activity Template">E01CF778509C4691B73221CAC1CE59DC</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Task" id="B6C9C7ECC0354C1F91BA2F1E64DCC273" action="add">
+        <description xml:lang="en">Ensure the Waiver is ready for Initial Review</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Waiver" type="Activity Template">E01CF778509C4691B73221CAC1CE59DC</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="A5F03F69262F423882C0112A50A172BD" action="add">
+        <controlled_itemtype keyed_name="PE_Waiver" type="ItemType" name="PE_Waiver">CD84AA40803F444CBF06843D26F6EC6A</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="D4AF0AD7496442E3A7CE80E60432F146" type="Life Cycle Transition">D4AF0AD7496442E3A7CE80E60432F146</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Waiver" type="Activity Template">E01CF778509C4691B73221CAC1CE59DC</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="46E8E916E05C4AC1AA5B73D5B1A9AE37" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Submit</name>
+        <related_id>5A000365698D49B7943B2DFD2375CBA7</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Waiver" type="Activity Template">E01CF778509C4691B73221CAC1CE59DC</source_id>
+        <x>0</x>
+        <y>0</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="PE_Waiver" type="Workflow Map">5A761D5B2C014C949A2AA74F950FB282</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Waiver Rejected" type="Activity Template">
+     <Item type="Activity Template" id="65DAFF1CBD5744B193547FE9DCF4B30A" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review...</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>322</x>
+      <y>210</y>
+      <name>Waiver Rejected</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="085302277C6645E39DEC2FC9668D583D" action="add">
+        <controlled_itemtype keyed_name="PE_Waiver" type="ItemType" name="PE_Waiver">CD84AA40803F444CBF06843D26F6EC6A</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="09D5456685DF414C9E8FA6308209A7B5" type="Life Cycle Transition">09D5456685DF414C9E8FA6308209A7B5</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Waiver Rejected" type="Activity Template">65DAFF1CBD5744B193547FE9DCF4B30A</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>768</sort_order>
+    <source_id keyed_name="PE_Waiver" type="Workflow Map">5A761D5B2C014C949A2AA74F950FB282</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

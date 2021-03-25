@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="5989399FE026423A97DF56C82C484873" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var aml = '<AML><Item type=\'Method\' action=\'cmf_GetViews\'><item_type_id>' + inArgs.itemTypeId + '</item_type_id></Item></AML>';
+var response = aras.applyAML(aml);
+var xmldom = aras.createXMLDocument();
+xmldom.loadXML(response);
+var docTypeNode = xmldom.selectSingleNode('Result/Item[@type=\'cmf_ContentType\']');
+
+var spreadsheetViews = xmldom.selectNodes('Result/Item[@type=\'cmf_TabularView\']');
+var viewCollection = [];
+var emptyObject = {text: ''};
+for (var i = 0; i < spreadsheetViews.length; i++) {
+	viewCollection.push({
+		id: (spreadsheetViews[i].selectSingleNode('id') || emptyObject).text,
+		name: (spreadsheetViews[i].selectSingleNode('name') || emptyObject).text,
+		label: (spreadsheetViews[i].selectSingleNode('label') || emptyObject).text,
+		docTypeId: docTypeNode.getAttribute('id'),
+		viewId: (spreadsheetViews[i].selectSingleNode('id') || emptyObject).text,
+		itemId: inArgs.itemId
+	});
+}
+return viewCollection;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cmf_GetViewsForCommandBars</name>
+ </Item>
+</AML>

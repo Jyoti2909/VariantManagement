@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = ".";
+  gCommonRootRelPath = ".";
+  gTopicId = "3.7.0_4";
+
+//]]></script>
+
+<script type="text/javascript" src="./template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="./template/scripts/common.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="./template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="assets/css/JAI_styles.css"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="generator" content="Adobe RoboHelp 2019"/>
+<title>Item Behavior</title>
+
+</head>
+<body>
+  <div>
+<h1>Item Behavior</h1>
+<p class="Content_body">Item Behavior is a property of the life cycle state that sets the behavior of the connection between the source item, or the parent, and the related item, or the child.  This property is only applicable if the source item and the related item are versionable.  Also, keep in mind that there is also an Item Behavior property defined on the RelationshipType itself (see <a href="RelationshipType_Item_Behavior.htm">RelationshipType Item Behavior</a>). These two properties - the Item Behavior of the RelationshipType and of the Item Behavior of the Life Cycle State - work together to control the configuration of the source and related items.</p>
+<p class="Content_body">The settings Hard Fixed and Hard Float mean different things for the RelationshipType behavior and the Life Cycle State behavior.  The table below explains these settings:</p>
+<table class="Aras_Blue" style="left: 0px; top: 120px;" cellspacing="0" width="921">
+<colgroup><col style="width: 33.333%;"/>
+<col style="width: 33.333%;"/>
+<col style="width: 33.333%;"/>
+</colgroup><tbody><tr class="t1st">
+<td style="border: Solid 1px #c0c0c0;"> </td>
+<td style="border-top: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+<p class="Table_header">Hard Float</p>
+</td>
+<td style="border-top: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+<p class="Table_header">Hard Fixed</p>
+</td>
+</tr>
+<tr>
+<td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+<p class="Table_header" style="font-weight: bold;">RelationshipType</p>
+</td>
+<td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+<p class="Table_Body">Float behavior that can not be modified by the life cycle state settings</p>
+</td>
+<td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+<p class="Table_Body">Fixed behavior that cannot be modified by the life cycle state settings</p>
+</td>
+</tr>
+<tr>
+<td style="border-left: Solid 1px #c0c0c0; border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+<p class="Table_header" style="font-weight: bold;">Life Cycle State</p>
+</td>
+<td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+<p class="Table_Body">Float behavior that is in effect until the life cycle ends, and cannot be changed by subsequent life cycle states</p>
+</td>
+<td style="border-right: Solid 1px #c0c0c0; border-bottom: Solid 1px #c0c0c0;">
+<p class="Table_Body">Fixed behavior that is in effect until the life cycle ends, and cannot be changed by subsequent life cycle states</p>
+</td>
+</tr>
+</tbody></table>
+<p class="Content_body">Furthermore, there are two categories to consider - what happens to the items if the child (or the related item) is versioned first, as opposed to the parent (or the source item) being versioned first. Let&#39;s look at the first case first.</p>
+<h2>Behavior When Parent (the Source Item) Is Versioned First</h2>
+<p class="Content_body">Let&#39;s first consider what happens when there is no behavior set on the life cycle state:</p>
+<p class="Content_body_indented"><img src="assets/images/behavior3.jpg" alt="" class="Image" style="width: 100%; max-width: 650px;"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body">Notice that with the Float RelationshipType behavior, when Child2 is created, Parent1 still points to Child1.  The reason for this is that when a new version of the Parent is created, the previous versions are then Hard Fixed in their current configuration.  So, when Parent2 is created Parent1 is pointing to Child1.  It remains in that state going forward, no matter how many times Child is versioned after that.</p>
+<p class="Content_body">When the Life Cycle Behavior is set to Float, it forces the even the RelationshipType defined as Fixed to act as Float.  See the figure below.</p>
+<p class="Content_body_indented"><img src="assets/images/behavior4.jpg" alt="" class="Image" style="width: 100%; max-width: 644px;"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body">When the Life Cycle Behavior is set to Fixed, it forced even the RelationshipType defined as Float to act as Fixed.  See the figure below:</p>
+<p class="Content_body_indented"><img src="assets/images/behavior5.jpg" alt="" class="Image" style="width: 100%; max-width: 638px;"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body">When the RelationshipType is defined as Hard Fixed or Hard Float it overrides whatever the behavior is set by the Life Cycle state.  Notice the two figures below showing that the behavior defined by the RelationshipType rules the behavior, regardless of the behavior defined by the Life Cycle state.</p>
+<p class="Content_body_indented"><img src="assets/images/behavior6.jpg" alt="" class="Image" style="width: 100%; max-width: 648px;"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body">If the RelationshipType Behavior is not set to Hard, it can be overwritten by the Life Cycle State Behavior.  The figure below shows what happens when one generation of the parent is in one state, with one type of behavior, and the next state is in another life cycle state, with a different behavior.</p>
+<p class="Content_body_indented"><img src="assets/images/behavior7.jpg" alt="" class="Image" style="width: 100%; max-width: 649px;"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body">So far we have been looking at all these cases with the assumption that the Parent or the source item is versioned first.  Now, we need to examine all the same cases, but with the Child or the Related item versioned first.</p>
+<h2>Behavior When Child (the Related Item) Is Versioned First</h2>
+<p class="Content_body">As previously, let&#39;s consider first what happens when there is no life cycle state behavior set.  Notice that even for Fixed behavior, Parent 2 is associated with Child2.  This is true because of the following rule: When a source item is versioned, it is automatically associated with the latest available version of all its children.  In this case, since Child 2 was previously created, instead of pointing to Child1, Parent 2 points to Child2.</p>
+<p class="Content_body_indented"><img src="assets/images/behavior8.jpg" alt="" class="Image" style="width: 100%; max-width: 663px;"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body">The Life Cycle State behavior overrides the RelationshipType behavior.  As you can see in the diagrams below, Fixed relationship acts like Float when in Float life cycle state, and the Float relationship acts as Fixed in the Fixed life cycle state.</p>
+<p class="Content_body_indented"><img src="assets/images/behavior9.jpg" alt="" class="Image" style="width: 100%; max-width: 723px;"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body">When the RelationshipType Behavior is set to Hard Fixed or Hard Float, it overrides the Life Cycle State behavior.  In the diagrams below you can see that the Hard Fixed behavior acts as Fixed, regardless of the life cycle state setting, and the Hard Float acts as Float regardless of the life cycle state setting.</p>
+<p class="Content_body_indented"><img src="assets/images/behavior10.jpg" alt="" class="Image" style="width: 100%; max-width: 699px;"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body">If the RelationshipType Behavior is not set to Hard, it can be overwritten by the Life Cycle State Behavior.  The figure below shows what happens when one generation of the parent is in one state, with one type of behavior, and the next state is in another life cycle state, with a different behavior.</p>
+<p class="Content_body_indented"><img src="assets/images/behavior11.jpg" alt="" class="Image" style="width: 100%; max-width: 696px;"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body">Remember that if you set the Life Cycle state behavior to Hard Fixed or Hard Float, it will override all subsequent state behavior through the end of the cycle.  This is particularly useful if you have a life cycle map with states that follow Released, such as Obsolete, or Superseded.  Most likely once an item reaches a Released state you would want to Hard Fix its behavior, so that its configuration remained the same, even if the item is promoted to Obsolete or Superseded.</p>
+
+
+</div>
+  <div>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

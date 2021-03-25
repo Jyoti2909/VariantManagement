@@ -1,0 +1,186 @@
+﻿<AML>
+ <Item type="Method" id="E89ADF687CEE4C7D96C365AD5DC365C6" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			var dataAccessLayer = new DataAccessLayer(this.getInnovator(), (Item)this, CCO.DB.InnDatabase);
+			var businessLogic = new BusinessLogic(dataAccessLayer);
+
+			if (!businessLogic.ValidatePermissions(CCO.Variables.GetUserID()))
+			{
+				throw new OperationCanceledException(CCO.ErrorLookup.Lookup("Aras.Server.Core.InsufficientPermissionsException", "this"));
+			}
+
+			Item result = businessLogic.GetAggregatedNotifications();
+			return result;
+
+		}
+
+		public class BusinessLogic
+		{
+			private IDataAccessLayer dataAccessLayer;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				this.dataAccessLayer = dataAccessLayer;
+			}
+
+			// return all messages for Base Notification Message polysources
+			public Item GetAggregatedNotifications()
+			{
+				Item container = GetNotificationsWithPrivilege();
+				Item result = dataAccessLayer.GetEmptyItem();
+				var allItems = container.dom.DocumentElement.SelectSingleNode("Relationships");
+				if (allItems != null)
+				{
+				    result.loadAML("<Result>" + allItems.InnerXml + "</Result>");
+				    return result;
+				}
+				return dataAccessLayer.GetResultItem("");
+			}
+
+			private Item GetNotificationsWithPrivilege()
+			{
+				Item container = dataAccessLayer.GetEmptyItem();
+				List<string> polySources = dataAccessLayer.GetPolysources();
+				var adminIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+				bool adminPermsWasSet = Aras.Server.Security.Permissions.GrantIdentity(adminIdentity);
+				try
+				{
+					foreach (var source in polySources)
+					{
+						switch (source)
+						{
+							case "Message": ApplyMethod("GetAggregatedNotifications", container, source); break;
+							case "SSVC Notification Message": ApplyMethod("VCN_GetAggregatedNotifications", container, source); break;
+							default: break;
+						}
+					}
+				}
+				finally
+				{
+					if (adminPermsWasSet)
+					{
+						Aras.Server.Security.Permissions.RevokeIdentity(adminIdentity);
+					}
+				}
+
+				return container;
+			}
+
+			public void ApplyMethod(string methodName, Item resultItem, string messageItemTypeName)
+			{
+				Item methodItem = dataAccessLayer.GetMethodItem(methodName, messageItemTypeName);
+				Item responce = methodItem.apply();
+				ConcatItems(resultItem, responce);
+			}
+
+			public void ConcatItems(Item source, Item needToConcat)
+			{
+				XmlNode target = source.node;
+				for (int i = 0; i < needToConcat.getItemCount(); i++)
+				{
+					Item needToCopy = needToConcat.getItemByIndex(i);
+					source.addRelationship(needToCopy);
+				}
+			}
+
+			public bool ValidatePermissions(string invokeUserId)
+			{
+				string userId = dataAccessLayer.GetUserId();
+				return String.Equals(userId, invokeUserId, StringComparison.OrdinalIgnoreCase);
+			}
+		}
+
+		public interface IDataAccessLayer
+		{
+			List<string> GetPolysources();
+			Item GetMethodItem(string methodName, string messageItemTypeName);
+			Item GetEmptyItem();
+			string GetIdentityList();
+			string GetUserId();
+			Item GetResultItem(string body);
+		}
+
+		public class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+			private Item currentItem;
+			private Aras.Server.Core.IInnovatorDatabase database;
+			private string identityList;
+
+			internal DataAccessLayer(Innovator innovator, Item currentItem, Aras.Server.Core.IInnovatorDatabase db)
+			{
+				this.innovator = innovator;
+				this.currentItem = currentItem;
+				this.database = db;
+			}
+
+			public List<string> GetPolysources()
+			{
+				Item sp = innovator.newItem("Morphae", "get");
+				sp.setProperty("source_id", "2AC54107A76C483E9279862AD418A0D6"); // Base Notification Message Item Type
+				sp.setAttribute("select", "related_id(id)");
+				sp.setPropertyAttribute("source_id", "condition", "eq");
+				Item res = sp.apply();
+
+				if (res.isError())
+				{
+					return new List<string>();
+				}
+
+				var polySources = new List<string>();
+				for (int i = 0; i < res.getItemCount(); i++)
+				{
+					Item morphae = res.getItemByIndex(i);
+					polySources.Add(morphae.getPropertyAttribute("related_id", "keyed_name"));
+
+				}
+				return polySources;
+			}
+
+			public Item GetMethodItem(string methodName, string messageItemTypeName)
+			{
+				Item method = innovator.newItem("Method", methodName);
+				XmlNode target = method.node;
+
+				foreach (XmlNode child in currentItem.node.ChildNodes)
+				{
+					XmlNode nodeToCopy = method.dom.ImportNode(child, true);
+					target.AppendChild(nodeToCopy);
+				}
+
+				if (String.IsNullOrEmpty(this.identityList))
+				{
+					this.identityList = GetIdentityList();
+				}
+
+				method.setProperty("identity_list", this.identityList);
+				method.setProperty("message_type", messageItemTypeName);
+				return method;
+			}
+
+			public Item GetEmptyItem()
+			{
+				return innovator.newItem();
+			}
+
+			public string GetIdentityList()
+			{
+				string userId = currentItem.getProperty("user_id");
+				string identityList = Aras.Server.Security.Permissions.GetIdentitiesList(database, userId);
+				return identityList;
+			}
+			
+			public Item GetResultItem(string body)
+			{
+			    return this.innovator.newResult(body);
+			}
+
+			public string GetUserId()
+			{
+				return this.currentItem.getProperty("user_id");
+			}
+			//}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetNotificationMessages</name>
+ </Item>
+</AML>

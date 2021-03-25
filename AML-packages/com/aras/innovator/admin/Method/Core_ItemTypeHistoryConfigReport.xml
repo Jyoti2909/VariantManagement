@@ -1,0 +1,72 @@
+﻿<AML>
+ <Item type="Method" id="D64AFEC8E24D433888A1F158EE70157F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Item q = this.newItem();
+Item r,r2,r3;
+int i;
+string s;
+string itemTypeID = this.getAttribute("id");
+if (String.IsNullOrEmpty(itemTypeID))
+{
+  return this.getInnovator().newError("Input id attribute is empty.");
+}
+
+string histTemplateAMLPortion = ""+
+"<Item type='History Template' select='name,property_history'>"+
+  "<Relationships>"+
+    "<Item type='History Template Action' select='related_id(name,label,comment_text)'/>"+
+  "</Relationships>"+
+"</Item>";
+
+//+++++ Default History Template
+s = "<Item type='ItemType' action='get' select='id,name,history_template(name,property_history)' id='{0}'><history_template>{1}</history_template></Item>";
+q.loadAML(String.Format(CultureInfo.InvariantCulture, s, System.Security.SecurityElement.Escape(itemTypeID), histTemplateAMLPortion));
+r = q.apply();
+if (r.getItemCount()<1) return r;
+r = r.getItemByIndex(0);
+if (r.getProperty("history_template", "")=="")
+{
+  return r;
+}
+//----- Default History Template
+
+XmlElement pNd = (XmlElement) r.node.ParentNode;
+
+//+++++ Tracked Properties
+s = "<Item type='Property' action='get' select='name,label,data_type'><source_id>{0}</source_id><track_history>1</track_history></Item>";
+q.loadAML(String.Format(CultureInfo.InvariantCulture, s, System.Security.SecurityElement.Escape(itemTypeID)));
+r2 = q.apply();
+for (i=0; i<r2.getItemCount(); i++)
+{
+  pNd.AppendChild(pNd.OwnerDocument.ImportNode(r2.getItemByIndex(i).node, true));
+}
+//----- Tracked Properties
+
+//+++++ History Templates on Life Cycle States
+s = ""+
+"<Item type='ItemType Life Cycle' action='get' select='id,related_id'>"+
+  "<source_id>{0}</source_id>"+
+  "<related_id>"+
+    "<Item type='Life Cycle Map' action='get' select='id,name'>"+
+      "<Relationships>"+
+        "<Item type='Life Cycle State' action='get' select='id,name,history_template(*)'>"+
+          "<history_template condition='is not null'/>"+
+          "<history_template>{1}</history_template>"+
+        "</Item>"+
+      "</Relationships>"+
+    "</Item>"+
+  "</related_id>"+
+"</Item>";
+q.loadAML(String.Format(CultureInfo.InvariantCulture, s, System.Security.SecurityElement.Escape(itemTypeID), histTemplateAMLPortion));
+r3 = q.apply();
+for (i=0; i<r3.getItemCount(); i++)
+{
+  pNd.AppendChild(pNd.OwnerDocument.ImportNode(r3.getItemByIndex(i).node, true));
+}
+//----- History Templates on Life Cycle States
+
+return r;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Core_ItemTypeHistoryConfigReport</name>
+ </Item>
+</AML>

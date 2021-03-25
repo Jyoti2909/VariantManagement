@@ -1,0 +1,37 @@
+﻿<AML>
+ <Item type="Method" id="E9F8F5252D0B40B1A0706FBD27633689" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = this.getInnovator();
+string licenceId = innovator.ConsumeLicense("Aras.PDFViewer");
+
+Aras.Server.Security.Identity adminIdentity = null;
+bool permsWasSet = false;
+try
+{
+	adminIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+	permsWasSet =  Aras.Server.Security.Permissions.GrantIdentity(adminIdentity);
+	Item queryItem = this.newItem("Feature License", "get");
+	queryItem.setID(licenceId);
+	queryItem.setAttribute("select", "additional_license_data");
+	Item result = queryItem.apply();
+	if (result.isError())
+	{
+		return result;
+	}
+	string additionalLicenseData = result.getProperty("additional_license_data");
+	XmlDocument xmlDoc = new XmlDocument();
+	xmlDoc.LoadXml(additionalLicenseData);
+	XmlNode keyNd = xmlDoc.SelectSingleNode("data/key2");
+	return innovator.newResult(keyNd.InnerText);
+}
+finally
+{
+	if (permsWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(adminIdentity);
+	}
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetPDFTronClientLicenseData</name>
+ </Item>
+</AML>

@@ -1,0 +1,150 @@
+﻿<AML>
+ <Item type="Report" id="3FEE448935E34C7DBB557A51A6BA86FD" action="add">
+  <location>client</location>
+  <method keyed_name="ProjectTimeReport" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>ProjectTimeReport</name>
+   </Item>
+  </method>
+  <report_query><![CDATA[<Item type="Project" id="{@id}" action="get" select="date_start_target,date_due_target,name,project_number,wbs_id"/>
+]]></report_query>
+  <target>window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.1" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:user="urn:user-scripts" xmlns:aras="http://www.aras.com">
+	<xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes" cdata-section-elements="script msxsl:script"/>
+	<xsl:template match="//Result/Item">
+		<html>
+			<style type="text/css">
+table {width:17cm;border-top:1px #666666 solid;border-right:1px #FFFFFF solid;border-bottom:1px #FFFFFF solid;border-left:1px #666666 solid;}
+.name {font-family:tahoma, arial, helvetica, sans-serif; font-size: 9pt;}
+.header {font-family:tahoma, arial, helvetica, sans-serif; font-size: 10pt;}
+.date {font-family:tahoma, arial, helvetica, sans-serif; font-size: 8pt;}
+.hours {font-family:tahoma, arial, helvetica, sans-serif; font-size: 9pt; font-weight:bold;}
+.user {font-family:arial, helvetica, sans-serif; font-size: 9pt; font-weight:bold; letter-spacing:2px;}
+td {border-top:1px #FFFFFF solid;border-right:1px #666666 solid;border-bottom:1px #666666 solid;border-left:1px #FFFFFF solid;}
+h2 {font-family:tahoma, arial, helvetica, sans-serif;}
+h3 {font-family:tahoma, arial, helvetica, sans-serif;}
+.pageBreak{page-break-before:'always';}
+			</style>
+			<head>
+				<title>Resource Allocation Report</title>
+			</head>
+			<body topmargin="0" leftmargin="0">
+				<center>
+					<h2>Resource Allocation Report</h2>
+					<h3>
+						<xsl:value-of select="todays_date"/>
+					</h3>
+				</center>
+				<table border="1" cellspacing="0" cellpadding="2" width="100%" align="center">
+					<tr>
+						<td class="header" nowrap="nowrap">
+							<b>Project #:</b>
+						</td>
+						<td class="header" width="50%">
+							<xsl:value-of select="project_number"/>
+						</td>
+						<td class="header" nowrap="nowrap">
+							<b>Start Date:</b>
+						</td>
+						<td class="header" width="50%">
+							<xsl:value-of select="date_start_target"/>
+						</td>
+					</tr>
+					<tr>
+						<td class="header" nowrap="nowrap">
+							<b>Project Name:</b>
+						</td>
+						<td class="header" width="50%">
+							<xsl:value-of select="name"/>
+						</td>
+						<td class="header" nowrap="nowrap">
+							<b>Finish Date:</b>
+						</td>
+						<td class="header" width="50%">
+							<xsl:value-of select="date_due_target"/>
+						</td>
+					</tr>
+				</table>
+				<div class="name">
+					<b>
+						<center>Work Hours in brackets e.g. (16) indicate assumed assignment where there is no explicit work estimate</center>
+					</b>
+				</div>
+				<xsl:for-each select="startEnd/startEnd">
+					<xsl:call-template name="main">
+						<xsl:with-param name="start" select="@start"/>
+						<xsl:with-param name="end" select="@end"/>
+					</xsl:call-template>
+				</xsl:for-each>
+			</body>
+		</html>
+	</xsl:template>
+	<xsl:template name="main">
+		<xsl:param name="start"/>
+		<xsl:param name="end"/>
+		<!-- main table template -->
+		<table border="1" cellspacing="0" cellpadding="2" width="100%" align="center">
+			<xsl:if test="$start!=0">
+				<xsl:attribute name="class">pageBreak</xsl:attribute>
+			</xsl:if>
+			<tr>
+				<td rowspan="2" class="header">Resource</td>
+				<td class="header">
+					<xsl:attribute name="colspan"><xsl:value-of select="count(../../Relationships/Item[1]/Relationships/Item[1]/dates/date[position()&gt;$start and position()&lt;$end])"/></xsl:attribute>
+					<b>
+						<center>Work Hours</center>
+					</b>
+				</td>
+			</tr>
+			<tr>
+				<xsl:for-each select="../../Relationships/Item[1]/Relationships/Item[1]/dates/date[position()&gt;$start and position()&lt;$end]">
+					<td class="date">
+						<xsl:value-of select="@date"/>
+					</td>
+				</xsl:for-each>
+			</tr>
+			<xsl:for-each select="../../users/name">
+				<xsl:sort select="." data-type="text" order="ascending"/>
+				<xsl:variable name="userPos" select="position()"/>
+				<xsl:variable name="curNm" select="string(.)"/>
+				<xsl:variable name="prevNm" select="../name[position()=number($userPos)-1]"/>
+				<xsl:if test="$curNm!=string($prevNm)">
+					<xsl:for-each select="../../Relationships/Item[count(Relationships/Item/related_id/Item[name=$curNm]) &gt; 0]">
+						<xsl:sort select="substring(date_start_sched,7,4)" data-type="number" order="ascending"/>
+						<xsl:sort select="substring(date_start_sched,1,2)" data-type="number" order="ascending"/>
+						<xsl:sort select="substring(date_start_sched,4,2)" data-type="number" order="ascending"/>
+						<xsl:sort select="name"/>
+						<xsl:variable name="pos" select="position()"/>
+						<xsl:if test="$pos=1">
+							<tr>
+								<td class="user">
+									<xsl:attribute name="colspan"><xsl:value-of select="count(Relationships/Item/dates/date[position()&gt;$start and position()&lt;$end])+1"/></xsl:attribute>
+									<xsl:attribute name="bgColor"><xsl:text>#cccccc</xsl:text></xsl:attribute>
+									<xsl:value-of select="$curNm"/>
+								</td>
+							</tr>
+						</xsl:if>
+						<tr>
+							<td class="name">
+								<xsl:value-of select="name"/>
+							</td>
+							<xsl:for-each select="Relationships/Item[related_id/Item/name=$curNm]/dates/date[position()&gt;$start and position()&lt;$end]">
+								<td class="hours" align="center">
+									<xsl:if test=".=''">
+										<xsl:text disable-output-escaping="yes">&#160;</xsl:text>
+									</xsl:if>
+									<xsl:value-of select="."/>
+								</td>
+							</xsl:for-each>
+						</tr>
+					</xsl:for-each>
+				</xsl:if>
+			</xsl:for-each>
+		</table>
+		<!-- main table template -->
+	</xsl:template>
+</xsl:stylesheet>]]></xsl_stylesheet>
+  <name>ProjectTimeReport</name>
+ </Item>
+</AML>

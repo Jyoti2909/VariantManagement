@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Instances","type":"item","url":"Instances.htm"},{"name":"Substitutes","type":"item","url":"Substitutes.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

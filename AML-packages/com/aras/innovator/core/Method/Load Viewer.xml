@@ -1,0 +1,64 @@
+﻿<AML>
+ <Item type="Method" id="5723382025DA43D88FFC1A0835105720" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[document.body.scroll = 'no';
+
+var item = document.item;
+if (!item) {
+	return;
+}
+
+if (aras.isTempEx(item)) {
+	return;
+}
+
+var filename = aras.getItemProperty(item, 'filename');
+if (!filename) {
+	return;
+}
+
+var fileURL = aras.getFileURLEx(item);
+if (!fileURL) {
+	return;
+}
+
+var fileTypeId = aras.getItemProperty(item, 'file_type');
+var fileType = aras.getItemFromServerWithRels('FileType', fileTypeId, 'name', 'View With', 'client, application, related_id(viewer_url)', 1).node;
+
+var viewer  = (fileType) ? fileType.selectSingleNode('Relationships/Item[client=\'js\'][application/@is_null=\'1\']/related_id/Item/viewer_url') : null;
+
+if (viewer) {
+	document.location.replace(aras.scriptsURL + viewer.text + '?file_url=' + escape(fileURL));
+} else if (fileType) {
+	fileURL = aras.IomInnovator.getFileUrl(item.getAttribute('id'), aras.Enums.UrlType.SecurityToken);
+	aras.getMostTopWindowWithAras(window).open(fileURL, '_self', 'scrollbars=yes,resizable=yes,status=no');
+} else {
+	var spnId = 'file_form_message';
+	var spn = document.getElementById(spnId);
+	if (spn) {
+		var newMessageHtml = '' +
+		'<table width="410" cellpadding="3" cellspacing="5">' +
+			'<tr>' +
+				'<td align="left" valign="middle" width="360">' +
+					'<h1 style="COLOR:000000; FONT: 13pt/15pt verdana">' +
+						aras.getResource('', 'imports_core.file_extension_troubles') +
+					'</h1>' +
+				'</td>' +
+			'</tr>' +
+			'<tr>' +
+				'<td width="400" colspan="2">' +
+					'<font style="COLOR:000000; FONT: 8pt/11pt verdana">' +
+						aras.getResource('', 'imports_core.file_extension_troubles_use_file_download') +
+					'</font>' +
+				'</td>' +
+			'</tr>' +
+		'</table>';
+		spn.innerHTML = newMessageHtml;
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <permission_id keyed_name="0994E68F1B9B4E45A8C1F3DF5C0C905F" type="Permission">0994E68F1B9B4E45A8C1F3DF5C0C905F</permission_id>
+  <name>Load Viewer</name>
+ </Item>
+</AML>

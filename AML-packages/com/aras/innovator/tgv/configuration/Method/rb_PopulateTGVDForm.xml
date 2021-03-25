@@ -1,0 +1,237 @@
+﻿<AML>
+ <Item type="Method" id="3C0B34B756824B6D949C2C7EC8A17415" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[require([
+	'dojo/dom', 'dojo/_base/window', 'dojo/domReady!'
+], function(dom, win) {
+	var self = this;
+	var innovator = aras.IomInnovator;
+	var topWindow = aras.getMostTopWindowWithAras(window);
+
+	function getRootItemType(queryDefinitionId) {
+		var qdItem = innovator.newItem('qry_QueryDefinition', 'get');
+		qdItem.setID(queryDefinitionId);
+		qdItem.setAttribute('select', 'id, name');
+		var referenceItem = qdItem.createRelationship('qry_QueryReference', 'get');
+		referenceItem.setAttribute('select', 'parent_ref_id, child_ref_id');
+		referenceItem.setPropertyCondition('parent_ref_id', 'is null');
+		var queryItem = qdItem.createRelationship('qry_QueryItem', 'get');
+		queryItem.setAttribute('select', 'ref_id, item_type(id, keyed_name, name)');
+
+		qdItem = qdItem.apply();
+		if (qdItem.isError()) {
+			aras.AlertError(qdItem);
+			return;
+		}
+
+		referenceItem = qdItem.getItemsByXPath('Relationships/Item[@type="qry_QueryReference"]');
+		var rootItemType = qdItem.getItemsByXPath('Relationships/Item[@type="qry_QueryItem" and ref_id="' +
+		referenceItem.getProperty('child_ref_id') + '"]/item_type/Item');
+
+		return rootItemType;
+	}
+
+	function onLinkClick(event) {
+		if (!event) {
+			event = window.event;
+		}
+		if (!event.srcElement) {
+			event.srcElement = event.target;
+		}
+		var tgName = event.srcElement.tagName;
+		var srcElem = event.srcElement;
+		var itemTypeId = rootItemType.getID();
+		if (tgName == 'SPAN' && srcElem.style.visibility != 'hidden' && itemTypeId) {
+			var contextItemType = aras.getItemTypeForClient(itemTypeId, 'id');
+			if (contextItemType) {
+				aras.uiShowItemEx(contextItemType.node,undefined);
+			}
+		}
+	}
+
+	function createContextItemTypeLink(itemType) {
+		var contextItemTypeSpan = self.document.getElementById('context_item_type_link');
+		while (contextItemTypeSpan.hasChildNodes()) {
+			contextItemTypeSpan.removeChild(contextItemTypeSpan.lastChild);
+		}
+		var linkSpan = self.document.createElement('span');
+		linkSpan.className = 'sys_item_link context_item_type';
+		linkSpan.textContent = itemType.getProperty('keyed_name');
+		contextItemTypeSpan.appendChild(linkSpan);
+		contextItemTypeSpan.addEventListener('click', onLinkClick);
+	}
+
+	function makeQueryDefinitionPropertyNotEdit(itemNd) {
+		if (document.isEditMode && !aras.isTempEx(itemNd)) {
+			var field = getFieldByName('query_definition');
+			if (field) {
+				var fieldId = field.getAttribute('id').replace('span', '');
+				var functionName = 'expression_' + fieldId + '_setExpression';
+				setTimeout(functionName + '(false)', 1);
+			}
+		}
+	}
+
+	function getPresentationConfig(tgvItem) {
+		var presentationConfig = tgvItem.selectSingleNode('presentation_config');
+		if (presentationConfig) {
+			return presentationConfig.selectSingleNode('Item');
+		}
+		var itemId = tgvItem.getAttribute('id');
+		var itemTypeId = tgvItem.getAttribute('typeId');
+		var item = aras.newIOMItem('ItemPresentationConfiguration', 'get');
+		item.setAttribute('select', 'presentation_config_id');
+		item.setProperty('item_id', itemId);
+		item.setProperty('item_type_id', itemTypeId);
+		item.setProperty('client_type', 'js');
+		item = item.apply();
+
+		if (item.isError() && !item.isEmpty()) {
+			return null;
+		}
+
+		if (item.isEmpty()) {
+			item = aras.newIOMItem('ItemPresentationConfiguration', 'add');
+			item.setProperty('item_id', itemId);
+			item.setProperty('item_type_id', itemTypeId);
+			item.setProperty('client_type', 'js');
+		}
+
+		tgvItem.appendChild(tgvItem.ownerDocument.createElement('presentation_config'));
+		presentationConfig = tgvItem.selectSingleNode('presentation_config');
+		presentationConfig.appendChild(item.node);
+		return item.node;
+	}
+
+	function populatePresentationConfigForm(tgvItem) {
+		var itemType = ArasModules.jsonToXml({
+			Item: {
+				'@attrs': {
+					type: 'ItemType',
+					id: 'fixit',
+				},
+				name: 'fakeIt',
+				Relationships: {
+					Item: {
+						'@attrs': {
+							id: '5901A03E806B47DA87BC7D4DA6527975',
+							type: 'Property'
+						},
+						name: 'presentation_config_id',
+						data_type: 'item',
+						data_source: {
+							'@attrs': {
+								name: 'PresentationConfiguration'
+							},
+							'@value': '80881F5852BC439E9F3CF0AEC03ABE2A'
+						}
+					}
+				}
+			}
+		});
+		var form = ArasModules.jsonToXml({
+			Item: {
+				'@attrs': {
+					type: 'Form',
+					id: 'fixit'
+				},
+				name: 'fake_TGV_349CD00F696A419EB1CF5812AE7FF5EA',
+				stylesheet: '../styles/default.css',
+				Relationships: {
+					Item: {
+						'@attrs': {
+							type: 'Body'
+						},
+						Relationships: {
+							Item: {
+								'@attrs': {
+									type: 'Field',
+									id: 'fakeHtml_45A45476CCFE4836AC1F2A5AC94D75E1'
+								},
+								name: 'presentation_config_id',
+								field_type: 'item',
+								label: aras.getResource('../Modules/aras.innovator.TreeGridView', 'form.linked_toolbar_context_menu'),
+								propertytype_id: '5901A03E806B47DA87BC7D4DA6527975',
+								x: '0',
+								y: '0',
+								sort_order: '0',
+								is_visible: '1',
+								label_position: 'top',
+								font_weight: 'bold',
+								font_size: '8pt',
+								font_family: 'arial, helvetica, sans-serif',
+								font_color: '#000000',
+								display_length: '160',
+								display_length_unit: 'px',
+								Relationships: {
+									Item: {
+										'@attrs': {
+											type: 'Field Event',
+											id: 'fakeEvent_F9765F9D65FD4682B820CF160DD0FDA9'
+										},
+										field_event: 'onchange',
+										related_id: {
+											Item: {
+												'@attrs': {
+													type: 'Method',
+													id: 'fakeMethod_9C807629DDAF4D5B9A0938AF9470F9D1'
+												},
+												method_code: 'aras.MetadataCache.DeleteConfigurableUiDatesFromCache();',
+												method_type: 'JavaScript',
+												name: 'fakeName_9C807629DDAF4D5B9A0938AF9470F9D1'
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		});
+		var itemTypeXml = aras.createXMLDocument();
+		itemTypeXml.loadXML(itemType);
+		var formXml = aras.createXMLDocument();
+		formXml.loadXML(form);
+
+		var presentationConfig = getPresentationConfig(tgvItem);
+		if (presentationConfig) {
+			var frame = document.getElementById('presentation_config_form_id');
+			frame.addEventListener('load', function() {
+				var fieldComponent = this.contentWindow.getFieldComponentByName('presentation_config_id');
+				var itemTypeField = frame.closest('div[name="presentation_config_form"]');
+				var dom = fieldComponent.dom.querySelector('.aras-dropdown');
+				var observer = new MutationObserver(function(mutations) {
+					mutations.forEach(function(mutation) {
+						const isOpened = mutation.target.classList.contains('aras-dropdown_opened');
+						itemTypeField.style.zIndex = isOpened ? 1000 : '';
+					});
+				});
+				this.contentWindow.document.body.style.background = 'none';
+				observer.observe(dom, {
+					attributes: true,
+					attributeFilter: ['class']
+				});
+			});
+			aras.uiShowItemInFrameEx(frame, presentationConfig, (document.isEditMode ? 'edit' : 'view'), 0, formXml.documentElement, itemTypeXml.documentElement);
+		}
+	}
+
+	var itemNd = self.document.item;
+
+	populatePresentationConfigForm(itemNd);
+
+	var queryDefinitionId = aras.getItemProperty(itemNd, 'query_definition');
+	if (!queryDefinitionId) {
+		return;
+	}
+
+	var rootItemType = getRootItemType(queryDefinitionId);
+
+	createContextItemTypeLink(rootItemType);
+	makeQueryDefinitionPropertyNotEdit(itemNd);
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>rb_PopulateTGVDForm</name>
+ </Item>
+</AML>

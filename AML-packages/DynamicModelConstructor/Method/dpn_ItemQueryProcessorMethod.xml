@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="F6D63CC4E861451591B7CB3B23EEF424" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.Public.Events.EventHandler<Aras.DynamicModelViewer.DataModel.DataProcessorArgs>; 
+if (eventArgs == null || !eventArgs.IsValid()) 
+{ 
+	return; 
+} 
+
+// Get query definition item 
+Item qdItem = Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper.Instance.GetQueryDefinitionItem(eventArgs.QueryDefinitionId); 
+
+// Apply query definition and get result 
+Item qdResult = Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper.Instance.GetQueryDefinitionResultItem(qdItem, eventArgs.ItemId, eventArgs.QueryDefinitionParams); 
+
+// Get aliases to item types map 
+Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap map = Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper.Instance.GetAliasToItemTypeMap(qdItem); 
+
+// Create processor instance
+// var processor = new Aras.DynamicModelViewer.QueryProcessor.Processor(CCO.ErrorLookup);
+var processor = new Aras.DynamicModelViewer.QueryProcessor.XmlBasedProcessor(CCO.ErrorLookup); 
+
+// Process QD result using map
+var processingResult = processor.ProcessQueryResult(qdResult, map); 
+
+// Set processing result to event argument
+eventArgs.SetQueryProcessingResult(processingResult);
+				]]></method_code>
+  <method_type>C#</method_type>
+  <name>dpn_ItemQueryProcessorMethod</name>
+ </Item>
+</AML>

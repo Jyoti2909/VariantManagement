@@ -1,0 +1,109 @@
+﻿<!--
+
+Insert this code into the Report Stylesheet between the closing </style> and </html> tags
+replacing any <body> tags that may already exist;
+plus edit the dialog properties below as required.
+
+-->
+<script>
+  ///
+  /// Set the User Input Fields...
+  /// The property names must match exactly the names you used for the
+  /// Named Parameters in the SQL Query.
+  ///
+  /// For example, this SQL Query for the GetParts Report in the Report Server has the following
+  /// Named Parameters: part_number, description, and cost;
+  ///
+  /// SELECT     part_number, description, cost
+  /// FROM         MY_PART
+  /// WHERE     (part_number LIKE @part_number) AND (description LIKE @description) AND (cost LIKE @cost)
+  ///
+  var userInputFields = opener.parent.parent.myInnovator.newItem();
+  userInputFields.setProperty('part_number', '%');
+  userInputFields.setProperty('description', '%');
+  userInputFields.setProperty('cost', '%');
+  
+  ///
+  /// If there are properties from the selected context Item packed as hidden fields on the form
+  /// use this to pass those hidden fields as user input fields:
+  ///
+  /// userInputFields.setProperty('id',   document.forms.ReportForm['id'].value);
+  /// userInputFields.setProperty('name', document.forms.ReportForm['name'].value);
+  ///
+  
+  ///
+  /// Set the Report Name...
+  /// This is the Report name as deployed to the Report Server.
+  ///
+  var reportName = 'GetParts';
+  
+  ///
+  /// Set the title for the dialog.
+  ///
+  var title = 'Parts Report';
+  
+  
+  ///
+  /// The rest of the code is generic...
+  /// Open the dialog in a thread to allow the browser to update.
+  ///
+  setTimeout('OpenDialog()', 1);
+ 
+  window.resizeTo(400,50);
+
+  function OpenDialog()
+  {
+    var args      = new Array(opener.parent.parent.aras, userInputFields.node.xml, title);
+    var height    = userInputFields.node.selectNodes('*').length * 9 + 200;
+    var features  = 'center=yes; dialogWidth=400px; dialogHeight='+height+'px; status=no; resizable=yes; scroll=no';  
+    var userInput = showModalDialog('ReportTool/UserInputDialog.html', args, features);
+
+    if (userInput == "" || userInput == undefined)
+    {
+      window.close();
+    }
+    else
+    {
+      RunReport(userInput);
+    }
+  }
+  
+  function RunReport(userInput)
+  {
+    var elm = document.getElementById('Status');
+    elm.innerHTML = "Running Report...";
+
+    userInputFields.loadAML(userInput);
+    
+    // Set the URL to the RSGateway passing the user input from the Form dialog as the query_string.    
+    var url   = opener.parent.parent.aras.getServerBaseURL() + "RSGateway.aspx?irs:Report=" + reportName;      
+    var nodes = userInputFields.node.selectNodes('*');
+    for (i=0; i&lt;nodes.length; ++i)
+    {
+      var name = nodes[i].nodeName;
+      url += "&amp;np:" + name + "=" + userInputFields.getProperty(name);
+    }
+    
+    location = url;
+    window.resizeTo(800,600);
+  }
+</script>
+
+<body topmargin="0" leftmargin="0" bgColor="#FFFFCC">
+  <p id="Status" style="background:#FFFFCC; padding:8px">Waiting for user input, please complete the Form...</p>
+  
+  <!--
+  The following is an example for passing attributes and properties
+  from the selected context Item as hidden fields.
+  
+  For example, pack the id attribute from the context Item using
+  XSLT Attribute Substitution and nested xsl tags for the properties.
+  
+  <form id="ReportForm">
+    <input type="hidden" name="id" value="{//Item@id}/>
+    <input type="hidden" name="name">
+      <xsl:attribute name="value" select="//Item/name"/>
+    </input>
+  </form>
+  -->
+</body>

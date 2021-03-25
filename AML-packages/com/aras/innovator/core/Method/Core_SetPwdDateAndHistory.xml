@@ -1,0 +1,94 @@
+﻿<AML>
+ <Item type="Method" id="9651CB4F2E4D48599D618D4CC21EF6ED" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Dim tmpInn As Innovator = Me.getInnovator()
+Dim userId As String = Me.getAttribute("id")
+Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+Dim token As String = CCO.TokenProtectedFunctions.FunctionProtectionToken
+Dim rs As Aras.Server.Core.InnovatorDataSet
+Dim sql As String
+Dim inD As New XmlDocument()
+Dim outD As New XmlDocument()
+
+Dim i As Integer
+Dim idenIds As String = Aras.Server.Security.Permissions.GetIdentitiesList(conn, userId)
+Dim newPwd As String = Me.getProperty("password")
+If IsNothing(newPwd) Then Return tmpInn.newResult("nothing changed")
+
+Dim itm As Item = Me.newItem("RelationshipType", "get")
+itm.setProperty("name", "Old Password")
+itm = itm.apply()
+If itm.isError() Then Return itm
+
+sql = String.Format("SELECT password FROM [tokenprotected].[USER]('{1}') WHERE ID='{0}'", conn.QuoteValue(userId), conn.QuoteValue(token))
+rs = conn.ExecuteSelectCommand(sql)
+
+Dim oldPwd As String = CStr(rs.Value(0, ""))
+
+sql = String.Format("SELECT MAX(pwd_history_length) FROM [IDENTITY] WHERE ID IN ({0})", idenIds)
+rs = conn.ExecuteSelectCommand(sql)
+Dim pwd_history_length As Integer = 0
+If Not rs.Eof Then pwd_history_length = CInt(rs.Value(0, 0))
+
+If pwd_history_length < 0 Then pwd_history_length = 0
+Dim whereClause2Delete As String = ""
+If pwd_history_length > 0 Then
+	sql = String.Format("SELECT id FROM [Old_Password] WHERE source_id='{0}' ORDER BY created_on", conn.QuoteValue(userId))
+	rs = conn.ExecuteSelectCommand(sql)
+	Dim ids2Delete() As String
+	Dim ids2DeleteNum As Integer = rs.RowsNumber - pwd_history_length + 1
+	If ids2DeleteNum > 0 Then
+		Redim ids2Delete(ids2DeleteNum - 1)
+		i = 0
+		While Not rs.Eof
+			If i < ids2DeleteNum Then
+				ids2Delete(i) = conn.QuoteValue(CStr(rs.Value("id")))
+			End If
+			i += 1
+			rs.MoveNext()
+		End While
+		If i > 0 Then whereClause2Delete = "[Old_Password].id IN ('" + Join(ids2Delete, "','") + "')"
+	End If
+Else
+	whereClause2Delete = String.Format("[Old_Password].source_id='{0}'", conn.QuoteValue(userId))
+End If
+
+If Not String.IsNullOrEmpty(whereClause2Delete) Then
+	itm = Me.newItem("Old Password", "delete")
+	itm.setAttribute("where", whereClause2Delete)
+	itm = itm.apply()
+	If itm.isError() Then Return itm
+End If
+
+sql = ""
+If pwd_history_length > 0 Then
+	sql = String.Format("SELECT id FROM [tokenprotected].[OLD_PASSWORD]('{2}') WHERE source_id='{0}' AND old_pwd='{1}' " + _
+	  "  UNION ALL " + _
+	  "SELECT id FROM [tokenprotected].[USER]('{2}') WHERE id='{0}' AND password='{1}'", conn.QuoteValue(userId), conn.QuoteValue(newPwd), conn.QuoteValue(token))
+
+	rs = conn.ExecuteSelectCommand(sql)
+
+	Dim doesTheSamePwdExist As Boolean = Not rs.Eof
+
+	Dim s As String = ""
+	If pwd_history_length > 1 Then s = "s"
+	If doesTheSamePwdExist Then Return tmpInn.newError(String.Format("You cannot repeat any of your previous {0} password{1}. Please, try a different password.", pwd_history_length, s))
+	'+++++ add the password history record
+	Dim newId As String = tmpInn.getNewID()
+	itm = Me.newItem("Old Password", "add")
+	itm.setID(newId)
+	itm.setProperty("source_id", userId)
+	itm = itm.apply()
+	If itm.isError() Then Return itm
+
+	sql = String.Format("UPDATE [Old_Password] SET old_pwd='{0}' WHERE id='{1}'", conn.QuoteValue(oldPwd), conn.QuoteValue(newId))
+	sql += vbNewLine
+	'----- add the password history record
+End If
+
+sql += String.Format("UPDATE [User] SET pwd_is_set_on=getutcdate() WHERE id='{0}'", conn.QuoteValue(userId))
+conn.ExecuteSQL(sql)]]></method_code>
+  <method_type>VB</method_type>
+  <name>Core_SetPwdDateAndHistory</name>
+ </Item>
+</AML>

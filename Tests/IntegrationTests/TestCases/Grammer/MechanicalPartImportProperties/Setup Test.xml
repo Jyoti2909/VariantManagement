@@ -1,0 +1,61 @@
+﻿<TestCase author="vsmirnov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>
+		This setup test remembers the initial value of the GAG_ExportedPropFilesFolderPath variable, and sets it in the end of the tests;
+	</Description>
+
+	<Request position="1">
+		<Variables>
+			<Variable id="Default.Path.To.Csv.Folder" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/default_value/text()" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Variable" id="FA8CD27CF889444681E293EAD76CF603" action="get" select="default_value" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Variable" typeId="6DAB4ACC09E6471DB4BDD15F36C3482B" id="FA8CD27CF889444681E293EAD76CF603">
+							<default_value>\\s-rd-de.cad.has.grammer.de\listen</default_value>
+							<id keyed_name="GAG_ExportedPropFilesFolderPath" type="Variable">FA8CD27CF889444681E293EAD76CF603</id>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/default_value/text()" />
+		</Comparison>
+	</Request>
+
+	<TestCaseCleanUp>
+		<Variables>
+			<Variable id="Default.Path.To.Csv.Folder" action="apply" xpath="Query/AML/Item/default_value/text()" />
+			<Variable id="Default.Path.To.Csv.Folder" action="apply" xpath="Query/AML/Item/value/text()" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Variable" id="FA8CD27CF889444681E293EAD76CF603" action="edit" doGetItem="0">
+					<default_value>variable</default_value>
+					<value>variable</value>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Variable" id="FA8CD27CF889444681E293EAD76CF603" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="FA8CD27CF889444681E293EAD76CF603" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

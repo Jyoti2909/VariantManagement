@@ -1,0 +1,71 @@
+﻿<AML>
+ <Item type="Method" id="188A4E7C3805488AA29D100451B1D8ED" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run();
+}
+	
+	//[PartialPath("BusinessLogic/BusinessLogic")]
+	internal class BusinessLogic
+	{
+		private readonly IDataAccessLayer dal;
+
+		public BusinessLogic(IDataAccessLayer dataAccessLayer)
+		{
+			dal = dataAccessLayer;
+		}
+
+		public Item Run()
+		{
+			string userID = dal.GetUserID();
+			Item qrySync = dal.NewItem("Method", "EID_Sync_Individual_User");
+			qrySync.setProperty("eid_user_id",userID);
+			Item qryForceLogout = dal.NewItem("Method", "EID_Check_Force_LogOff");
+			qryForceLogout.setProperty("eid_user_id",userID);
+			Aras.Server.Security.Identity identityForGrant = Aras.Server.Security.Identity.GetByName("EID_External Identity Configurator");
+			bool permissionWasGranted = false;
+			try
+			{
+				permissionWasGranted = Aras.Server.Security.Permissions.GrantIdentity(identityForGrant);
+				Item result = dal.ApplyItemWithGrantIdentity(qrySync, "User Administrators");
+				bool syncError = result.isError() ||
+					(result.node != null &&
+						string.Equals(result.getProperty("eid_sync_error"), "1", StringComparison.Ordinal));
+				qryForceLogout.setProperty("eid_sync_error",syncError?"1":"0");
+				return dal.ApplyItem(qryForceLogout);
+			}
+			finally
+			{
+				if (permissionWasGranted)
+				{
+					Aras.Server.Security.Permissions.RevokeIdentity(identityForGrant);
+				}
+			}
+		}
+	}
+
+		//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+		internal interface IDataAccessLayer : Aras.Common.IDataAccessLayer
+		{
+			string GetUserID();
+		}
+
+		//[PartialPath("DataAccessLayer/DataAccessLayer")]
+		internal class DataAccessLayer : Aras.Common.DataAccessLayer, IDataAccessLayer
+		{
+			private Innovator innovator;
+			internal DataAccessLayer(Innovator innovator, Aras.Server.Core.CallContext CC)
+					: base(innovator, CC)
+			{
+				this.innovator = innovator;
+			}
+
+			public string GetUserID()
+			{
+				return innovator.getUserID();
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_LogOn_Sync</name>
+ </Item>
+</AML>

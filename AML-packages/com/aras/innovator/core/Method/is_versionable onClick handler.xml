@@ -1,0 +1,25 @@
+﻿<AML>
+ <Item type="Method" id="A48720B96EB64147A392060806967796" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*version: 5*/
+var _mv_chb = getFieldComponentByName('versioning_discipline');
+var _isVers = (aras.getItemProperty(item, 'is_versionable') === '1');
+var item = document.item;
+if (window.handleItemChange) {
+	if (_isVers) {
+		var isRelationship = (aras.getItemProperty(item, 'is_relationship') == '1');
+		var versioningDiscipline = isRelationship ? 'BaselineVersioningDiscipline' : '0';
+		handleItemChange('manual_versioning', versioningDiscipline);
+	} else {
+		handleItemChange('manual_versioning', '');
+		aras.setItemPropertyAttribute(item, 'manual_versioning', 'is_null', '1');
+	}
+}
+if (_mv_chb) {
+	_mv_chb.setDisabled(_isVers);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>is_versionable onClick handler</name>
+ </Item>
+</AML>

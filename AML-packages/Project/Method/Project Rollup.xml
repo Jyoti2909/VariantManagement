@@ -1,0 +1,46 @@
+﻿<AML>
+ <Item type="Method" id="BCDBD01C5A184498893917EE53287B26" action="add">
+  <comments>Roll-up calculation for Project scheduled</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA['inDom format:
+'  <Item type='Method' action='Schedule Project'>
+'    <body project_id='PROJECT_ID_VAL'/>
+'  </Item>
+' OR
+'  <Item type='Project' id='PROJECT_ID_VAL'>
+'    ....
+'  </Item>
+
+Dim projectId As String
+Dim tmpInn As Innovator = Me.getInnovator()
+If Me.getAttribute("type")="Method" Then
+	Dim tmpNd As XmlElement = CType(Me.node.selectSingleNode("body[@project_id]"), XmlElement)
+	If IsNothing(tmpNd) Then Return tmpInn.newError("Invalid input parameters")
+	projectId = tmpNd.getAttribute("project_id")
+Else
+	projectId = Me.getAttribute("id")
+End If
+
+Dim tzName As String = CCO.Utilities.GetVarValue("CorporateTimeZone", "")
+If tzName = "" Then _
+	Return tmpInn.newError("CorporateTimeZone Variable is not set.")
+
+Dim callframe As Item = Me.newitem("SQL", "SQL PROCESS")
+callframe.setproperty("name", "activity_status_rollup")
+callframe.setproperty("PROCESS", "CALL")
+callframe.setproperty("ARG1", projectId)
+callframe.setproperty("ARG2", tzName)
+
+Dim resultframe As Item = callframe.apply()
+If resultframe.isError() Then Return(resultframe)
+
+Dim result_text As String = resultframe.getproperty("result_text")
+
+If result_text <> "SUCCESS" Then _
+	Return tmpInn.newError("rollup_calculation failed " + result_text)
+
+Return tmpInn.newResult("SUCCESS")]]></method_code>
+  <method_type>VB</method_type>
+  <name>Project Rollup</name>
+ </Item>
+</AML>

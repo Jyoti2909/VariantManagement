@@ -1,0 +1,501 @@
+﻿<TestCase author="apetrovsky@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>
+		<![CDATA[
+		CAD can be promoted if child is in current and another GECOs
+		Created within 32949 bug
+		]]>
+	</Description>
+	<Request runAs="root:innovator">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Create CADs
+			Then:
+				Should create CADs
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD01-Child10" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][1]/@id" />
+			<Variable id="CAD02-Check10" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][2]/@id" />
+			<Variable id="CAD5-Parent" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][3]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD01-Child10</name>
+					<item_number>CAD01-Child10</item_number>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD02-Check10</name>
+					<item_number>CAD02-Check10</item_number>
+				</Item>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD5-Parent</name>
+					<item_number>CAD5-Parent</item_number>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs="root:innovator">
+		<Comments>
+			<![CDATA[
+			Given:
+				root and parent CAD
+			When:
+				Add CAD Structure
+			Then:
+				Should add CAD Structure
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD5-Parent" action="apply" xpath="Query/AML/Item[@type='CAD'][1]/@id" />
+			<Variable id="CAD01-Child10" action="apply" xpath="Query/AML/Item[@type='CAD'][1]/Relationships/Item[@type='CAD Structure'][1]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="edit" id="{CAD5-Parent}" doGetItem="0">
+					<Relationships>
+						<Item type="CAD Structure" action="add">
+							<related_id type="CAD">{CAD01-Child10}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="EA9A29F9123F42DE815114C31C81C0A2" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="EA9A29F9123F42DE815114C31C81C0A2|C333AD54C43F41A8BDB480FF64B69E64" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="creatorUser:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				creatorUser
+			When:
+				add new GECO as creatorUser
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="GECO.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="GECO.1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="CAD01-Child10" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="add" doGetItem="0">
+					<classification>Pre-Release &amp; Change/CAD Document</classification>
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Revise</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{CAD01-Child10}</related_id>
+						</Item>
+						<Item type="GAG_GECO CADDesigner" action="add">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>cadUser</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type="GAG_GECO DevReleaseApprover" action="add">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>prodUser1</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request
+		runAs="creatorUser:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="creatorUser:1"
+		srcName="Common.Promotion.CancelGECO"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="creatorUser:1"
+		srcName="Common.EvaluateActivityWithTwoTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request runAs="creatorUser:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				creatorUser
+			When:
+				add new GECO as creatorUser
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="GECO.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="GECO.2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="CAD02-Check10" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/related_id" />
+			<Variable id="CAD01-Child10" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][2]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="add" doGetItem="0">
+					<classification>Pre-Release &amp; Change/CAD Document</classification>
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Release</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{CAD02-Check10}</related_id>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled" action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>None</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{CAD01-Child10}</related_id>
+						</Item>
+						<Item type="GAG_GECO CADDesigner" action="add">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>cadUser</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type="GAG_GECO DevReleaseApprover" action="add">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>prodUser1</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request
+		runAs="creatorUser:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="creatorUser:1"
+		srcName="Common.Promotion.StartCADTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="creatorUser:1"
+		srcName="Common.EvaluateActivityWithTwoTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cadUser:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cadUser:1"
+		srcName="Common.Promotion.StartReview"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cadUser:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cpartuser:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cpartuser:1"
+		srcName="Common.Promotion.CPartCheckCompleted"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cpartuser:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cadServiceUser:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cadServiceUser:1"
+		srcName="Common.Promotion.CADQualityCheckCompleted"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cadServiceUser:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="prodUser1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="prodUser1:1"
+		srcName="Common.Promotion.DevelopmentRelease"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="prodUser1:1"
+		srcName="Common.EvaluateActivityWithTwoTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request runAs="creatorUser:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				creatorUser
+			When:
+				add new GECO as creatorUser
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="GECO.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="GECO.3.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="CAD01-Child10" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="add" doGetItem="0">
+					<classification>Pre-Release &amp; Change/CAD Document</classification>
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>None</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{CAD01-Child10}</related_id>
+						</Item>
+						<Item type="GAG_GECO CADDesigner" action="add">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>cadUser</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type="GAG_GECO DevReleaseApprover" action="add">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>prodUser1</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs="creatorUser:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				creatorUser
+			When:
+				add new GECO as creatorUser
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="GECO.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="GECO.4.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="CAD01-Child10" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/related_id" />
+			<Variable id="CAD5-Parent" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][2]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="add" doGetItem="0">
+					<classification>Pre-Release &amp; Change/CAD Document</classification>
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Release</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{CAD01-Child10}</related_id>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled" action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Release</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{CAD5-Parent}</related_id>
+						</Item>
+						<Item type="GAG_GECO CADDesigner" action="add">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>cadUser</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type="GAG_GECO DevReleaseApprover" action="add">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>prodUser1</keyed_name>
+								</Item>
+							</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request
+		runAs="creatorUser:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="creatorUser:1"
+		srcName="Common.Promotion.StartCADTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="creatorUser:1"
+		srcName="Common.EvaluateActivityWithTwoTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cadUser:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cadUser:1"
+		srcName="Common.Promotion.StartReview"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="cadUser:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<TestCaseCleanUp runAs="root:innovator">
+		<Variables>
+			<Variable id="GECO.1.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject'][1]/@id" />
+			<Variable id="GECO.2.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject'][2]/@id" />
+			<Variable id="GECO.3.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject'][3]/@id" />
+			<Variable id="GECO.4.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject'][4]/@id" />
+			<Variable id="CAD5-Parent" action="apply" xpath="Query/AML/Item[@type='CAD'][1]/@id" />
+			<Variable id="CAD01-Child10" action="apply" xpath="Query/AML/Item[@type='CAD'][2]/@id" />
+			<Variable id="CAD02-Check10" action="apply" xpath="Query/AML/Item[@type='CAD'][3]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" id="{GECO.1.Id}" action="delete" />
+				<Item type="GAG_EngineeringChangeObject" id="{GECO.2.Id}" action="delete" />
+				<Item type="GAG_EngineeringChangeObject" id="{GECO.3.Id}" action="delete" />
+				<Item type="GAG_EngineeringChangeObject" id="{GECO.4.Id}" action="delete" />
+				<Item type="Workflow Process" action="delete" where="[WORKFLOW_PROCESS].created_by_id = 'FC4284C01D524D37ACF863B47FC4D2ED'" />
+				<Item type="CAD" action="delete" id="{CAD5-Parent}" />
+				<Item type="CAD" action="delete" id="{CAD01-Child10}" />
+				<Item type="CAD" action="delete" id="{CAD02-Check10}" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

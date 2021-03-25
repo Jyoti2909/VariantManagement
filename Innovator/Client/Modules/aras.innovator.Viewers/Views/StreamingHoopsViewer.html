@@ -1,0 +1,98 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1;IE=edge">
+    <title>HOOPS</title>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/jquery-3.3.1.min.js"></script>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/jquery.minicolors.min.js"></script>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/jquery.ui.touch-punch.min.js"></script>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/iscroll.min.js"></script>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/hoops_web_viewer.js"></script>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/web_viewer_ui.js"></script>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/communicator_server_integration.js"></script>
+    <script src="../Scripts/3rdPartyLibs/hoopswebviewer/js/hwf_import.js"></script>
+    <script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules"></script>
+
+    <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/TreeControl.css" type="text/css" />
+    <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/Toolbar.css" type="text/css" />
+    <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/Desktop.css" type="text/css" />
+    <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/NoteText.css" type="text/css" />
+    <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/jquery-ui.min.css" type="text/css" />
+    <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/PropertyWindow.css" type="text/css" />
+    <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/ViewerSettings.css" type="text/css" />
+    <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/jquery.minicolors.css" type="text/css" />
+
+    <link rel="stylesheet" href="../styles/ModelBrowser.css" type="text/css" />
+    <link rel="stylesheet" href="../styles/DynamicModelBrowser/DynamicModelBrowser.css" type="text/css" />
+
+    <link rel="stylesheet" href="../../../javascript/dijit/themes/claro/claro.css" />
+    <!-- ViewerUI.html -->
+    <link rel="stylesheet" href="../styles/svgSettings.css" />
+    <link rel="stylesheet" href="../styles/ViewerToolbar.css" type="text/css" />
+    <link rel="stylesheet" href="../styles/Viewer.css" type="text/css" />
+    <link rel="stylesheet" href="../styles/Dialogs.css" type="text/css" />
+
+    <link rel="stylesheet" href="../../../styles/controls/toolbar.css" type="text/css" />
+
+    <link rel="stylesheet" href="../../../javascript/dojox/grid/resources/claroGrid.css" type="text/css" />
+    <link rel="stylesheet" href="../../../javascript/include.aspx?classes=common.css" type="text/css" />
+    <link rel="stylesheet" href="../../../javascript/dojox/form/resources/CheckedMultiSelect.css" type="text/css" />
+
+    <link rel="stylesheet" type="text/css" href="../../../styles/common.min.css">
+    <link rel="stylesheet" type="text/css" href="../../../styles/formElements.css" />
+    <script type="text/javascript" src="../../../javascript/pageReturnBlocker.js"></script>
+
+    <!-- end/HoopsWebViewerUI files -->
+    <script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+    <script type="text/javascript" src="../../../javascript/cookie.js"></script>
+
+    <script type="text/javascript" src="../Scripts/Utils.js"></script>
+    <script type="text/javascript" src="../Scripts/AxisTriad.js"></script>
+
+    <script type="text/javascript" src="../Scripts/canvg/canvg.js"></script>
+    <script type="text/javascript" src="../Scripts/canvg/rgbcolor.js"></script>
+    <script type="text/javascript" src="../../../javascript/include.aspx?classes=XmlDocument"></script>
+    <script type="text/javascript" src="../../../javascript/include.aspx?files=soap_object"></script>
+</head>
+<body onselectstart="return true;" class="claro" style="width: 100%;">
+
+    <!-- NoteWindow.html -->
+    <div id="noteMarkup" class="draggable" style="display:none">
+        <input type="button" value="" class="noteButton color blue" data-r="0" data-g="0" data-b="1.0" />
+        <input type="button" value="" class="noteButton color red" data-r="1.0" data-g="0" data-b="0" />
+        <input type="button" value="" class="noteButton color green" data-r="0" data-g="1.0" data-b="0" />
+        <input type="button" value="" class="noteButton color white" data-r="1.0" data-g="1.0" data-b="1.0" />
+        <input type="button" value="" class="noteButton color black" data-r="0" data-g="0" data-b="0.0" />
+        <input type="button" value="" class="noteButton trash" />
+        <textarea class="notetextarea noteArea" rows=7 id="noteText" maxlength="4096"></textarea>
+        <div class="noteOwner"></div>
+    </div>
+
+    <!-- ViewerSettings.html -->
+    <script type="text/javascript">
+		require(["dojo/ready"], function(ready) {
+			ready(function() {
+				VC.Utils.registerModulePaths();
+				VC.Utils.Page.LoadGeometry();
+				VC.Utils.Page.LoadModules(["Viewer", "StreamingHoopsViewer", "ViewerAgent"]);
+
+				var args = VC.Utils.Page.GetParams();
+                window.aras = args.itemWindow ? args.itemWindow.aras : top.aras;
+                args.aras = window.aras;
+
+				window.SSVCViewer = new VC.StreamingHoopsViewer(args);
+				window.customObject = window.SSVCViewer;
+				if (window.onViewerIsReady) {
+					window.onViewerIsReady();
+				}
+			});
+		});
+    </script>
+
+</body>
+</html>

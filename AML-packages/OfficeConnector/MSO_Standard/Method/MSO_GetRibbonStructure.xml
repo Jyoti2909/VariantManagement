@@ -1,0 +1,357 @@
+﻿<AML>
+ <Item type="Method" id="81FAEB48BFA44B468B1CE90246BA6135" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[			Innovator innovator = this.getInnovator();
+			RibbonItemsTree tree = new RibbonItemsTree(innovator, this.getID());
+			return innovator.newResult(tree.Create());}
+
+//[PartialPath("RibbonItemsTree")]
+		class RibbonItemsTree
+		{
+			private const string ribbonItemTypeName = "MSO_RibbonItem";
+			private const string ribbonItemRelationShipName = "MSO_ChildRibbonItem";
+			private const string ribbonItemRelationCommonSetting = "MSO_RibbonItemSettings";
+			private const string propertyToEdit = "mso_visible";
+			private const int treeLevel = 4;
+
+			private string iconPath;
+			List<PropertyInfo> properties;
+
+			private Innovator innovator;
+			private readonly string id;
+
+			public RibbonItemsTree(Innovator innovator, string id)
+			{
+				this.innovator = innovator;
+				this.id = id;
+				LoadColumnLable();
+			}
+
+
+
+			public string Create()
+			{
+				iconPath = GetCurrentItemIcon();
+				var tableStructure = CreateBaseTable();
+				var zeroLevel = GetRelationshipZeroLevel();
+				StringBuilder builder = new StringBuilder();
+				foreach (var item in zeroLevel)
+				{
+					builder.Append(CreateRow(item));
+				}
+
+				tableStructure.Append(builder.ToString());
+				tableStructure.Append("</table>");
+				return tableStructure.ToString();
+			}
+
+			public string CreateRow(RibbonTreeNode item)
+			{
+				StringBuilder stringBuilder = new StringBuilder();
+
+				if (!string.IsNullOrEmpty(this.iconPath))
+				{
+					string iconInfo = string.Format("<tr  expanded=\"true\" icon0=\"{0}\" icon1=\"{0}\">", this.iconPath);
+					stringBuilder.Append(iconInfo);
+				}
+				else
+				{
+					stringBuilder.Append("<tr  expanded=\"true\">");
+				}
+
+				stringBuilder.Append("<userdata key =\"gridData_rowItemID\" value=\"" + item.Id + "\"/>");
+				stringBuilder.Append("<userdata key =\"typeRelationship\" value=\"" + item.ParentRelationshipType + "\" />");
+				stringBuilder.Append("<userdata key =\"currentType\" value=\"" + item.Type + "\" />");
+				stringBuilder.Append("<userdata key =\"relationshipId\" value=\"" + item.ParentRelationshipId + "\" />");
+				stringBuilder.Append("<userdata key =\"level\" value=\"" + item.Level + "\" />");
+				stringBuilder.Append("<userdata key =\"childCount\" value=\"" + item.Childs.Count + "\" />");
+				foreach (var property in this.properties)
+				{
+					string td;
+					string propertyValue = item.GetProperty(property.Name);
+					if (property.DataType.Equals("boolean"))
+					{
+						td = string.Format("<td fdt=\"boolean\"><![CDATA[<checkbox state=\"{0}\"/>]]]]><![CDATA[></td>", propertyValue);
+					}
+					else
+					{
+						td = string.Format("<td fdt=\"string\"><![CDATA[{0}]]]]><![CDATA[></td>", propertyValue);
+					}
+
+					stringBuilder.Append(td);
+				}
+
+				foreach (var child in item.Childs)
+				{
+					string chilRow = CreateRow(child);
+					stringBuilder.Append(chilRow);
+				}
+
+				stringBuilder.Append("</tr>");
+				return stringBuilder.ToString();
+			}
+
+			private StringBuilder CreateBaseTable()
+			{
+				StringBuilder baseTable = new StringBuilder();
+
+				baseTable.Append("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+				baseTable.Append("<table");
+				baseTable.Append(" font=\"Microsoft Sans Serif-8\"");
+				baseTable.Append(" editable=\"true\"");
+				baseTable.Append(" draw_grid=\"true\"");
+				baseTable.Append(" multiselect=\"false\"");
+				baseTable.Append(" column_draggable=\"false\"");
+				baseTable.Append(" enableHtml=\"false\"");
+				baseTable.Append(" enterAsTab=\"false\"");
+				baseTable.Append(" bgInvert=\"false\"");
+				baseTable.Append(" xmlns:msxsl=\"urn:schemas-microsoft-com:xslt\"");
+				baseTable.Append(" xmlns:aras=\"http://www.aras.com\" xmlns:usr=\"urn:the-xml-files:xslt\">");
+
+				StringBuilder headers = new StringBuilder();
+				StringBuilder columns = new StringBuilder();
+				int order = 0;
+				foreach (var item in properties)
+				{
+					headers.Append(" <th abbr=\"" + item.Name + "\" align=\"c\">" + item.Label + "</th>");
+					if (item.Name == propertyToEdit)
+					{
+						columns.Append(" <column width=\"" + 150 + "\" align=\"c\" order=\"" + order + "\" />");
+					}
+					else
+					{
+						columns.Append(" <column edit=\"NOEDIT\" width=\"" + 150 + "\" align=\"c\" order=\"" + order + "\" />");
+					}
+
+					order++;
+				}
+
+				baseTable.Append(" <thead>");
+				baseTable.Append(headers.ToString());
+				baseTable.Append(" </thead>");
+				baseTable.Append(" <columns>");
+				baseTable.Append(columns.ToString());
+				baseTable.Append(" </columns>");
+				baseTable.Append(" <menu>");
+				baseTable.Append(" <emptytag/>");
+				baseTable.Append(" </menu>");
+
+				return baseTable;
+			}
+
+			private Item GetStructItemById(string id)
+			{
+				string select = string.Join(",", this.properties.Select(x => x.Name)) + ",Relationships";
+				Item ribbonItem = innovator.newItem(ribbonItemTypeName, "GetItemRepeatConfig");
+				ribbonItem.setID(id);
+				ribbonItem.setAttribute("select", select);
+				Item relationItem = innovator.newItem(ribbonItemRelationShipName);
+				relationItem.setAttribute("repeatProp", "related_id");
+				relationItem.setAttribute("repeatTimes", treeLevel.ToString());
+				relationItem.setAttribute("select", "related_id");
+				ribbonItem.addRelationship(relationItem);
+				ribbonItem = ribbonItem.apply();
+
+				return ribbonItem;
+			}
+
+			private RibbonTreeNode CreateTree(Item curentItem, int level, string parentRelationshipName, string parentId)
+			{
+				RibbonTreeNode currentNode = new RibbonTreeNode(curentItem, level, parentRelationshipName, parentId);
+				Item items = curentItem.getRelationships(ribbonItemRelationShipName);
+				int countItem = items.getItemCount();
+				for (int i = 0; i < countItem; i++)
+				{
+					Item relationShopItem = items.getItemByIndex(i);
+					Item ribbonItem = relationShopItem.getPropertyItem("related_id");
+
+					RibbonTreeNode child = CreateTree(ribbonItem, level + 1, relationShopItem.getType(), relationShopItem.getID());
+					currentNode.Childs.Add(child);
+				}
+
+				return currentNode;
+			}
+
+			private List<RibbonTreeNode> GetRelationshipZeroLevel()
+			{
+				Item commonSetting = innovator.newItem("MSO_CommonSetting", "get");
+				commonSetting.setID(this.id);
+				Item ribbonItemSetting = innovator.newItem(ribbonItemRelationCommonSetting, "get");
+				ribbonItemSetting.setAttribute("select", "related_id");
+				ribbonItemSetting.setPropertyItem("source_id", commonSetting);
+				ribbonItemSetting = ribbonItemSetting.apply();
+
+				List<RibbonTreeNode> zeroLevelNodes = new List<RibbonTreeNode>();
+				int itemCount = ribbonItemSetting.getItemCount();
+				for (int i = 0; i < itemCount; i++)
+				{
+					Item generalRelationShipItem = ribbonItemSetting.getItemByIndex(i);
+					Item relatedItem = generalRelationShipItem.getPropertyItem("related_id");
+					Item treeNode = this.GetStructItemById(relatedItem.getID());
+					RibbonTreeNode generalNode = this.CreateTree(treeNode, 0, generalRelationShipItem.getType(), generalRelationShipItem.getID());
+					zeroLevelNodes.Add(generalNode);
+				}
+
+				return zeroLevelNodes;
+			}
+
+			private void LoadColumnLable()
+			{
+				this.properties = new List<PropertyInfo>();
+				Item itemType = innovator.newItem("ItemType", "get");
+				itemType.setProperty("name", ribbonItemTypeName);
+
+				Item propertiesItem = innovator.newItem("Property", "get");
+				propertiesItem.setPropertyItem("source_id", itemType);
+				propertiesItem.setProperty("is_hidden2", "0");
+				propertiesItem.setAttribute("select", "column_width,label,name,sort_order,data_type");
+				propertiesItem = propertiesItem.apply();
+				if (propertiesItem.isError())
+				{
+					throw new Exception(propertiesItem.getErrorString());
+				}
+
+				int propertyCount = propertiesItem.getItemCount();
+				for (int i = 0; i < propertyCount; i++)
+				{
+					Item propertyItem = propertiesItem.getItemByIndex(i);
+					properties.Add(new PropertyInfo(propertyItem));
+				}
+
+				properties = properties.OrderBy(x => x.SortOrder).ToList();
+			}
+
+			private string GetCurrentItemIcon()
+			{
+				Item itemType = innovator.newItem("ItemType", "get");
+				itemType.setProperty("name", ribbonItemTypeName);
+				itemType.setAttribute("select", "open_icon");
+				itemType = itemType.apply();
+
+				string icon = itemType.getProperty("open_icon", string.Empty);
+				return icon;
+			}
+		}
+
+//[PartialPath("PropertyInfo")]
+		class PropertyInfo
+		{
+			private readonly Item propertyItem;
+
+			private int sortOrder = -1;
+
+			public PropertyInfo(Item propertyItem)
+			{
+				if (propertyItem == null)
+				{
+					throw new ArgumentNullException("propertyItem");
+				}
+
+				this.propertyItem = propertyItem;
+			}
+
+			public string Label
+			{
+				get
+				{
+					return this.propertyItem.getProperty("label");
+				}
+			}
+
+			public string Name
+			{
+				get
+				{
+					return this.propertyItem.getProperty("name");
+				}
+			}
+
+			public int SortOrder
+			{
+				get
+				{
+					if (this.sortOrder == -1)
+					{
+						this.sortOrder = Convert.ToInt32(this.propertyItem.getProperty("sort_order"));
+					}
+
+					return this.sortOrder;
+				}
+			}
+
+			public string DataType
+			{
+				get
+				{
+					return this.propertyItem.getProperty("data_type");
+				}
+			}
+		}
+
+//[PartialPath("RibbonTreeNode")]
+		class RibbonTreeNode
+		{
+			private readonly Item currentItem;
+
+			public RibbonTreeNode(Item item, int level, string parentRelationshipType, string parentId)
+			{
+				if (item == null)
+				{
+					throw new ArgumentNullException("item");
+				}
+				if (level < 0)
+				{
+					throw new ArgumentOutOfRangeException("level must be positive");
+				}
+				if (string.IsNullOrEmpty(parentRelationshipType))
+				{
+					throw new ArgumentNullException("parentRelationshipType");
+				}
+				if (string.IsNullOrEmpty(parentId))
+				{
+					throw new ArgumentNullException("parentId");
+				}
+
+				this.currentItem = item;
+				this.Level = level;
+				this.ParentRelationshipType = parentRelationshipType;
+				this.ParentRelationshipId = parentId;
+				Childs = new List<RibbonTreeNode>();
+
+			}
+
+			public int Level { get;  private set; }
+
+			public List<RibbonTreeNode> Childs { get; private set; }
+
+			public string Id 
+			{
+				get
+				{
+					return this.currentItem.getID();
+				}
+			}
+
+			public string Type
+			{
+				get
+				{
+					return this.currentItem.getType();
+				}
+			}
+
+			public string ParentRelationshipType { get; private set; }
+
+			public string ParentRelationshipId { get; private set; }
+
+			public string GetProperty(string name)
+			{
+				return this.currentItem.getProperty(name, string.Empty);
+			}
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_GetRibbonStructure</name>
+ </Item>
+</AML>

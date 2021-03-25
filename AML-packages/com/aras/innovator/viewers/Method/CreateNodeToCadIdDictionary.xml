@@ -1,0 +1,524 @@
+﻿<AML>
+ <Item type="Method" id="E8760B2472A544228E79F536CB4E2590" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[        Innovator inn = this.getInnovator();
+    
+        String rootCadID = this.getProperty("root_cad_id");
+        String resolution = this.getProperty("resolution");
+        IDataAccessLayer dataAccessLayer= new DataAccessLayer(inn);
+        Item rootCad = dataAccessLayer.GetNativeCADFile(rootCadID);
+        if(rootCad.isError())
+        {
+            return rootCad;
+        }
+        
+        string nativeFileId = rootCad.getProperty("native_file");
+        Item assemblyTreeXmlFile = dataAccessLayer.GetRepresentationXMLFile(nativeFileId);
+        if (assemblyTreeXmlFile.isError())
+        {
+            return assemblyTreeXmlFile;
+        }
+
+        string treeXmlID = assemblyTreeXmlFile.getItemByIndex(0).getID();
+
+        // Load the document
+        AssemblyTreeParser parser = new AssemblyTreeParser(treeXmlID, rootCadID, resolution, dataAccessLayer);
+
+        // Process the data
+        String prodOccurrencesXml = parser.processFile();
+
+        return inn.newResult(prodOccurrencesXml);
+    }
+
+  public interface IDataAccessLayer
+  {
+        Item GetNativeCADFile(string cadID);
+        Item GetRepresentationXMLFile(string nativeFileId);
+        Item GetCadTreeItem(string cadID, string resolution);
+        XmlDocument GetTreeMasterXml(string fileId);
+  }
+
+  public class DataAccessLayer : IDataAccessLayer
+  {
+       private Innovator inn;
+
+       public DataAccessLayer(Innovator inn)
+       {
+            this.inn = inn;
+       }
+
+       public Item GetNativeCADFile(string cadID)
+       {
+            Item cad = inn.newItem("CAD", "get");
+            cad.setID(cadID);
+            cad.setAttribute("select", "native_file");
+            return cad.apply();
+       }
+
+       public Item GetRepresentationXMLFile(string nativeFileId)
+       {
+            Item nativeFile = inn.newItem("File", "get");
+            nativeFile.setAttribute("select", "id");
+            nativeFile.setProperty("id", nativeFileId);
+
+            Item frRep = nativeFile.createRelationship("fr_Representation", "get");
+            frRep.setAttribute("select", "id");
+            Item representationType = inn.newItem("fr_RepresentationType", "get");
+            representationType.setAttribute("select", "id");
+            representationType.setProperty("name", "SCS Representation");
+            frRep.setPropertyItem("representation_type_id", representationType);
+
+            Item frRepFile = frRep.createRelationship("fr_RepresentationFile", "get");
+            frRepFile.setAttribute("select", "related_id(id)");
+            frRepFile.setProperty("kind", "xml_assemblytree");
+            nativeFile = nativeFile.apply();
+
+            if(nativeFile.isError())
+            {
+                return nativeFile;
+            }
+
+            Item assemblyTreeXmlFile = nativeFile.getItemsByXPath("./Relationships/Item[@type='fr_Representation']/Relationships/Item[@type='fr_RepresentationFile']/related_id/Item[@type='File']");
+
+            if(assemblyTreeXmlFile.getItemCount() < 1)
+            {
+                 return inn.newError("There is no assembly tree XML!");
+            }
+
+            return assemblyTreeXmlFile;
+        }
+
+        public Item GetCadTreeItem(string cadID, string resolution)
+        {
+            string cadQuery = @"<AML>
+            <Item type='CAD' action='PE_GetResolvedStructure' resolution='{0}' select='native_file'  id='{1}'>
+                <Relationships>
+                    <Item type='CAD Structure' select='related_id' >
+                    </Item>
+                </Relationships>
+            </Item>
+            </AML>";
+
+            cadQuery = String.Format(CultureInfo.InvariantCulture, cadQuery,
+                System.Security.SecurityElement.Escape(resolution),
+                System.Security.SecurityElement.Escape(cadID));
+
+            return inn.applyAML(cadQuery);
+       }
+
+       public XmlDocument GetTreeMasterXml(string fileId)
+       {
+            String masterXmlUrl = inn.getFileUrl(fileId, Aras.IOM.UrlType.SecurityToken);
+            XmlDocument doc = Aras.Server.Core.XML.CreateNewXMLDocument();
+            doc.Load(masterXmlUrl);
+            doc.PreserveWhitespace = true;
+            return doc;
+       }
+  }
+
+  /// <summary>
+  /// Used to parse an XML file created by the HOOPS 2017 Converter with a 
+  /// <code>--prepare_shattered_xml</code> conversion parameter.
+  /// Construct the Assembly Parser by providing a path to the XML file
+  /// to process.  The method <code>processFile()</code> will parse the contents
+  /// and return a <code>AssemblyTreeParser.Part</code> object containing the 
+  /// hierarchy of CAD Parts with instances of each.
+  /// </summary>
+  public class AssemblyTreeParser
+  {
+    public class CadInfo
+    {
+        public string CadId { get; set; }
+        public string DocumentNumber { get; set; }
+    }
+
+    private String _rootCadID;
+    private Dictionary<string, CadInfo> cadInfoDictionary;
+    public Dictionary<string, CadInfo> CadInfoDictionary
+    {
+        get
+        {
+            return cadInfoDictionary;
+        }
+    }
+    private String _resolution = "Current";
+    
+    /// <summary>
+    /// Path to the XML File to process
+    /// </summary>
+    private String _dataFileId;
+
+    /// <summary>
+    /// Document Node for the XML contents
+    /// </summary>
+    private XmlNode rootNode;
+    private IDataAccessLayer _dataAccessLayer;
+    private bool isModelWithConfigurations = false;
+
+    /// <summary>
+    /// Constructor.  Call <seealso cref="processFile()"> to process the data.</seealso>
+    /// </summary>
+    /// <param name="xmlFilePath">Path to the XML file to process</param>
+    public AssemblyTreeParser(String dataFileId, String rootCadID, String resolution, IDataAccessLayer dataAccessLayer)
+    {
+      _dataFileId = dataFileId;
+      _rootCadID = rootCadID;
+      _resolution = resolution;
+      cadInfoDictionary = new Dictionary<string, CadInfo>();
+      _dataAccessLayer = dataAccessLayer;
+    } // AssemblyTreeParser(String)
+
+    /// <summary>
+    /// Processes the contents of the XML file
+    /// </summary>
+    /// <returns><seealso cref="AssemblyTreeParser.Part">Root Part data</seealso></returns>
+    public String processFile()
+    {
+        XmlDocument modelFile = Aras.Server.Core.XML.CreateNewXMLDocument("<ModelFile/>");
+        XmlNode prodOccurrences = modelFile.DocumentElement;
+
+        Item cadsTree = _dataAccessLayer.GetCadTreeItem(_rootCadID, _resolution);
+        if(cadsTree.isError())
+        {
+            return null;
+        }
+        
+        Item rootCad = cadsTree.getItemsByXPath("/*/*/Result/Item[@type='CAD']").getItemByIndex(0);
+        gatherCadInfoIntoDictionary(rootCad);
+
+        XmlDocument doc = _dataAccessLayer.GetTreeMasterXml(_dataFileId);
+        rootNode = doc.DocumentElement;
+        prodOccurrences = processDoc(prodOccurrences);
+        String treeXML = isModelWithConfigurations ? prodOccurrences.OuterXml : "<Root>" + prodOccurrences.OuterXml + "</Root>";
+
+        return treeXML;
+    } // processFile()
+
+    /// <summary>
+    /// Finds the root Assembly and recursively processes all child Parts/Assemblies
+    /// </summary>
+    /// <returns>Root Assembly/Part</returns>
+    private XmlNode processDoc(XmlNode prodOccurrences)
+    {
+      // TODO:  Validate it against a schema that this method requires
+
+      // Start with the first Product Occurrence
+      XmlNode root = findRootOccurrence(rootNode.SelectSingleNode("/Root/ModelFile/ProductOccurence[1]"));
+      return processOccurrence(root, prodOccurrences);
+    } // processDoc()
+
+    /// <summary>
+    /// Convenience method to extract an Attribute Value from the given Node
+    /// </summary>
+    /// <param name="node">XML Node to parse</param>
+    /// <param name="attrName">Name of the attribute to extract</param>
+    /// <returns>Value of Attribute with the given name.  Returns empty String if not found</returns>
+    static String getAttribute(XmlNode node, String attrName)
+    {
+      String attrVal = "";
+      if(node != null)
+      {
+        XmlAttribute attr = node.Attributes[attrName];
+        if (attr != null)
+          attrVal = attr.Value;
+      } // if(node != null)
+
+      return(attrVal.Trim());
+    } // getAttribute(XmlNode, String)
+
+    /// <summary>
+    /// Returns the XML Node for the ProductOccurence associated with the root Part/Assembly in the file.
+    /// </summary>
+    /// <remarks>
+    /// <code><ProductOccurence/></code> nodes in the the HOOPS Assembly Tree XML file define a hierarchy
+    /// of Part instances that were converted based on the given CAD file in the HOOPS Conversion process.
+    /// This hierachy is defined by unique <code>@Id</code> attribute values and a list of ids provided
+    /// in the <code>@Children</code> attribute.  The first <code><ProductOccurence/></code> node typically
+    /// has an <code>@Id</code> value of 0, with all children, grandchildren, etc. having IDs of incremental
+    /// value.  A typical file will have the form:
+    /// <code>
+    /// <ProductOccurence Id="0" Children="1">...</ProductOccurence>
+    /// <ProductOccurence Id="1" Children="2">...</ProductOccurence>
+    /// <ProductOccurence Id="2" Children="3 4 5 6">...</ProductOccurence>    
+    /// </code>
+    /// <code>@FilePath</code> attributes identify the CAD file associated with each Product Occurence.  It's
+    /// possible that the first couple/few Product Occurences all refer to the same Root Part.  This Method
+    /// will continue to process Child nodes until a Product Occurence node is found that doesn't refer to
+    /// the same CAD File.  This node is returned.
+    /// Model can have configurations. Each configuration is described in seperate Product Occurence node
+    /// and they have Configuration attribute equals to true. In this case, Product Occurence node, which is parent to 
+    /// these configuration nodes, will be returned 
+    /// </remarks>
+    /// <param name="prodOcc">Root Product Occurence</param>
+    /// <returns>A <code><ProductOccurence/></code> node that starts the root hierarchy</returns>
+    XmlNode findRootOccurrence(XmlNode prodOcc)
+    {
+      String rootFilePath = getAttribute(prodOcc, "FilePath");
+      String childrenStr;
+      XmlNode nextOcc = prodOcc;
+
+      // Find the first Product Occurrence that references a CAD File
+      // This path may not exists in the given node
+      while (rootFilePath.Length == 0)
+      {
+        childrenStr = getAttribute(nextOcc, "Children");
+        if (childrenStr.Length > 0)
+        {
+          char[] delim = { ' ' };
+          string[] ids = childrenStr.Split(delim);
+          nextOcc = rootNode.SelectSingleNode("/Root/ModelFile/ProductOccurence[@Id = " + ids[0].Trim() + "]");
+          rootFilePath = getAttribute(nextOcc, "FilePath");
+        }
+        else
+          return null;
+      } // while (rootFilePath.Length == 0)
+
+      // At this point, the Root Product Occurrence has been found with a reference to the root CAD file
+      // We need to continue to process the child Product Occurrences until we find the first child
+      // that doesn't reference the same CAD File.  
+
+      bool continueSearch = true;
+      while (continueSearch)
+      {
+        childrenStr = getAttribute(nextOcc, "Children");
+        // Check the first child of each Occurence.  The one with a child that references a different
+        // CAD file is the node to return.  Note that the given node may represent a Part with no
+        // hierarchy so we have to account for that
+        if (childrenStr.Length > 0)
+        {
+          char[] delim = { ' ' };
+          string[] ids = childrenStr.Split(delim);
+          XmlNode childProdOcc = rootNode.SelectSingleNode("/Root/ModelFile/ProductOccurence[@Id = " + ids[0].Trim() + "]");
+          String childFilePath = getAttribute(childProdOcc, "FilePath");
+          if (childFilePath.Length > 0)
+          {
+            bool isConfiguration = string.Equals(getAttribute(childProdOcc, "Configuration"),"true");
+            if (!string.Equals(rootFilePath, childFilePath) || isConfiguration)
+            {
+                continueSearch = false;  // we have a root File Path and it's differnt so return the current Occurrence
+                if (isConfiguration)
+                    isModelWithConfigurations = true;
+            }
+            else
+              nextOcc = childProdOcc;
+          } // if (childFilePath.Length > 0)
+          else // Current node doesn't have an Associated CAD File so stop here
+            continueSearch = false;
+        }
+        else  // No more children
+          continueSearch = false;
+      } // while
+
+      XmlDocument doc = nextOcc.OwnerDocument;
+      XmlAttribute attr = doc.CreateAttribute("Root");
+      attr.Value = "true";
+      nextOcc.Attributes.SetNamedItem(attr);
+      if (isModelWithConfigurations)
+      {
+          attr = doc.CreateAttribute("ModelWithConfigurations");
+          attr.Value = "true";
+          nextOcc.Attributes.SetNamedItem(attr);
+      }
+
+      return (nextOcc);
+
+    } // findRootOccurrence()
+
+
+    /// <summary>
+    /// Return ModelConfiguration XML Node
+    /// </summary>
+    /// <remarks>
+    /// Each configuration can be identified by ID and it has own Assembly Tree XML
+    /// In order to process each configuration on Client side, Assembly Tree XML for each configuration
+    /// is placed into <code><ModelConfiguration/></code> node which has next attributes:
+    /// Id - configuration id
+    /// Name - configuration name
+    /// <param name="rootProdOccConfig">Root Product Occurence for configuration</param>
+    /// <returns><code><ModelConfiguration/></code> node that will contain Assembly Tree XML for configuration</returns>
+    static XmlNode createModelConfigurationNode(XmlNode rootProdOccConfig)
+    {
+        XmlDocument modelConfig = Aras.Server.Core.XML.CreateNewXMLDocument("<ModelConfiguration/>");
+        XmlNode modelConfigNode = modelConfig.DocumentElement;
+        XmlDocument doc = rootProdOccConfig.OwnerDocument;
+        XmlAttribute attr = doc.CreateAttribute("Name");
+        attr.Value = getAttribute(rootProdOccConfig, "Name");
+        modelConfigNode.Attributes.SetNamedItem(attr);
+        attr = doc.CreateAttribute("Id");
+        attr.Value = getAttribute(rootProdOccConfig, "Id");
+        modelConfigNode.Attributes.SetNamedItem(attr);
+        return modelConfigNode;
+    }
+    
+    /// <summary>
+    /// Returns the XML Node which contains all configurations
+    /// </summary>
+    /// <remarks>
+    /// Method returns XML Node such as:
+    /// <code>
+    /// <ModelConfigurations>
+    ///  <ModelConfiguration>
+    ///   <Root>
+    ///    <ModelFile>
+    ///     <ProductOccurance />
+    ///    </ModelFile>
+    ///   </Root>
+    ///  </ModelConfiguration>
+    ///  <ModelConfiguration>
+    ///   <Root>
+    ///    <ModelFile>
+    ///     <ProductOccurance />
+    ///    </ModelFile>
+    ///   </Root>
+    ///  </ModelConfiguration>
+    ///  ...
+    /// </ModelConfigurations>
+    /// </code>
+    /// </remarks>
+    /// <param name="prodOcc">Root Product Occurence</param>
+    /// <param name="xmlDoc">Xml Document</param>
+    /// <returns>A <code><ModelConfigurations/></code> node that contains Tree XML of all model configurations</returns>
+    private XmlNode getModelConfigurations(XmlNode rootProdOcc, XmlDocument xmlDoc)
+    {
+        String childrenStr = getAttribute(rootProdOcc, "Children");
+        XmlDocument modelConfigurations = Aras.Server.Core.XML.CreateNewXMLDocument("<ModelConfigurations/>");
+        XmlNode modelConfigurationsNode = modelConfigurations.DocumentElement;
+            
+        if(childrenStr.Length > 0)
+        {
+            char[] delim = { ' ' };
+            string[] ids = childrenStr.Split(delim);
+
+            foreach (string id in ids)
+            {
+                XmlNode rootProdOccConfig = rootNode.SelectSingleNode("/Root/ModelFile/ProductOccurence[@Id = " + id.Trim() + "]");
+                XmlDocument doc = rootProdOccConfig.OwnerDocument;
+                XmlAttribute attr = doc.CreateAttribute("Root");
+                attr.Value = "true";
+                rootProdOccConfig.Attributes.SetNamedItem(attr);
+
+                XmlDocument modelFile = Aras.Server.Core.XML.CreateNewXMLDocument("<ModelFile/>");
+                XmlNode prodOccurrences = modelFile.DocumentElement;
+
+                processOccurrenceChild(rootProdOccConfig, prodOccurrences, "", xmlDoc);
+
+                XmlDocument root = Aras.Server.Core.XML.CreateNewXMLDocument("<Root/>");
+                XmlNode rootN = root.DocumentElement;
+                rootN.AppendChild(rootN.OwnerDocument.ImportNode(prodOccurrences, true));
+
+                XmlNode modelConfigurationNode = createModelConfigurationNode(rootProdOccConfig);
+                modelConfigurationNode.AppendChild(modelConfigurationNode.OwnerDocument.ImportNode(rootN, true));
+                modelConfigurationsNode.AppendChild(modelConfigurationsNode.OwnerDocument.ImportNode(modelConfigurationNode, true));
+            }
+        }
+        return modelConfigurationsNode;
+    }
+    
+    private XmlNode processOccurrence(XmlNode rootProdOcc, XmlNode prodOccurrences)
+    {
+        XmlDocument xmlDoc = Aras.Server.Core.XML.CreateNewXMLDocument();
+        if (isModelWithConfigurations)
+        {
+            prodOccurrences = getModelConfigurations(rootProdOcc, xmlDoc);
+        } else {
+            processOccurrenceChild(rootProdOcc, prodOccurrences, "", xmlDoc);
+        }
+        return prodOccurrences;
+    }
+
+    /// <summary>
+    /// Recursive method to process a hierarchy of Product Occurence nodes.
+    /// </summary>
+    /// <param name="prodOcc"><code><ProductOccurence/></code> to parse</param>
+    /// <returns>An Part object containing the data parsed from the given node</returns>
+    void processOccurrenceChild(XmlNode prodOcc, XmlNode prodOccurrences, String parentProcId, XmlDocument xmlDoc)
+    {
+      if (prodOcc == null)
+        return;
+
+      String procId = getAttribute(prodOcc, "Id");
+      String filePath = getAttribute(prodOcc, "FilePath");
+
+      String childrenStr = getAttribute(prodOcc, "Children");
+      int ind = filePath.LastIndexOf("\\", StringComparison.CurrentCulture);
+      if (ind >= 0)
+      {
+         String SCFileName = filePath.Substring(ind + 1);
+
+         if (!String.IsNullOrEmpty(SCFileName)) 
+         {
+            SCFileName = SCFileName.ToUpperInvariant();
+            CadInfo cadInfo = null;
+            
+            if(cadInfoDictionary.TryGetValue(SCFileName, out cadInfo))
+            {
+              string xml = "<Attributes>" +
+                "<Attr Name=\"ItemId\" Type=\"String\" Value=\"" + System.Security.SecurityElement.Escape(cadInfo.CadId) + "\"/>" +
+                "<Attr Name=\"DocNumber\" Type=\"String\" Value=\"" + System.Security.SecurityElement.Escape(cadInfo.DocumentNumber) + "\"/>" +
+                "<Attr Name=\"ParentProcId\" Type=\"String\" Value=\"" + System.Security.SecurityElement.Escape(parentProcId) + "\"/>" +
+                "</Attributes>";
+
+              xmlDoc.LoadXml(xml);
+              XmlNode attributesElem = xmlDoc.DocumentElement;
+              prodOcc.AppendChild(prodOcc.OwnerDocument.ImportNode(attributesElem, true));
+            }
+         }
+        prodOccurrences.AppendChild(prodOccurrences.OwnerDocument.ImportNode(prodOcc, true));
+      }
+
+      if(childrenStr.Length > 0)
+      {
+        char[] delim = { ' ' };
+        string[] ids = childrenStr.Split(delim);
+        parentProcId = procId;
+
+        foreach (string id in ids)
+        {
+            XmlNode childProdOcc = rootNode.SelectSingleNode("/Root/ModelFile/ProductOccurence[@Id = " + id.Trim() + "]");
+            processOccurrenceChild(childProdOcc, prodOccurrences, parentProcId, xmlDoc);
+        } // foreach()
+      } // if(childrenStr.Length > 0)
+    }
+    
+    public void gatherCadInfoIntoDictionary(Item cad) {
+        string filename = null;
+        Item nextCad = null;
+        Item currentCadStructure = null;
+        
+        if (cad != null) 
+        {
+            string cadId = cad.getID();
+
+            //double escape special characters because first is used in InitXML function and second in tree._load in ..\javascript\Aras\Client\Controls\Experimental\Tree.js
+            string documentNumber = System.Security.SecurityElement.Escape(cad.getPropertyAttribute("id", "keyed_name"));
+            Item cadStructures = cad.getRelationships("CAD Structure");
+            Item nativeFile = cad.getPropertyItem("native_file");
+            int count = cadStructures.getItemCount();
+        
+            if(nativeFile != null && nativeFile.getItemCount() > 0)
+            {
+                filename = nativeFile.getProperty("filename");
+                if(!string.IsNullOrEmpty(filename)) {
+                    filename = filename.ToUpperInvariant();                    
+                }
+            }
+
+            if(!string.IsNullOrEmpty(filename) && !cadInfoDictionary.ContainsKey(filename))
+            {
+                cadInfoDictionary.Add(filename, new CadInfo() { CadId = cadId, DocumentNumber = documentNumber });
+            }
+        
+            for(int i = 0; i < count; i++)
+            {
+                currentCadStructure = cadStructures.getItemByIndex(i);
+                nextCad = currentCadStructure.getRelatedItem();
+                gatherCadInfoIntoDictionary(nextCad);
+            }
+        }
+    }
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>CreateMonolithicModelXML</name>
+ </Item>
+</AML>

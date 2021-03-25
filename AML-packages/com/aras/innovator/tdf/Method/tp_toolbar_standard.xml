@@ -1,0 +1,246 @@
+﻿<AML>
+ <Item type="Method" id="DBAA9941AA034336BE74E4B2D2049F3E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/* Method that hndler for standart toolbar
+ * This method must return object with:
+ * onClick  - handler that execute buttons event onClick
+ * onSelect - handler that execute selection event onChangeSelect
+ * onStyled - handler that set foreach button class (use as toggle button)
+ * onShow   - handler that show/hide buttons and selections
+ * onInited  -  handler that call after init toolbar
+ *
+ * in this method income 2 arguments: viewmodel object and toolbar object
+ *
+ * Also this method is provided to use custom code for custom buttons or selections
+ */
+var Enums = {};
+require(['TechDoc/Aras/Client/Controls/TechDoc/ViewModel/DocumentationEnums'], function(DocumentationEnums) {
+	Enums = DocumentationEnums;
+});
+
+var ToolbarProvider = function(viewmodel, toolbar) {
+	this.viewmodel = viewmodel;
+	this.toolbar = toolbar;
+	this.toolbarActions = toolbar._toolbarActions; // the standart implemented actions
+	this._tooltips = {};
+
+	require(['TechDoc/Aras/Client/Controls/TechDoc/Helper/CharacterHelper'], function(CharacterHelper) {
+		this._characterHelper = new CharacterHelper({viewmodel: viewmodel});
+	}.bind(this));
+};
+
+// The 'isEditable' argument is boolean flag that provide document locked state
+ToolbarProvider.prototype.onClick = function(buttonName, isEditable) {
+	var action = buttonName.replace('tp_', '');
+
+	switch (action) {
+		// actions that always accessible
+		case 'showdocumentview':
+			var documentViewSettings = this.toolbar.getAdditionalData('documentViewSettings') || {};
+
+			this.toolbarActions[action].handler.Execute(documentViewSettings);
+			break;
+		case 'testlink':
+			this.toolbarActions.arastextactions.handler.Execute({'actionName': action});
+			break;
+		case 'filtering':
+			this.toolbarActions.showdocumentview.handler.filterEnable();
+			break;
+		default:
+			if (isEditable) {
+				// actions that allowed only when document in edit state
+				switch (action) {
+					case 'bold':
+					case 'italic':
+					case 'strike':
+					case 'sub':
+					case 'sup':
+					case 'under':
+					case 'addlink':
+					case 'changelink':
+					case 'deletelink':
+						this.toolbarActions.arastextactions.handler.Execute({'actionName': action});
+						break;
+					case 'bullet':
+					case 'numeric':
+					case 'alpha':
+						this.toolbarActions.listaction.handler.Execute({'listtype': action,});
+						break;
+					case 'table':
+					case 'bottom':
+					case 'middle':
+					case 'top':
+					case 'left':
+					case 'right':
+					case 'center':
+					case 'justify':
+						this.toolbarActions.tableactions.handler.Execute({'action': action,});
+						break;
+					case 'undo':
+						this.toolbarActions.undoaction.handler.Execute();
+						break;
+					case 'redo':
+						this.toolbarActions.redoaction.handler.Execute();
+						break;
+					case 'char_table':
+						var btnNode = this.toolbar.getElement(buttonName)['_item_Experimental'].domNode;
+						this._characterHelper.ShowCharacterTable(btnNode);
+						break;
+					default:
+						this.viewmodel._aras.AlertError(this.viewmodel._aras.getResource('../Modules/aras.innovator.TDF', 'includes.actionwasntimplemented'));
+						break;
+				}
+			}
+			break;
+	}
+};
+
+// The 'selection' argument is selection object that change option
+// The 'isEditable' argument is boolean flag that provide document locked state
+ToolbarProvider.prototype.onSelect = function(selection, isEditable) {
+};
+
+ToolbarProvider.prototype.onStyled = function(sender) {
+	if (!sender.IsEqualEditableLevel(Enums.EditLevels.IgnoreExternal)) {
+		return;
+	}
+
+	var modelCursor = sender.Cursor();
+	var ancesstorItem = modelCursor.commonAncestor;
+	var currentSelectedList = sender.GetSelectedItems();
+	var isSelected = currentSelectedList.length > 0;
+	var isMultiSelect = currentSelectedList.length > 1;
+	var currentSelectedItems = (isMultiSelect) ? currentSelectedList : currentSelectedList[0];
+
+	if (!isSelected || isMultiSelect) {
+		return;
+	}
+
+	if (currentSelectedItems.is('ArasTextXmlSchemaElement') && currentSelectedItems == ancesstorItem) {
+		var rangeStyle = ancesstorItem.GetStyleOfRange();
+
+		if (!rangeStyle) {
+			return;
+		}
+		if (rangeStyle.bold) {
+			this.toolbar.SetToggled('tp_bold');
+		}
+		if (rangeStyle.italic) {
+			this.toolbar.SetToggled('tp_italic');
+		}
+		if (rangeStyle.strike) {
+			this.toolbar.SetToggled('tp_strike');
+		}
+		if (rangeStyle.sub) {
+			this.toolbar.SetToggled('tp_sub');
+		}
+		if (rangeStyle.sup) {
+			this.toolbar.SetToggled('tp_sup');
+		}
+		if (rangeStyle.under) {
+			this.toolbar.SetToggled('tp_under');
+		}
+	} else if (currentSelectedItems.is('ArasListXmlSchemaElement') || (currentSelectedItems.is('ArasListItemXmlSchemaElement') && currentSelectedItems.List())) {
+		var listElement = currentSelectedItems.is('ArasListXmlSchemaElement') ? currentSelectedItems : currentSelectedItems.List();
+		var listType = listElement.Attribute('type');
+
+		if (listType) {
+			this.toolbar.SetToggled(listType);
+		}
+	}
+};
+
+// This event allow to select toolbar's buttons to show
+ToolbarProvider.prototype.onShow = function(sender) {
+	var toolbar = this.toolbar;
+	var currentSelectedList = sender.GetSelectedItems();
+	var isSelected = currentSelectedList.length > 0;
+	var isMultiSelect = currentSelectedList.length > 1;
+	var currentSelectedItems = (isMultiSelect) ? currentSelectedList : currentSelectedList[0];
+	var cursor = sender.Cursor();
+	var ancesstorItem = cursor.commonAncestor;
+	// Don't show toolbar's button for nonedit document
+	var isDocumentEdit = sender.IsEqualEditableLevel(Enums.EditLevels.IgnoreExternal);
+	var isElementEdit = sender.IsEqualEditableLevel(Enums.EditLevels.FullAllow);
+	var isPrimaryToolbar = this.toolbar.getAdditionalData('isPrimary');
+
+	if (isPrimaryToolbar) {
+		toolbar.ShowButton('tp_showdocumentview');
+	}
+
+	var documentView = this.viewmodel.OptionalContent().DocumentView();
+	var bool = Object.keys(documentView).length > 0 || this.toolbarActions.showdocumentview.handler.documentView;
+	toolbar.ShowButton('tp_filtering');
+	toolbar.getItem('tp_filtering').setEnabled(bool);
+	if (bool && !this.toolbarActions.showdocumentview.handler.documentView) {
+		toolbar.SetToggled('tp_filtering');
+	}
+
+	if (isDocumentEdit) {
+		var queueChanges = viewmodel.QueueChanges();
+
+		toolbar.ShowButton('tp_undo');
+		toolbar.ShowButton('tp_redo');
+
+		toolbar.getItem('tp_undo').setEnabled(queueChanges.getPreviousState());
+		toolbar.getItem('tp_redo').setEnabled(queueChanges.getNextState());
+	}
+
+	if (!isSelected || isMultiSelect) {
+		return;
+	}
+
+	var isCursorInText = currentSelectedItems.is('ArasTextXmlSchemaElement') && currentSelectedItems == ancesstorItem;
+	var textLinksCount = isCursorInText ? ancesstorItem.GetSelectedLinksCount() : 0;
+
+	if (isElementEdit) {
+		if (isCursorInText) {
+			toolbar.ShowButton('tp_bold');
+			toolbar.ShowButton('tp_italic');
+			toolbar.ShowButton('tp_strike');
+			toolbar.ShowButton('tp_sub');
+			toolbar.ShowButton('tp_sup');
+			toolbar.ShowButton('tp_under');
+			toolbar.ShowButton('tp_char_table');
+
+			if (ancesstorItem.IsHasEmphes()) {
+				if (textLinksCount == 1) {
+					toolbar.ShowButton('tp_changelink');
+					toolbar.ShowButton('tp_deletelink');
+				}
+			}
+
+			if (!textLinksCount) {
+				toolbar.ShowButton('tp_addlink');
+			}
+		} else if (currentSelectedItems.is('ArasListXmlSchemaElement') || (currentSelectedItems.is('ArasListItemXmlSchemaElement') && currentSelectedItems.List())) {
+			toolbar.ShowButton('tp_bullet');
+			toolbar.ShowButton('tp_numeric');
+			toolbar.ShowButton('tp_alpha');
+		} else if (currentSelectedItems.is('ArasCellXmlSchemaElement')) {
+			toolbar.ShowButton('tp_bottom');
+			toolbar.ShowButton('tp_middle');
+			toolbar.ShowButton('tp_top');
+			toolbar.ShowButton('tp_left');
+			toolbar.ShowButton('tp_right');
+			toolbar.ShowButton('tp_center');
+			toolbar.ShowButton('tp_justify');
+		}
+	}
+
+	if (isCursorInText && textLinksCount == 1) {
+		toolbar.ShowButton('tp_testlink');
+	}
+};
+
+ToolbarProvider.prototype.onInited = function(action) {
+	this.toolbar.MarkButtonsAsToggle(['tp_filtering', 'tp_bold', 'tp_italic', 'tp_strike', 'tp_sub', 'tp_sup',
+		'tp_under', 'tp_addlink', 'tp_bullet', 'tp_numeric', 'tp_alpha']);
+};
+
+return new ToolbarProvider(viewmodel, toolbar);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>tp_toolbar_standard</name>
+ </Item>
+</AML>

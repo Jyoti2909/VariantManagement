@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Attendance","type":"item","url":"Employee_Care_eBook/Attendance_e_Book.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

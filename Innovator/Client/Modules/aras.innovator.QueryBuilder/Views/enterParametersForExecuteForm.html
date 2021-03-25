@@ -1,0 +1,88 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="../../../styles/common.min.css" />
+		<script id="ArasModules" type="text/javascript" src="../../../../javascript/include.aspx?classes=ArasModules"></script>
+	</head>
+	<body class="aras-form">
+		<style>
+			body {
+				box-sizing: border-box;
+				padding: 10px 15px;
+			}
+			label {
+				display: block;
+				font-weight: bold !important;
+				margin-bottom: 5px;
+			}
+			label.aras-checkbox {
+				line-height: 1.5;
+				padding-top: 20px;
+			}
+			select:disabled {
+				font-style: italic;
+			}
+			select, input {
+				width: 100%;
+			}
+			iframe {
+				height: 178px;
+				width: 100%;
+			}
+			body > div {
+				margin-bottom: 15px;
+			}
+			.aras-btn {
+				display: block;
+				margin: 0 auto;
+				min-width: 12rem;
+			}
+			.parameters-list div {
+				width: 49%;
+			}
+			.parameters-list div:first-child {
+				margin-right: 1%;
+			}
+			.parameters-list div:last-child {
+				margin-left: 1%;
+			}
+		</style>
+		<div>
+			<label>Max Count</label>
+			<input type="text" value="100" id="maxCount" />
+		</div>
+		<div>
+			<label>Conditions</label>
+			<iframe scrolling="no" id="conditionNodeFrame" src="conditionsView.html" frameborder="0"></iframe>
+		</div>
+		<div class="parameters-list aras-flex">
+			<div>
+				<label>Parameter</label>
+				<select required disabled>
+					<option selected disabled value="">Select parameter</option>
+				</select>
+			</div>
+			<div>
+				<label>Parameter Value Customisation</label>
+				<input type="text" disabled />
+			</div>
+		</div>
+		<div class="parameters-list aras-flex">
+			<div>
+				<label id="outputFormatLabel"></label>
+				<select required  id="outputFormat">
+				</select>
+			</div>
+			<div>
+				<label class="aras-checkbox">
+					<input type="checkbox" class="aras-checkbox__input" id="resultAsFile"></input>
+					<span class="aras-checkbox__check-button"></span>
+					<span id="resultAsFileLabel"></span>
+				</label>
+			</div>
+		</div>
+		<button id='executeBtn' class="aras-btn"></button>
+		<script type="text/javascript" src="../Scripts/enterParametersForExecuteForm.js" onload="initEnterParametersForm(frameElement)"></script>
+	</body>
+</html>

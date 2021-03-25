@@ -1,0 +1,419 @@
+﻿<AML>
+ <Item type="Method" id="8B54EA6736204CE0BB299EDC18EBDB5C" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.Server.Core.Configurator;
+	private HashSet<string> guidsCacheableScopeObjectDependsOn = new HashSet<string>();
+	private IDictionary<string, string> itemTypeNamesByIdsOfVariableTypeItem;
+	private Item fullStructuredScopeItem;
+
+	private Item FullStructuredScopeItem
+	{
+		get
+		{
+			if (fullStructuredScopeItem == null)
+			{
+				fullStructuredScopeItem = ScopeItem.newItem("effs_scope", "get");
+
+				string effsScopeId = ScopeItem.getID();
+
+				fullStructuredScopeItem.setID(effsScopeId);
+				fullStructuredScopeItem.setAttribute("select", "name,builder_method");
+
+				Item scopeVariableRelationship = ScopeItem.newItem("effs_scope_variable");
+				scopeVariableRelationship.setAttribute("select", "related_id(name,variable_type,list_id,itemtype_id)");
+				fullStructuredScopeItem.addRelationship(scopeVariableRelationship);
+
+				fullStructuredScopeItem = fullStructuredScopeItem.apply();
+
+				if (fullStructuredScopeItem.isError())
+				{
+					throw new InnovatorServerException(fullStructuredScopeItem.dom);
+				}
+			}
+
+			return fullStructuredScopeItem;
+		}
+	}
+
+	private IDictionary<string, string> ItemTypeNamesByIdsOfVariableTypeItem
+	{
+		get
+		{
+			if (itemTypeNamesByIdsOfVariableTypeItem == null)
+			{
+				Item itemVariableTypeItems = FullStructuredScopeItem.getItemsByXPath("Relationships/Item/related_id/Item[variable_type='item']");
+				itemTypeNamesByIdsOfVariableTypeItem = PullItemTypeInfoForVariableOfTypeItem(itemVariableTypeItems);
+			}
+
+			return itemTypeNamesByIdsOfVariableTypeItem;
+		}
+	}
+
+	/// <summary>
+	/// Builds a scope object for the given effs_scope item context
+	/// </summary>
+	/// <returns></returns>
+	public override Scope BuildScope()
+	{
+		Scope scope = new Scope()
+		{
+			Id = FullStructuredScopeItem.getID(),
+			Name = FullStructuredScopeItem.getProperty("name")
+		};
+		guidsCacheableScopeObjectDependsOn.Add(FullStructuredScopeItem.getProperty("builder_method"));
+
+		Item primitiveVariableTypeItems = FullStructuredScopeItem.getItemsByXPath("Relationships/Item[related_id/Item[variable_type='integer' or variable_type='string' or variable_type='date']]");
+		IEnumerable<Variable> primitiveVariables = GetVariableListOfPrimitiveTypes(primitiveVariableTypeItems);
+		scope.VariableList.AddRange(primitiveVariables);
+
+		Item listVariableTypeItems = FullStructuredScopeItem.getItemsByXPath("Relationships/Item[related_id/Item[variable_type='list']]");
+		IEnumerable<Variable> listVariables = GetVariableListOfComplexListType(listVariableTypeItems);
+		scope.VariableList.AddRange(listVariables);
+
+		Item itemVariableTypeItems = FullStructuredScopeItem.getItemsByXPath("Relationships/Item[related_id/Item[variable_type='item']]");
+		IEnumerable<Variable> itemVariables = GetVariableListOfComplexTypeItem(itemVariableTypeItems);
+		scope.VariableList.AddRange(itemVariables);
+
+		return scope;
+	}
+
+	/// <summary>
+	/// Returns a list of <see cref="Aras.Server.Core.Configurator.Variable"/> objects prepared based on the incoming Variable Items.
+	/// Primitive variable data types 'integer', 'string', 'date' are supported only
+	/// </summary>
+	/// <param name="scopeVariableRelationshipItems"></param>
+	/// <returns></returns>
+	private IEnumerable<Variable> GetVariableListOfPrimitiveTypes(Item scopeVariableRelationshipItems)
+	{
+		List<Variable> variables = new List<Variable>();
+		int scopeVariableRelationshipItemCount = scopeVariableRelationshipItems.getItemCount();
+		for (int i = 0; i < scopeVariableRelationshipItemCount; i++)
+		{
+			Item scopeVariableRelationship = scopeVariableRelationshipItems.getItemByIndex(i);
+			guidsCacheableScopeObjectDependsOn.Add(scopeVariableRelationship.getID());
+
+			Item effectivityVariable = scopeVariableRelationship.getRelatedItem();
+			string effectivityVariableId = effectivityVariable.getID();
+			guidsCacheableScopeObjectDependsOn.Add(effectivityVariableId);
+
+			DataType dataType = ParseDataType(effectivityVariable.getProperty("variable_type"));
+			variables.Add(new Variable(dataType)
+			{
+				Id = effectivityVariableId,
+				Name = effectivityVariable.getProperty("name")
+			});
+		}
+		return variables;
+	}
+
+	/// <summary>
+	/// Returns a list of <see cref="Aras.Server.Core.Configurator.Variable"/> objects prepared based on the incoming Variable Items.
+	/// Complex variable data type 'list' is supported only
+	/// </summary>
+	/// <param name="scopeVariableRelationshipItems"></param>
+	/// <returns></returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "variabletype")]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "listid")]
+	private IEnumerable<Variable> GetVariableListOfComplexListType(Item scopeVariableRelationshipItems)
+	{
+		List<Variable> variables = new List<Variable>();
+		int scopeVariableRelationshipItemCount = scopeVariableRelationshipItems.getItemCount();
+		for (int i = 0; i < scopeVariableRelationshipItemCount; i++)
+		{
+			Item scopeVariableRelationship = scopeVariableRelationshipItems.getItemByIndex(i);
+			Item effectivityVariable = scopeVariableRelationship.getRelatedItem();
+
+			string listId = effectivityVariable.getProperty("list_id");
+			if (string.IsNullOrEmpty(listId))
+			{
+				throw new InnovatorServerException("The property \"list_id\" must be defined for items, where the property \"variable_type\" equals to \"list\"");
+			}
+
+			guidsCacheableScopeObjectDependsOn.Add(scopeVariableRelationship.getID());
+			guidsCacheableScopeObjectDependsOn.Add(listId);
+
+			string effectivityVariableId = effectivityVariable.getID();
+			guidsCacheableScopeObjectDependsOn.Add(effectivityVariableId);
+
+			Aras.Server.Core.Configurator.Enum variableEnum = GetNamedConstantEnumFromListValues(listId, GetListValues(listId));
+
+			variables.Add(new Variable(null)
+			{
+				Id = effectivityVariableId,
+				Name = effectivityVariable.getProperty("name"),
+				Enum = variableEnum
+			});
+		}
+
+		return variables;
+	}
+
+	/// <summary>
+	/// Returns a list of <see cref="Aras.Server.Core.Configurator.Variable"/> objects prepared based on the incoming Variable Items.
+	/// Complex variable data type 'item' is supported only
+	/// </summary>
+	/// <param name="scopeVariableRelationshipItems"></param>
+	/// <returns></returns>
+	private IEnumerable<Variable> GetVariableListOfComplexTypeItem(Item scopeVariableRelationshipItems)
+	{
+		List<Variable> variables = new List<Variable>();
+
+		int scopeVariableRelationshipItemCount = scopeVariableRelationshipItems.getItemCount();
+		for (int i = 0; i < scopeVariableRelationshipItemCount; i++)
+		{
+			Item scopeVariableRelationship = scopeVariableRelationshipItems.getItemByIndex(i);
+			guidsCacheableScopeObjectDependsOn.Add(scopeVariableRelationship.getID());
+
+			Item effectivityVariable = scopeVariableRelationship.getRelatedItem();
+			string effectivityVariableId = effectivityVariable.getID();
+			guidsCacheableScopeObjectDependsOn.Add(effectivityVariableId);
+
+			string itemTypeId = effectivityVariable.getProperty("itemtype_id");
+			string itemTypeName = ItemTypeNamesByIdsOfVariableTypeItem[itemTypeId];
+
+			Aras.Server.Core.Configurator.Enum variableEnum = GetNamedConstantEnumFromItems(itemTypeId, GetItemsByItemTypeName(itemTypeName));
+
+			variables.Add(new Variable(null)
+			{
+				Id = effectivityVariableId,
+				Name = effectivityVariable.getProperty("name"),
+				Enum = variableEnum
+			});
+		}
+
+		return variables;
+	}
+
+	/// <summary>
+	/// Returns the Values for a List item
+	/// </summary>
+	/// <param name="listId"></param>
+	/// <returns></returns>
+	private Item GetListValues(string listId)
+	{
+		Item listValues = ScopeItem.newItem("Value", "get");
+		listValues.setAttribute("select", "label,value");
+		listValues.setProperty("source_id", listId);
+		listValues = listValues.apply();
+
+		if (listValues.isError() && !string.Equals(listValues.getErrorCode(), "0", StringComparison.Ordinal))
+		{
+			throw new InnovatorServerException(listValues.dom);
+		}
+
+		return listValues;
+	}
+
+	/// <summary>
+	/// Returns items of a particular ItemType
+	/// </summary>
+	/// <param name="itemTypeName"></param>
+	/// <returns></returns>
+	private Item GetItemsByItemTypeName(string itemTypeName)
+	{
+		Item items = ScopeItem.newItem(itemTypeName, "get");
+		items.setAttribute("select", "keyed_name,label");
+		items = items.apply();
+
+		if (items.isError() && !string.Equals(items.getErrorCode(), "0", StringComparison.Ordinal))
+		{
+			throw new InnovatorServerException(items.dom);
+		}
+
+		return items;
+	}
+
+	/// <summary>
+	/// Creates an instance of <see cref="Aras.Server.Core.Configurator.Enum"/> and fills it with Named Constant options 
+	/// based on provided Value items of a List item
+	/// </summary>
+	/// <param name="listId"></param>
+	/// <param name="listValues"></param>
+	/// <returns></returns>
+	private Aras.Server.Core.Configurator.Enum GetNamedConstantEnumFromListValues(string listId, Item listValues)
+	{
+		Aras.Server.Core.Configurator.Enum @enum = new Aras.Server.Core.Configurator.Enum(DataType.String) { Id = listId };
+
+		int itemsCount = listValues.getItemCount();
+		for (int i = 0; i < itemsCount; i++)
+		{
+			Item listValue = listValues.getItemByIndex(i);
+			string namedConstantId = listValue.getID();
+			string namedConstantLabel = listValue.getProperty("label");
+			string namedConstantValue = listValue.getProperty("value");
+
+			guidsCacheableScopeObjectDependsOn.Add(namedConstantId);
+			@enum.AddNamedConstant(namedConstantId, namedConstantLabel, namedConstantValue);
+		}
+
+		return @enum;
+	}
+
+	/// <summary>
+	/// Creates an instance of <see cref="Aras.Server.Core.Configurator.Enum"/> and fills it with Named Constant options 
+	/// based on provided Items
+	/// </summary>
+	/// <param name="itemTypeId"></param>
+	/// <param name="items"></param>
+	/// <returns></returns>
+	private Aras.Server.Core.Configurator.Enum GetNamedConstantEnumFromItems(string itemTypeId, Item items)
+	{
+		Aras.Server.Core.Configurator.Enum @enum = new Aras.Server.Core.Configurator.Enum(DataType.String) { Id = itemTypeId };
+
+		int itemCount = items.getItemCount();
+		for (int i = 0; i < itemCount; i++)
+		{
+			Item item = items.getItemByIndex(i);
+			string namedConstantId = item.getID();
+			string namedConstantLabel = item.getProperty("label", item.getProperty("keyed_name"));
+
+			guidsCacheableScopeObjectDependsOn.Add(namedConstantId);
+			@enum.AddNamedConstant(namedConstantId, namedConstantLabel, (string)null);
+		}
+
+		return @enum;
+	}
+
+	/// <summary>
+	/// Converts the string representation of supported primitive data types (case sensitive) to <see cref="Aras.Server.Core.Configurator.DataType"/> 
+	/// enum constants equivalent.
+	/// <see cref="Aras.Server.Core.InnovatorServerException"/> exception is thrown in case the passed string represents unknown data type
+	/// </summary>
+	/// <param name="rawDataType"></param>
+	/// <returns></returns>
+	internal static DataType ParseDataType(string rawDataType)
+	{
+		DataType dataType;
+
+		switch (rawDataType)
+		{
+			case "date":
+				dataType = DataType.DateTime;
+				break;
+			case "integer":
+				dataType = DataType.Int;
+				break;
+			case "string":
+				dataType = DataType.String;
+				break;
+			default:
+				throw new InnovatorServerException(string.Format(CultureInfo.InvariantCulture, "The provided \"{0}\" data type is unknown", rawDataType));
+		}
+
+		return dataType;
+	}
+
+	/// <summary>
+	/// Pulls names of ItemTypes associated with Variable items of the data type 'item'
+	/// </summary>
+	/// <param name="variableItems"></param>
+	/// <returns></returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "variabletype")]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "itemtypeid")]
+	private IDictionary<string, string> PullItemTypeInfoForVariableOfTypeItem(Item variableItems)
+	{
+		HashSet<string> collectedItemTypeIds = new HashSet<string>();
+		int variableItemCount = variableItems.getItemCount();
+		for (int i = 0; i < variableItemCount; i++)
+		{
+			Item variableItem = variableItems.getItemByIndex(i);
+			string itemTypeId = variableItem.getProperty("itemtype_id");
+			if (string.IsNullOrEmpty(itemTypeId))
+			{
+				throw new InnovatorServerException("The property \"itemtype_id\" must be defined for items, where the property \"variable_type\" equals to \"item\"");
+			}
+
+			collectedItemTypeIds.Add(itemTypeId);
+		}
+
+		Dictionary<string, string> itemTypeNamesByIds = new Dictionary<string, string>();
+
+		if (collectedItemTypeIds.Any())
+		{
+			Item itemTypeItem = ScopeItem.newItem("ItemType", "get");
+			itemTypeItem.setAttribute("idlist", string.Join(",", collectedItemTypeIds));
+			itemTypeItem.setAttribute("select", "name");
+			itemTypeItem = itemTypeItem.apply();
+
+			if (itemTypeItem.isError())
+			{
+				throw new InnovatorServerException(itemTypeItem.dom);
+			}
+
+			int itemTypeCount = itemTypeItem.getItemCount();
+			for (int i = 0; i < itemTypeCount; i++)
+			{
+				Item itemType = itemTypeItem.getItemByIndex(i);
+				itemTypeNamesByIds.Add(itemType.getID(), itemType.getProperty("name"));
+			}
+		}
+
+		return itemTypeNamesByIds;
+	}
+
+	/// <summary>
+	/// Returns the cache key used to identify the cache item for later retrieving
+	/// </summary>
+	/// <returns></returns>
+	public override ArrayList GetCustomKey()
+	{
+		return new ArrayList {
+			ScopeItem.getID()
+		};
+	}
+
+	/// <summary>
+	/// Returns a list containing Item Ids, which were used to build the Scope Object. 
+	/// Any time an item from this list and associated with an ItemType declared within the 
+	/// method <see cref="GetItemTypeNamesItemDependsOn"/> is changed, the system invalidates the built Scope Object in the cache
+	/// </summary>
+	/// <returns></returns>
+	public override string[] GetGuidsItemDependsOn()
+	{
+		return guidsCacheableScopeObjectDependsOn.ToArray();
+	}
+
+	/// <summary>
+	/// Returns a list containing ItemType names, which were used to build the Scope Object. 
+	/// Any time an item listed within the method <see cref="GetGuidsItemDependsOn"/> and associated 
+	/// with the declared ItemTypes is changed, the system invalidates the built Scope Object in the cache
+	/// </summary>
+	/// <returns></returns>
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1002:DoNotExposeGenericLists")]
+	public override List<string> GetItemTypeNamesItemDependsOn()
+	{
+		List<string> itemTypeNamesDependsOn = new List<string>
+		{
+			"effs_scope",
+			"effs_scope_variable",
+			"effs_variable",
+			"List",
+			"Value",
+			"Method"
+		};
+
+		itemTypeNamesDependsOn.AddRange(ItemTypeNamesByIdsOfVariableTypeItem.Values);
+
+		return itemTypeNamesDependsOn;
+	}
+}
+
+internal static class ListExtension
+{
+	/// <summary>
+	/// Adds the elements of the specified collection to the end of the <see cref= "IList{T}" />
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
+	/// <param name="target"></param>
+	/// <param name="collection"></param>
+	internal static void AddRange<T>(this IList<T> target, IEnumerable<T> collection)
+	{
+		foreach (T entry in collection)
+		{
+			target.Add(entry);
+		}
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>effs_scopeObjectBuilderMethod</name>
+ </Item>
+</AML>

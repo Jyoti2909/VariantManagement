@@ -1,0 +1,270 @@
+﻿<AML>
+ <Item type="Method" id="A373E15539964959B60D8597F9AEB798" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	// "version" operation is launched at server side immediately after "update".
+	// If "global_version" will be checked again at "version" operation it always will be not the same to original
+	// because "update" operation will cause update of "global" version.
+	// To avoid excess check for "global_version" it should be detected is versioning is done from update or as standalone action.
+	if (string.IsNullOrEmpty((RequestState["initial_action"] ?? String.Empty).ToString()))
+	{
+		RequestState.Add("initial_action", this.getAction());
+	}
+	string langCode = "en";
+
+	string arasDocumentTemplate = "<aras:document xmlns=\"{0}\" schemaid=\"{1}\" xmlns:aras=\"http://aras.com/ArasTechDoc\"><aras:content><aras:block blockId=\"{2}\" by-reference=\"internal\" aras:id=\"{2}\">" +
+		"{3}</aras:block></aras:content><aras:references>{4}</aras:references></aras:document>";
+
+	string documentXml = this.getProperty("document_xml", null, langCode);
+	if (!string.IsNullOrEmpty(documentXml))
+	{
+		XmlDocument document = new XmlDocument { PreserveWhitespace = true };
+		XmlNamespaceManager ns = new XmlNamespaceManager(document.NameTable);
+		ns.AddNamespace("aras", "http://aras.com/ArasTechDoc");
+		document.LoadXml(documentXml);
+
+		XmlElement arasDocument = (XmlElement)document.SelectSingleNode("/aras:document", ns);
+		if (arasDocument != null)
+		{
+			string referencesContent = "";
+			XmlNode arasReferences = document.SelectSingleNode("aras:document/aras:references", ns);
+
+			string documentXmlns = arasDocument.GetAttribute("xmlns");
+			string schemaId = arasDocument.GetAttribute("schemaid");
+			XmlNode arasBlock = document.SelectSingleNode("aras:document/aras:content/aras:block", ns);
+
+			if (arasBlock != null)
+			{
+				List<string> conflicts = new List<string>();
+				Item reqDocReqs = this.getRelationships("re_Req_Doc_Content");
+				int relsCount = reqDocReqs.getItemCount();
+				for (int i = 0; i < relsCount; i++)
+				{
+					Item contentItem = reqDocReqs.getItemByIndex(i);
+					Item requirement = contentItem.getRelatedItem();
+					if (requirement == null || requirement.node == null)
+					{
+						continue;
+					}
+
+					string reqAction = requirement.getAction();
+					if (string.IsNullOrEmpty(reqAction))
+					{
+						continue;
+					}
+
+					if (requirement.getLockStatus() > 1 || !Equals(RequestState["initial_action"], this.getAction()))
+					{
+						this.removeRelationship(contentItem);
+						continue;
+					}
+
+					bool isNewRequirement = reqAction == "add";
+					string reqConfigId = requirement.getProperty("config_id");
+					XmlNode reqNode = arasBlock.SelectSingleNode("./*[@reqId=\"" + reqConfigId + "\"]");
+					string classification = GetNormalizedClassification(reqNode.Name);
+					referencesContent = GetRequirementReferences(arasReferences, reqNode);
+					if (isNewRequirement)
+					{
+						requirement.setProperty("content", reqNode.OuterXml, langCode);
+						requirement.setProperty("references", referencesContent);
+					}
+					else
+					{
+						string requirementContent = string.Format(CultureInfo.InvariantCulture, arasDocumentTemplate, documentXmlns, schemaId, reqConfigId, reqNode.OuterXml, referencesContent);
+						requirement.setProperty("document_xml", requirementContent, langCode);
+					}
+
+					requirement.setProperty("classification", classification);
+					if (!string.IsNullOrEmpty(requirement.getAction()) && Equals(RequestState["initial_action"], this.getAction()))
+					{
+						if (!isNewRequirement)
+						{
+							Item dbItem = GetCurrentItemFromDB(reqConfigId);
+							if (requirement.getProperty("global_version") != dbItem.getProperty("global_version") && !isResolvedAutomatically(dbItem, requirement))
+							{
+								string conflictDetails = GenerateConflictDetails(dbItem);
+								conflicts.Add(conflictDetails);
+								continue;
+							}
+						}
+
+						Item reqResult = ApplyRequirement(requirement, contentItem, isNewRequirement);
+						if (reqResult.isError())
+						{
+							return reqResult;
+						}
+					}
+				}
+
+				if (conflicts.Count > 0)
+				{
+					Item error = this.getInnovator().newError("conflict");
+					error.setErrorDetail(string.Join("", conflicts));
+
+					return error;
+				}
+			}
+		}
+
+		this.removeProperty("document_xml", langCode);
+	}
+
+	return this;
+}
+
+private string GetRequirementReferences(XmlNode arasReferences, XmlNode reqNode)
+{
+	if (arasReferences == null)
+	{
+		return string.Empty;
+	}
+
+	XmlNodeList nodesWithRefId = reqNode.SelectNodes("descendant::*[@ref-id]");
+	List<string> references = new List<string>();
+	foreach (XmlNode nodeWithRef in nodesWithRefId)
+	{
+		string refId = ((XmlElement)nodeWithRef).GetAttribute("ref-id");
+		XmlNode reference = arasReferences.SelectSingleNode(string.Format(CultureInfo.InvariantCulture, "*[@ref-id='{0}']", refId));
+		if (reference != null)
+		{
+			references.Add(reference.OuterXml);
+		}
+	}
+
+	return string.Join("", references);
+}
+
+private Item ApplyRequirement(Item requirement, Item reqContent, bool isNewRequirement)
+{
+	bool unlockIsRequired = false;
+	if (!isNewRequirement && requirement.getLockStatus() == 0)
+	{
+		requirement.lockItem();
+		unlockIsRequired = true;
+	}
+
+	reqContent.setProperty("source_id", this.getID());
+	reqContent.setRelatedItem(requirement);
+	reqContent.setAttribute("doGetItem", "1");
+	reqContent.setAttribute("select", "related_id(id)");
+	Item reqResult = reqContent.apply();
+	if (!reqResult.isError())
+	{
+		// Requirement should not be unlocked in case when requirement
+		// was locked manually by user 
+		if (unlockIsRequired)
+		{
+			Item newReqVersion = reqResult.getRelatedItem();
+			newReqVersion.unlockItem();
+		}
+
+		this.removeRelationship(reqContent);
+	}
+
+	return reqResult;
+}
+
+private string GenerateConflictDetails(Item dbItem)
+{
+	Item conflict = this.newItem("Conflict");
+	conflict.setPropertyItem("latest_item", dbItem);
+	return conflict.dom.InnerXml;
+}
+
+private bool isResolvedAutomatically(Item DBItem, Item currentItem)
+{
+	List<string> propsList = GetRequirementPropertiesList();
+	string langCode = this.getInnovator().getI18NSessionContext().GetLanguageCode();
+	string DBItemContent = DBItem.getProperty("content", null, langCode);
+	string localItemContent = currentItem.getProperty("content", null, langCode);
+	if (DBItem.getLockStatus() <= 1 && (DBItemContent == localItemContent || string.IsNullOrEmpty(DBItemContent) || string.IsNullOrEmpty(localItemContent)))
+	{
+		foreach (string property in propsList)
+		{
+			string localItemPropValue = currentItem.getProperty(property);
+			string DBItemPropValue = DBItem.getProperty(property);
+			bool modifiedProp = property == "modified_on" || property == "modified_by_id";
+
+			if (string.IsNullOrEmpty(DBItemPropValue) && !string.IsNullOrEmpty(localItemPropValue))
+			{
+				continue;
+			}
+
+			// "localItemPropValue" can be empty string. It should not be ignored
+			if (!string.IsNullOrEmpty(DBItemPropValue) && localItemPropValue != null && !modifiedProp && DBItemPropValue != localItemPropValue)
+			{
+				return false;
+			}
+		}
+	}
+	else
+	{
+		return false;
+	}
+	return true;
+}
+
+private List<string> GetRequirementPropertiesList()
+{
+	List<string> propsList = new List<string>();
+	Item item = this.newItem("ItemType", "get");
+	item.setProperty("name", "re_Requirement");
+	Item relationship = item.newItem("Property", "get");
+	item.addRelationship(relationship);
+	item = item.apply();
+
+	Item properties = item.getRelationships("Property");
+	int amountOfProperties = properties.getItemCount();
+	for (int propIndex = 0; propIndex < amountOfProperties; propIndex++)
+	{
+		string currentProperty = properties.getItemByIndex(propIndex).getProperty("name");
+		if (currentProperty != "content" && currentProperty != "global_version")
+		{
+			propsList.Add(currentProperty);
+		}
+	}
+	return propsList;
+}
+
+private Item GetCurrentItemFromDB(string configId)
+{
+	Item ItemFromDB = this.newItem("re_Requirement", "get");
+	ItemFromDB.setProperty("config_id", configId);
+	return ItemFromDB.apply();
+}
+
+private string GetNormalizedClassification(string classification)
+{
+	switch (classification)
+	{
+		case "RequirementText":
+			return "Text";
+		case "Usecase":
+			return "Use case";
+		default:
+			return classification;
+	}
+}
+
+
+private string GetErrorDetail(XmlDocument fault, string errorDetailTagName)
+{
+	string err = string.Empty;
+	if (fault != null)
+	{
+		XmlNode errorDetailNode = fault.SelectSingleNode(Item.XPathFault + "/" + errorDetailTagName);
+		if (errorDetailNode != null)
+		{
+			err = errorDetailNode.InnerText;
+		}
+	}
+	return err;
+}
+
+private Item GetRequirementByConfigId(/*Item reqDoc,*/string configId)
+{
+	return this.getItemsByXPath("/Item/Relationships/Item[@type=\"re_Req_Doc_Content\"]/related_id/Item[config_id=\"" + configId + "\"]");]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_ReqDocBeforeUpdate</name>
+ </Item>
+</AML>

@@ -1,0 +1,348 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+<head>
+	<title></title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" type="text/css" href="../styles/common.min.css" />
+	<style type="text/css">
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/default.css";
+
+		body {
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+			overflow: hidden;
+		}
+
+		iframe {
+			border: 0px;
+		}
+
+		#structure_frameset {
+			position: absolute;
+			width: 100%;
+			top: 30px;
+			bottom: 0px;
+			left: 0px;
+		}
+
+		#majorFrame {
+			overflow: auto;
+			float: left;
+			width: 100%;
+		}
+
+		#minorFrame {
+			overflow: auto;
+			height: 100%;
+			width: 50%;
+			display: none;
+		}
+
+		*{margin:0;padding:0}
+		html, body {height:100%;width:100%; }
+		table {height:100%;width:100%;table-layout:static;border-collapse:collapse;position:absolute}
+		iframe {height:100%;}
+		.structure {height:100%;}
+		.toolbar {height:30px;}
+	</style>
+	<script type="text/javascript" src="../javascript/include.aspx?files=TopWindowHelper"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ModulesHelper"></script>
+	<script>
+		var nativeClose = window.close;
+		var nativeFocus = window.focus;
+	</script>
+	<script>
+		var topWnd = TopWindowHelper.getMostTopWindowWithAras(opener);
+		var aras = topWnd.aras;
+		const mainWindow = aras.getMainWindow();
+		const arasTabsObj = mainWindow.arasTabs;
+		var close;
+		var focus;
+		const getTabbarByTabId = function getTabbarByTabId(tabId) {
+			const tabsContainer = aras.getMainWindow().mainLayout.tabsContainer;
+			return tabsContainer.getTabbarByTabId(tabId);
+		};
+		if(window.frameElement) {
+			window.windowType = 'structureBrowser';
+			close = function(callback) {
+				if (!callback) {
+					const tabId = this.frameElement.id;
+					getTabbarByTabId(tabId).removeTab(tabId);
+				} else {
+					callback(true);
+				}
+			};
+			focus = function() {
+				const tabId = this.frameElement.id;
+				getTabbarByTabId(tabId).selectTab(tabId);
+			};
+		} else {
+			close = nativeClose;
+			focus = nativeFocus;
+		}
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=QueryString,ArasModules,XmlDocument,StructureBrowser"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: true, baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=arasInnovatorCUI"></script>
+	<script type="text/javascript">
+			window.cui = new CUI_ConfigurableUI();
+
+		var userID = aras.getUserID();
+
+		// build some data strcutures to hold the itemtype info
+		// that is: id, name, open_icon, and list of relationships (should accept pipe seperated)
+
+		var activeToolbar = null;
+		var activeStructureFrame = null;
+
+		var itemsCompared = false;
+
+		var mainItemID = QueryString("id").toString();
+		var mainItemTypeName = QueryString("type_name").toString();
+		mainItemTypeName = getItemTypeName(mainItemTypeName);
+		var mainItemTypeLabel = mainItemTypeName;
+
+		var mainItem = aras.getItemById(mainItemTypeName, mainItemID, 0);
+
+		var URLParams = new URLSearchParams(location.search.slice(1));
+		var itemId = URLParams.get('id') || '';
+		var itemTypeName = URLParams.get('type_name') || '';
+
+		document.title = aras.getResource("", "structurebrowser.browser", aras.getKeyedNameEx(mainItem));
+
+		window.addEventListener("unload", function() {
+			window.aras.uiUnregWindowEx(itemId + '_StructureBrowser');
+		});
+
+		var isVersionableIT = false;
+
+		var mainFrameWindow = null,
+			mainFrameElement = null,
+			secondFrameWindow = null,
+			secondFrameElement = null;
+
+		var currItemType = aras.getItemTypeDictionary(mainItemTypeName);
+		if (currItemType && !currItemType.isError())
+		{
+			if (aras.isPolymorphic(currItemType.node))
+			{
+				var itemtype = aras.getItemProperty(mainItem, "itemtype");
+				if (itemtype)
+				{
+					currItemType = aras.getItemTypeDictionary(itemtype, "id");
+					if (currItemType && !currItemType.isError())
+						mainItemTypeName = currItemType.getProperty('name');
+				}
+			}
+
+			if (currItemType)
+			{
+				isVersionableIT = (currItemType.getProperty('is_versionable') == '1');
+				mainItemTypeLabel = currItemType.getProperty('label');
+				if (!mainItemTypeLabel) mainItemTypeLabel = mainItemTypeName;
+			}
+		}
+
+		function setLayoutButtonState(newLy)
+		{
+			var prevLy = aras.getPreferenceItemProperty("Core_GlobalLayout", null, "core_structure_layout");
+			var t = activeToolbar.getItem('ly' + prevLy);
+			if (t)
+			{
+				if (prevLy != newLy) t.setState(false);
+				else t.setState(true);
+			}
+
+			aras.setPreferenceItemProperties("Core_GlobalLayout", null, { core_structure_layout: newLy });
+		}
+
+		function onButtonClick(button)
+		{
+			if (!activeStructureFrame || !activeStructureFrame.controlReady)
+				return;
+
+			var btnID = button.getId();
+			if (btnID.search(/^ly(\d)+/) == 0)
+			{
+				var ly = parseInt(btnID.substr(2));
+				if (!isNaN(ly))
+				{
+					setLayoutButtonState(ly);
+					mainFrameWindow.structure.setLayout(ly);
+					if (secondFrameWindow && secondFrameWindow.structure)
+						secondFrameWindow.structure.setLayout(ly);
+				}
+			}
+			else if (btnID == 'expand_all')
+				activeStructureFrame.expandAll();
+			else if (btnID == 'collapse_all')
+				activeStructureFrame.collapseAll();
+			else if (btnID == 'side_to_other_version')
+				side_to_other_version();
+			else if (btnID == 'side_to_other_itemType')
+				side_to_other_itemType();
+			else if (btnID == 'highlight')
+				compareStructuresContent();
+		}
+
+		function compareStructuresContent()
+		{
+			if (!itemsCompared && mainFrameWindow && secondFrameWindow)
+			{
+				var res = loadChildItems(mainItemTypeName, mainFrameWindow.itemId, secondFrameWindow.itemId, -1);
+				var xDoc = aras.createXMLDocument();
+				xDoc.loadXML(res);
+				var resItems = xDoc.selectNodes("Result/Item[@type='" + mainItemTypeName + "']");
+				if (resItems.length == 2)
+				{
+					mainFrameWindow.initStructure(mainFrameWindow.structure, resItems[0].xml);
+					mainFrameWindow.structure.refresh();
+					secondFrameWindow.initStructure(secondFrameWindow.structure, resItems[1].xml);
+					secondFrameWindow.structure.refresh();
+					mainFrameWindow.allItemsExpanded = true;
+					secondFrameWindow.allItemsExpanded = true;
+					mainFrameWindow.expandAll();
+					secondFrameWindow.expandAll();
+
+					itemsCompared = true;
+				}
+			}
+		}
+
+		function loadChildItems(typeName, itemID, compareToId, levels, notShowStatusMessage) {
+			var statusId;
+			if (!notShowStatusMessage) {
+				statusId = aras.showStatusMessage("status", aras.getResource("", "statusbar.expanding_all"), "../images/Progress.gif");
+			}
+
+			var methodAML =
+				"<Item " +
+					" type='" + typeName + "' " +
+					" id='" + itemID + "'" + (compareToId ? " compareToId='" + compareToId + "'" : "") +
+					" action='GetItemsForStructureBrowser' " +
+					" levels='" + levels + "' />";
+
+			var res = aras.applyMethod("GetItemsForStructureBrowser", methodAML);
+			if (!notShowStatusMessage) {
+				aras.clearStatusMessage(statusId);
+			}
+
+			return res;
+		}
+
+		function side_to_other_version(){
+			var param = {
+				aras: aras,
+				title: aras.getResource("", "revisiondlg.item_versions"),
+				itemID: mainItemID,
+				itemTypeName: mainItemTypeName,
+				doNotOpenItemOnDblClick: true,
+				dialogWidth: 800,
+				dialogHeight: 300,
+				resizable: true,
+				content: "revisionDialog.html"
+			};
+			window.ArasModules.Dialog.show("iframe", param).promise.then(function (res) {
+				if (res && res.item) {
+					appendNewStructure(res.itemID, res.item.getAttribute("type"));
+				}
+				itemsCompared = false;
+			});
+		}
+
+		function side_to_other_itemType() {
+			var params = new Object();
+			params.aras = aras;              // dialogArguments[0]
+			params.itemtypeID = aras.getItemTypeId(mainItemTypeName);    // dialogArguments[1]
+			params.multiselect = false;
+			params.type = "SearchDialog";
+			window.ArasModules.MaximazableDialog.show("iframe", params).promise.then(function (dlgRes) {
+				if (dlgRes && dlgRes.item) {
+					appendNewStructure(dlgRes.itemID, dlgRes.item.getAttribute("type"));
+				}
+				itemsCompared = false;
+			});
+		}
+
+		function getFrameContentWindow(frameElement, itemId, itemTypeName) {
+			frameElement.src = "StructureBrowserFrame.html?id=" + itemId + "&type_name=" + itemTypeName;
+			return frameElement.contentWindow;
+		}
+
+		function appendNewStructure(itemId, itemTypeName) {
+			var itemType = aras.getItemTypeDictionary(itemTypeName, "name"),
+				itemToCompare;
+			if (!itemType || itemType.isError()) {
+				return;
+			}
+
+			itemToCompare = aras.getItemById(itemTypeName, itemId, 0);
+			if (aras.isNew(itemToCompare)) {
+				aras.AlertError(aras.getResource("", "dependencies.is_new_error", itemType.getProperty("label")));
+				return;
+			}
+
+			activeToolbar.getItem("highlight").setEnabled(true);
+
+			mainFrameElement.style.width = "50%";
+			secondFrameElement.style.display = "block";
+			secondFrameWindow = getFrameContentWindow(secondFrameElement, itemId, itemTypeName);
+		}
+
+		function getItemTypeName(itemTypeName) {
+			switch(itemTypeName) {
+				case "GAG_MechanicalPart":
+					return "Part";
+				default:
+					return itemTypeName;
+			}
+		}
+
+		window.addEventListener("load", function () {
+			mainFrameElement = document.getElementById("majorFrame");
+
+			mainFrameElement.addEventListener('load', function() {
+				aras.browserHelper.toggleSpinner(document, false);
+			});
+
+			mainFrameWindow = getFrameContentWindow(mainFrameElement, mainItemID, mainItemTypeName);
+			secondFrameElement = document.getElementById("minorFrame");
+
+			function adjustFramesHeight() {
+				mainFrameElement.style.height = secondFrameElement.style.height = (document.body.clientHeight - 32) + "px";
+			}
+
+			window.addEventListener("resize", adjustFramesHeight, false);
+			adjustFramesHeight();
+
+			if(arasTabsObj && window.frameElement) {
+				const itemTypeNd = aras.getItemTypeForClient(itemTypeName).node;
+				const itemTypeImgSrc = aras.getItemProperty(itemTypeNd, 'open_icon') || '../images/DefaultItemType.svg';
+				arasTabsObj.updateTitleTab(window.name, {label: document.title, image: itemTypeImgSrc});
+			}
+		}, false);
+	</script>
+</head>
+	<body class="claro">
+	<table>
+	<tr>
+		<td class="toolbar">
+			<iframe id="toolbar_frame" src="structureToolbar.html" width="100%" scrolling="no"></iframe>
+		</td>
+	</tr>
+	<tr>
+		<td class="structure">
+			<div id="structure_frameset">
+				<iframe id="majorFrame" src="blank.html" scrolling="auto" ></iframe>
+				<iframe id="minorFrame" src="blank.html" scrolling="auto" ></iframe>
+			</div>
+		</td>
+	</tr>
+	</table>
+	<iframe id="dimmer_spinner" src="spinner.html"></iframe>
+	</body>
+</html>

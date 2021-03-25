@@ -1,0 +1,446 @@
+﻿<AML>
+ <Item type="Method" id="C9A5299CCE4F4978BC813723981E9B0F" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[			BusinessLogic businessLogic = new BusinessLogic(new DataAccessLayer(this.getInnovator()));
+			return businessLogic.ProcessRequest(this);
+		}
+
+		private const string tocMenuPrefix = "com.aras.innovator.cui_default.toc_";
+
+		internal class BusinessLogic
+		{
+			private IDataAccessLayer dataAccessLayer;
+
+			internal BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				this.dataAccessLayer = dataAccessLayer;
+			}
+
+			internal Item ProcessRequest(Item requestItem)
+			{
+				string oldTocAccessCategory = requestItem.getProperty("old_category", null);
+				string newTocAccessCategory = requestItem.getProperty("new_category", null);
+				string tocAccessId = requestItem.getProperty("toc_access_id");
+
+				if (string.IsNullOrEmpty(tocAccessId))
+				{
+					return requestItem.getInnovator().newError("TOC Access ID for synchronization method 'TOC Access' and 'TOC View' was not specified");
+				}
+
+				string accessCuiButtonId = DataAccessLayer.CalculateIdByTwoDataSegments(tocAccessId, string.Empty);
+				Item tocAccessItem = dataAccessLayer.GetItemById("CommandBarItem", accessCuiButtonId, null, null);
+
+				if (tocAccessItem.isError())
+				{
+					// TOC Access was deleted
+					// need delete all TOC View buttons for deleted TOC Access
+					return ProcessTocAccessDeletion(tocAccessId);
+				}
+				else if (!string.Equals(oldTocAccessCategory, newTocAccessCategory))
+				{
+					// category of TOC Access was changed
+					// need update all TOC View buttons for this TOC Access
+					return ProcessTocAccessUpdate(tocAccessId, oldTocAccessCategory, newTocAccessCategory);
+				}
+				else
+				{
+					// TOC Access was added
+					// need create all TOC View buttons for this TOC Access
+					return ProcessTocAccessAdding(tocAccessId);
+				}
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Globalization", "CA1303:Do not pass literals as localized parameters", MessageId = "Aras.IOM.Innovator.newResult(System.String)")]
+			private Item ProcessTocAccessDeletion(string tocAccessId)
+			{
+				Item commandBarItems = dataAccessLayer.GetCommandBarItemsForTOCLocation();
+				Item relationshipsToButtonsForAllTocViews = commandBarItems.getItemsByXPath("//Result/Item[contains(related_id/Item/additional_data, '\"relatedTocAccessId\"')]");
+
+				for (int i = 0; i < relationshipsToButtonsForAllTocViews.getItemCount(); i++)
+				{
+					Item relationshipToButton = relationshipsToButtonsForAllTocViews.getItemByIndex(i);
+					Item button = relationshipToButton.getRelatedItem();
+
+					Newtonsoft.Json.Linq.JObject additionalData =
+						Newtonsoft.Json.Linq.JObject.Parse(button.getProperty("additional_data"));
+
+					if (string.Equals(additionalData.Value<string>("relatedTocAccessId"), tocAccessId,
+						StringComparison.OrdinalIgnoreCase))
+					{
+						button = button.clone(false);
+						button.setID(relationshipToButton.getRelatedItemID());
+						relationshipToButton.removeProperty("related_id");
+
+						relationshipToButton.setAction("delete");
+						relationshipToButton = relationshipToButton.apply();
+						if (relationshipToButton.isError())
+						{
+							return relationshipToButton;
+						}
+
+						button.setAction("delete");
+						button = button.apply();
+
+						if (button.isError())
+						{
+							return button;
+						}
+					}
+				}
+
+				return commandBarItems.getInnovator().newResult("OK");
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Globalization", "CA1303:Do not pass literals as localized parameters", MessageId = "Aras.IOM.Innovator.newResult(System.String)")]
+			private Item ProcessTocAccessAdding(string tocAccessId)
+			{
+				Item commandBarItems = dataAccessLayer.GetCommandBarItemsForTOCLocation();
+				string accessCuiButtonId = DataAccessLayer.CalculateIdByTwoDataSegments(tocAccessId, string.Empty);
+				Item relationshipToAccessButton = commandBarItems.getItemsByXPath(string.Format(CultureInfo.InvariantCulture, "//Result/Item[related_id/Item/@id='{0}']", accessCuiButtonId));
+
+				if (relationshipToAccessButton.node == null)
+				{
+					return commandBarItems.getInnovator().newError("CUI button for TOC Access was not found");
+				}
+
+				Item tocAccessButton = relationshipToAccessButton.getRelatedItem();
+				Newtonsoft.Json.Linq.JObject accessButtonAdditionalData = Newtonsoft.Json.Linq.JObject.Parse(tocAccessButton.getProperty("additional_data", "{}"));
+				string itemTypeId = accessButtonAdditionalData.Value<string>("itemTypeId");
+				Newtonsoft.Json.Linq.JObject accessAdditionalData = Newtonsoft.Json.Linq.JObject.Parse(tocAccessButton.getProperty("additional_data"));
+
+				Item tocViews = dataAccessLayer.GetTOCViewsForItemType(itemTypeId);
+
+				for (int i = 0; i < tocViews.getItemCount(); i++)
+				{
+					Item tocViewItem = tocViews.getItemByIndex(i);
+
+					Tuple<string, string> idsForButtonAndRelationship = GetIdsForButtonAndRelationship(tocViewItem, tocAccessButton);
+
+					Item viewButton = commandBarItems.getItemsByXPath(string.Format(
+						CultureInfo.InvariantCulture,
+						"//Result/Item/related_id/Item[@id='{0}']", idsForButtonAndRelationship.Item1));
+
+					if (viewButton.node != null)
+					{
+						continue;
+					}
+
+					Item parentItemType = tocViewItem.getPropertyItem("source_id");
+					string roleId = tocViewItem.getRelatedItemID();
+
+					Item commandbarSectionForViewButton = tocViewItem.newItem("CommandBarSection", "edit");
+					commandbarSectionForViewButton.setID(relationshipToAccessButton.getProperty("source_id"));
+
+					Newtonsoft.Json.Linq.JObject additionalData = new Newtonsoft.Json.Linq.JObject();
+					additionalData.Add("itemTypeId", itemTypeId);
+					additionalData.Add("tocViewId", tocViewItem.getID());
+					additionalData.Add("relatedTocAccessId", accessAdditionalData.Value<string>("tocAccessId"));
+
+					string tocViewForm = tocViewItem.getProperty("form");
+					string tocViewParameters = tocViewItem.getProperty("parameters");
+					string tocViewStartPage = tocViewItem.getProperty("start_page");
+
+					if (!string.IsNullOrEmpty(tocViewForm))
+					{
+						additionalData["formId"] = tocViewForm;
+					}
+
+					if (!string.IsNullOrEmpty(tocViewParameters))
+					{
+						additionalData["parameters"] = tocViewParameters;
+					}
+
+					if (!string.IsNullOrEmpty(tocViewStartPage))
+					{
+						additionalData["startPage"] = tocViewStartPage;
+					}
+
+					IDictionary<string, string> labels = GetMultilingualValuesSet(tocAccessButton, "label");
+
+					Item relationshipsToNewButton = CreateRelationshipAndButton(
+						commandbarSectionForViewButton,
+						idsForButtonAndRelationship.Item2,
+						idsForButtonAndRelationship.Item1,
+						roleId,
+						additionalData.ToString(),
+						tocMenuPrefix + parentItemType.getProperty("name") + "_" + idsForButtonAndRelationship.Item2,
+						labels,
+						tocAccessButton.getProperty("image"),
+						tocAccessButton.getProperty("parent_menu")
+					);
+
+					commandbarSectionForViewButton.addRelationship(relationshipsToNewButton);
+					commandbarSectionForViewButton.apply();
+				}
+
+				return commandBarItems.getInnovator().newResult("OK");
+			}
+
+			private static IDictionary<string, string> GetMultilingualValuesSet(Item item, string propertyName)
+			{
+				IDictionary<string, string> result = new Dictionary<string, string>();
+
+				XmlNodeList propsList = item.node.SelectNodes(string.Format(CultureInfo.InvariantCulture, "./*[local-name()='{0}']", propertyName));
+
+				foreach (XmlElement propNode in propsList)
+				{
+					if (!propNode.HasAttribute("is_null"))
+					{
+						string langCode = propNode.GetAttribute("xml:lang");
+						string value = propNode.InnerText;
+
+						result[langCode] = value;
+					}
+				}
+
+				return result;
+			}
+
+			private static Item CreateRelationshipAndButton(Item commandBarSectionItem, string relationshipId, string buttonId, string roleId,
+				string additionalData, string name, IDictionary<string, string> labels, string image, string parentMenuId)
+			{
+				string relatedButtonType = string.IsNullOrEmpty(parentMenuId) ? "CommandBarButton" : "CommandBarMenuButton";
+
+				Item relationsshipToButton = commandBarSectionItem.newItem("CommandBarSectionItem", "add");
+				relationsshipToButton.setProperty("source_id", commandBarSectionItem.getID());
+				relationsshipToButton.setProperty("role", roleId);
+				relationsshipToButton.setProperty("action", "Add");
+				relationsshipToButton.setID(relationshipId);
+
+				Item relatedButton = commandBarSectionItem.newItem(relatedButtonType, "add");
+
+				relatedButton.setProperty("name", name);
+				relatedButton.setProperty("image", image);
+
+				foreach (KeyValuePair<string, string> label in labels)
+				{
+					relatedButton.setProperty("label", label.Value, string.IsNullOrEmpty(label.Key) ? null : label.Key);
+				}
+
+				relatedButton.setProperty("additional_data", additionalData);
+				relatedButton.setID(buttonId);
+
+				if (!string.IsNullOrEmpty(parentMenuId))
+				{
+					relatedButton.setProperty("parent_menu", parentMenuId);
+				}
+
+				relationsshipToButton.setRelatedItem(relatedButton);
+
+				return relationsshipToButton;
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Globalization", "CA1303:Do not pass literals as localized parameters", MessageId = "Aras.IOM.Innovator.newResult(System.String)")]
+			private Item ProcessTocAccessUpdate(string tocAccessId, string oldCategory, string newCategoty)
+			{
+				Item commandBarItems = dataAccessLayer.GetCommandBarItemsForTOCLocation();
+				Item relationshipsButtonsForAllTocViews = commandBarItems.getItemsByXPath("//Result/Item[contains(related_id/Item/additional_data, '\"relatedTocAccessId\"')]");
+				string accessCuiButtonId = DataAccessLayer.CalculateIdByTwoDataSegments(tocAccessId, string.Empty);
+				Item tocAccessCUIButton = commandBarItems.getItemsByXPath(string.Format(CultureInfo.InvariantCulture, "//Result/Item/related_id/Item[@id='{0}']", accessCuiButtonId));
+				string parentMenuId = tocAccessCUIButton.getProperty("parent_menu");
+
+				List<Item> tocViewRelationshipsForTocAccess = new List<Item>();
+
+				for (int i = 0; i < relationshipsButtonsForAllTocViews.getItemCount(); i++)
+				{
+					Item relationshipToButton = relationshipsButtonsForAllTocViews.getItemByIndex(i);
+					Item button = relationshipToButton.getRelatedItem();
+
+					Newtonsoft.Json.Linq.JObject additionalData =
+						Newtonsoft.Json.Linq.JObject.Parse(button.getProperty("additional_data"));
+
+					if (string.Equals(additionalData.Value<string>("relatedTocAccessId"), tocAccessId,
+						StringComparison.OrdinalIgnoreCase))
+					{
+						tocViewRelationshipsForTocAccess.Add(relationshipToButton);
+					}
+				}
+
+				if (string.IsNullOrEmpty(oldCategory) && !string.IsNullOrEmpty(newCategoty) ||
+					!string.IsNullOrEmpty(oldCategory) && string.IsNullOrEmpty(newCategoty))
+				{
+					List<Item> newTocViewRelationshipsForTocAccess = tocViewRelationshipsForTocAccess.Select(x => CreateNewRelationshipWithRelatedItem(x, parentMenuId)).ToList();
+
+					for (int i = 0; i < tocViewRelationshipsForTocAccess.Count; i++)
+					{
+						Item relationship = tocViewRelationshipsForTocAccess[i];
+
+						Item button = relationship.getRelatedItem().clone(false);
+						button.setID(relationship.getRelatedItemID());
+						button.setAction("delete");
+						relationship.removeProperty("related_id");
+						relationship.setAction("delete");
+
+						relationship = relationship.apply();
+						if (relationship.isError())
+						{
+							return relationship;
+						}
+
+						button = button.apply();
+						if (button.isError())
+						{
+							return button;
+						}
+
+						Item resultOfNewButtonApply = newTocViewRelationshipsForTocAccess[i].apply();
+						if (resultOfNewButtonApply.isError())
+						{
+							return resultOfNewButtonApply;
+						}
+					}
+				}
+				else
+				{
+					// need to change parent_menu for all existing buttons
+					foreach (Item relationship in tocViewRelationshipsForTocAccess)
+					{
+						Item button = relationship.getRelatedItem();
+
+						button.setAction("edit");
+						button.setProperty("parent_menu", parentMenuId);
+
+						button = button.apply();
+						if (button.isError())
+						{
+							return button;
+						}
+					}
+				}
+
+				return commandBarItems.getInnovator().newResult("OK");
+			}
+
+			private static Item CreateNewRelationshipWithRelatedItem(Item oldRelationship, string parentMenuId)
+			{
+				string buttonType = string.IsNullOrEmpty(parentMenuId) ? "CommandBarButton" : "CommandBarMenuButton";
+
+				Item result = oldRelationship.clone(true);
+				result.setID(oldRelationship.getID());
+				result.setAction("add");
+
+				Item relatedButton = result.getRelatedItem();
+				relatedButton.setType(buttonType);
+				relatedButton.setAction("add");
+				relatedButton.setProperty("parent_menu", parentMenuId);
+
+				return result;
+			}
+
+			private static Tuple<string, string> GetIdsForButtonAndRelationship(Item tocViewItem, Item buttonBorTocAccess)
+			{
+				/*
+					IDs for TOC View CUI buttons
+						ID for button: XxHash(TOC_View_ID + TOC_Access_Button)
+						ID for relationship: XxHash(ID_OF_View_Button + "_CommandBarSectionItem")
+				*/
+
+				string buttonId = DataAccessLayer.CalculateIdByTwoDataSegments(tocViewItem.getID(), buttonBorTocAccess.getID());
+				string relationshipId = DataAccessLayer.CalculateIdByTwoDataSegments(buttonId, "_CommandBarSectionItem");
+
+				return new Tuple<string, string>(buttonId, relationshipId);
+			}
+		}
+
+		internal interface IDataAccessLayer
+		{
+			Item GetCommandBarItemsForTOCLocation();
+			Item GetTOCViewsForItemType(string itemTypeId);
+			Item GetItemById(string itemTypeName, string id, string select, string language);
+		}
+
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this.innovator = innovator;
+			}
+
+			public Item GetTOCViewsForItemType(string itemTypeId)
+			{
+				Item result = innovator.newItem("TOC VIew", "get");
+				result.setProperty("source_id", itemTypeId);
+				result.setAttribute("select", "form,parameters,start_page,source_id(name),related_id");
+
+				return result.apply();
+			}
+
+			public Item GetCommandBarItemsForTOCLocation()
+			{
+				Item result = innovator.newItem();
+
+				string aml = @"<AML>
+	<Item type=""CommandBarSectionItem"" action=""get"" language=""*"">
+		<source_id>
+			<Item action=""get"">
+				<location>
+					<Item type=""Location"" action=""get"" select=""name"">
+						<name>TOC</name>
+					</Item>
+				</location>
+			</Item>
+		</source_id>
+	</Item>
+</AML>";
+
+				result.loadAML(aml);
+
+				return result.apply();
+			}
+
+			public Item GetItemById(string itemTypeName, string id, string select, string language)
+			{
+				Item requestItem = this.innovator.newItem(itemTypeName, "get");
+				requestItem.setID(id);
+
+				if (!string.IsNullOrEmpty(language))
+				{
+					requestItem.setAttribute("language", language);
+				}
+
+				if (!string.IsNullOrEmpty(select))
+				{
+					requestItem.setAttribute("select", select);
+				}
+
+				return requestItem.apply();
+			}
+
+			internal class XxHashAlgorithmHelper
+			{
+				private readonly object _xxHashAlgorithm;
+				private readonly System.Reflection.MethodInfo _computeHashMethodInfo;
+
+				internal XxHashAlgorithmHelper()
+				{
+					System.Reflection.Assembly targetAssembly = System.Reflection.Assembly.Load("Aras.Cryptography");
+					Type xxHash64AlgorithmBuilderType = targetAssembly.GetTypes().Single(t => t.Name == "XxHash64AlgorithmBuilder");
+					var xxHash64AlgorithmBuilder = Activator.CreateInstance(xxHash64AlgorithmBuilderType);
+
+					System.Reflection.MethodInfo buildMethodInfo = xxHash64AlgorithmBuilderType.GetMethod("Build");
+
+					_xxHashAlgorithm = buildMethodInfo.Invoke(xxHash64AlgorithmBuilder, null);
+					_computeHashMethodInfo = _xxHashAlgorithm.GetType().GetMethod("ComputeHash", new[] { typeof(byte[]) });
+				}
+
+				internal byte[] ComputeHash(byte[] dataBytes)
+				{
+					byte[] result = (byte[])_computeHashMethodInfo.Invoke(_xxHashAlgorithm, new object[] { dataBytes });
+					return result;
+				}
+			}
+
+			internal static string CalculateIdByTwoDataSegments(string data1, string data2)
+			{
+				var xxHashAlgorithmHelper = new XxHashAlgorithmHelper();
+				string hash1 = BitConverter.ToString(xxHashAlgorithmHelper.ComputeHash(Encoding.UTF8.GetBytes(data1)));
+				string hash2 = BitConverter.ToString(xxHashAlgorithmHelper.ComputeHash(Encoding.UTF8.GetBytes(data2)));
+
+				return string.Format(CultureInfo.InvariantCulture, "{0}{1}", hash1, hash2).Replace("-", string.Empty);
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>ti_toc_sync_view_with_access</name>
+ </Item>
+</AML>

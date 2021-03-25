@@ -1,0 +1,110 @@
+﻿<AML>
+ <Item type="Report" id="2290D6D2214C4A38B5C08755AEE8A282" action="add">
+  <description />
+  <location>client</location>
+  <method keyed_name="PE_execQuantityRepAndApplyXslt" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>PE_execQuantityRepAndApplyXslt</name>
+   </Item>
+  </method>
+  <report_query />
+  <target>one window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:exslt="http://exslt.org/common" extension-element-prefixes="exslt" xmlns:aras="http://www.aras-corp.com">
+ <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes"></xsl:output>
+ <xsl:template match="/">
+  <html>
+   <head></head>
+   <body topmargin="50" leftmargin="50">
+    <div class="print_button_wrapper">
+     <img id="print_button" src="../images/Print.svg" onclick="printReport(window);" />
+     <a href="#" onclick="printReport(window); return false;">Print</a>
+    </div>
+    <div class="table_wrapper">
+     <div class="report_name">
+      Quantity Rollup Report for <xsl:value-of select="//Item/item_number"/>
+     </div>
+     <div class="report_generation_time"></div>
+     
+     <table border="0" cellspacing="0" cellpadding="0">
+      <tr>
+       <th>Part Number</th>
+       <th>Name</th>
+       <th>Calculated Quantity</th>
+      </tr>
+       <xsl:call-template name="main"></xsl:call-template>
+     </table>
+    </div>
+   </body>
+   <script>
+    function loadScript(url)
+    {
+     const loadedJS = document.createElement('script');
+     loadedJS.src = url;
+     document.getElementsByTagName('head')[0].appendChild(loadedJS);
+    }
+    function loadStyle(url)
+    {
+     const link = document.createElement('link');
+     link.setAttribute('rel', 'stylesheet');
+     link.setAttribute('href', url);
+     document.getElementsByTagName('head')[0].appendChild(link)
+    }
+    loadScript(parent.aras.getBaseURL('/Solutions/PLM/javascript/report.js'));
+    loadStyle(parent.aras.getBaseURL('/Solutions/PLM/styles/report.css'));
+   </script>
+  </html>
+ </xsl:template>
+ 
+ <xsl:template name="main">
+  <xsl:for-each select="Result/Item[@alias='Part']">
+   <xsl:variable name="part_number">
+    <xsl:value-of select="item_number"/>
+    <xsl:if test="item_number='' or not(item_number)">
+     <xsl:text>&#160;</xsl:text>
+    </xsl:if>
+   </xsl:variable>
+   <xsl:variable name="part_name">
+    <xsl:value-of select="name"/>
+    <xsl:if test="name='' or not(name)">
+     <xsl:text>&#160;</xsl:text>
+    </xsl:if>
+   </xsl:variable>
+   <xsl:variable name="sum_of_products">
+    <xsl:value-of select="total_count"/>
+    <xsl:if test="total_count='' or not(total_count)">
+     <xsl:text>&#160;</xsl:text>
+    </xsl:if>
+   </xsl:variable>
+   <xsl:if test="position()!=1">
+    <xsl:call-template name="draw_row_for_item">
+     <xsl:with-param name="sum_of_products" select="$sum_of_products"></xsl:with-param>
+     <xsl:with-param name="part_number" select="$part_number"></xsl:with-param>
+     <xsl:with-param name="part_name" select="$part_name"></xsl:with-param>
+    </xsl:call-template>
+   </xsl:if>
+  </xsl:for-each>
+ </xsl:template>
+ 
+ <!-- Draw rows of table-->
+ <xsl:template name="draw_row_for_item">
+  <xsl:param name="sum_of_products"></xsl:param>
+  <xsl:param name="part_number"></xsl:param>
+  <xsl:param name="part_name"></xsl:param>
+  <tr>
+   <td>
+    <xsl:value-of select="$part_number"></xsl:value-of>
+   </td>
+   <td>
+    <xsl:value-of select="$part_name"></xsl:value-of>
+   </td>
+   <td>
+    <xsl:value-of select="$sum_of_products"></xsl:value-of>
+   </td>
+  </tr>
+ </xsl:template>
+</xsl:stylesheet>
+]]></xsl_stylesheet>
+  <name>BOM Quantity Rollup Report</name>
+ </Item>
+</AML>

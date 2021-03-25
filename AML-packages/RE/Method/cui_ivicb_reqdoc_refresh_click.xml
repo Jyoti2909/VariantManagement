@@ -1,0 +1,26 @@
+﻿<AML>
+ <Item type="Method" id="567A1C29564F42F9A21C467C052BF357" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!options.eventState) {
+	options.eventState = window.aras.evalMethod('cui_reinit_calc_tearoff_states');
+}
+
+if (options.eventState.isDirty) {
+	const dialogSettings = {
+		title: aras.getResource('../Solutions/RE', 'req_document_refresh_confirmationtitle')
+	};
+	const dialogMessage = aras.getResource('', 'common.discard_confirmationmessage');
+
+	return window.ArasModules.Dialog.confirm(dialogMessage, dialogSettings).then(function(result) {
+		if (result === 'ok') {
+			onRefresh();
+		}
+	});
+}
+
+onRefresh();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivicb_reqdoc_refresh_click</name>
+ </Item>
+</AML>

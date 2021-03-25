@@ -1,0 +1,423 @@
+﻿<AML>
+ <Item type="Method" id="112350EA93F54669925690954A81EA41" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			Innovator inn = this.getInnovator();
+			string rootCadID = this.getProperty("root_cad_id");
+			string masterXmlID = this.getProperty("master_xml_id");
+			string resolution = this.getProperty("resolution");
+			IDataAccessLayer dataAccessLayer = new DataAccessLayer(inn);
+
+			var parser = string.IsNullOrEmpty(resolution)
+				? new AssemblyTreeParser(masterXmlID, rootCadID, dataAccessLayer)
+				: new AssemblyTreeParser(masterXmlID, rootCadID, dataAccessLayer, resolution);
+			var res = parser.FillCadsTreeDoc();
+			if (res.isError())
+				return res;
+			parser.ProcessDoc();
+
+			return inn.newResult("OK.");
+		}
+	}
+
+	public interface IDataAccessLayer
+	{
+		Item GetCadTreeItem(string cadID);
+		Item GetCadTreeItem(string cadID, string resolution);
+		XmlDocument GetTreeMasterXml(string fileId);
+		void CreateCadInstance(string cadStrId, string name, string transformStr);
+	}
+
+	public class DataAccessLayer : IDataAccessLayer
+	{
+		private Innovator inn;
+
+		public DataAccessLayer(Innovator inn)
+		{
+			this.inn = inn;
+		}
+
+		public Item GetCadTreeItem(string cadID)
+		{
+			return GetCadTreeItem(cadID, "AsSaved");
+		}
+
+		public Item GetCadTreeItem(string cadID, string resolution)
+		{
+			string cadQuery = @"<AML>
+            <Item type='CAD' action='PE_GetResolvedStructure' resolution='{1}' select='native_file'  id='{0}'>
+                <Relationships>
+                    <Item type='CAD Structure' select='related_id' repeatTimes='2' >
+                    </Item>
+                </Relationships>
+            </Item>
+            </AML>";
+
+			cadQuery = String.Format(CultureInfo.InvariantCulture, cadQuery,
+				System.Security.SecurityElement.Escape(cadID),
+				System.Security.SecurityElement.Escape(resolution));
+
+			return inn.applyAML(cadQuery);
+		}
+
+		public XmlDocument GetTreeMasterXml(string fileId)
+		{
+			String masterXmlUrl = inn.getFileUrl(fileId, Aras.IOM.UrlType.SecurityToken);
+			XmlDocument doc = Aras.Server.Core.XML.CreateNewXMLDocument();
+
+			try
+			{
+				doc.Load(masterXmlUrl);
+			}
+			catch
+			{
+				// Don't change message, it is used in "To Dynamic Enabled" conversion procedure
+				// to log in case if xml is absent in Vault
+				throw new InvalidOperationException("Xml could not be loaded by defined path");
+			}
+
+			doc.PreserveWhitespace = true;
+			return doc;
+		}
+
+		/// <summary>
+		/// The method to create a CAD Instance item.
+		/// </summary>
+		/// <param name="cadStrId">CAD Structure item's id</param>
+		/// <param name="name">CAD Instance item's name</param>
+		/// <param name="transformStr">Transformation matrix</param>
+		public void CreateCadInstance(string cadStrId, string name, string transformStr)
+		{
+			Item curStruct = inn.newItem("CAD Structure", "edit");
+			curStruct.setID(cadStrId);
+
+			Item newInst = inn.newItem("CAD Instance", "add");
+			newInst.setProperty("name", name);
+			newInst.setProperty("transformation_matrix", transformStr);
+			curStruct.addRelationship(newInst);
+			curStruct = curStruct.apply();
+		}
+	}
+
+	/// <summary>
+	/// Used to parse an XML file created by the HOOPS Converter with a 
+	/// <code>--output_xml_assemblytree</code> conversion parameter.
+	/// Construct the Assembly Parser by providing an ID of the XML file
+	/// to process. 
+	/// </summary>
+	public class AssemblyTreeParser
+	{
+		private HashSet<string> processedCadStructureIds = new HashSet<string>();
+
+		/// <summary>
+		/// Document Node for the XML contents
+		/// </summary>
+		private XmlNode _rootNode;
+		private Item _cadsTree;
+		private IDataAccessLayer _dataAccessLayer;
+
+		/// <summary>
+		/// Constructor.  Call <seealso cref="processFile()"> to process the data.</seealso>
+		/// </summary>
+		public AssemblyTreeParser(String dataFileId, String rootCadID, IDataAccessLayer dataAccessLayer)
+		{
+			if (string.IsNullOrEmpty(dataFileId))
+				throw new ArgumentNullException("dataFileId");
+			if (string.IsNullOrEmpty(rootCadID))
+				throw new ArgumentNullException("rootCadID");
+			if (dataAccessLayer == null)
+				throw new ArgumentNullException("dataAccessLayer");
+			_dataAccessLayer = dataAccessLayer;
+			_rootNode = _dataAccessLayer.GetTreeMasterXml(dataFileId);
+			if (_rootNode == null)
+				throw new InvalidDataException("_rootNode == null");
+			_cadsTree = _dataAccessLayer.GetCadTreeItem(rootCadID);
+			if (_cadsTree == null)
+				throw new InvalidDataException("_cadsTree == null");
+		}
+
+		/// <summary>
+		/// Constructor.  Call <seealso cref="processFile()"> to process the data.</seealso>
+		/// </summary>
+		public AssemblyTreeParser(string dataFileId, string rootCadID, IDataAccessLayer dataAccessLayer, string resolution)
+		{
+			if (string.IsNullOrEmpty(dataFileId))
+			{
+				throw new ArgumentNullException("dataFileId");
+			}
+
+			if (string.IsNullOrEmpty(rootCadID))
+			{
+				throw new ArgumentNullException("rootCadID");
+			}
+
+			if (string.IsNullOrEmpty(resolution))
+			{
+				throw new ArgumentNullException("resolution");
+			}
+
+			_dataAccessLayer = dataAccessLayer ?? throw new ArgumentNullException("dataAccessLayer");
+			_rootNode = _dataAccessLayer.GetTreeMasterXml(dataFileId);
+
+			if (_rootNode == null)
+			{
+				throw new InvalidDataException("_rootNode == null");
+			}
+			_cadsTree = _dataAccessLayer.GetCadTreeItem(rootCadID, resolution);
+
+			if (_cadsTree == null)
+			{
+				throw new InvalidDataException("_cadsTree == null");
+			}
+		}
+
+		/// <summary>
+		/// Finds the root Assembly and recursively processes all first-level child Parts/Assemblies
+		/// </summary>
+		public void ProcessDoc()
+		{
+			// Start with the first Product Occurrence
+			XmlNode root = FindRootOccurrence(_rootNode.SelectSingleNode("/Root/ModelFile/ProductOccurence[1]"));
+			if (root == null)
+			{
+				return;
+			}
+			// CAD Instance items should be created just for first-level single components and sub-assemblies.
+			// We should not create CAD Instance items for sub-assembly's components.
+			// Because it should be done by appropriate Conversion Tasks created for those sub-assemblies.
+			String childrenStr = getAttribute(root, "Children");
+			if (childrenStr.Length > 0)
+			{
+				char[] delim = { ' ' };
+				string[] ids = childrenStr.Split(delim);
+				foreach (string id in ids)
+				{
+					XmlNode childProdOcc = _rootNode.SelectSingleNode("/Root/ModelFile/ProductOccurence[@Id = " + id.Trim() + "]");
+					ProcessOccurrence(childProdOcc);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Replace short references to CAD item by full data.
+		/// Because when some CAD item is presented in AML response several times
+		/// just one presentation contains full data. The rest presentaitions are
+		/// transformed to short references (just CAD item id).
+		/// </summary>
+		public Item FillCadsTreeDoc()
+		{
+			if (_cadsTree.isError())
+				return _cadsTree;
+			XmlDocument doc = _cadsTree.dom;
+
+			XmlNode rootCadNode = doc.SelectSingleNode("//Result/Item[@type='CAD']");
+			if (rootCadNode == null)
+				throw new InvalidDataException("Root CAD item is not found");
+
+			XmlNodeList cadStrItems = rootCadNode.SelectNodes("./Relationships/Item[@type='CAD Structure']");
+			foreach (XmlNode cadStrNode in cadStrItems)
+			{
+				XmlNode cadItem = cadStrNode.SelectSingleNode("./related_id/Item[@type='CAD']");
+				// It's possible that the related Item is not included with the CAD Structure relationship
+				// In this case, the Id of the related Item should be
+				if (cadItem == null)
+				{
+					XmlNode relNode = cadStrNode.SelectSingleNode("./related_id");
+					if (relNode != null && relNode.InnerText.Length > 0)
+					{
+						String relId = relNode.InnerText;
+						cadItem = doc.SelectSingleNode("//Item[@type='CAD' and id='" + relId + "']");
+						if (cadItem != null)
+						{
+							XmlNode newNode = cadItem.CloneNode(true);
+							relNode.AppendChild(newNode);
+						}
+					}
+				}
+			}
+			return _cadsTree;
+		}
+
+		/// <summary>
+		/// Convenience method to extract an Attribute Value from the given Node
+		/// </summary>
+		/// <param name="node">XML Node to parse</param>
+		/// <param name="attrName">Name of the attribute to extract</param>
+		/// <returns>Value of Attribute with the given name.  Returns empty String if not found</returns>
+		static private String getAttribute(XmlNode node, String attrName)
+		{
+			String attrVal = "";
+			if (node != null)
+			{
+				XmlAttribute attr = node.Attributes[attrName];
+				if (attr != null)
+				{
+					attrVal = attr.Value;
+				}
+			}
+
+			return (attrVal.Trim());
+		}
+
+		/// <summary>
+		/// Returns the XML Node for the ProductOccurence associated with the root Part/Assembly in the file.
+		/// </summary>
+		/// <remarks>
+		/// <code><ProductOccurence/></code> nodes in the the HOOPS Assembly Tree XML file define a hierarchy
+		/// of Part instances that were converted based on the given CAD file in the HOOPS Conversion process.
+		/// This hierachy is defined by unique <code>@Id</code> attribute values and a list of ids provided
+		/// in the <code>@Children</code> attribute.  The first <code><ProductOccurence/></code> node typically
+		/// has an <code>@Id</code> value of 0, with all children, grandchildren, etc. having IDs of incremental
+		/// value.  A typical file will have the form:
+		/// <code>
+		/// <ProductOccurence Id="0" Children="1">...</ProductOccurence>
+		/// <ProductOccurence Id="1" Children="2">...</ProductOccurence>
+		/// <ProductOccurence Id="2" Children="3 4 5 6">...</ProductOccurence>    
+		/// </code>
+		/// <code>@FilePath</code> attributes identify the CAD file associated with each Product Occurence.  It's
+		/// possible that the first couple/few Product Occurences all refer to the same Root Part.  This Method
+		/// will continue to process Child nodes until a Product Occurence node is found that doesn't refer to
+		/// the same CAD File.  This node is returned.
+		/// </remarks>
+		/// <param name="prodOcc">Root Product Occurence</param>
+		/// <returns>A <code><ProductOccurence/></code> node that starts the root hierarchy</returns>
+		public XmlNode FindRootOccurrence(XmlNode prodOcc)
+		{
+			String rootFilePath = getAttribute(prodOcc, "FilePath");
+			String childrenStr;
+			XmlNode nextOcc = prodOcc;
+			char[] delim = { ' ' };
+
+			// Find the first Product Occurrence that references a CAD File
+			// This path may not exists in the given node
+			while (rootFilePath.Length == 0)
+			{
+				childrenStr = getAttribute(nextOcc, "Children");
+				if (childrenStr.Length > 0)
+				{
+					string[] ids = childrenStr.Split(delim);
+					nextOcc = _rootNode.SelectSingleNode("/Root/ModelFile/ProductOccurence[@Id = " + ids[0].Trim() + "]");
+					rootFilePath = getAttribute(nextOcc, "FilePath");
+				}
+				else
+				{
+					return null;
+				}
+			}
+
+			// At this point, the Root Product Occurrence has been found with a reference to the root CAD file
+			// We need to continue to process the child Product Occurrences until we find the first child
+			// that doesn't reference the same CAD File.  
+			bool continueSearch = true;
+			while (continueSearch)
+			{
+				childrenStr = getAttribute(nextOcc, "Children");
+
+				// Check the first child of each Occurence.  The one with a child that references a different
+				// CAD file is the node to return.  Note that the given node may represent a Part with no
+				// hierarchy so we have to account for that
+				if (childrenStr.Length > 0)
+				{
+					string[] ids = childrenStr.Split(delim);
+					XmlNode childProdOcc = _rootNode.SelectSingleNode("/Root/ModelFile/ProductOccurence[@Id = " + ids[0].Trim() + "]");
+					String childFilePath = getAttribute(childProdOcc, "FilePath");
+					if (childFilePath.Length > 0)
+					{
+						if (string.Compare(rootFilePath, childFilePath, StringComparison.OrdinalIgnoreCase) != 0)
+						{
+							continueSearch = false;  // we have a root File Path and it's differnt so return the current Occurrence
+						}
+						else
+						{
+							nextOcc = childProdOcc;
+						}
+					}
+					else // Current node doesn't have an associated CAD File so stop here
+					{
+						continueSearch = false;
+					}
+				}
+				else  // No more children
+				{
+					continueSearch = false;
+				}
+			} // while
+
+			return (nextOcc);
+		}
+
+		/// <summary>
+		/// The method to process a Product Occurence node.
+		/// </summary>
+		/// <param name="prodOcc"><code><ProductOccurence/></code> to parse</param>
+		public void ProcessOccurrence(XmlNode prodOcc)
+		{
+			if (prodOcc == null)
+			{
+				return;
+			}
+
+			String filePath = getAttribute(prodOcc, "FilePath");
+
+			// Get the Tranform Text (from attribute) if it exists
+			XmlNode xForm = prodOcc.SelectSingleNode("./Transformation");
+			String transformStr = "1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1";
+			if (xForm != null)
+			{
+				transformStr = getAttribute(xForm, "RelativeTransfo");
+			}
+
+			if (!String.IsNullOrEmpty(transformStr))
+			{
+				int ind = filePath.LastIndexOf("\\", StringComparison.OrdinalIgnoreCase);
+				if (ind >= 0)
+				{
+					String fileName = filePath.Substring(ind + 1);
+
+					if (!String.IsNullOrEmpty(fileName))
+					{
+						String name = getAttribute(prodOcc, "Name");
+						string itemXPath = "Relationships/Item[@type='CAD Structure' and related_id/Item[@type='CAD' and native_file/Item[@type='File' and filename='" + fileName + "']]]";
+						Item cadStrItems = _cadsTree.getItemsByXPath(itemXPath);
+						int cadStrItemsCount = cadStrItems.getItemCount();
+						bool cadInstCreated = false;
+
+						for (int i = 0; i < cadStrItemsCount; i++)
+						{
+							Item cadStr = cadStrItems.getItemByIndex(i);
+							string cadStrId = cadStr.getID();
+
+							// When particular CAD item is assigned to parent one several times
+							// we should create and assign CAD Instance to each CAD Structure.
+							// But when CAD Structure item is only one all new CAD Instance items
+							// should be assigned to it.
+							if (!processedCadStructureIds.Contains(cadStrId) || (cadStrItemsCount == 1))
+							{
+								cadInstCreated = true;
+								processedCadStructureIds.Add(cadStrId);
+
+								_dataAccessLayer.CreateCadInstance(cadStrId, name, transformStr);
+
+								return;
+							}
+						}
+
+						// When count of instances for particular CAD item is more than
+						// count of appropriate CAD Structure items excess CAD Instance items
+						// will be assigned to first CAD Structure.
+						if (!cadInstCreated && (cadStrItemsCount > 0))
+						{
+							Item cadStr = cadStrItems.getItemByIndex(0);
+							string cadStrId = cadStr.getID();
+
+							_dataAccessLayer.CreateCadInstance(cadStrId, name, transformStr);
+						}
+					}
+
+				}
+			}
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>CR_3DCADtoDyn_CreateCadInstances</name>
+ </Item>
+</AML>

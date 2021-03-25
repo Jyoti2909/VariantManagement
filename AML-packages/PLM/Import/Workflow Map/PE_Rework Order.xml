@@ -1,0 +1,285 @@
+﻿<AML>
+ <Item type="Workflow Map" id="E74422B0BD0A46E6BF78AFE0A71FE03C" action="add">
+  <description xml:lang="en">PE - Rework Workflow</description>
+  <node_bg_color>       </node_bg_color>
+  <node_label1_color>       </node_label1_color>
+  <node_label1_font />
+  <node_label2_color>       </node_label2_color>
+  <node_label2_font />
+  <node_name_color>       </node_name_color>
+  <node_name_font />
+  <node_size />
+  <process_owner keyed_name="Creator" type="Identity">
+   <Item type="Identity" action="get" select="id">
+    <name>Creator</name>
+   </Item>
+  </process_owner>
+  <transition_line_color>       </transition_line_color>
+  <transition_name_color>       </transition_name_color>
+  <transition_name_font />
+  <name>PE_Rework Order</name>
+  <Relationships>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Rework Order Approved" type="Activity Template">
+     <Item type="Activity Template" id="C26F8EBFA57B4BCB9710C45F9811F1F5" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Workflow End</message>
+      <priority>1</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>660</x>
+      <y>80</y>
+      <name>Rework Order Approved</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="705D8ABA95B14A55912B5992458A1528" action="add">
+        <controlled_itemtype keyed_name="PE_Rework Order" type="ItemType" name="PE_Rework Order">255AACBE895E4ADFA79BE85F3C8BCDEC</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="41C921CD854D47309DA6AD3BA7E86074" type="Life Cycle Transition">41C921CD854D47309DA6AD3BA7E86074</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Rework Order Approved" type="Activity Template">C26F8EBFA57B4BCB9710C45F9811F1F5</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="PE_Rework Order" type="Workflow Map">E74422B0BD0A46E6BF78AFE0A71FE03C</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Start" type="Activity Template">
+     <Item type="Activity Template" id="8FCC68E2F27D4D0B9D6A1F3DBCA6D150" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/WorkflowStart.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>0</is_end>
+      <is_start>1</is_start>
+      <message xml:lang="en">Workflow Start</message>
+      <priority>2</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>29</x>
+      <y>76</y>
+      <name>Start</name>
+      <Relationships>
+       <Item type="Workflow Map Path" id="C12174B2AB7A463EA6BCBE26393A6566" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>0</is_override>
+        <name>Go</name>
+        <related_id>F266EF40CBDF40139E17B0062AA953A5</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Start" type="Activity Template">8FCC68E2F27D4D0B9D6A1F3DBCA6D150</source_id>
+        <x>0</x>
+        <y>0</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="PE_Rework Order" type="Workflow Map">E74422B0BD0A46E6BF78AFE0A71FE03C</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Review Rework Order" type="Activity Template">
+     <Item type="Activity Template" id="798418AEA660428ABA827F3890CCE2A8" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please review the Rework Order</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>399</x>
+      <y>79</y>
+      <name>Review Rework Order</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="59D0E47C7EBE41318CC4B3B0093A3991" action="add">
+        <related_id keyed_name="Manufacturing" type="Identity">BABF5AE8735447B48C26489922E585FE</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Rework Order" type="Activity Template">798418AEA660428ABA827F3890CCE2A8</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Task" id="15878908F4574401947B658354B35010" action="add">
+        <description xml:lang="en">Check Rework Order for completeness</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Rework Order" type="Activity Template">798418AEA660428ABA827F3890CCE2A8</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="1C7CC883B71E46D4B64362DBC39C9D92" action="add">
+        <description xml:lang="en">Vote "Approve" to send the Rework Order for approval or "Reject" if the Rework Order should be rejected</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review Rework Order" type="Activity Template">798418AEA660428ABA827F3890CCE2A8</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="B3031484D255482B99E552AE0AFAF14C" action="add">
+        <controlled_itemtype keyed_name="PE_Rework Order" type="ItemType" name="PE_Rework Order">255AACBE895E4ADFA79BE85F3C8BCDEC</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="BA05C2446D464CCF865FF560B70FCF6B" type="Life Cycle Transition">BA05C2446D464CCF865FF560B70FCF6B</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Rework Order" type="Activity Template">798418AEA660428ABA827F3890CCE2A8</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="A159F03132AC4434AB6E885EC44984A3" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Approve</name>
+        <related_id>C26F8EBFA57B4BCB9710C45F9811F1F5</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Rework Order" type="Activity Template">798418AEA660428ABA827F3890CCE2A8</source_id>
+        <x>104</x>
+        <y>13</y>
+       </Item>
+       <Item type="Workflow Map Path" id="2F4ABA3475CF481DA5AD53059EE99469" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Reject</name>
+        <related_id>678214CFB24A49C09A8775AC4257CF3F</related_id>
+        <segments />
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review Rework Order" type="Activity Template">798418AEA660428ABA827F3890CCE2A8</source_id>
+        <x>2</x>
+        <y>73</y>
+       </Item>
+       <Item type="Workflow Map Path" id="D1CAE113D122426C819949B453E0DDDE" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Rework</name>
+        <related_id>F266EF40CBDF40139E17B0062AA953A5</related_id>
+        <segments>338,190|252,190</segments>
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Review Rework Order" type="Activity Template">798418AEA660428ABA827F3890CCE2A8</source_id>
+        <x>-133</x>
+        <y>117</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>768</sort_order>
+    <source_id keyed_name="PE_Rework Order" type="Workflow Map">E74422B0BD0A46E6BF78AFE0A71FE03C</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Submit Rework Order" type="Activity Template">
+     <Item type="Activity Template" id="F266EF40CBDF40139E17B0062AA953A5" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please submit the Rework Order</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>203</x>
+      <y>81</y>
+      <name>Submit Rework Order</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="E685F6D0E0EF403CA1EF82DFE27E2F6C" action="add">
+        <related_id keyed_name="Creator" type="Identity">
+         <Item type="Identity" action="get" select="id">
+          <name>Creator</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Rework Order" type="Activity Template">F266EF40CBDF40139E17B0062AA953A5</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Task" id="8775261718A94EDB90685022712D9B6F" action="add">
+        <description xml:lang="en">Ensure that the Rework Order is ready for Review</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Rework Order" type="Activity Template">F266EF40CBDF40139E17B0062AA953A5</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="94E700F8E524452B93A57A278DACFE57" action="add">
+        <description xml:lang="en">Attach Rework Order Instructions</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Submit Rework Order" type="Activity Template">F266EF40CBDF40139E17B0062AA953A5</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="94CC20BFD3C84B0FAAAD7B66B88FC182" action="add">
+        <controlled_itemtype keyed_name="PE_Rework Order" type="ItemType" name="PE_Rework Order">255AACBE895E4ADFA79BE85F3C8BCDEC</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="DB548EFAF7D145CC964DAD0216AE626E" type="Life Cycle Transition">DB548EFAF7D145CC964DAD0216AE626E</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Rework Order" type="Activity Template">F266EF40CBDF40139E17B0062AA953A5</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="232963E2BD66430C8C89E81775D86852" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Submit</name>
+        <related_id>798418AEA660428ABA827F3890CCE2A8</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Rework Order" type="Activity Template">F266EF40CBDF40139E17B0062AA953A5</source_id>
+        <x>0</x>
+        <y>0</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>896</sort_order>
+    <source_id keyed_name="PE_Rework Order" type="Workflow Map">E74422B0BD0A46E6BF78AFE0A71FE03C</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Rework Order Rejected" type="Activity Template">
+     <Item type="Activity Template" id="678214CFB24A49C09A8775AC4257CF3F" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review...</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>398</x>
+      <y>236</y>
+      <name>Rework Order Rejected</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="15F3141CFB0A44D1B92955F181E7844A" action="add">
+        <controlled_itemtype keyed_name="PE_Rework Order" type="ItemType" name="PE_Rework Order">255AACBE895E4ADFA79BE85F3C8BCDEC</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="DE1A6265381F48E8A5F20D0B491CC136" type="Life Cycle Transition">DE1A6265381F48E8A5F20D0B491CC136</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Rework Order Rejected" type="Activity Template">678214CFB24A49C09A8775AC4257CF3F</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>1024</sort_order>
+    <source_id keyed_name="PE_Rework Order" type="Workflow Map">E74422B0BD0A46E6BF78AFE0A71FE03C</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

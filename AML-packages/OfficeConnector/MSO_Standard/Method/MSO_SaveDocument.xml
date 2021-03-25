@@ -1,0 +1,52 @@
+<AML>
+ <Item type="Method" id="C00AF9629917469EA29B26E64626242F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+            var itemToSave = this.getPropertyItem("item_to_save");
+            string xpSelect = this.getProperty("xp_select", string.Empty);
+            
+            bool shouldBeLocked = false;
+            string shoulBeLockedString = this.getProperty("should_be_unlocked");
+            bool.TryParse(shoulBeLockedString, out shouldBeLocked);
+
+            string itemToSaveAction = itemToSave.getAction();
+            if (!string.IsNullOrEmpty(itemToSaveAction))
+            {
+                Item files = itemToSave.getItemsByXPath("//Item[@type='File' and @action='add']");
+                int fileCount = files.getItemCount();
+                for (int i = 0; i < fileCount; i++)
+                {
+                    //When actual_filename property exists in File item the 'Apply' method bellow will try to load its again into Vault 
+                    //But files already exist in Vault transaction and its should not be loaded again.
+                    //To avoid second loading the actual_filename property will removed before call 'apply' method.
+                    //This code should be delted when the I-015878 "Cleanup actual_filename property after file was uploaded" issue will be fixed.
+                    Item file = files.getItemByIndex(i);
+                    file.removeProperty("actual_filename"); 
+                }
+
+                itemToSave = itemToSave.apply();
+            }
+            
+            if (!itemToSave.isError())
+            {
+                if (shouldBeLocked)
+                {
+                    itemToSave.unlockItem();
+                }
+
+                var itemRequest = this.getInnovator().newItem(itemToSave.getType(), "get");
+                itemRequest.setAttribute("levels", "2");
+                if (!string.IsNullOrEmpty(xpSelect))
+                {
+                    itemRequest.setAttribute("select", xpSelect);
+                }
+                itemRequest.setID(itemToSave.getID());
+                itemToSave = itemRequest.apply();
+            }
+
+            return itemToSave;
+            ]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_SaveDocument</name>
+ </Item>
+</AML>

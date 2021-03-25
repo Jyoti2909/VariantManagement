@@ -1,0 +1,20 @@
+﻿<AML>
+ <Item type="Method" id="AAEA486F53EC4EF8A6902E4DF3C19609" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const effectivityContext = options.effectivityContext;
+const getDeleteButtonDisabledState = function() {
+	return effectivityContext.grid.selectedRowIds.length === 0;
+};
+
+effectivityContext.grid.on('selectRow', function() {
+	effectivityContext.toolbar.setItemEnabled('effs_expressionItemGridToolbarDeleteItemButton', !getDeleteButtonDisabledState());
+});
+
+return {
+	disabled: getDeleteButtonDisabledState(),
+	label: null
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_exprItemGridDeleteBtnInit</name>
+ </Item>
+</AML>

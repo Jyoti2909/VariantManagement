@@ -1,0 +1,178 @@
+﻿<AML>
+ <Item type="Method" id="95EE1022E5C8464D8C997F4CCA84B819" action="add">
+  <comments>Returns name of method which implements EID_VerifyConnection functionality for this definition's provider</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+	return businessLogic.Run(this);
+}
+
+//[PartialPath("BusinessLogic/BusinessLogic")]
+	internal class BusinessLogic
+	{
+		private readonly IDataAccessLayer dal;
+		private readonly IDictionary<string, string> inpParamsD;
+
+		public BusinessLogic(IDataAccessLayer dataAccessLayer)
+		{
+			dal = dataAccessLayer;
+			inpParamsD = new Dictionary<string, string>();
+		}
+
+		public Item Run(Item contextItem)
+		{
+			bool isCollectSuccess = collectInputParams(contextItem, out StringBuilder collectErrMess);
+			if (!isCollectSuccess)
+			{
+				return dal.NewError(collectErrMess != null ?
+					collectErrMess.ToString() : "Undefined parameters collection error");
+			}
+			bool isNameObtained = obtainMethodName(out string methName, out StringBuilder obtainErrMess);
+			if (!isNameObtained)
+			{
+				return dal.NewError(obtainErrMess != null ?
+					obtainErrMess.ToString() : "Undefined obtain method error");
+			}
+			return dal.NewResult(methName);
+		}
+		
+		private bool collectInputParams(Item contextItem, out StringBuilder errMess)
+		{
+			errMess = null;
+			XmlNode paramsNd = contextItem.node.SelectSingleNode("params");
+			if (paramsNd == null)
+			{
+				errMess = new StringBuilder("No parameters are provided by client.");
+				return false;
+			}
+			foreach (XmlNode parNd in paramsNd)
+			{
+				if (parNd.NodeType == XmlNodeType.Element
+					&& parNd.FirstChild.NodeType == XmlNodeType.Text)
+				{
+					inpParamsD.Add(parNd.Name, parNd.FirstChild.Value);
+				} else {
+					if (errMess == null)
+					{
+						 errMess = new StringBuilder("Invalid parameters: ");
+					} else
+					{
+						errMess.Append(", ");
+					}
+					errMess.Append(parNd.Name);
+				}
+			}
+			return true;	
+		}
+		
+		private bool obtainMethodName(out string methName, out StringBuilder obtainErrMess)
+		{
+			methName = null;
+			obtainErrMess = null;
+			string itemToSearchInId, itemToSearchInType;
+			if (!inpParamsD.TryGetValue("itemToSearchInId", out itemToSearchInId))
+			{
+				obtainErrMess = new StringBuilder("Not found:");
+				obtainErrMess.Append("itemToSearchInId");
+			}
+			if (!inpParamsD.TryGetValue("itemToSearchInType", out itemToSearchInType))
+			{
+				if (obtainErrMess == null)
+				{
+					obtainErrMess = new StringBuilder("Not found:");
+				} else
+				{
+					obtainErrMess.Append(", ");
+				}
+				obtainErrMess.Append("itemToSearchInType");
+			}
+			if (obtainErrMess != null)
+			{
+				return false;
+			}
+			Item itemToSearchIn = dal.NewItem(itemToSearchInType, "get");
+			itemToSearchIn.setID(itemToSearchInId);
+			itemToSearchIn.setAttribute("select", "eid_verify_connection_method");
+			Item itemToSearchInA = dal.ApplyItem(itemToSearchIn);
+			if (itemToSearchInA.isError())
+			{
+				obtainErrMess = new StringBuilder(itemToSearchInA.getErrorString());
+				return false;
+			}
+			string verifyConnectionMethodId = itemToSearchInA.getProperty("eid_verify_connection_method");
+			if (string.IsNullOrEmpty(verifyConnectionMethodId))
+			{
+				obtainErrMess = new StringBuilder("Property eid_verify_connection_method is empty");
+				return false;
+			}
+			
+			Item methodI = dal.NewItem("Method", "get");
+			methodI.setID(verifyConnectionMethodId);
+			methodI.setAttribute("select", "name,keyed_name");
+			Item methodIA = dal.ApplyItem(methodI);
+			if (methodIA.isError())
+			{
+				obtainErrMess = new StringBuilder(methodIA.getErrorString());
+				return false;
+			}
+			methName = methodIA.getProperty("name");
+			if (string.IsNullOrWhiteSpace(methName))
+			{
+				obtainErrMess = new StringBuilder("Property name is empty");
+				return false;
+			}
+			return true;
+		}
+	}
+	
+//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+	internal interface IDataAccessLayer
+	{
+		Item NewResult(string textMessage);
+		Item NewError(string errorMessage);
+		Item NewItem(string type = null, string action = null);
+		Item ApplyItem(Item item);
+	}
+	
+//[PartialPath("DataAccessLayer/DataAccessLayer")]
+	internal class DataAccessLayer : IDataAccessLayer
+	{
+		private Innovator innovator;
+
+		internal DataAccessLayer(Innovator innovator)
+		{
+			this.innovator = innovator;
+		}
+
+		public Item NewResult(string textMessage)
+		{
+			return innovator.newResult(textMessage);
+		}
+
+		public Item NewError(string errorMessage)
+		{
+			return innovator.newError(errorMessage);
+		}
+		
+		public Item NewItem(string type = null, string action = null)
+		{
+			if (string.IsNullOrEmpty(type))
+			{
+				return innovator.newItem();
+			}
+			if (string.IsNullOrEmpty(action))
+			{
+				return innovator.newItem(type);
+			}
+			return innovator.newItem(type, action);
+		}
+		
+		public Item ApplyItem(Item item)
+		{
+			return item.apply();
+		}
+	//}	]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_VerifyConnectionObtainMethod</name>
+ </Item>
+</AML>

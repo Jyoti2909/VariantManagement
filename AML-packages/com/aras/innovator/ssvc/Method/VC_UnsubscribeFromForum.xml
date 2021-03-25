@@ -1,0 +1,78 @@
+﻿<AML>
+ <Item type="Method" id="151AB6EF1FC44E258DE20AC42AEDB21B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string forumId = this.getID();
+string userId = this.getProperty("user_id");
+if (String.IsNullOrEmpty(userId))
+{
+	throw new Exception(CCO.ErrorLookup.Lookup("SSVC_FailedUnsubscribeFromForumUserIdNotSet"));
+}
+string identityId = GetUserIsAliasIdentityId(userId);
+Item forum = GetForumById(forumId);
+if (forum.isError())
+{
+	throw new Exception(String.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_FailedUnsubscribeFromForum"), forum.getErrorString()));
+}
+context = CCO;
+Aras.Server.Security.Identity identity = null;
+bool permsWasSet = false;
+try
+{
+	identity = Aras.Server.Security.Identity.GetByName("Super User");
+	permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(identity);
+	forum = RemoveIdentityFromWantViewBy(forum, identityId);
+	forum.setAction("edit");
+	forum = forum.apply();
+	if (forum.isError())
+	{
+		return forum;
+	}
+	
+	var forumWithMustViewBy = this.newItem("Forum", "get");
+	forumWithMustViewBy.setID(forum.getID());
+	Item mvb = this.newItem("ForumMustViewBy", "get");
+	mvb.setAttribute("where", String.Format(CultureInfo.InvariantCulture, "{0}.source_id = '{1}' and {0}.must_view_id = '{2}'", "ForumMustViewBy", context.DB.InnDatabase.QuoteValue(forum.getID()), context.DB.InnDatabase.QuoteValue(identityId)));
+	mvb.setAttribute("select", "id");
+	forumWithMustViewBy.addRelationship(mvb);
+	forum = forumWithMustViewBy.apply();
+}
+finally
+{
+	if (permsWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(identity);
+	}
+}
+return forum;
+}
+
+Aras.Server.Core.CallContext context;
+
+private string GetUserIsAliasIdentityId(string userId)
+{
+	Item i = this.newItem("User", "VC_GetUserIsAliasIdentity");
+	i.setID(userId);
+	i = i.apply();
+	return i.getID();
+}
+
+private Item RemoveIdentityFromWantViewBy(Item forum, string identityId)
+{
+	const string ForumWantViewBy = "ForumWantViewBy";
+	string table = context.DB.InnDatabase.GetTableName(ForumWantViewBy);
+	Item wvb = this.newItem(ForumWantViewBy, "delete");
+	wvb.setAttribute("where", String.Format(CultureInfo.InvariantCulture, "{0}.source_id = '{1}' and {0}.want_view_id = '{2}'", table, context.DB.InnDatabase.QuoteValue(forum.getID()), context.DB.InnDatabase.QuoteValue(identityId)));
+	forum.addRelationship(wvb);
+	return forum;
+}
+
+private Item GetForumById(string forumId)
+{
+	Item forum = this.newItem("Forum", "get");
+	forum.setID(forumId);
+	forum.setAttribute("select", "shared_with, want_view_by");
+	return forum.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_UnsubscribeFromForum</name>
+ </Item>
+</AML>

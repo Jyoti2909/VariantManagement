@@ -1,0 +1,715 @@
+﻿<AML>
+ <Item type="SearchMode" id="BD84BCA3EC064D77BF3772A9D93308B6" action="add">
+  <is_active>0</is_active>
+  <label xml:lang="en">Simple</label>
+  <search_handler>
+const typesWithRangeSupport = [
+	'float',
+	'decimal',
+	'integer',
+	'ubigint',
+	'global_version',
+	'date'
+];
+
+function Simple(searchContainer, aras) {
+	this.supportXClassSearch = true;
+	// Call base SearchMode constructor
+	SearchMode.prototype.constructor.call(this, searchContainer, aras);
+	this.userID = this.aras.getUserID();
+	this.loggedUserKeyedName = this.aras.user.userInfo.keyedName;
+	this.complexity = 1;
+
+	this.amlValidator = new SimpleAmlValidator(this.aras);
+
+	this._searchByWildcardIsEnabled = function() {
+		return (this.aras.getPreferenceItemProperty('Core_GlobalLayout', null, 'core_use_wildcards') == 'true');
+	};
+
+	this._applyWildcard = function(itemNd, useWildcards) {
+		var itemTypeName = itemNd.getAttribute('type');
+		var isItemNode = itemNd.nodeName == 'Item';
+		var childNodes = itemNd.childNodes;
+		var currentNode;
+		var i;
+
+		if (itemTypeName &amp;&amp; isItemNode) {
+			var globalCondition = (useWildcards ? 'like' : 'eq');
+			var wildcardConditions = /like|eq/;
+			var itemTypeDef;
+			var currentCondition;
+
+			//"null" is string here. Note, that it's possible case, see steps in IR-028333
+			if (itemTypeName !== 'null') {
+				itemTypeDef = this.aras.getItemTypeForClient(itemTypeName).node;
+			}
+
+			for (i = 0; i &lt; childNodes.length; i++) {
+				currentNode = childNodes[i];
+				// get attribute when currentNode is ELEMENT_NODE
+				if (currentNode.nodeType === 1) {
+					currentCondition = currentNode.getAttribute('condition');
+				}
+
+				if (wildcardConditions.test(currentCondition)) {
+					if (itemTypeName === 'null') {
+						currentNode.setAttribute('condition', globalCondition);
+						continue;
+					}
+
+					var propDef = itemTypeDef.selectSingleNode('Relationships/Item[@type="Property"][name="' + currentNode.nodeName + '"]');
+					if (currentNode.nodeName.indexOf('xp-') === 0) {
+						propXPath = 'Relationships/Item[@type=\'xItemTypeAllowedProperty\' and not(inactive=\'1\')]' +
+							'/related_id/Item[@type=\'xPropertyDefinition\' and name=\'' + currentNode.nodeName + '\']';
+						propDef = itemTypeDef.selectSingleNode(propXPath);
+					}
+
+					if (propDef) {
+						var conditionChangeAllowed = true;
+						var childNodeValue = currentNode.text;
+						var realPropertyDef = this.aras.getRealPropertyForForeignProperty(propDef);
+						var propName = this.aras.getItemProperty(propDef, 'name');
+						var propDT = this.aras.getItemProperty(realPropertyDef, 'data_type');
+						var localCondition = globalCondition;
+
+						switch (propDT) {
+							case 'item':
+								if (propName == 'locked_by_id') {
+									conditionChangeAllowed = false;
+								}
+								break;
+						}
+
+						if (conditionChangeAllowed) {
+							if (!this._containsWildcardCharacter(childNodeValue) || 'list' == propDT || 'filter list' == propDT || 'color list' == propDT || 'boolean' == propDT) {
+								localCondition = 'eq';
+							}
+
+							currentNode.setAttribute('condition', localCondition);
+						}
+					}
+				}
+			}
+		}
+
+		for (i = 0; i &lt; childNodes.length; i++) {
+			currentNode = childNodes[i];
+
+			if (currentNode.childNodes.length) {
+				this._applyWildcard(currentNode, useWildcards);
+			}
+		}
+	};
+}
+
+Simple.prototype = Object.create(SearchMode.prototype);
+Simple.prototype.constructor = Simple;
+
+Simple.prototype.clearSearchCriteria = function Simple_clearSearchCriteria() {
+	if (!this.onSearchDialogUpdatesQueryExplicitly) {
+		this.currQryItem.removeAllCriterias();
+	}
+
+	this.currQryItem.removeItemAttribute('where');
+	this.currQryItem.removeItemAttribute('order_by');
+
+	if (this.grid &amp;&amp; this.grid.inputRow.get('visible')) {
+		for (var i = 0, j = this.grid.columns_Experimental.get('count'); i &lt; j; i++) {
+			if (this.grid.inputRow.get(i, 'disabled') === false) {
+				var propNd = this.searchContainer.getPropertyDefinitionByColumnIndex(i);
+				var nds2Remove = this.currQryItem.item.selectNodes(propNd.selectSingleNode('name').text);
+
+				for (var k = 0; k &lt; nds2Remove.length; k++) {
+					nds2Remove[k].parentNode.removeChild(nds2Remove[k]);
+				}
+				this.grid.inputRow.set(i, 'value', '');
+			}
+		}
+	}
+
+	if (this.userMethodColumnCfgs) {
+		var useWildcards = this._searchByWildcardIsEnabled();
+		for (var propName in this.userMethodColumnCfgs) {
+			if (this.userMethodColumnCfgs[propName] &amp;&amp; this.userMethodColumnCfgs[propName].isFilterFixed) {
+				var criteria = this.userMethodColumnCfgs[propName].filterValue;
+				const condition = useWildcards &amp;&amp; this._containsWildcardCharacter(criteria) ? 'like' : 'eq';
+				const propNd = currItemType.selectSingleNode('Relationships/Item[@type="Property" and data_type="item" and name="' + propName + '"]');
+				if (propNd) {
+					const propDS = aras.getItemPropertyAttribute(propNd, 'data_source', 'name');
+					this.currQryItem.setPropertyCriteria(propName, 'keyed_name', criteria, condition, propDS);
+				} else {
+					this.currQryItem.setCriteria(propName, criteria, condition);
+				}
+			}
+		}
+	}
+};
+
+Simple.prototype.setSearchCriteria = function SimpleSearchMode_setSearchCriteria(propDef, propXpath, criteria, condition) {
+	if (criteria) {
+		let propDT = this.aras.getItemProperty(propDef, 'data_type');
+		if (!this._containsWildcardCharacter(criteria) || 'list' == propDT || 'filter list' == propDT || 'color list' == propDT || 'boolean' == propDT) {
+			condition = 'eq';
+		}
+
+		const propName = this.aras.getItemProperty(propDef, 'name');
+		let nodeName = propName;
+		const realPropertyDef = this.aras.getRealPropertyForForeignProperty(propDef);
+		const numberToString = ArasModules.intl.number.toString;
+		const parseFloat = ArasModules.intl.number.parseFloat;
+		const topWnd = this.aras.getMostTopWindowWithAras();
+
+		propDT = this.aras.getItemProperty(realPropertyDef, 'data_type');
+
+		switch (propDT) {
+			case 'item':
+				if (propName == 'locked_by_id') {
+					var lockedFileName = /\w*\.svg/.exec(criteria);
+					if (lockedFileName) {
+						switch (lockedFileName[0]) {
+							case 'ClaimOn.svg':
+								criteria = this.loggedUserKeyedName;
+								condition = 'eq';
+								break;
+							case 'ClaimOther.svg':
+								criteria = this.loggedUserKeyedName;
+								condition = 'ne';
+								break;
+							case 'ClaimAnyone.svg':
+								criteria = '%';
+								condition = 'like';
+								break;
+						}
+					}
+				}
+				const typeName = realPropertyDef.selectSingleNode('data_source').getAttribute('name');
+				nodeName = propName === 'current_state' ? 'current_state' : 'keyed_name';
+				const searchPropertyName = propName === 'current_state' ? '/OR' : '/keyed_name';
+				propXpath += '/Item' + (typeName === null ? '' : '[@type=\'' + typeName + '\']') + searchPropertyName;
+				break;
+		}
+
+		const criteriaAML = topWnd.ArasCore.searchConverter.simpleToAml(criteria, nodeName, {type: propDT, condition});
+		if (!criteriaAML) {
+			return false;
+		}
+
+		this.applySearchCriteria(propXpath, criteriaAML);
+	} else {
+		this.currQryItem.removeSearchCriteria(propXpath, {
+			extendXPath: !this.onSearchDialogUpdatesQueryExplicitly
+		});
+	}
+	return true;
+};
+
+Simple.prototype.applySearchCriteria = function SimpleSearchMode_setSearchCriteria(propXpath, criteria) {
+	if (!criteria) {
+		return;
+	}
+
+	this.currQryItem.removeSearchCriteria(propXpath, {
+		extendXPath: !this.onSearchDialogUpdatesQueryExplicitly
+	});
+
+	var domToAml = this.aras.createXMLDocument();
+	domToAml.loadXML(criteria);
+
+	var pathParts = propXpath.split('/');
+	var parentPath = pathParts.splice(0, pathParts.length - 1).join('/');
+
+	// add new criteria to currQryItem
+	var targetNode = this.currQryItem.dom.selectSingleNode(parentPath);
+	if (targetNode) {
+		if (domToAml.documentElement) {
+			targetNode.appendChild(domToAml.documentElement);
+		}
+	} else {
+		var critNd = this._createItemByXPath(parentPath);
+		critNd.appendChild(domToAml.documentElement);
+	}
+};
+
+Simple.prototype.onStartSearchMode = function SimpleSearchMode_onStartSearchMode(sContainer) {
+	// Call base onStartSearchMode method.
+	SearchMode.prototype.onStartSearchMode.call(this, sContainer);
+
+	if (this.grid) {
+		this.grid.ShowInputRow(true);
+	}
+};
+
+Simple.prototype.onEndSearchMode = function SimpleSearchMode_onStartSearchMode(sContainer) {
+	// Call base onEndSearchMode method.
+	SearchMode.prototype.onEndSearchMode.call(this);
+
+	if (this.grid) {
+		this.grid.ShowInputRow(false);
+	}
+};
+
+Simple.prototype.generateValidationInfo = function SimpleSearchMode_generateValidationInfo() {
+	if (!this.grid) {
+		return null;
+	}
+
+	var validationInfo = {};
+	for (var i = 0, j = this.grid.GetColumnCount(); i &lt; j; i++) {
+		validationInfo[this.searchContainer.getPropertyXPathByColumnIndex(i)] = this.searchContainer.getPropertyDefinitionByColumnIndex(i);
+	}
+
+	return validationInfo;
+};
+
+Simple.prototype.setAml = function SimpleSearchMode_setAml(searchAML) {
+	// Call base initSearch method.
+	let xClassCriteria;
+	SearchMode.prototype.setAml.call(this, searchAML);
+	if (this.grid &amp;&amp; this.grid.IsInputRowVisible()) {
+		var qryDom = this.currQryItem.dom.cloneNode(true);
+
+		if (!this.onSearchDialogUpdatesQueryExplicitly) {
+			//clear currQryItem
+			this.currQryItem.removeAllCriterias();
+			this.currQryItem.removeItemAttribute('where');
+			this.currQryItem.removeItemAttribute('order_by');
+		}
+
+		var propList;
+		try {
+			let searchCriteria = searchAML;
+			if (this.supportXClassSearch) {
+				xClassCriteria = qryDom.documentElement.selectSingleNode(this.xClassSearchCriteriaXPath);
+				if (xClassCriteria) {
+					xClassCriteria = qryDom.documentElement.removeChild(xClassCriteria);
+					searchCriteria = qryDom.documentElement.xml;
+				}
+			}
+
+			const json_result = aras.CriteriaConverter.AmlToSimple(searchCriteria);
+			propList = JSON.parse(json_result);
+		}
+		catch (err) {
+			propList = undefined;
+		}
+
+		propXPathToProp = {};
+		if (propList) {
+			propList.forEach(function(propData) {
+				propXPathToProp[propData[0]] = propData;
+			});
+		}
+		var columnsToShow = [];
+
+		//[xpath][name][value][condition]
+		//xpath - Item[@type='Part']/related_id
+		var xpath_num = 0;
+		var name_num = 1;
+		var value_num = 2;
+
+		for (var i = 0, j = this.grid.GetColumnCount(); i &lt; j; i++) {
+			var propXpath = this.searchContainer.getPropertyXPathByColumnIndex(i);
+			var realPropertyXpath = propXpath;
+			var propDef = this.searchContainer.getPropertyDefinitionByColumnIndex(i);
+			var propName = this.aras.getItemProperty(propDef, 'name');
+			if (!this.grid.IsColumnVisible(i)) {
+				if (propXPathToProp[propXpath]) {
+					var colName = this.grid.GetColumnName(i);
+					var width = 100;
+					if (colName === 'L') {
+						width = 32;
+					} else {
+						var tempWidth = parseInt(this.aras.getItemProperty(propDef, 'column_width'));
+						if (!isNaN(tempWidth)) {
+							width = tempWidth;
+						}
+					}
+					columnsToShow.push({id: i, width: width});
+				} else {
+					continue;
+				}
+			}
+			var realPropertyDef = this.aras.getRealPropertyForForeignProperty(propDef);
+
+			var propDT = this.aras.getItemProperty(realPropertyDef, 'data_type');
+			let currentStateRealXpath;
+			if (propDT == 'item') {
+				var propertyDataSource = this.aras.getItemPropertyAttribute(realPropertyDef, 'data_source', 'name');
+				var typeCriterion = propertyDataSource || '';
+
+				if (!propertyDataSource) {
+					this.grid.cells('input_row', i).setEditable(false);
+				}
+
+				const defaultXPath = '/Item' + (typeCriterion === '' ? '' : ('[@type=\'' + typeCriterion + '\']'));
+				if (propName === 'current_state') {
+					currentStateRealXpath = realPropertyXpath += defaultXPath + '/name';
+				} else {
+					realPropertyXpath += defaultXPath + '/keyed_name';
+				}
+			}
+
+			var valueToSet = '';
+			if (propList) {
+				for (var propIndex = 0; propIndex &lt; propList.length; propIndex++) {
+					if (propList[propIndex][xpath_num] === realPropertyXpath) {
+						if (currentStateRealXpath === realPropertyXpath) {
+							const valueToParse = propList[propIndex][value_num];
+							valueToSet = valueToParse.substr(0, valueToParse.length/2-3);
+							const isExistORoperator = valueToSet.search(/[^\\](\|)/) &gt; -1;
+							if (isExistORoperator) {
+								valueToSet = valueToSet.substring(1, valueToSet.length-1);
+							}
+						} else {
+							valueToSet = propList[propIndex][value_num];
+						}
+						break;
+					}
+				}
+			}
+
+			if (!valueToSet) {
+				valueToSet = '';
+			}
+
+			let condition;
+			switch (propDT) {
+				case 'item':
+					if (propName == 'locked_by_id' &amp;&amp; this.grid.GetColumnName(i) == 'L') { //L - lock column
+						condition = qryDom.selectSingleNode(realPropertyXpath + '/@condition');
+						var imageStyle = 'margin-right: 4px; height: auto; width: auto; max-width: 20px; max-height: 20px;';
+
+						condition = condition ? condition.text : 'eq';
+
+						if (condition == 'eq' || condition == 'like') {
+							if (!valueToSet) {
+								valueToSet = '';
+							} else if (valueToSet == '%') {
+								valueToSet = '&lt;img src="../images/ClaimAnyone.svg" style="' + imageStyle + '" /&gt;';
+							} else if (valueToSet == this.loggedUserKeyedName) {
+								valueToSet = '&lt;img src="../images/ClaimOn.svg" style="' + imageStyle + '" /&gt;';
+							} else {
+								valueToSet = '&lt;img src="../images/ClaimOther.svg" style="' + imageStyle + '" /&gt;';
+							}
+						} else if (condition == 'ne') {
+							if (valueToSet) {
+								valueToSet = '&lt;img src="../images/ClaimOther.svg" style="' + imageStyle + '" /&gt;';
+							}
+						}
+					} else {
+						const valueHasWildCard = this._containsWildcardCharacter(valueToSet);
+						condition = (valueHasWildCard ? 'like' : 'eq');
+					}
+					break;
+				case 'date':
+					if (valueToSet) {
+						const topWnd = this.aras.getMostTopWindowWithAras();
+						valueToSet = topWnd.ArasCore.searchConverter.convertDatesFromNeutral(valueToSet);
+					}
+					break;
+				default:
+					var useWildcards = this._searchByWildcardIsEnabled();
+					condition = (useWildcards ? 'like' : 'eq');
+			}
+
+			this.grid.inputRow.set(i, 'value', valueToSet);
+			if (!this.onSearchDialogUpdatesQueryExplicitly) {
+				this.setSearchCriteria(propDef, propXpath, valueToSet, condition);
+			}
+		}
+		columnsToShow.forEach(function(column) {
+			this.grid.SetColumnVisible(column.id, true, column.width);
+		}, this);
+	}
+	if (xClassCriteria) {
+		this.currQryItem.item.appendChild(this.currQryItem.dom.importNode(xClassCriteria, true));
+	}
+};
+
+Simple.prototype.getAml = function SimpleSearchMode_getAml() {
+	if (SearchMode.prototype.getAml.call(this) == undefined) {
+		return undefined;
+	}
+	let xClassCriteria;
+	if (this.supportXClassSearch) {
+		xClassCriteria = this.currQryItem.item.selectSingleNode(this.xClassSearchCriteriaXPath);
+		if (xClassCriteria) {
+			xClassCriteria = this.currQryItem.item.removeChild(xClassCriteria);
+		}
+	}
+
+	this._applyWildcard(this.currQryItem.dom.documentElement, this._searchByWildcardIsEnabled());
+
+	if (xClassCriteria) {
+		this.currQryItem.item.appendChild(xClassCriteria);
+	}
+	return this.currQryItem.item.xml;
+};
+
+Simple.prototype.testAmlForCompatibility = function(searchAml) {
+	let searchQuery = searchAml;
+	if (this.supportXClassSearch) {
+		const queryDom = this.aras.createXMLDocument();
+		queryDom.loadXML(searchAml);
+		const xClassCriteria = queryDom.documentElement.selectSingleNode(this.xClassSearchCriteriaXPath);
+		if (xClassCriteria) {
+			queryDom.documentElement.removeChild(xClassCriteria);
+			searchQuery = queryDom.documentElement.xml;
+		}
+	}
+	return SearchMode.prototype.testAmlForCompatibility.call(this, searchQuery);
+};
+
+Simple.prototype._containsWildcardCharacter = function(criteria) {
+	return /[%*]/.test(criteria);
+};
+
+function SimpleAmlValidator(aras, validationInfoObject) {
+	// Call base SearchMode constructor
+	AmlValidator.prototype.constructor.call(this, aras, validationInfoObject);
+}
+SimpleAmlValidator.prototype =  Object.create(AmlValidator.prototype);
+SimpleAmlValidator.prototype.constructor = SimpleAmlValidator;
+
+SimpleAmlValidator.prototype.generateInnerItemDefinition =
+function SimpleAmlValidator_generateInnerItemDefinition(parentItemXPath, parentItemDef, withKeyedName) {
+	const isCurrentState = parentItemXPath.endsWith("current_state/Item[@type='Life Cycle State']");
+	var transformedParentItemXPath = this._transformXPath(parentItemXPath);
+	var orName = 'OR-' + transformedParentItemXPath;
+	var orGroupName = 'OR-Group-' + transformedParentItemXPath;
+	if (isCurrentState) {
+		this.generateDefenitionForCurrentState(transformedParentItemXPath);
+	}
+	this.schemaGlobalObjects.push('&lt;xs:complexType name="' + orName + '"&gt;');
+	this.schemaGlobalObjects.push('	&lt;xs:choice maxOccurs="unbounded"&gt;');
+	this.schemaGlobalObjects.push('		&lt;xs:group ref="' + orGroupName + '" maxOccurs="unbounded"/&gt;');
+	this.schemaGlobalObjects.push('	&lt;/xs:choice&gt;');
+	this.schemaGlobalObjects.push('&lt;/xs:complexType&gt;');
+
+	var orGroupDefinition = [];
+	orGroupDefinition.push('&lt;xs:group name="' + orGroupName + '"&gt;');
+	orGroupDefinition.push('	&lt;xs:choice&gt;');
+	orGroupDefinition.push('		&lt;xs:element name="OR" type="' + orName + '"/&gt;');
+
+	var parentItemXPathDeep = parentItemXPath.split('/').length;
+
+	parentItemDef.push('			&lt;xs:choice minOccurs="0" maxOccurs="unbounded"&gt;');
+
+	if (withKeyedName) {
+		if (parentItemXPath.indexOf(this.getRootItemXPath() + '/locked_by_id/Item[@type=\'User\']') != -1) {
+
+			parentItemDef.push('			&lt;xs:element name="keyed_name"&gt;');
+			parentItemDef.push('				&lt;xs:complexType&gt;');
+			parentItemDef.push('					&lt;xs:simpleContent&gt;');
+			parentItemDef.push('						&lt;xs:extension base="xs:string"&gt;');
+			parentItemDef.push('							&lt;xs:attribute name="condition" type="CONST-Condition-2"/&gt;');
+			parentItemDef.push('						&lt;/xs:extension&gt;');
+			parentItemDef.push('					&lt;/xs:simpleContent&gt;');
+			parentItemDef.push('				&lt;/xs:complexType&gt;');
+			parentItemDef.push('			&lt;/xs:element&gt;');
+		} else {
+			if (isCurrentState) {
+				parentItemDef.push(`			
+					&lt;xs:element name="OR-AND" type="curr__${transformedParentItemXPath}"/&gt;
+					&lt;xs:element name="OR-label" type="OR-label-and__${transformedParentItemXPath}"/&gt;
+				`);
+			} else {
+				parentItemDef.push('			&lt;xs:element name="keyed_name" type="CONST-string"/&gt;');
+			}
+		}
+		if (!isCurrentState) {
+			orGroupDefinition.push('		&lt;xs:element name="OR-keyed_name" type="CONST-OR-keyed_name"/&gt;');
+		}
+	}
+
+	const andGroup = [];
+
+	for (var currentXPath in this.validationInfoObject) {
+		if (currentXPath.indexOf(parentItemXPath) == -1) {
+
+			continue;
+		}
+
+		var propName;
+		var newItemXPath = '';
+		var currentXPathArray = currentXPath.split('/');
+		var currentXPathDeep = currentXPathArray.length;
+
+		if (currentXPathDeep == parentItemXPathDeep + 1) {
+			var propDef = this.validationInfoObject[currentXPath];
+			var realPropDef = this.aras.getRealPropertyForForeignProperty(propDef);
+			var propDT = this.aras.getItemProperty(realPropDef, 'data_type');
+			propName = this.aras.getItemProperty(propDef, 'name');
+
+			if ('item' != propDT) {
+				var orTypeName = 'OR-' + transformedParentItemXPath + propName;
+				var andTypeName = 'AND-' + transformedParentItemXPath + propName;
+
+				parentItemDef.push(this._generatePropertyDefinition(propName, propDT));
+				orGroupDefinition.push('&lt;xs:element name="OR-' + propName + '" type="' + orTypeName + '"/&gt;');
+
+				if (typesWithRangeSupport.includes(propDT) ) {
+					if (andGroup.length === 0) {
+						orGroupDefinition.push('&lt;xs:element name="AND" type="OR-' + transformedParentItemXPath + '-AND"/&gt;');
+						orGroupDefinition.push('&lt;xs:element name="OR-AND" type="OR-' + transformedParentItemXPath + '-AND"/&gt;');
+					}
+					andGroup.push(this._generatePropertyDefinition(propName, propDT));
+					this.schemaGlobalObjects.push(this.generatePropertyAND(andTypeName, propName, propDT));
+				}
+				this.schemaGlobalObjects.push(this.generatePropertyOR(orTypeName, propName, propDT, andTypeName));
+
+			} else {
+				var propertyDataSource = this.aras.getItemPropertyAttribute(realPropDef, 'data_source', 'name');
+				var typeCriterion = '';
+				if (propertyDataSource) {
+					typeCriterion = '[@type=\'' + propertyDataSource + '\']';
+				}
+
+				newItemXPath = currentXPath + '/Item' + typeCriterion;
+				withKeyedName = false;
+				if (!this.validationInfoObject[newItemXPath + '/keyed_name']) {
+					withKeyedName = true;
+				}
+
+				parentItemDef.push('&lt;xs:element name="' + propName + '"&gt;');
+				parentItemDef.push('	&lt;xs:complexType&gt;');
+				parentItemDef.push('		&lt;xs:choice minOccurs="0" maxOccurs="1"&gt;');
+				parentItemDef.push(this.generateItemDefinition(newItemXPath, false, withKeyedName));
+				parentItemDef.push('		&lt;/xs:choice&gt;');
+				parentItemDef.push('		&lt;xs:attribute name="condition" type="' + this.types.item + '" use="optional"/&gt;');
+				parentItemDef.push('	&lt;/xs:complexType&gt;');
+				parentItemDef.push('&lt;/xs:element&gt;');
+			}
+			delete this.validationInfoObject[currentXPath];
+		} else {
+			propName = currentXPathArray[parentItemXPathDeep];
+
+			for (var j = 0; j &lt; parentItemXPathDeep + 1; j++) {
+				if (newItemXPath) {
+					newItemXPath += '/';
+				}
+
+				newItemXPath += currentXPathArray[j];
+			}
+
+			if (this.validationInfoObject[newItemXPath] &amp;&amp; !this.validationInfoObject[newItemXPath + '/keyed_name']) {
+
+				withKeyedName = true;
+				this.aras.deletePropertyFromObject(this.validationInfoObject, newItemXPath);
+			}
+
+			newItemXPath += '/' + currentXPathArray[parentItemXPathDeep + 1];
+
+			parentItemDef.push('&lt;xs:element name="' + propName + '"&gt;');
+			parentItemDef.push('	&lt;xs:complexType&gt;');
+			parentItemDef.push('		&lt;xs:choice minOccurs="0" maxOccurs="1"&gt;');
+			parentItemDef.push(this.generateItemDefinition(newItemXPath, false, withKeyedName));
+			parentItemDef.push('		&lt;/xs:choice&gt;');
+			parentItemDef.push('	&lt;/xs:complexType&gt;');
+			parentItemDef.push('&lt;/xs:element&gt;');
+		}
+
+		this.aras.deletePropertyFromObject(this.validationInfoObject, currentXPath);
+	}
+
+	if (andGroup.length) {
+		this.schemaGlobalObjects.push('&lt;xs:complexType name="OR-' + transformedParentItemXPath + '-AND"&gt;');
+		this.schemaGlobalObjects.push('	&lt;xs:choice maxOccurs="unbounded"&gt;');
+		this.schemaGlobalObjects.push(andGroup.join(''));
+		this.schemaGlobalObjects.push('		&lt;xs:element name="AND" type="OR-' + transformedParentItemXPath + '-AND"/&gt;');
+		this.schemaGlobalObjects.push('	&lt;/xs:choice&gt;');
+		this.schemaGlobalObjects.push('&lt;/xs:complexType&gt;');
+	}
+
+	orGroupDefinition.push('	&lt;/xs:choice&gt;');
+	orGroupDefinition.push('&lt;/xs:group&gt;');
+
+	this.schemaGlobalObjects.push(orGroupDefinition.join(''));
+
+	if (!isCurrentState) {
+		parentItemDef.push(`			&lt;xs:group ref="${orGroupName}"/&gt;`);
+	}
+	parentItemDef.push('			&lt;/xs:choice&gt;');
+};
+
+SimpleAmlValidator.prototype.generateConditions = function SimpleAmlValidator_generateConditions() {
+	var res = '';
+	res += this.generateConditionDefinition(0, new Array('eq'));
+	res += this.generateConditionDefinition(1, new Array('eq', 'like'));
+	res += this.generateConditionDefinition(2, new Array('eq', 'like', 'ne'));
+	res += this.generateConditionDefinition(3, new Array('eq', 'like', 'between'));
+	res += this.generateConditionDefinition(4, new Array('eq', 'like', 'between', 'gt', 'lt', 'ge', 'le'));
+	res += this.generateConditionDefinition(5, new Array('eq', 'ne', 'between', 'gt', 'lt', 'ge', 'le'));
+	res += this.generateConditionDefinition(6, new Array('is null'));
+	return res;
+};
+
+SimpleAmlValidator.prototype.generatePropertyAND = function SimpleAmlValidator_generatePropertyAND(orName, propName, propDT) {
+	var res = '';
+	res += '  &lt;xs:complexType name="' + orName + '"&gt;';
+	res += '    &lt;xs:choice maxOccurs="unbounded"&gt;';
+	res += this._generatePropertyDefinition(propName, propDT);
+	res += '    &lt;/xs:choice&gt;';
+	res += '  &lt;/xs:complexType&gt;';
+	return res;
+};
+
+SimpleAmlValidator.prototype.generatePropertyOR = function SimpleAmlValidator_generatePropertyOR(orName, propName, propDT, andName) {
+	var res = '';
+	res += '  &lt;xs:complexType name="' + orName + '"&gt;';
+	res += '    &lt;xs:choice maxOccurs="unbounded"&gt;';
+	res += this._generatePropertyDefinition(propName, propDT);
+	res += '      &lt;xs:element name="OR-' + propName + '" type="' + orName + '"/&gt;';
+	if (typesWithRangeSupport.includes(propDT)) {
+		res += '      &lt;xs:element name="AND" type="' + andName + '"/&gt;';
+	}
+	res += '    &lt;/xs:choice&gt;';
+	res += '  &lt;/xs:complexType&gt;';
+	return res;
+};
+
+SimpleAmlValidator.prototype.generateTypes = function SimpleAmlValidator_generateTypes() {
+	var typesArray = [];
+	this.generateTypeDefinition(typesArray, 'boolean', 'CONST-Condition-0', 'xs:boolean');
+	this.generateTypeDefinition(typesArray, 'color', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'color-list', 'CONST-Condition-0');
+	this.generateTypeDefinition(typesArray, 'date', 'CONST-Condition-5');
+	this.generateTypeDefinition(typesArray, 'decimal', 'CONST-Condition-4', 'number-or-number-with-between');
+	this.generateTypeDefinition(typesArray, 'federated', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'filter-list', 'CONST-Condition-0');
+	this.generateTypeDefinition(typesArray, 'float', 'CONST-Condition-4', 'number-or-number-with-between');
+	this.generateTypeDefinition(typesArray, 'foreign', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'formatted-text', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'image', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'integer', 'CONST-Condition-4', 'number-or-number-with-between');
+	this.generateTypeDefinition(typesArray, 'item', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'list', 'CONST-Condition-0');
+	this.generateTypeDefinition(typesArray, 'md5', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'ml_string', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'mv_list', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'sequence', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'string', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'text', 'CONST-Condition-1');
+	this.generateTypeDefinition(typesArray, 'global_version', 'CONST-Condition-5', 'unsigned-integer-or-unsigned-integer-with-between');
+	this.generateTypeDefinition(typesArray, 'ubigint', 'CONST-Condition-5', 'unsigned-integer-or-unsigned-integer-with-between');
+	this.generateTypeDefinition(typesArray, 'null-label', 'CONST-Condition-6');
+
+	typesArray.push('  &lt;xs:simpleType name="number-or-number-with-between"&gt;');
+	typesArray.push('    &lt;xs:restriction base="xs:string"&gt;');
+	typesArray.push('      &lt;xs:pattern value="[+-]?([0-9]+[.,])?[0-9]+(\ and\ [+-]?([0-9]+[.,])?[0-9]+)?"/&gt;');
+	typesArray.push('    &lt;/xs:restriction&gt;');
+	typesArray.push('  &lt;/xs:simpleType&gt;');
+
+	typesArray.push('  &lt;xs:simpleType name="unsigned-integer-or-unsigned-integer-with-between"&gt;');
+	typesArray.push('    &lt;xs:restriction base="xs:string"&gt;');
+	typesArray.push('      &lt;xs:pattern value="([0-9]){1,20}(\ and\ ([0-9]){1,20})?"/&gt;');
+	typesArray.push('    &lt;/xs:restriction&gt;');
+	typesArray.push('  &lt;/xs:simpleType&gt;');
+
+	return typesArray.join('');
+};
+</search_handler>
+  <search_mode_order>128</search_mode_order>
+  <name>Simple</name>
+ </Item>
+</AML>

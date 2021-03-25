@@ -1,0 +1,337 @@
+{
+  "id" : "home_page_toc",
+  "type"  : "wrapperGroup",
+  "extraclass": "skin-component-properties",
+  "wrapper": "divElement",
+  "items" : [
+    {
+      "type": "collapsible",
+      "label": "General",
+      "expanded": "@uiStates.home_page_toc_general",
+      "defaultState": true,
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Number of TOC titles in a row"
+            },
+            {
+              "type": "divElement",
+              "extraclass": ["coral-Form-field"],
+              "items": [{
+                "type": "numberInput",
+                "extraclass": "start",
+                "value": "@attrs.no_of_toc_tiles",
+                "metadata": {
+                  "attr": "no_of_toc_tiles"
+                },
+                "step": "1",
+                "min": "2",
+                "max":"8",
+                "on-change": "startChanged"
+              }]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "collapsible",
+      "label": "Colors",
+      "expanded": "@uiStates.home_page_toc_color",
+      "defaultState": true,
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Item Text"
+            },
+            {
+              "type": "colorpicker",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.toc_tile_text_color",
+              "on-change": {"name": "colorChanged", "args": {"attr": "toc_tile_text_color"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Item Text Background"
+            },
+            {
+              "type": "colorpicker",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.toc_tile_text_bgcolor",
+              "on-change": {"name": "colorChanged", "args": {"attr": "toc_tile_text_bgcolor"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Item Text Hover"
+            },
+            {
+              "type": "colorpicker",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.toc_tile_text_hover_color",
+              "on-change": {"name": "colorChanged", "args": {"attr": "toc_tile_text_hover_color"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Item Text Hover Background"
+            },
+            {
+              "type": "colorpicker",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.toc_tile_text_hover_bgcolor",
+              "on-change": {"name": "colorChanged", "args": {"attr": "toc_tile_text_hover_bgcolor"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Item Background"
+            },
+            {
+              "type": "colorpicker",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.toc_tile_bgcolor",
+              "on-change": {"name": "colorChanged", "args": {"attr": "toc_tile_bgcolor"}}
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Item Hover Background"
+            },
+            {
+              "type": "colorpicker",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.toc_tile_hover_bgcolor",
+              "on-change": {"name": "colorChanged", "args": {"attr": "toc_tile_hover_bgcolor"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "collapsible",
+      "label": "Images",
+      "expanded": "@uiStates.home_page_toc_images",
+      "defaultState": true,
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Book"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "toc_tile_book_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.toc_tile_book_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Book Hover"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "toc_tile_book_hover_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.toc_tile_book_hover_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Topic"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "toc_tile_topic_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.toc_tile_topic_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Topic Hover"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "toc_tile_topic_hover_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.toc_tile_topic_hover_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Remote URL"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "toc_tile_remote_url_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.toc_tile_remote_url_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Remote URL Hover"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "toc_tile_remote_url_hover_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.toc_tile_remote_url_hover_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Back"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "toc_tile_back_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.toc_tile_back_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Back Hover"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "toc_tile_back_hover_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.toc_tile_back_hover_image"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

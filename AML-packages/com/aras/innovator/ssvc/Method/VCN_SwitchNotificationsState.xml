@@ -1,0 +1,43 @@
+﻿<AML>
+ <Item type="Method" id="E5495E51F2ED4C448052792970D3A02B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var query = this.newItem('Variable', 'get');
+// Force.Disable.SSVC.Notifications
+query.setID('98A71F83992449D1ACE157F0E0929CCD');
+query = query.apply();
+if (query.isError()) {
+	aras.AlertError(query);
+	return;
+}
+
+var isNotificationsDisabled = query.getProperty('value') === '1';
+var resourceKey;
+if (isNotificationsDisabled) {
+	resourceKey = 'enable_notifications';
+} else {
+	resourceKey = 'disable_notifications';
+}
+var warningText = aras.getResource('../Modules/aras.innovator.SSVC/', resourceKey);
+if (!aras.confirm(warningText)) {
+	return;
+}
+
+query.setProperty('value', isNotificationsDisabled ? '0' : '1');
+query = query.apply('edit');
+if (query.isError()) {
+	aras.AlertError(query);
+	return;
+}
+
+query = this.newItem('Method', 'VCN_CreateEmailDigestTask');
+query.setAttribute('check_existence', '1');
+query = query.apply();
+if (query.isError()) {
+	aras.AlertError(query);
+	return;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VCN_SwitchNotificationsState</name>
+ </Item>
+</AML>

@@ -1,0 +1,69 @@
+﻿<AML>
+ <Item type="Method" id="BB732B068DA343C18A85CDE16BBDE24D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Dim projects As XmlNodeList = Me.dom.SelectNodes("//Item[@type='Project']")
+Dim project As XmlElement
+Dim propsArray As ArrayList = New ArrayList()
+Dim re4Digit As New System.Text.RegularExpressions.Regex("^[0-9]+$")
+
+
+Dim typeId As String
+If Not project Is Nothing Then typeId = project.GetAttribute("typeId")
+If typeId = "" Then
+    Dim ItemType As XmlElement = CCO.Cache.GetItemTypeFromCache("Project", "name")
+    typeId = ItemType.GetAttribute("id")
+End If
+
+For Each curProperty As XmlElement In CCO.Cache.GetPropertiesFromCache(typeId)
+	Dim propName As String = curProperty.GetAttribute("name")
+	If propName.StartsWith("status_") AndAlso curProperty.GetAttribute("data_type") = "color list" Then
+	    propsArray.Add(propName)
+	End If
+Next
+
+For Each project In projects	
+	Dim RE As System.Text.RegularExpressions.Regex
+	Dim propName As String
+	Dim propName2 As String
+	Dim propValue As String
+	Dim i As Integer
+	
+	Dim css As String = CCO.XML.GetItemProperty(project, "css")
+	If IsNothing(css) Then
+		css = ""
+	End If
+
+        Dim propNameSuffix As String
+	For i = 0 To propsArray.Count - 1
+		propName = propsArray(i)
+		
+		Dim j As Integer = propName.Length
+		Do
+		  propNameSuffix = propName.Substring(j - 1)
+		  j -= 1
+		Loop While re4Digit.IsMatch(propName.Substring(j - 1))
+		
+		propName2 = "percent_compl_" & propNameSuffix
+		propValue = CCO.XML.GetItemProperty(project, propName)
+	
+		If Not IsNothing(propValue) Then
+			If Not propValue.Equals("") Then
+				Dim css2 As String = ""
+				CCO.Utilities.SetPropertyStyle(css2, propName2, "background-color", propValue)
+				RE = New System.Text.RegularExpressions.Regex("(?:^| |\t|\})\." & propName2 & "[ \t]*\{(.+?)\}")
+				Dim Matches As System.Text.RegularExpressions.MatchCollection = RE.Matches(css)
+				If Matches.Count <> 0 Then
+					css = RE.Replace(css, css2)
+				Else
+					css = css & css2
+				End If
+
+				CCO.XML.SetItemProperty(project, "css", css)
+			End If
+		End If
+	Next
+Next project]]></method_code>
+  <method_type>VB</method_type>
+  <name>Project_onAfterGetProject</name>
+ </Item>
+</AML>

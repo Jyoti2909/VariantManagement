@@ -1,0 +1,114 @@
+﻿<AML>
+ <Item type="Method" id="482D5150224544FC954EBFBC8BE91943" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string forumId = this.getID();
+string userId = this.getProperty("user_id");
+if (String.IsNullOrEmpty(userId))
+{
+	throw new Exception(CCO.ErrorLookup.Lookup("SSVC_FailedSubscribeToForumUserIdNotSet"));
+}
+string identityId = GetUserIsAliasIdentityId(userId);
+Item forum = GetForumById(forumId);
+if (forum.isError())
+{
+	throw new Exception(String.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_FailedSubscribeToForum"), forum.getErrorString()));
+}
+if (IsUserSubscribedToForum(forum, identityId))
+{
+	throw new Exception(String.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_FailedSubscribeToForumUserAlreadySubscribed"), userId, forum.getProperty("name")));
+}
+if (IsForumSharedWithUser(forum, userId))
+ {
+	Aras.Server.Security.Identity identity = null;
+	bool permsWasSet = false;
+	try
+	{
+		identity = Aras.Server.Security.Identity.GetByName("Super User");
+		permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(identity);
+		forum = SetIdentityToWantViewBy(forum, identityId);
+		forum.setAction("edit");
+		forum = forum.apply();
+	}
+	finally
+	{
+		if (permsWasSet)
+		{
+			Aras.Server.Security.Permissions.RevokeIdentity(identity);
+		}
+	}
+	return forum;
+ }
+else
+{
+	//shared with string in empty or identites was not found in sw
+	throw new Exception(String.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_ForumNotSharedWithUser"), forum.getProperty("name"), userId));
+}
+}
+
+private string GetUserIsAliasIdentityId(string userId)
+{
+	Item i = this.newItem("User", "VC_GetUserIsAliasIdentity");
+	i.setID(userId);
+	i = i.apply();
+	return i.getID();
+}
+
+private Item SetIdentityToWantViewBy(Item forum, string identityId)
+{
+	Item wvb = this.newItem("ForumWantViewBy", "add");
+	wvb.setProperty("source_id", forum.getID());
+	wvb.setProperty("want_view_id", identityId);
+	forum.addRelationship(wvb);
+	return forum;
+}
+
+private bool IsUserSubscribedToForum(Item forum, string identityId)
+{
+	Item wvb = this.newItem("ForumWantViewBy", "get");
+	wvb.setProperty("want_view_id", identityId);
+	wvb.setProperty("source_id", forum.getID());
+	wvb = wvb.apply();
+	if (!wvb.isError() && wvb.getItemCount() > 0)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+private bool IsForumSharedWithUser(Item forum, string userId)
+{
+	List<string> forums = GetForumsSharedWithUser(userId);
+	if (forums.Contains(forum.getID()))
+	{
+		return true;
+	}
+	else
+		return false;
+}
+
+private List<string> GetForumsSharedWithUser(string userId)
+{
+	List<string> result = new List<string>();
+	Item forumsSharedWithUser = this.newItem("User", "VC_GetForumsSharedWithUser");
+	forumsSharedWithUser.setID(userId);
+	forumsSharedWithUser = forumsSharedWithUser.apply();
+	for (int i = 0, count = forumsSharedWithUser.getItemCount(); i < count; i++)
+	{
+		result.Add(forumsSharedWithUser.getItemByIndex(i).getID());
+	}
+	return result;
+}
+
+private Item GetForumById(string forumId)
+{
+	Item forum = this.newItem("Forum", "get");
+	forum.setID(forumId);
+	forum.setAttribute("select", "shared_with, want_view_by, name, label");
+	return forum.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_SubscribeToForum</name>
+ </Item>
+</AML>

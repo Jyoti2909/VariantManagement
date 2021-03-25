@@ -1,0 +1,110 @@
+﻿<AML>
+ <Item type="Method" id="E93A10ADC03C4CDEB2B33BBE4EB84456" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.TDF.ContentGenerator(Strict);
+
+	Innovator inn = this.Factory.InnovatorInstance;
+
+	// Get document content.
+	Item contentRequest = inn.newItem(executionContext.DocumentItemType, executionContext.ContentBuilderMethod);
+	contentRequest.setID(executionContext.DocumentId);
+	contentRequest = contentRequest.apply();
+
+	if (!contentRequest.isError()) {
+		string documentXml = contentRequest.getResult();
+
+		XmlDocument xmlDoc = new XmlDocument();
+		xmlDoc.LoadXml(documentXml);
+
+		DocumentSchemaElement rootBlock = this.Factory.ParseDocument(xmlDoc) as DocumentSchemaElement;
+
+		// Clear any current content in the node since this Content Generator
+		// could be run on a node that has already been processed.
+		targetElement.ClearChilds();
+
+		// Validation of 'SourceElements' parameter
+		if (!this.GenerationParameters.ContainsKey("SourceElements"))
+		{
+			throw new InvalidOperationException("'SourceElements' generation parameter was not passed.");
+		}
+
+		if (!this.GenerationParameters.ContainsKey("TOCItemName"))
+		{
+			throw new InvalidOperationException("'TOCItemName' generation parameter was not passed.");
+		}
+
+		// Initialization of 'MaxLevel' generation parameter
+		object maxLevelParameter = null;
+		int TOCMaxLevel = Int32.MaxValue;
+		if (this.GenerationParameters.TryGetValue("MaxLevel", out maxLevelParameter))
+		{
+			if (!Int32.TryParse(maxLevelParameter.ToString(), out TOCMaxLevel))
+			{
+				TOCMaxLevel = 0;
+			}
+
+			if (TOCMaxLevel < 1)
+			{
+				throw new InvalidOperationException("'MaxLevel' generation parameter should be 1 or greater.");
+			}
+		}
+
+		// Scan document content and creating TOC-Items
+		CreateTOCLevel(rootBlock, targetElement, 0, TOCMaxLevel);
+	}
+}
+
+// Method searches for elements, which are passed as "SourceElements" into content generator
+// found element content is used for TOCItems generation.
+internal void CreateTOCLevel(DocumentSchemaElement contentElement, DocumentSchemaElement TOCElement, int TOCLevel, int TOCMaxLevel)
+{
+	if (TOCLevel >= TOCMaxLevel) {
+		return;
+	}
+
+	string TOCItemElementName = (string) this.GenerationParameters["TOCItemName"];
+	Dictionary<string, object> itemSources = (Dictionary<string, object>) this.GenerationParameters["SourceElements"];
+	List<DocumentSchemaNode> foundChildren = contentElement.GetAllChildren().ToList();
+
+	foreach (DocumentSchemaNode currentChild in foundChildren)
+	{
+		DocumentSchemaElement childElement = currentChild as DocumentSchemaElement;
+
+		if (childElement != null && itemSources.ContainsKey(childElement.NodeName))
+		{
+			bool isRootChapter = true;
+			DocumentSchemaElement parentElement = childElement.Parent;
+
+			while (parentElement != contentElement)
+			{
+				if (itemSources.ContainsKey(parentElement.NodeName))
+				{
+					isRootChapter = false;
+					break;
+				}
+
+				parentElement = parentElement.Parent;
+			}
+
+			if (isRootChapter)
+			{
+				string textContainerElementName = (string) itemSources[childElement.NodeName];
+				TextDocumentElement TOCItemElement = (TextDocumentElement) this.Factory.NewElement(TOCItemElementName);
+				TextDocumentElement titleElement = childElement.Childs.FirstOrDefault(x => x.NodeName == textContainerElementName) as TextDocumentElement;
+
+				TOCItemElement.Text = titleElement != null && !string.IsNullOrEmpty(titleElement.Text) ? titleElement.Text : childElement.NodeName;
+				TOCItemElement.Strings[0].SetLink(LinkTypes.InternalElement, childElement.Uid);
+				TOCItemElement.SetAttribute("level", TOCLevel.ToString());
+
+				// Add new TOCItem as a child for TOC element.
+				TOCElement.AddChild(TOCItemElement);
+
+				// Search for TOCSourceItems on the next hierarchy level.
+				CreateTOCLevel(childElement, TOCElement, TOCLevel + 1, TOCMaxLevel);
+			}
+		}
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>tp_TOCContentGenerator</name>
+ </Item>
+</AML>

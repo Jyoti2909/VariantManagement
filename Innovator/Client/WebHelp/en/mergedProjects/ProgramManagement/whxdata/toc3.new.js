@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Definitions","type":"item","url":"Definitions.htm"},{"name":"Comparison of Functionality","type":"item","url":"Comparison_of_Functionality.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

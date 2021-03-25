@@ -1,0 +1,59 @@
+﻿<AML>
+ <Item type="Method" id="2DBA488D13EE43AF9E8C43713534ECB0" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var eventState = {};
+var topWnd = aras.getMostTopWindowWithAras(window);
+if (topWnd.main && topWnd.main.work && topWnd.main.work.grid) {
+	var work = topWnd.main.work;
+	if (work.itemTypeName == 'InBasket Task') {
+		var grid = work.grid;
+		var itemIDs = grid.getSelectedItemIds();
+		if (!itemIDs || itemIDs.length === 0 || !work.currQryItem) {
+			return {};
+		}
+
+		var unlockFlg = true;
+		var lockFlg = true;
+		var idsArray = itemIDs.map(function(value) {
+			return '@id=\'' + value + '\'';
+		});
+
+		var res = work.currQryItem.getResult();
+		var itemNds = res.selectNodes('Item[' + idsArray.join(' or ') + ']');
+		var itemTypesNames = [];
+		for (i = 0; i < itemNds.length; i++) {
+			itemNd = itemNds[i];
+			if (itemNd) {
+				var itemTypeId = aras.getItemProperty(itemNd, 'itemtype');
+				var itemTypeName = aras.getItemTypeName(itemTypeId);
+				itemTypesNames.push(itemTypeName);
+				var lockedBy = aras.getItemProperty(itemNd, 'locked_by_id');
+				var isTemp = aras.isTempEx(itemNd);
+				unlockFlg = unlockFlg && (lockedBy == work.userID || (!isTemp && lockedBy !== '' && aras.isAdminUser())) && !isFunctionDisabled(itemTypeName, 'Unlock');
+
+				lockFlg = lockFlg && aras.uiItemCanBeLockedByUser(itemNd, work.isRelationshipIT, work['use_src_accessIT']) &&
+					(aras.getItemProperty(itemNd, 'my_assignment') === '1') && !isFunctionDisabled(itemTypeName, 'Lock');
+				if (itemTypeName === 'Workflow Task') {
+					lockFlg = lockFlg && (aras.getItemProperty(itemNd, 'status').toLowerCase() === 'active');
+				}
+			}
+		}
+
+		eventState.InBasketEventState = {};
+		if (itemNds.length === 1 && itemNds[0]) {
+			eventState.InBasketEventState.discoverOnlyFlg = itemNds[0].getAttribute('discover_only') == '1';
+		}
+
+		eventState.InBasketEventState.itemIds = itemIDs;
+		eventState.InBasketEventState.unlockFlg = unlockFlg;
+		eventState.InBasketEventState.lockFlg = lockFlg;
+		eventState.InBasketEventState.itemTypesNames = itemTypesNames;
+	}
+}
+
+return eventState;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_reinit_inbasket_calc_states</name>
+ </Item>
+</AML>

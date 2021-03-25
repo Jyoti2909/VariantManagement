@@ -1,0 +1,72 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<title></title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" type="text/css" href="../styles/common.min.css">
+	<style type="text/css">
+		@import "../javascript/include.aspx?classes=arasClaro.css";
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/include.aspx?classes=common.css";
+
+		html, body {
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+	<script type="text/javascript" src="../javascript/include.aspx?files=TopWindowHelper"></script>
+	<script>
+		if (window.frameElement && window.frameElement.dialogArguments) {
+			window.dialogArguments = window.frameElement.dialogArguments;
+		} else if (window.parent.parent.dialogArguments) {
+			window.dialogArguments = window.parent.parent.dialogArguments;
+		}
+		var aras = TopWindowHelper.getMostTopWindowWithAras(window).aras;
+		if (window.dialogArguments) {
+			aras = aras || window.dialogArguments.aras;
+		}
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ScriptSet5,TearOffMenuControllerNoCUI,ItemViewWrappers"></script>
+	<script type="text/javascript">
+		var item = null,
+			itemType = null,
+			relationships = null,
+			relationshipsControl = null,
+			RelationshipsOverriddenFunctions = parent.RelationshipsOverriddenFunctions;
+
+		//window.addEvent
+		window.onload = function () {
+			var queryString = { tabbar: QueryString("tabbar").toString(), relTypeID: QueryString("relTypeID").toString(), editMode: QueryString("editMode").toString(), ITName: QueryString("ITName").toString(),
+				itemID: QueryString("itemID").toString(), where: QueryString("where").toString(), db: QueryString("db").toString(), toolbar: QueryString("toolbar").toString(), WorkFlowProc: QueryString("WorkFlowProc").toString()
+			};
+
+			var relData = { window: window, queryString: queryString, style: "height: calc(100% - 26px); padding: 0px", domNode: document.getElementById("relshipContainer") };
+			if (window.dialogArguments) {
+				relData["relationshipsGridAlwaysViewMode"] = window.dialogArguments.relationshipsGridAlwaysViewMode;
+			}
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Experimental.Relationships", relData, function(control) {
+				relationshipsControl = control;
+				relationshipsControl.startup();
+
+				relationships = new RelationshipsWrapper(relationshipsControl);
+				if (queryString.tabbar === '0') {
+					relationships.relTabbar.tabs.style.display = 'none';
+				}
+				item = relationships.item;
+			});
+		}
+	</script>
+</head>
+<body class="claro" ondragenter="return false;" ondragover="return false;" ondrop="return false;">
+	<aras-tabs movable id="tabs-container" class="aras-flex-grow"></aras-tabs>
+	<div id="relshipContainer" style="height: calc(100% - 26px); width: 100%">
+	</div>
+</body>
+</html>

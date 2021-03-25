@@ -1,0 +1,24 @@
+﻿<AML>
+ <Item type="Method" id="756F3BF9A07B41F3A0F3CA012AD4ACA5" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.Server.Core.Configurator.ScopeStructureOutput;
+private Scope _scope;
+
+public override void Init(XmlElement requestItem, Scope scope)
+{
+	_scope = scope;
+}
+
+public override void ExtendVariable(Item variableItem)
+{
+	string variableId = variableItem.getID();
+	Variable variable = this._scope.VariableList.FirstOrDefault(scopeVar => scopeVar.Id == variableId);
+	if (variable != null && variable.DataType != null && (variable.Enum == null || !variable.Enum.NamedConstantList.Any()))
+	{
+		variableItem.setProperty("datatype", variable.DataType.ToString());
+	}
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>effs_ScopeOutputBuilderMethod</name>
+ </Item>
+</AML>

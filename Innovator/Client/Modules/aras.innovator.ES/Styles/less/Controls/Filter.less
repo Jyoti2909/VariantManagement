@@ -1,0 +1,237 @@
+@import '../../../../../styles/less/core/variables';
+@import '../../../../../styles/less/core/inputs';
+
+@filter_dialog-image-checkbox_unselected: url('../../../../../../Images/CheckboxUnselect.svg');
+@filter_dialog-image-checkbox_indet: url('../../../../../../Images/CheckboxIndet.svg');
+@filter_dialog-image-checkbox_selected: url('../../../../../../Images/CheckboxSelect.svg');
+
+@filter_dialog-image-sort_alpha_off: url('../../../../../../Images/SortAlphaOff.svg');
+@filter_dialog-image-sort_alpha_asc: url('../../../../../../Images/SortAlphaAscend.svg');
+@filter_dialog-image-sort_alpha_desc: url('../../../../../../Images/SortAlphaDescend.svg');
+
+@filter_dialog-image-sort_freq_off: url('../../../../../../Images/SortFreqOff.svg');
+@filter_dialog-image-sort_freq_asc: url('../../../../../../Images/SortFreqAscend.svg');
+@filter_dialog-image-sort_freq_desc: url('../../../../../../Images/SortFreqDescend.svg');
+
+@filter_dialog-image-tooltip_arrow: url('../../../../../../Images/TooltipArrow.svg');
+
+@filter_dialog-image-input-menu: url('../../../../../../Images/InputMenu.svg');
+
+@filter_dialog-input-menu-button-size: 1.667rem;
+
+.filterDialog {
+	width: 336px;
+	height: 462px;
+	outline: none;
+}
+
+.aras-button {
+	background-size: 18px 18px;
+	background-position: 50% 50%;
+	background-repeat: no-repeat;
+
+	&[data-state='checked'] {
+		background-image: @filter_dialog-image-checkbox_selected;
+	}
+
+	&[data-state='unchecked'] {
+		background-image: @filter_dialog-image-checkbox_unselected;
+	}
+
+	&[data-state='indet'] {
+		background-image: @filter_dialog-image-checkbox_indet;
+	}
+
+	&[data-filter-control-sort-mode='label'] {
+		background-image: @filter_dialog-image-sort_alpha_off;
+	}
+
+	&[data-filter-control-sort-mode='count'] {
+		background-image: @filter_dialog-image-sort_freq_off;
+	}
+}
+
+.filterDialogContentContainer {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+
+	span[disabled] {
+		pointer-events: none;
+	}
+
+	&[data-filter-sort-mode='count'] {
+		&[data-filter-sort-order='desc'] .active {
+			background-image: @filter_dialog-image-sort_freq_desc;
+		}
+
+		&[data-filter-sort-order='asc'] .active {
+			background-image: @filter_dialog-image-sort_freq_asc;
+		}
+
+		.filterDialogAlphabeticalLabel {
+			visibility: hidden !important;
+		}
+	}
+
+	&[data-filter-sort-mode='label'] {
+		&[data-filter-sort-order='desc'] .active {
+			background-image: @filter_dialog-image-sort_alpha_desc;
+		}
+
+		&[data-filter-sort-order='asc'] .active {
+			background-image: @filter_dialog-image-sort_alpha_asc;
+		}
+	}
+}
+
+.filterDialogAlphabeticalLabel {
+	width: 16px;
+	color: #999999;
+	font-size: 14px;
+	margin-right: 8px;
+	flex-shrink: 0;
+	align-self: baseline;
+	line-height: 18px;
+	text-align: center;
+	visibility: hidden;
+}
+
+.filterItemOptionContainer.firstLetterVisible .filterDialogAlphabeticalLabel {
+	visibility: visible;
+}
+
+.filterDialogOptionsContainer {
+	width: 100%;
+	display: flex;
+	margin-top: 6px;
+	overflow-y: auto;
+	flex-wrap: nowrap;
+	flex-direction: column;
+}
+
+.filterDialogOptionLabelText {
+	max-width: 226px !important; // Required for word-wrap
+}
+
+.aras-button:not([disabled]).active {
+	background-color: #e2e6f3;
+	border-color: #777a9c;
+	box-shadow: none;
+}
+
+.filterDialogSearchContainer {
+	width: 100%;
+
+	& > * {
+		float: left;
+		margin-right: 7px;
+	}
+
+	& > span:last-child {
+		margin-right: 0;
+	}
+}
+
+.filterDialog2SearchTextBoxContainer {
+	position: relative;
+
+	input {
+		width: 192px;
+		padding-right: @input-padding*2 + @filter_dialog-input-menu-button-size;
+	}
+
+	aras-dropdown {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		position: absolute;
+		right: 6px;
+		top: $right;
+		width: @filter_dialog-input-menu-button-size;
+		height: @filter_dialog-input-menu-button-size;
+		border: 1px solid transparent;
+		border-radius: 2px;
+		cursor: pointer;
+
+		aras-menu {
+			margin-top: 5px;
+			margin-left: 6px;
+		}
+
+		[dropdown-button] {
+			background-image: @filter_dialog-image-input-menu;
+			background-size: @filter_dialog-input-menu-button-size;
+			width: $background-size;
+			height: $background-size;
+		}
+
+		&:hover,
+		&[open] {
+			background-color: @color-2;
+		}
+
+		&:active,
+		&[open] {
+			border: 1px solid @indigo-900;
+		}
+	}
+}
+
+.filterDialogBanner {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	height: 28px;
+	margin: 8px -12px 0 -12px;
+	padding: 0 12px;
+	color: #333333;
+	background-color: #fef7af;
+
+	&Label {
+		overflow: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+
+	&Button {
+		flex-shrink: 0;
+		margin-left: 4px;
+		cursor: pointer;
+		color: #0d47a1;
+		text-decoration: underline;
+		user-select: none;
+	}
+}
+
+// Rules, temporary added to this file for testing purposes. Must be moved to another files in further implementation
+.hidden {
+	display: none !important;
+}
+
+.filtersPanelTextBox::-ms-clear,
+.filterDialog2SearchTextBox::-ms-clear {
+	width: 0;
+	height: 0;
+	display: none !important;
+}
+
+.es-message {
+	font-size: 16px;
+	font-weight: bold;
+	line-height: 24px;
+
+	&.info {
+		color: #1b1b98;
+		padding: 25px 0;
+	}
+}
+
+.filterTooltipItem {
+	font-family: @font-12-med;
+	font-weight: 500;
+}
+
+.claro .dijitTooltipConnector {
+	background-image: @filter_dialog-image-tooltip_arrow;
+}

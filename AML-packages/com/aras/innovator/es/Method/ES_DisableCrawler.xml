@@ -1,0 +1,69 @@
+﻿<AML>
+ <Item type="Method" id="1B51A548C57B44D18EE2A16FCBC4AA01" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (this.getProperty('crawler_state', '') !== 'Disabled') {
+	this.setProperty('crawler_state', 'Disabled');
+
+	var crawlerStateItem = this.newItem('ES_CrawlerState', 'get');
+	crawlerStateItem.setProperty('source_id', this.getID());
+	crawlerStateItem = crawlerStateItem.apply();
+
+	if (!crawlerStateItem.isError() && crawlerStateItem.getItemCount() === 0) {
+		crawlerStateItem = this.newItem('ES_CrawlerState', 'add');
+		crawlerStateItem.setProperty('source_id', this.getID());
+		crawlerStateItem = crawlerStateItem.apply();
+	}
+
+	if (!crawlerStateItem.isError() && crawlerStateItem.getItemCount() === 1) {
+		var newFinishDate = convertDateToNeutralFormat(new Date(new Date().getTime() + aras.getCorporateToLocalOffset() * 60000));
+		crawlerStateItem.setProperty('ca_finish', newFinishDate);
+		crawlerStateItem.setProperty('current_action', '');
+		crawlerStateItem.setProperty('next_action', '');
+		crawlerStateItem.setProperty('currently_processed', '0');
+		crawlerStateItem.setProperty('is_iteration_finished', '0');
+		crawlerStateItem.setProperty('total_to_process', '0');
+		crawlerStateItem.setProperty('has_errors', '0');
+
+		var iLockStatus = crawlerStateItem.getLockStatus();
+
+		if (iLockStatus === 0) {
+			crawlerStateItem.apply('edit');
+		}
+
+		if (iLockStatus === 1) {
+			crawlerStateItem.apply('update');
+		}
+	}
+
+	var iLockStatus = this.getLockStatus();
+
+	if (iLockStatus === 0) {
+		this.apply('edit');
+	}
+
+	if (iLockStatus === 1) {
+		this.apply('update');
+	}
+} else {
+	aras.AlertError('Crawler has already been disabled');
+}
+
+function convertDateToNeutralFormat(dt) {
+	var dateString = dt.getFullYear() + '-';
+	dateString += pad(dt.getMonth() + 1) + '-';
+	dateString += pad(dt.getDate()) + 'T';
+	dateString += pad(dt.getHours()) + ':';
+	dateString += pad(dt.getMinutes()) + ':';
+	dateString += pad(dt.getSeconds());
+
+	return dateString;
+}
+
+function pad(x) {
+	return (x < 10) ? '0' + x : '' + x;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_DisableCrawler</name>
+ </Item>
+</AML>

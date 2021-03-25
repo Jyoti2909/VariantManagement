@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="95B06B6860974698B07C42C9A0446706" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA['inDom format:
+'  <Item type='Method' action='Update Project'>
+'    <body project_id='PROJECT_ID_VAL'/>
+'  </Item>
+' OR
+'  <Item type='Project' id='PROJECT_ID_VAL'>
+'    ....
+'  </Item>
+
+Dim i As Innovator = Me.getInnovator()
+Dim projId As String
+Dim tmpNd As XmlElement
+If Me.node.getAttribute("type")="Method" Then
+  tmpNd = CType(Me.node.selectSingleNode("body"), XmlElement)
+  If IsNothing(tmpNd) Then Return i.newError("body is not specified")
+  projId = tmpNd.getAttribute("project_id")
+Else
+  projId = Me.node.getAttribute("id")
+End If
+Dim methNm As String = "PM_fireCustomProjectHook"
+Return i.applyMethod(methNm, String.Format("<body project_id='{0}' prop_name='update_method'/>", System.Security.SecurityElement.Escape(projId)))]]></method_code>
+  <method_type>VB</method_type>
+  <name>Update Project</name>
+ </Item>
+</AML>

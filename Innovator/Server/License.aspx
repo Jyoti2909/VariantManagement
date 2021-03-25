@@ -1,0 +1,1 @@
+<%@ Page CodePage="65001" AutoEventWireup="True" Inherits="Aras.Web.Server.LicenseHttpHandler"%>

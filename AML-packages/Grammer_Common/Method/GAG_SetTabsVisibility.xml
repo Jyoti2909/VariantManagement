@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="2FC7446B368E46F48719D36BCE2A8B57" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const tabsVisibilityList = inArgs.tabsVisibility || [];
+const topWindow = aras.getMostTopWindowWithAras();
+let relationshipsTabBar = topWindow.relationships && topWindow.relationships.relTabbar;
+if (relationshipsTabBar) {
+	setTabVisibility(relationshipsTabBar, tabsVisibilityList);
+} else {
+	topWindow.document.addEventListener('loadWidgets', function() {
+		relationshipsTabBar = topWindow.relationships && topWindow.relationships.relTabbar;
+		setTabVisibility(relationshipsTabBar, tabsVisibilityList);
+		selectFirstVisibleTab();
+	});
+}
+
+function setTabVisibility(relationshipsTabBar, tabsVisibilityList) {
+	tabsVisibilityList.forEach(function(tabVisibility) {
+		relationshipsTabBar.SetTabVisible(tabVisibility.id, tabVisibility.isVisible);
+	});
+}
+
+function selectFirstVisibleTab() {
+	const firstVisibleTab = relationshipsTabBar.tabs.tabs[0];
+	if (firstVisibleTab) {
+		relationshipsTabBar.selectTab(firstVisibleTab);
+	}
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_SetTabsVisibility</name>
+ </Item>
+</AML>

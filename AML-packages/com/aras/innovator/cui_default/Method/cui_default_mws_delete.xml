@@ -1,0 +1,39 @@
+﻿<AML>
+ <Item type="Method" id="A82C781240EA4416AE24E5AC6E70F4A8" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (state.contentEditable) {
+	return true;
+}
+if (this.work && this.work.grid) {
+	var workFrame = this.work;
+	var selectedIds = workFrame.grid.getSelectedItemIds();
+	if (selectedIds.length) {
+		var isDeleteEnabled;
+		var isFuncDisabled = isFunctionDisabled(workFrame.itemTypeName, 'Delete');
+		for (var i = 0; i < selectedIds.length; i++) {
+			var itemNode = aras.getItemById(workFrame.itemTypeName, selectedIds[i], 0);
+			if (itemNode) {
+				var lockedBy = aras.getItemProperty(itemNode, 'locked_by_id');
+				var isTemp = aras.isTempEx(itemNode);
+				isDeleteEnabled = (isTemp || !lockedBy) && !isFuncDisabled;
+				if (!isDeleteEnabled) {
+					return;
+				}
+			} else {
+				isDeleteEnabled = false;
+				break;
+			}
+		}
+
+		if (isDeleteEnabled) {
+			if (workFrame.onDeleteCommand) {
+				workFrame.onDeleteCommand();
+			}
+		}
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_mws_delete</name>
+ </Item>
+</AML>

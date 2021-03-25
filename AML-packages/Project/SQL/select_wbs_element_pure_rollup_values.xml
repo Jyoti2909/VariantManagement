@@ -1,0 +1,172 @@
+﻿<AML>
+ <Item type="SQL" id="13CBF6333ED1427DBD1ACBB1BE783386" action="add">
+  <execution_count>3</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_wbs_element_pure_rollup_values</old_name>
+  <sqlserver_body><![CDATA[create function innovator.select_wbs_element_pure_rollup_values(@WBS_ID CHAR(32))
+  RETURNS @RESULT TABLE(ROLLUP_DURATION_SUM INTEGER,
+                ROLLUP_DURATION_COMPL_SUM FLOAT,
+                ROLLUP_DATE_SCHED_START DATETIME,
+                ROLLUP_DATE_SCHED_DUE DATETIME,
+                rollup_work_est INTEGER,
+                /*Using alias data type DATA_TYPE_44B7A53F168D414ABC98371A1912D166 
+                becaus type of ACTIVITY2.ROLLUP_ACTUAL_WORK is basic type for property  rollup_actual_work.*/
+                rollup_actual_work DATA_TYPE_44B7A53F168D414ABC98371A1912D166,
+                deliv_required CHAR(1) COLLATE database_default,
+                rollup_date_start_act DATETIME,
+                rollup_percent_compl INTEGER,
+                rollup_planned_value INTEGER
+                )
+AS
+begin
+DECLARE @ROLLUP_DURATION_SUM INTEGER
+DECLARE @ROLLUP_DURATION_COMPL_SUM FLOAT
+DECLARE @ROLLUP_DATE_SCHED_START DATETIME
+DECLARE @ROLLUP_DATE_SCHED_DUE DATETIME
+DECLARE @rollup_work_est INTEGER
+--Using alias data type DATA_TYPE_44B7A53F168D414ABC98371A1912D166 becaus type of ACTIVITY2.ROLLUP_ACTUAL_WORK is basic  type for property  rollup_actual_work.
+DECLARE @rollup_actual_work DATA_TYPE_44B7A53F168D414ABC98371A1912D166
+DECLARE @deliv_required CHAR(1)
+DECLARE @rollup_date_start_act DATETIME
+DECLARE @rollup_percent_compl INTEGER
+DECLARE @rollup_planned_value INTEGER
+
+DECLARE @WBS_ELEMENTS TABLE(
+  rollup_duration_sum INTEGER,
+  rollup_duration_compl_sum FLOAT,
+  ROLLUP_DATE_SCHED_START DATETIME,
+  ROLLUP_DATE_SCHED_DUE DATETIME,
+  rollup_work_est INTEGER, 
+  -- Using alias data type for ACTIVITY2.ROLLUP_ACTUAL_WORK because assumes that data type of WBS_ELEMENT.ROLLUP_ACTUAL_WORK equals ACTIVITY2.ROLLUP_ACTUAL_WORK.
+  rollup_actual_work DATA_TYPE_44B7A53F168D414ABC98371A1912D166,
+  deliv_required CHAR(1) COLLATE database_default,
+  rollup_date_start_act DATETIME,
+  rollup_percent_compl INTEGER,
+  rollup_planned_value INTEGER
+  )
+DECLARE @ACTIVITIES TABLE(
+  expected_duration INTEGER, percent_compl INTEGER,
+  DATE_START_SCHED DATETIME,
+  DATE_DUE_SCHED DATETIME,
+  rollup_work_est INTEGER, work_est INTEGER,
+  -- Using alias data type for ACTIVITY2.ROLLUP_ACTUAL_WORK where 44B7A53F168D414ABC98371A1912D166 is ID of this property.
+  rollup_actual_work DATA_TYPE_44B7A53F168D414ABC98371A1912D166,
+  -- Using alias data type for ACTIVITY2.ACTUAL_WORK where 7D73C3BAC4AB4D29AAF88B88DCBC413C is ID of this property.
+  actual_work DATA_TYPE_7D73C3BAC4AB4D29AAF88B88DCBC413C,
+  deliv_required CHAR(1) COLLATE database_default,
+  date_start_act DATETIME,
+  rollup_percent_compl INTEGER,
+  planned_value INTEGER
+  )
+  
+ DECLARE @work_day_duration INT
+ SET @work_day_duration = 8
+  
+INSERT @WBS_ELEMENTS
+SELECT rollup_duration_sum, rollup_duration_compl_sum, ROLLUP_DATE_SCHED_START, ROLLUP_DATE_SCHED_DUE, rollup_work_est, rollup_actual_work, deliv_required, rollup_date_start_act, rollup_percent_compl, rollup_planned_value
+FROM WBS_ELEMENT 
+WHERE ID IN (SELECT RELATED_ID FROM SUB_WBS WHERE SOURCE_ID = @WBS_ID)
+
+INSERT @ACTIVITIES
+SELECT expected_duration, percent_compl, DATE_START_SCHED, DATE_DUE_SCHED, rollup_work_est, work_est, rollup_actual_work, actual_work, deliv_required, date_start_act, rollup_percent_compl, planned_value
+FROM ACTIVITY2
+WHERE ID IN (SELECT RELATED_ID FROM WBS_ACTIVITY2 WHERE SOURCE_ID = @WBS_ID)
+
+SET @ROLLUP_DURATION_SUM = NULL
+DECLARE @TMP1 INTEGER
+SET @TMP1 = (SELECT SUM(rollup_duration_sum) FROM @WBS_ELEMENTS)
+IF NOT (@TMP1 IS NULL) SET @ROLLUP_DURATION_SUM = @TMP1
+SET @TMP1 = (SELECT SUM(expected_duration) FROM @ACTIVITIES)
+IF NOT (@TMP1 IS NULL) SET @ROLLUP_DURATION_SUM = IsNull(@ROLLUP_DURATION_SUM, 0) + @TMP1
+
+SET @ROLLUP_DURATION_COMPL_SUM = NULL
+DECLARE @TMP2 FLOAT
+SET @TMP2 = (SELECT SUM(rollup_duration_compl_sum) FROM @WBS_ELEMENTS)
+IF NOT (@TMP2 IS NULL) SET @ROLLUP_DURATION_COMPL_SUM = @TMP2
+SET @TMP2 = (SELECT SUM((expected_duration*percent_compl)/100.0) FROM @ACTIVITIES)
+IF NOT (@TMP2 IS NULL) SET @ROLLUP_DURATION_COMPL_SUM = IsNull(@ROLLUP_DURATION_COMPL_SUM, 0) + @TMP2
+
+DECLARE @TMP3 TABLE (D DATETIME)
+INSERT @TMP3
+ SELECT ROLLUP_DATE_SCHED_START FROM @WBS_ELEMENTS
+INSERT @TMP3
+ SELECT DATE_START_SCHED FROM @ACTIVITIES
+SET @ROLLUP_DATE_SCHED_START = (SELECT MIN(D) FROM @TMP3)
+
+DELETE FROM @TMP3
+INSERT @TMP3
+ SELECT ROLLUP_DATE_SCHED_DUE FROM @WBS_ELEMENTS
+INSERT @TMP3
+ SELECT DATE_DUE_SCHED FROM @ACTIVITIES
+SET @ROLLUP_DATE_SCHED_DUE = (SELECT MAX(D) FROM @TMP3)
+
+SET @rollup_work_est=NULL
+DECLARE @TMP4 INTEGER
+SET @TMP4 = (SELECT SUM(rollup_work_est) FROM @WBS_ELEMENTS)
+IF NOT (@TMP4 IS NULL) SET @rollup_work_est = @TMP4
+SET @TMP4 = (SELECT SUM(rollup_work_est) FROM @ACTIVITIES)
+IF NOT (@TMP4 IS NULL) SET @rollup_work_est = IsNull(@rollup_work_est, 0) + @TMP4
+SET @TMP4 = (SELECT SUM(INNOVATOR.select_work_est_for_rollup(work_est, expected_duration, @work_day_duration)) FROM @ACTIVITIES WHERE rollup_work_est IS NULL)
+IF NOT (@TMP4 IS NULL) SET @rollup_work_est = IsNull(@rollup_work_est, 0) + @TMP4
+
+SET @rollup_actual_work=NULL
+--Using alias data type DATA_TYPE_44B7A53F168D414ABC98371A1912D166 becaus type of ACTIVITY2.ROLLUP_ACTUAL_WORK is basic type for property  rollup_actual_work.
+DECLARE @TMP5  DATA_TYPE_44B7A53F168D414ABC98371A1912D166
+SET @TMP5 = (SELECT SUM(rollup_actual_work) FROM @WBS_ELEMENTS)
+IF NOT (@TMP5 IS NULL) SET @rollup_actual_work = @TMP5
+SET @TMP5 = (SELECT SUM(rollup_actual_work) FROM @ACTIVITIES)
+IF NOT (@TMP5 IS NULL) SET @rollup_actual_work = IsNull(@rollup_actual_work, 0) + @TMP5
+SET @TMP5 = (SELECT SUM(actual_work) FROM @ACTIVITIES WHERE rollup_actual_work IS NULL)
+IF NOT (@TMP5 IS NULL) SET @rollup_actual_work = IsNull(@rollup_actual_work, 0) + @TMP5
+
+SET @deliv_required='0'
+DECLARE @TMP6 INTEGER
+SET @TMP6 = (SELECT COUNT(deliv_required) FROM @WBS_ELEMENTS WHERE deliv_required='1')
+IF (@TMP6>0) SET @deliv_required = '1'
+SET @TMP6 = (SELECT COUNT(deliv_required) FROM @ACTIVITIES WHERE deliv_required='1')
+IF (@TMP6>0) SET @deliv_required = '1'
+
+DELETE FROM @TMP3
+INSERT @TMP3
+ SELECT rollup_date_start_act FROM @WBS_ELEMENTS
+INSERT @TMP3
+ SELECT date_start_act FROM @ACTIVITIES
+SET @rollup_date_start_act = (SELECT MIN(D) FROM @TMP3)
+
+SET @rollup_percent_compl=NULL
+DECLARE @TMP7 INTEGER
+DECLARE @SUM1 INTEGER
+DECLARE @SUM2 INTEGER
+SET @SUM1 = NULL
+SET @SUM2 = NULL
+SET @TMP7 = (SELECT SUM(rollup_percent_compl*rollup_work_est) FROM @WBS_ELEMENTS)
+IF NOT (@TMP7 IS NULL) SET @SUM1 = IsNull(@SUM1, 0) + @TMP7
+SET @TMP7 = (SELECT SUM(rollup_percent_compl*rollup_work_est) FROM @ACTIVITIES)
+IF NOT (@TMP7 IS NULL) SET @SUM1 = IsNull(@SUM1, 0) + @TMP7
+SET @TMP7 = (SELECT SUM(percent_compl*INNOVATOR.select_work_est_for_rollup(work_est, expected_duration, @work_day_duration)) FROM @ACTIVITIES WHERE rollup_percent_compl IS NULL OR rollup_work_est IS NULL)
+IF NOT (@TMP7 IS NULL) SET @SUM1 = IsNull(@SUM1, 0) + @TMP7
+SET @TMP7 = (SELECT SUM(rollup_work_est) FROM @WBS_ELEMENTS)
+IF NOT (@TMP7 IS NULL) SET @SUM2 = IsNull(@SUM2, 0) + @TMP7
+SET @TMP7 = (SELECT SUM(rollup_work_est) FROM @ACTIVITIES)
+IF NOT (@TMP7 IS NULL) SET @SUM2 = IsNull(@SUM2, 0) + @TMP7
+SET @TMP7 = (SELECT SUM(INNOVATOR.select_work_est_for_rollup(work_est, expected_duration, @work_day_duration)) FROM @ACTIVITIES WHERE rollup_work_est IS NULL)
+IF NOT (@TMP7 IS NULL) SET @SUM2 = IsNull(@SUM2, 0) + @TMP7
+IF @SUM2 != 0 SET @rollup_percent_compl = CAST(@SUM1 AS FLOAT) / @SUM2
+
+SET @rollup_planned_value=NULL
+DECLARE @TMP8 INTEGER
+SET @TMP8 = (SELECT SUM(rollup_planned_value) FROM @WBS_ELEMENTS)
+IF NOT (@TMP8 IS NULL) SET @rollup_planned_value = @TMP8
+SET @TMP8 = (SELECT SUM(planned_value) FROM @ACTIVITIES)
+IF NOT (@TMP8 IS NULL) SET @rollup_planned_value = IsNull(@rollup_planned_value, 0) + @TMP8
+
+INSERT @RESULT
+  SELECT @ROLLUP_DURATION_SUM, @ROLLUP_DURATION_COMPL_SUM, @ROLLUP_DATE_SCHED_START,  @ROLLUP_DATE_SCHED_DUE, @rollup_work_est, @rollup_actual_work, @deliv_required, @rollup_date_start_act, @rollup_percent_compl, @rollup_planned_value
+RETURN
+end]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_wbs_element_pure_rollup_values</name>
+ </Item>
+</AML>

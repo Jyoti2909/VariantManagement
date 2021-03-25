@@ -1,0 +1,317 @@
+﻿<AML>
+ <Item type="Method" id="0450D6F7441B41629E48EA4AB509CCB7" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Innovator innovator = this.getInnovator();
+	var dal = new DataAccess(innovator);
+	var utils = new Utils(innovator);
+
+	var restartEdrAction = new RestartEdrAction(new ExpressEdr(this, dal), dal);
+	var errors = restartEdrAction.Validate();
+	if (errors.Any())
+	{
+		return utils.ErrorResult(errors.First());
+	}
+
+	return restartEdrAction.Execute();
+}
+
+class RestartEdrAction
+{
+	private const string VotePath = "Reject";
+
+	private readonly ExpressEdr _edr;
+	private readonly DataAccess _dataAccess;
+
+	public RestartEdrAction(ExpressEdr edr, DataAccess dataAccess)
+	{
+		_edr = edr;
+		_dataAccess = dataAccess;
+	}
+
+	public ICollection<string> Validate()
+	{
+		var errors = new List<string>();
+		ShouldBeUnlocked(errors);
+		EdrInPendingClosureState(errors);
+		return errors;
+	}
+
+	public Item Execute()
+	{
+		var arasPlmIdentity = Aras.Server.Security.Identity.GetByName("Aras PLM");
+		var workflow = new Workflow(_dataAccess.GetWorkflow(_edr.Id));
+		var activity = workflow.ActiveActivity;
+		var activityAssignment = activity.Assignment.FirstOrDefault(a => a.getRelatedItemID() == arasPlmIdentity.Id);
+		var path = activity.Paths.FirstOrDefault(p => p.getProperty("name") == VotePath);
+		if (activityAssignment == null || path == null)
+		{
+			throw new InvalidOperationException("No any assignments found for Aras PLM identity. This assignment is supposed to be completed to perform operation.");
+		}
+		return _dataAccess.VoteActivity(activity.Id, activityAssignment.getID(), path.getID());
+	}
+
+	private void ShouldBeUnlocked(ICollection<string> errors)
+	{
+		if (_edr.IsLocked)
+		{
+			errors.Add("Current EDR is locked. Please unlock the EDR first.");
+		}
+	}
+
+	private void EdrInPendingClosureState(ICollection<string> errors)
+	{
+		if (!String.Equals(EdrStates.PendingClosure, _edr.State, StringComparison.InvariantCulture))
+		{
+			errors.Add("EDR Restart Action is only available if EDR in Pending Closure state.");
+		}
+	}
+}
+
+class ExpressEdr : ItemWrapper
+{
+	private readonly Lazy<Workflow> _workflow;
+	public Workflow Workflow
+	{
+		get { return _workflow.Value; }
+	}
+
+	public ExpressEdr(Item edrItem, DataAccess dataAccess)
+		: base(edrItem)
+	{
+	    if (edrItem.getType() != ItemTypeNames.ExpressEdr)
+	    {
+	        throw new ArgumentException("Item is not a Express EDR");
+	    }
+	    _workflow = new Lazy<Workflow>(() => new Workflow(dataAccess.GetWorkflow(Id)));
+	}
+}
+
+class Activity : ItemWrapper
+{
+	public string Name
+	{
+		get { return Item.getProperty("name"); }
+	}
+
+	public DateTime ActivateDateTime
+	{
+		get { return XmlConvert.ToDateTime(Item.getProperty("active_date"), "s"); }
+	}
+
+	public ICollection<Item> Assignment
+	{
+		get
+		{
+			var assignments =
+				ItemHelper.Enumerate(Item.getRelationships(ItemTypeNames.ActivityAssignment)).ToList();
+			return new System.Collections.ObjectModel.ReadOnlyCollection<Item>(assignments);
+		}
+	}
+
+	public ICollection<Item> Paths
+	{
+		get
+		{
+			var paths = ItemHelper.Enumerate(Item.getRelationships(ItemTypeNames.WorkflowProcessPath)).ToList();
+			return new System.Collections.ObjectModel.ReadOnlyCollection<Item>(paths);
+		}
+	}
+
+	public Activity(Item activityItem)
+		: base(activityItem)
+	{
+	}
+
+	public override string ToString()
+	{
+		return Name;
+	}
+}
+
+class Workflow : ItemWrapper
+{
+	public Activity ActiveActivity
+	{
+		get { return History.LastOrDefault(); }
+	}
+
+	private readonly Lazy<ICollection<Activity>> _history;
+	public ICollection<Activity> History
+	{
+		get { return _history.Value; }
+	}
+
+	public Workflow(Item workflowItem)
+		: base(workflowItem)
+	{
+		_history = new Lazy<ICollection<Activity>>(ExtractWorkflowHistory);
+	}
+
+	private ICollection<Activity> ExtractWorkflowHistory()
+	{
+		const string selectActivatedActivites =
+			"./related_id/Item[@type=\"Workflow Process\"]/Relationships/Item/related_id/Item[@type=\"Activity\"][active_date]";
+		var history = ItemHelper.Enumerate(Item.getItemsByXPath(selectActivatedActivites))
+			.Select(item => new Activity(item))
+			.OrderBy(activity => activity.ActivateDateTime);
+		return new System.Collections.ObjectModel.ReadOnlyCollection<Activity>(history.ToList());
+	}
+}
+
+abstract class ItemWrapper
+{
+	protected Item Item { get; set; }
+
+	public string Id
+	{
+		get { return Item.getID(); }
+	}
+
+	public string State
+	{
+		get { return Item.getProperty("state"); }
+	}
+
+	public bool IsLocked
+	{
+		get { return Item.getLockStatus() != 0; }
+	}
+
+	protected ItemWrapper(Item item)
+	{
+		Item = item;
+	}
+}
+
+class DataAccess
+{
+	private readonly Innovator _innovator;
+
+	public DataAccess(Innovator innovator)
+	{
+		_innovator = innovator;
+	}
+
+	public Item GetWorkflow(string id)
+	{
+		Item workflow = _innovator.newItem(ItemTypeNames.Workflow, ItemActions.Get);
+		Item workflowProcess = _innovator.newItem("Workflow Process", ItemActions.Get);
+		Item wfpa = _innovator.newItem("Workflow Process Activity", ItemActions.Get);
+		Item activity = _innovator.newItem("Activity", "get");
+		Item activityAssign = _innovator.newItem(ItemTypeNames.ActivityAssignment, ItemActions.Get);
+		Item wpp = _innovator.newItem("Workflow Process Path", ItemActions.Get);
+		Item wppActivity = _innovator.newItem("Activity", ItemActions.Get);
+		wppActivity.setPropertyCondition("cloned_as", "is null");
+		wpp.setRelatedItem(wppActivity);
+		workflow.setRelatedItem(workflowProcess);
+		workflow.setPropertyCondition(RelationshipProperties.Related, "is not null");
+		workflow.setProperty(RelationshipProperties.Source, id);
+		workflowProcess.addRelationship(wfpa);
+		wfpa.setRelatedItem(activity);
+		activity.addRelationship(activityAssign);
+		activity.addRelationship(wpp);
+		return workflow.apply();
+	}
+
+	public Item VoteActivity(string activityId, string activityAssignment, string pathId)
+	{
+		// Build the voting request
+		var voteXml = new StringBuilder("");
+		voteXml.Append("<Item type=\"Activity\" action=\"EvaluateActivity\">");
+		voteXml.Append(" <Activity>{0}</Activity>");
+		voteXml.Append(" <ActivityAssignment>{1}</ActivityAssignment>");
+		voteXml.Append(" <Paths>");
+		voteXml.Append(" <Path id=\"{2}\"/>");
+		voteXml.Append(" </Paths>");
+		voteXml.Append(" <DelegateTo>0</DelegateTo>");
+		voteXml.Append(" <Tasks />");
+		voteXml.Append(" <Variables />");
+		voteXml.Append(" <Authentication mode=\"\" />");
+		voteXml.Append(" <Comments/>");
+		voteXml.Append(" <Complete>1</Complete>");
+		voteXml.Append("</Item>");
+
+		var evaluateActivityQuery = _innovator.newItem();
+		evaluateActivityQuery.loadAML(String.Format(voteXml.ToString(), System.Security.SecurityElement.Escape(activityId), 
+			System.Security.SecurityElement.Escape(activityAssignment), System.Security.SecurityElement.Escape(pathId)));
+		return evaluateActivityQuery.apply();
+	}
+}
+
+class Utils
+{
+	private readonly Innovator _innovator;
+
+	public Utils(Innovator innovator)
+	{
+		_innovator = innovator;
+	}
+
+	public Item OkResult()
+	{
+		return _innovator.newResult("OK");
+	}
+
+	public Item ErrorResult()
+	{
+		return ErrorResult(String.Empty);
+	}
+
+	public Item ErrorResult(string explanation)
+	{
+		return _innovator.newError(explanation);
+	}
+}
+
+class ItemActions
+{
+	public const string Add = "add";
+	public const string Edit = "edit";
+	public const string Update = "update";
+	public const string Get = "get";
+	public const string Delete = "delete";
+}
+
+class ItemTypeNames
+{
+	public const string Activity = "Activity";
+	public const string ActivityAssignment = "Activity Assignment";
+	public const string ExpressEdr = "Express EDR";
+	public const string Workflow = "Workflow";
+	public const string WorkflowProcess = "Workflow Process";
+	public const string WorkflowProcessActivity = "Workflow Process Activity";
+	public const string WorkflowProcessPath = "Workflow Process Path";
+}
+
+class RelationshipProperties
+{
+	public const string Source = "source_id";
+	public const string Related = "related_id";
+}
+
+static class EdrStates
+{
+	public const string PendingClosure = "Pending Closure";
+}
+
+static class ItemHelper
+{
+	public static IEnumerable<Item> Enumerate(Item itemCollection)
+	{
+		if (itemCollection == null)
+		{
+			throw new ArgumentNullException("itemCollection");
+		}
+		var count = itemCollection.getItemCount();
+		for (var i = 0; i < count; i++)
+		{
+			yield return itemCollection.getItemByIndex(i);
+		}
+	}
+}
+
+internal class SomeClass {]]></method_code>
+  <method_type>C#</method_type>
+  <name>EDR_Restart</name>
+ </Item>
+</AML>

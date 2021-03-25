@@ -1,0 +1,99 @@
+﻿@import 'variables';
+
+@chip-height: 2.667rem;
+@chip-icon-size: 2rem;
+
+.aras-chip-list {
+	display: flex;
+
+	&_vertical {
+		flex-direction: column;
+		& .aras-chip {
+			margin-bottom: 8px;
+			flex-shrink: 0;
+		}
+	}
+
+	&_horizontal {
+		flex-direction: row;
+		& .aras-chip {
+			margin-right: 8px;
+		}
+	}
+}
+
+.aras-chip {
+	display: flex;
+	align-items: center;
+	height: @chip-height;
+	width: 100%;
+	box-sizing: border-box;
+	cursor: pointer;
+	border-radius: @chip-height;
+	border: 1px solid transparent;
+	font: @font-12-med;
+
+	&:not(&_disabled) {
+		&:focus {
+			outline: none;
+			box-shadow: @shadow-focus-2;
+		}
+	}
+	&:last-of-type {
+		margin-bottom: 0;
+		margin-right: 0;
+	}
+	&:not(&_disabled) {
+		&:hover {
+			border-color: @neutral-7;
+			background-color: @neutral-f7;
+		}
+	}
+	&__icon {
+		width: @chip-icon-size;
+		height: @chip-icon-size;
+		flex-shrink: 0;
+	}
+
+	&__label {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		margin: 0 12px;
+	}
+
+	&_disabled {
+		opacity: 0.4;
+		filter: grayscale(100%);
+		&:hover {
+			cursor: default;
+		}
+		&:focus {
+			outline: none;
+		}
+	}
+
+	&_3 {
+		color: @neutral-3;
+		background-color: @neutral-e;
+
+		& > .aras-chip__icon + .aras-chip__label {
+			margin-left: 4px;
+		}
+
+		& > .aras-chip__icon {
+			margin-left: 8px;
+		}
+
+		&.aras-chip_active {
+			border-color: @color-14;
+			color: @color-14;
+			background-color: @color-3;
+
+			&:hover {
+				background-color: @color-2;
+				border-color: @color-14;
+			}
+		}
+	}
+}

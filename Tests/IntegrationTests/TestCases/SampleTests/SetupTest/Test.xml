@@ -1,0 +1,32 @@
+﻿<TestCase author="Noname" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>Create Item of Item Type SampleMetadata, created in 'Setup Test.xml'</Description>
+	<Request>
+		<Comments>
+			Create a new item of SampleMetadata item type
+			Select Quality Innovator/SampleMetadata item type in main tree and create a new item (click 'Create a New Item' icon on main toolbar). Fill in 'prop_str' field (enter, for example, 'test_prop_str'). Save/Unlock and Close the item
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="SampleMetadata" action="add" id="B3FBA327C9E747478FC3E7FA3B8A2123" doGetItem="0">
+					<prop_str>test_prop_str</prop_str>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="SampleMetadata" id="B3FBA327C9E747478FC3E7FA3B8A2123" />
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<TestCaseCleanUp>
+		<Query>
+			<AML>
+				<Item type="SampleMetadata" id="B3FBA327C9E747478FC3E7FA3B8A2123" action="delete" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

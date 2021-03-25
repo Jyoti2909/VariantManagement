@@ -1,0 +1,157 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>Choose deliverable please</title>
+	<link rel="stylesheet" type="text/css" href="../../../styles/default.css" />
+	<style type="text/css">
+		@import "../../../public/styles/controls.css";	
+	</style>
+	<style type="text/css">
+		html, body {
+			height: 100%;
+			margin: 0px;
+			padding: 0px
+		}
+	</style>
+	<script type="text/javascript">
+		window.dialogArguments = window.frameElement.dialogArguments;
+		var aras = dialogArguments.aras;
+	</script>
+	<script type="text/javascript" src="../../../javascript/dialog.js"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,ScriptSet2"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js"
+		data-dojo-config="isDebug: true, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=ScriptSet6"></script>
+	<script type="text/javascript">
+		var items = [];
+		function initItems() {
+			var deliverables = dialogArguments.deliverables;
+			for (var i = 0; i < deliverables.length; i++) {
+				items.push(deliverables[i]);
+			}
+		}
+		initItems();
+
+		var grid = null;
+		var xmlParentBase = aras.getScriptsURL() + "../Solutions/Project/";
+
+		function onToolbarLoad() {
+			toolbar = document.toolbar;
+			toolbar.showLabels(false);
+			activeToolbar = toolbar.getActiveToolbar();
+		}
+
+		function onToolbarButtonClick(btn) {
+			var btnId = btn.getId(),
+				rowId = grid.getSelectedId();
+			switch (btnId) {
+				case "ready_btn":
+					if (rowId) {
+						closeWindow(grid.getUserData(rowId, "id"));
+					} else {
+						closeWindow();
+					}
+					break;
+				case "set_nothing":
+					grid.setSelectedRow(rowId, true);
+					break;
+			}
+		}
+
+		function loadToolbar() {
+			toolbar.loadXml(aras.getI18NXMLResource("itemChoice_toolbar.xml", xmlParentBase));
+			toolbar.show();
+			onToolbarLoad();
+		}
+
+		function initGrid() {
+			var initXml = aras.createXMLDocument();
+			initXml.load(aras.getI18NXMLResource("itemChoice_grid.xml", xmlParentBase));
+
+			if (initXml.parseError.errorCode !== 0) {
+				var loadError = initXml.parseError;
+				aras.AlertError(aras.getResource("project", "item_choice.have_error", loadError.reason));
+				return;
+			}
+
+			var tableNode = initXml.selectSingleNode("table");
+			for (var i = 0; i < items.length; i++) {
+				var item = items[i];
+				var newTr = initXml.createElement("tr");
+
+				var newTd = initXml.createElement("td");
+				newTd.text = item[1];
+
+				var userData = initXml.createElement("userdata");
+				userData.setAttribute("key", "id");
+				userData.setAttribute("value", item[0]);
+
+				newTr.appendChild(userData);
+				newTr.appendChild(newTd);
+				tableNode.appendChild(newTr);
+			}
+			grid.InitXML(initXml.xml);
+		}
+
+		window.addEventListener("load", function () {
+			aras.browserHelper.adjustGridSize(window, function () {
+				document.getElementById("main_table").style.height = (dojo.window.getBox().h - 30) + "px";
+			}, false);
+		});
+
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", {id: "top_toolbar", connectId: "toolbar_container_cell" }, function(control) {
+			document.toolbar = toolbar = control;
+
+			clientControlsFactory.on(toolbar, {
+				"onClick": function (tbItem) {
+					onToolbarButtonClick(tbItem);
+				}
+			});
+			loadToolbar();
+		});
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", undefined, function(control) {
+			grid = control;
+			initGrid();
+		});
+
+		function fixGridHeight() {
+			var el = document.getElementById("gridTD");
+			aras.fixLiquidContainerHeight(document, el);
+		}
+
+		function closeWindow(value) {
+			if (dialogArguments.dialog) {
+				dialogArguments.dialog.close(value);
+			} else {
+				window.returnValue = value;
+				window.close();
+			}
+		}
+
+		onload = function () {
+			interval = window.setInterval(fixGridHeight, 100);
+			window.addEventListener("beforeunload", function () {
+				if (window.interval) {
+					clearInterval(interval);
+				}
+			});
+		};
+
+		onresize = function () {
+			fixGridHeight();
+		};
+	</script>
+</head>
+<body class="claro" scroll="no">
+	<table id="main_table" style="width: 100%; height: 100%;" cellspacing="0" cellpadding="0">
+		<tr id="toolbar_container" style="display: ''; vertical-align: top">
+			<td id="toolbar_container_cell" style="height: 30px;">
+			</td>
+		</tr>
+		<tr style="vertical-align: top;">
+			<td id="gridTD" style="height: 100%;">
+			</td>
+		</tr>
+	</table>
+</body>
+</html>

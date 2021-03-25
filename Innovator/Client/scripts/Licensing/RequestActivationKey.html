@@ -1,0 +1,107 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!-- (c) Copyright by Aras Corporation, 2013. -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="../../styles/default.css" />
+	<style type="text/css">
+		body, html
+		{
+			border: none;
+			overflow: hidden;
+			height: 100%;
+			background-color: buttonface;
+		}
+		.label
+		{
+			padding-left: 10px;
+			padding-right: 10px;
+			display: inline-block;
+			font-family: arial, helvetica, sans-serif;
+			font-size: 9pt;
+		}
+	</style>
+	<script type="text/javascript" src="../../javascript/Licensing.js"></script>
+	<script type="text/javascript">
+		var dialogArguments = parent.dialogArguments;
+		var arasObject = dialogArguments.aras;
+		var licensingObject = dialogArguments.licensingObject ? dialogArguments.licensingObject : new Licensing(arasObject);
+		document.write("<title>" + arasObject.getResource("", "licensing.view_feature_tree_title") + "</title>");
+
+		onload = function () {
+			populate();
+
+			var licensingObj = new Licensing();
+			var featureTreeDom = licensingObj.GetFeatureTree();
+			parser(featureTreeDom, 0);
+		}
+
+		function parser(node, depth) {
+			addOption(node.getAttribute("name"), depth);
+			var nodes = node.selectNodes('Feature');
+			for (var i = 0; i < nodes.length; i++) {
+				parser(nodes[i], depth + 1);
+			}
+		}
+
+		function addOption(value, level) {
+			var txt = new String();
+			for (var i = 0; i < 5 * level; i++)
+				txt += "-";
+			txt += value;
+			var option = document.createElement("option");
+			option.appendChild(document.createTextNode(txt));
+			option.setAttribute("value", value);
+
+			document.getElementById("features").appendChild(option);
+		}
+
+		function populate() {
+			document.getElementById("feature_label").innerHTML = arasObject.getResource("", "licensing.feature_label");
+			document.getElementById("ok_btn").value = arasObject.getResource("", "common.ok");
+			document.getElementById("cancel_btn").value = arasObject.getResource("", "common.cancel");
+		}
+
+		function getFeature() {
+			var el = document.getElementById("features");
+			returnValue = el.options[el.selectedIndex].value;
+			window.close();
+		}
+
+		function onRequestActivationKeyBtnClick() {
+			var methodArgs = arasObject.newObject();
+			var el = document.getElementById("features");
+			var featureName = el.options[el.selectedIndex].value;
+			methodArgs.featureName = featureName;
+			methodArgs.emailAddress = document.getElementById("email_address").value;			
+			methodArgs.licensingObject = licensingObject;
+
+			var result = arasObject.evalItemMethod("LM_GetMetaInfo", "", methodArgs);
+			if (result) {
+				window.close();
+			}
+		}
+
+		function cancelRequestActivationKey() {
+			returnValue = undefined;
+			window.close();
+		}
+	</script>
+</head>
+<body>
+	<div style="padding: 20px;">
+		<span class="label" id="feature_label"></span>
+		<select style="padding-left: 0px; width: 240px" id="features">
+			<option value="">Select feature</option>
+		</select>
+		<span class="label" id="email_address_label"></span>
+		<div>
+			<input id="email_address" type="text" style="width: 320px;" align="middle" onkeypress="if (event.keyCode == 13) onActivateBtnClick();" />
+		</div>
+	</div>
+	<div style="padding: 10px;" align="center">
+		<input id="ok_btn" type="button" style="width: 70px" onclick="onRequestActivationKeyBtnClick()" />
+		<input id="cancel_btn" type="button" style="width: 70px" onclick="cancelRequestActivationKey()" />
+	</div>
+</body>
+</html>

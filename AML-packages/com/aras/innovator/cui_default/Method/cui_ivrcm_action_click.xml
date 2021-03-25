@@ -1,0 +1,36 @@
+﻿<AML>
+ <Item type="Method" id="AF3AFA55E06E4569AD86FB6BD129E775" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const additionalData = target.additional_data || {};
+const actionId = additionalData.actionId;
+if (!actionId) {
+	return;
+}
+
+const arasInstance = window.aras;
+const itemTypeId = options.itemTypeId || '';
+const actionHandlerName = 'onAction:' + actionId + ':' + itemTypeId + 'Command';
+
+if (window[actionHandlerName]) {
+	const commandId = 'action:' + actionId + ':' + itemTypeId;
+	window[actionHandlerName](commandId);
+} else {
+	const actionItem = arasInstance.getItemFromServer('Action', actionId,
+		'name,method(name,method_type,method_code),type,target,location,body,on_complete(name,method_type,method_code),item_query');
+
+	if (actionItem) {
+		if (actionItem.getProperty('type') === 'itemtype') {
+			arasInstance.invokeAction(actionItem.node, itemTypeId, '');
+		} else {
+			const itemIds = window.grid ? window.grid.getSelectedItemIds() : [];
+			itemIds.forEach(function(itemId) {
+				arasInstance.invokeAction(actionItem.node, itemTypeId, itemId);
+			});
+		}
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivrcm_action_click</name>
+ </Item>
+</AML>

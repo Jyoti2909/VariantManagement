@@ -1,0 +1,35 @@
+@plus-minus-size: 70%;
+@plus-minus-line-size: 1px;
+@plus-minus-border-size: 1px;
+@plus-minus-color: #8a8a8a;
+
+.minusIcon () {
+	position: relative;
+	border: @plus-minus-border-size solid @plus-minus-color;
+
+	&:before,
+	&:after {
+		content: '';
+		display: block;
+		position: absolute;
+	}
+
+	&::before {
+		border-top: @plus-minus-line-size solid @plus-minus-color;
+		left: (100% - @plus-minus-size) / 2;
+		top: ~'calc(50% - ' @plus-minus-line-size / 2~ ')';
+		width: @plus-minus-size;
+	}
+}
+
+.plusIcon () {
+	.minusIcon();
+
+	&::after {
+		border-left: @plus-minus-line-size solid @plus-minus-color;
+		height: @plus-minus-size;
+		width: 0;
+		left: ~'calc(50% - ' @plus-minus-line-size / 2~ ')';
+		top: (100% - @plus-minus-size) / 2;
+	}
+}

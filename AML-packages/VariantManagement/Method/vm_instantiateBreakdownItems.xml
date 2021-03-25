@@ -1,0 +1,44 @@
+﻿<AML>
+ <Item type="Method" id="D497A4888EF74431BA5D6C4F2875EF6E" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[debugger;
+
+aras.browserHelper.toggleSpinner(window.document, true);
+
+let item = aras.evalMethod("vm_walkBreakdownStructure", this.node, inArgs);
+if(item){
+    if(item.duplicatePartItems.length || item.relationshipErrors.length){
+        aras.browserHelper.toggleSpinner(window.document, false);
+        
+        let alertMessage = ''; 
+        if(item.duplicatePartItems.length)
+        {
+            alertMessage += 'Following breakdown items have more than one resolved parts.\n';
+            item.duplicatePartItems.forEach((breakdownItemName) => {
+                alertMessage += breakdownItemName + '\n';
+            });
+            
+            alertMessage += '\n' + 'Instantiation aborted.';
+            aras.AlertError(alertMessage);
+            return;
+        }
+        
+        if(item.relationshipErrors.length)
+        {
+            aras.AlertError(item.relationshipErrors[0]);
+            return;
+        }
+    }
+    let methodArgsForCreate = {
+        contextWindow: window,
+        parentNode: item
+    }
+    aras.evalMethod("vm_createBreakdownItemInstances", this.node, methodArgsForCreate);
+    aras.AlertSuccess('Instantiation Complete');
+}
+
+aras.browserHelper.toggleSpinner(window.document, false);]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>vm_instantiateBreakdownItems</name>
+ </Item>
+</AML>

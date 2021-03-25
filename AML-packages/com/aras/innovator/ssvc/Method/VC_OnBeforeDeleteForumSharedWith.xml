@@ -1,0 +1,128 @@
+﻿<AML>
+ <Item type="Method" id="EE7A307A1DED4CECB530D2A6B24C9A0B" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	var idList = this.getAttribute("idlist");
+	Aras.Server.Security.Identity admin = null;
+	bool permsWasSet = false;
+	try
+	{
+		admin = Aras.Server.Security.Identity.GetByName("Super User");
+		permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(admin);
+		if (!string.IsNullOrEmpty(idList))
+		{
+			return HandleForumSharedWith(idList, null);
+		}
+
+		var id = this.getID();
+		if (!string.IsNullOrEmpty(id))
+		{
+			return HandleForumSharedWith(id, null);
+		}
+
+		var where = this.getAttribute("where");
+		if (!string.IsNullOrEmpty(where))
+		{
+			return HandleForumSharedWith(null, where);
+		}
+	}
+	finally
+	{
+		if (permsWasSet)
+		{
+			Aras.Server.Security.Permissions.RevokeIdentity(admin);
+		}
+	}
+
+	return this;
+}
+
+private Item HandleForumSharedWith(string idList, string where)
+{
+	var forumSharedWithItems = this.newItem("ForumSharedWith", "get");
+	if (string.IsNullOrEmpty(idList))
+	{
+		forumSharedWithItems.setAttribute("where", where);
+	}
+	else
+	{
+		forumSharedWithItems.setAttribute("idlist", idList);
+	}
+	forumSharedWithItems.setAttribute("select", "source_id, shared_with_id");
+	forumSharedWithItems = forumSharedWithItems.apply();
+	if (forumSharedWithItems.isError())
+	{
+		return forumSharedWithItems;
+	}
+	
+	var forumsIdsList = new List<string>();
+	for (var i = 0; i < forumSharedWithItems.getItemCount(); i++)
+	{
+		var currentFswItem = forumSharedWithItems.getItemByIndex(i);
+		var fId = currentFswItem.getProperty("source_id");
+		if (!forumsIdsList.Contains(fId))
+		{
+			forumsIdsList.Add(fId);
+		}
+	}
+	
+	var forumItemsQuery = this.newItem("Forum", "get");
+	forumItemsQuery.setAttribute("idlist", string.Join(",", forumsIdsList.Select(System.Security.SecurityElement.Escape)));
+	var forumItems = forumItemsQuery.apply();
+	if (forumItems.isError())
+	{
+		return forumItems;
+	}
+	
+	var teamsIdsList = new List<string>();
+	for (var i = 0; i < forumItems.getItemCount(); i++)
+	{
+		var currentForum = forumItems.getItemByIndex(i);
+		var teamId = currentForum.getProperty("team_id");
+		if (!teamsIdsList.Contains(teamId))
+		{
+			teamsIdsList.Add(teamId);
+		}
+	}
+	
+	foreach (var teamId in teamsIdsList)
+	{
+		var teamIdentities = this.newItem("Team Identity", "get");
+		teamIdentities.setProperty("source_id", teamId);
+		teamIdentities.setProperty("team_role", "D8A0A5EA402541ABA632475CCEC2BAE5");
+		teamIdentities = teamIdentities.apply();
+		if (teamIdentities.isError())
+		{
+			continue;
+		}
+		
+		
+		for (var i = 0; i < forumSharedWithItems.getItemCount(); i++)
+		{
+			var currentFswItem = forumSharedWithItems.getItemByIndex(i);
+			var identityIdForDelete = currentFswItem.getProperty("shared_with_id");
+			if (!string.IsNullOrEmpty(identityIdForDelete))
+			{
+				for (var j = 0; j < teamIdentities.getItemCount(); j++)
+				{
+					var currentTeamIdentity = teamIdentities.getItemByIndex(j);
+					var relatedId = currentTeamIdentity.getProperty("related_id");
+					if (string.Compare(relatedId, identityIdForDelete, true, CultureInfo.InvariantCulture) == 0)
+					{
+						var identityForDelete = this.newItem("Team Identity", "delete");
+						identityForDelete.setID(currentTeamIdentity.getID());
+						identityForDelete = identityForDelete.apply();
+						if (identityForDelete.isError())
+						{
+							return identityForDelete;
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_OnBeforeDeleteForumSharedWith</name>
+ </Item>
+</AML>

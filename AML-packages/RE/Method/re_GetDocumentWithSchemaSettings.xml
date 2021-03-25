@@ -1,0 +1,98 @@
+﻿<AML>
+ <Item type="Method" id="BE82DC35B420475BB2062E6B38035F8E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+	bool permsWasSet = false;
+	Aras.Server.Security.Identity identity = null;
+	string techDocPriveledgedPublisherId = "86F8574A13814269A1CEC0E012AEADB2";
+	string identityList = Aras.Server.Security.Permissions.Current.IdentitiesList;
+	if (identityList.IndexOf(techDocPriveledgedPublisherId, System.StringComparison.Ordinal) != -1)
+	{
+		identity = Aras.Server.Security.Identity.GetByName("Super User");
+		permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(identity);
+	}
+	try
+	{
+		string documentType = this.getAttribute("type");
+		Innovator innovator = this.getInnovator();
+		Item documentItem = innovator.applyAML("<AML><Item action=\"get\" type=\"" + documentType + "\" id=\"" + this.getID() + "\"/></AML>");
+
+		if (documentItem.isError())
+		{
+			return documentItem;
+		}
+
+		string classification = documentItem.getProperty("classification");
+		string schemaId = documentItem.getProperty("req_document_type");
+		if (documentItem.getType() == "re_Requirement_Document")
+		{
+			Item xmlSchemaItem = GetXmlSchemaForReqDocument(schemaId, innovator, documentItem);
+			if (xmlSchemaItem.isError())
+			{
+				return xmlSchemaItem;
+			} else {
+				schemaId = xmlSchemaItem.getID();
+			}
+		}
+		string classificationFilter = (!String.IsNullOrEmpty(classification)
+			? "<OR>" +
+				"<target_classification condition=\"is null\"></target_classification>" +
+				"<target_classification>" + classification + "</target_classification>" +
+			"</OR>"
+			: "<target_classification condition=\"is null\"></target_classification>");
+
+		string schemaRequestAml =
+			"<AML>" +
+				"<Item action=\"get\" type=\"tp_XmlSchema\" id=\"" + schemaId + "\">" +
+					"<Relationships>" +
+						"<Item type=\"tp_XmlSchemaOutputSetting\" action=\"get\" select=\"target_classification,stylesheet_id(name,style_content,parent_stylesheet),classification\">" +
+							classificationFilter +
+						"</Item>" +
+					"</Relationships>" +
+				"</Item>" +
+			"</AML>";
+		Item foundSettings = innovator.applyAML(schemaRequestAml);
+
+		if (foundSettings.isError())
+		{
+			return foundSettings;
+		}
+		documentItem.setPropertyItem("xml_schema", foundSettings);
+		return documentItem;
+	}
+	finally
+	{
+		if (permsWasSet)
+		{
+			Aras.Server.Security.Permissions.RevokeIdentity(identity);
+		}
+	}
+}
+
+static Item GetXmlSchemaForReqDocument(string schemaId, Innovator inn, Item requirementDocument)
+{
+	Item xmlSchema = inn.newItem("tp_XmlSchema", "get");
+	if (String.IsNullOrEmpty(schemaId))
+	{
+		Item relationships = requirementDocument.getRelationships("re_Req_Doc_Content");
+		if (relationships.getItemCount() > 0)
+		{
+			Item firstRelatinship = relationships.getItemByIndex(0);
+			Item firstRequirement = firstRelatinship.getRelatedItem();
+			schemaId = firstRequirement.getProperty("req_document_type");
+		}
+	}
+	if (!String.IsNullOrEmpty(schemaId))
+	{
+		xmlSchema.setID(schemaId);
+	} else {
+		xmlSchema.setProperty("application", "re_Requirement");
+	}
+
+	xmlSchema = xmlSchema.apply();
+	return xmlSchema.isCollection() ? inn.newError("It is impossible to associate xml schema with Requirements Document.") : xmlSchema;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_GetDocumentWithSchemaSettings</name>
+ </Item>
+</AML>

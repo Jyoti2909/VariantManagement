@@ -1,0 +1,115 @@
+<!DOCTYPE HTML>
+<!-- (c) Copyright by Aras Corporation, 2005-2015. -->
+<html>
+<head>
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/default.css";
+
+		html, body {
+			overflow: hidden;
+			width : 100%;
+			height : 100%;
+			margin : 0px;
+			padding : 0px;
+		}
+
+		#controlsContainer {
+			position: relative;
+			padding : 25px 25px 10px 25px;
+		}
+
+		#messageContainer {
+			padding-bottom: 5px;
+			border-bottom: 1px solid #CCCCCC;
+		}
+
+		#progressBarContainer {
+			margin-top: 5px;
+			height: 15px;
+			background-repeat: no-repeat;
+			background-size: cover;
+			background-position: -8px 0px;
+			background-image: url("../images/progress.gif");
+		}
+
+		#controlsSeparator {
+			margin-top: 20px;
+			border-bottom: 1px solid #CCCCCC;
+		}
+
+		#btnCancel {
+			margin-top: 10px;
+			width: 100px;
+		}
+	</style>
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<script type="text/javascript">
+		var dialogArguments = window.frameElement.dialogArguments,
+			aras = dialogArguments.aras,
+			expectedState = dialogArguments.propertyState,
+			waitOptions = {
+				itemType: dialogArguments.itemType,
+				itemId: dialogArguments.itemId,
+				propertyName: dialogArguments.propertyName,
+				checkRegExp: new RegExp(Array.isArray(expectedState) ? expectedState.join("|") : expectedState)
+			},
+			dialogControls = {},
+			timeoutId;
+
+		onload = function () {
+			if (dialogArguments.timeout !== undefined) {
+				timeoutId = setTimeout(function () { closeWindow("_timeout"); }, dialogArguments.timeout);
+			}
+			initializeControls();
+			checkPropertyState();
+
+			if (dialogArguments.hideSpinner) {
+				dialogArguments.hideSpinner();
+			}
+		}
+
+		function initializeControls () {
+			dialogControls.statusMessage = document.getElementById("statusMessage");
+
+			dialogControls.cancelButton = document.getElementById("btnCancel");
+			dialogControls.cancelButton.value = aras.getResource("", "common.cancel");
+		}
+
+		function checkPropertyState() {
+			var checkedItem = aras.getItemFromServer(waitOptions.itemType, waitOptions.itemId, waitOptions.propertyName);
+
+			if (checkedItem && !checkedItem.isError()) {
+				var currentPropertyState = checkedItem.getProperty(waitOptions.propertyName);
+
+				if (waitOptions.checkRegExp.test(currentPropertyState)) {
+					closeWindow(currentPropertyState);
+					return;
+				}
+				else {
+					dialogControls.statusMessage.textContent = waitOptions.itemType + " " + waitOptions.propertyName + ": " + currentPropertyState;
+				}
+			}
+
+			setTimeout(checkPropertyState, 2000);
+		}
+
+		function closeWindow(value) {
+			clearTimeout(timeoutId);
+			dialogArguments.dialog.close(value);
+		}
+	</script>
+</head>
+<body class="claro">
+	<div id="controlsContainer">
+		<span id="statusMessage"></span>
+		<div id="progressBarContainer"></div>
+		<div id="controlsSeparator"></div>
+		<div id="buttonsContainer" style="text-align:center;">
+			<input type="button" id="btnCancel" class="btn cancel_button" onclick="closeWindow()"/>
+		</div>
+	</div>
+</body>
+</html>

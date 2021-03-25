@@ -1,0 +1,47 @@
+﻿<AML>
+ <Item type="SQL" id="B49973DC3B824EDD958130BE7E6AADA5" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_wbs_element_rollup_status</old_name>
+  <sqlserver_body><![CDATA[/* Name:    select_wbs_element_rollup_status
+ created: 4-dec-2005 George J. Carrette
+  Note: this only needs to go down one level because of the context 
+        in which it is called.
+*/
+create function innovator.select_wbs_element_rollup_status(@ID CHAR(32))
+ RETURNS VARCHAR(64)
+AS
+begin
+ DECLARE @SUBSTATUS_ALL TABLE(STATUS VARCHAR(64) COLLATE database_default)
+ DECLARE @SUBSTATUS     TABLE(STATUS VARCHAR(64) COLLATE database_default PRIMARY KEY)
+ DECLARE @LIST_ID CHAR(32)
+ DECLARE @MAX_IND INTEGER
+ DECLARE @COLOR VARCHAR(64)
+ 
+ INSERT @SUBSTATUS_ALL 
+  SELECT ROLLUP_STATUS FROM WBS_ELEMENT
+  WHERE ID IN (SELECT RELATED_ID FROM SUB_WBS WHERE SOURCE_ID = @ID) AND
+         ROLLUP_STATUS IS NOT NULL
+ INSERT @SUBSTATUS_ALL
+  SELECT STATUS FROM ACTIVITY2
+  WHERE ID IN (SELECT RELATED_ID FROM WBS_ACTIVITY2 WHERE SOURCE_ID = @ID) AND
+         STATUS IS NOT NULL
+ INSERT @SUBSTATUS SELECT DISTINCT STATUS FROM @SUBSTATUS_ALL
+
+ SET @LIST_ID = (SELECT ID FROM [LIST] WHERE NAME = 'PM_StatusColor')
+ 
+ SET @MAX_IND = (SELECT MAX(SORT_ORDER) FROM [VALUE]
+                 WHERE SOURCE_ID = @LIST_ID AND 
+                       VALUE IN (SELECT STATUS FROM @SUBSTATUS))
+
+ SET @COLOR = (SELECT VALUE FROM VALUE
+               WHERE SOURCE_ID = @LIST_ID AND SORT_ORDER = @MAX_IND)
+ RETURN @COLOR
+end
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_wbs_element_rollup_status</name>
+ </Item>
+</AML>

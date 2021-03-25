@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="../../../styles/default.css" />
+		<style type="text/css">
+			@import "../../../javascript/dojo/resources/dojo.css";
+			@import "../../../styles/common.min.css";
+			@import "../../../javascript/dijit/themes/claro/claro.css";
+			@import "../../../javascript/include.aspx?classes=common.css";
+			@import "../Styles/ConditionEditorStyle.css";
+			@import "../Styles/AceConditionEditorStyle.css";
+		</style>
+
+		<title></title>
+		<script id="ScriptSet1" type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,ScriptSet1"></script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js,XmlDocument" data-dojo-config="async: false, isDebug: false, parseOnLoad: true, baseUrl:'../../../javascript/dojo'"></script>
+		<script type="text/javascript" src="../Scripts/conditionsView.js"></script>
+		<script>
+			document.addEventListener("keydown", function(e) {
+						var target = e.target||e.srcElement;
+						if (target.tagName !== 'TEXTAREA' && e.keyCode === 8) {
+							e.preventDefault();
+						}
+					}, false);
+			document.addEventListener("DOMContentLoaded", function() {
+						initConditionalView();
+					});
+		</script>
+	</head>
+	<body class="claro">
+		<aras-tabs id="qb-tabs"></aras-tabs>
+		<div id="containerWhereUse">
+			<div class="showConditions">
+				<div class="title"></div>
+				<span class="content"></span>
+			</div>
+			<div class="editConditions">
+				<div class="toolbar" id="JoinToolbar"></div>
+				<div class="edit-container aras-form-input" >
+					<div class="edit-area" spellcheck="false"></div>
+				</div>
+			</div>
+		</div>
+
+		<div id="containerJoin">
+			<div class="showConditions">
+				<div class="title"></div>
+				<span class="content"></span>
+			</div>
+			<div class="editConditions">
+				<div class="toolbar" id="WhereUseToolbar"></div>
+				<div class="edit-container aras-form-input">
+					<div class="edit-area" spellcheck="false"></div>
+				</div>
+			</div>
+		</div>
+
+		<div class="buttons">
+			<button id="buttonSave" style="display: none" class="aras-btn"></button>
+			<button id="buttonCancel" style="display: none" class="aras-btn btn_cancel"></button>
+		</div>
+	</body>
+</html>

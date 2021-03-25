@@ -1,0 +1,19 @@
+﻿<AML>
+ <Item type="SQL" id="B1CAE4B8FF6F457A8B0690E3C8076522" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>VC_SecureMessage_Step04_Drop_Table</old_name>
+  <sqlserver_body><![CDATA[IF  EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID(N'[innovator].[SECUREMESSAGE]'))
+  IF EXISTS (SELECT * FROM [SECUREMESSAGE]) 
+    RAISERROR ('Cannot drop [SECUREMESSAGE] since records exist there', 16, 1)
+  ELSE
+    DROP TABLE [SECUREMESSAGE]
+
+
+IF  EXISTS (SELECT * FROM sys.views WHERE object_id = OBJECT_ID(N'[innovator].[SECUREMESSAGE]'))
+  DROP VIEW [SECUREMESSAGE]]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>table</type>
+  <name>VC_SecureMessage_Step04_Drop_Table</name>
+ </Item>
+</AML>

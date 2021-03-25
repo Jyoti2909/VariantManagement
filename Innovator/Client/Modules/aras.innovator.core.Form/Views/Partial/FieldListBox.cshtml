@@ -1,0 +1,431 @@
+﻿@using System
+@using System.Linq
+@using System.Text
+@using System.Text.RegularExpressions
+@using Models.AML.Enums
+@using Models.AML.ItemTypes
+@using Models.Helpers
+@model Models.FieldRenderModel
+
+@{
+	var fieldId = Model.FieldNode.Id;
+	var fieldType = Model.FieldNode.FieldType;
+	var fieldNm = Model.FieldNode.Name;
+
+	var propNm = String.Empty;
+	var propDataType = String.Empty;
+	if (!Model.PropertyNode.IsNull)
+	{
+		propNm = Model.PropertyNode.Name;
+		propDataType = Model.PropertyNode.DataType;
+	}
+
+	var isDropDown = fieldType == FieldType.DropDown;
+	var isColorList = (propDataType == "color list");
+
+	var expressionFunctionCode = String.Empty;
+
+	// Generated field attributes
+	const string tabIndex = "-1";
+	var required = (!Model.PropertyNode.IsNull && Model.PropertyNode.IsRequired) ? " sys_f_div_select_required" : String.Empty;
+	var readOnlyProp = MethodsExUtils.UiIsFieldReadOnly(Model.FieldNode, Model.PropertyNode);
+	var isDisabled = ((!Model.PropertyNode.IsNull && readOnlyProp) || Model.Mode == "edit_form" || Model.Mode == "view_form") ? "disabled" : String.Empty;
+	var assignedFieldEvents = String.Empty;
+
+	// Support variables
+	var noBlank = Model.FieldNode.ListNoBlank || propDataType == "mv_list";
+	var onchange = String.Empty;
+
+	// Generated style attributes
+	var displayLengthUnit = Model.FieldNode.DisplayLengthUnit;
+	var displayLength = Model.FieldNode.DisplayLength;
+	string style = null;
+	if (!displayLength.IsNull && !String.IsNullOrEmpty(displayLengthUnit))
+	{
+		style = "width:" + displayLength.Value + displayLengthUnit + ";";
+	}
+
+	var attributes = "id=\"" + fieldId + "\" name=\"" + fieldNm + "\" class=\"" + fieldNm + (isDropDown ? " sys_f_select" : "");
+	if (fieldType == FieldType.ListBoxMultiSelect)
+	{
+		attributes += @" sys_ft_listbox_multi_select"" multiple=""yes"" ";
+	}
+	else
+	{
+		attributes += @""" ";
+	}
+
+	expressionFunctionCode += "var itemSpan = document.getElementById('" + fieldId + "');\r\n";
+
+	if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		if (!String.IsNullOrEmpty(propNm))
+		{
+			onchange += @"<script type=""text/javascript"">
+					function onchange" + fieldId + @"(event) {
+						event = window.event || event;
+						var target = event.srcElement || event.target;
+						";
+			if (propDataType == "mv_list")
+			{
+				onchange +=
+					@"function getSelectedValuesArr(selectObj)
+				{
+							var retArr = new Array();
+							for (var i = 0; i < selectObj.options.length; i++)
+							{
+								if (selectObj.options[i].selected)
+									retArr.push(selectObj.options[i].value);
+							}
+							return retArr;
+				}
+				";
+			}
+
+			onchange += @"var tmpSelectedVal = " + ((propDataType == "mv_list") ? "aras.arrayToMVListPropertyValue(getSelectedValuesArr(target))" : "target.options[target.selectedIndex].value;") + @"
+					  if (window.handleItemChange) {
+						  handleItemChange('" + propNm + "', tmpSelectedVal);\r\n"
+						 + ((propDataType == "color list") ? "var tmpBgColor = (target.selectedIndex !== -1) ? target.options[target.selectedIndex].style.backgroundColor : '#ffffff';\r\ntarget.parentElement.style.backgroundColor = tmpBgColor;\r\n}\r\n" : "\r\n}\r\n");
+
+			if (isColorList)
+			{
+				onchange += "target.parentElement.style.backgroundColor = (target.selectedIndex !== -1) ? target.options[target.selectedIndex].value : '#ffffff';";
+			}
+
+			onchange += @"if (window.handleItemChange) 
+						handleItemChange('" + propNm + @"', tmpSelectedVal)
+				}
+				document.getElementById(""" + fieldId + @""").addEventListener(""change"", onchange" + fieldId + @", false);
+				</script>";
+		}
+		
+		if (Model.Mode != "search")
+		{
+			var additionalEvents = new List<MethodsExUtils.AdditionalEvent>();
+			if (String.IsNullOrEmpty(propNm) && isDropDown)
+			{
+				additionalEvents.Add(new MethodsExUtils.AdditionalEvent
+				{
+					EventName = "onchange",
+					EventHandler = "aras.updateDomSelectLabel(event.target);"
+				});
+			}
+			assignedFieldEvents = MethodsExUtils.AssignFieldEventEx(Model.FieldNode, String.Empty, additionalEvents);
+		}
+	}
+
+	// Option tag generating
+
+	// First "default" cell adding
+	var optionTags = new List<string[]>();
+	if (!noBlank)
+	{
+		string attrs = null;
+		string label = null;
+		string value = null;
+		string optionStyle = (isColorList ? "background-color:#FFFFFF" : null);
+		var optionParams = new string[] { attrs, label, optionStyle, value };
+		optionTags.Add(optionParams);
+	}
+	var listId = Model.PropertyNode.DataSource.Value;
+	if (!String.IsNullOrEmpty(listId))
+	{
+		var options = MethodsExUtils.GetListValues(Model.ListNode, Model.FilterListNode, listId, propDataType);
+		var nds = Model.PropertyNode.DataSource.Item; // TODO: Getting full DS item or delete? (unused)
+		if (nds != null)
+		{
+			options = nds.Relationships.Items.Where(item => item.Id == Model.PropertyNode.Id).ToList();
+		}
+
+		foreach (var item in options)
+		{
+			var option = (Value)item;
+			var val = option.ValueField;
+			var label = option.Label.Value;
+			bool isInactive = option.Inactive;
+			if (option.Label.IsNull)
+			{
+				label = val;
+			}
+
+			string attrs = (isInactive ? " data-inactive=\"1\"" : null);
+			string optionStyle = (isColorList ? "background-color:" + val : null);
+			var optionParams = new string[] { attrs, label, optionStyle, val };
+			optionTags.Add(optionParams);
+		}
+	}
+
+	
+	if (isDropDown)
+	{
+		@:<div id="div_select_@(fieldId)" class="sys_f_div_select@(Html.Raw(required))">
+			<select aria-labelledby="@(fieldId)_label" size="1" style="@(style)" @Html.Raw(attributes) tabindex="@(tabIndex)" @(isDisabled) @Html.Raw(assignedFieldEvents)>
+			@foreach (var option in optionTags)
+			{
+				var optionAttrs = option[0];
+				var optionLabel = option[1];
+				var optionStyle = option[2];
+				var optionValue = option[3];
+				<option value="@optionValue" style="@(optionStyle)" @Html.Raw(optionAttrs)>@optionLabel</option>
+			}
+			</select>
+	}
+	else
+	{
+		var selectSize = Model.FieldNode.ListBoxSize.IsNull ? "2" : Model.FieldNode.ListBoxSize.Value; 
+		<select aria-labelledby="@(fieldId)_label" size="@(selectSize)" style="@(style)" @Html.Raw(attributes) tabindex="@(tabIndex)" @(isDisabled) @Html.Raw(assignedFieldEvents)>
+			@foreach (var option in optionTags)
+			{
+				var optionAttrs = option[0];
+				var optionLabel = option[1];
+				var optionStyle = option[2];
+				var optionValue = option[3];
+				<option value="@optionValue" style="@(optionStyle)" @Html.Raw(optionAttrs)>@optionLabel</option>
+			}
+		</select>
+	}
+
+	// Another options for field lists
+	if (!Model.PropertyNode.IsNull)
+	{
+		if (!String.IsNullOrEmpty(listId))
+		{
+			if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+			{
+				var pattern = Model.PropertyNode.Pattern;
+				if (propDataType == "filter list" && !pattern.IsNull)
+				{
+					var funcName = "system_" + fieldId + "_options";
+					<script type="text/javascript">
+						function @(funcName)(event)
+						{
+							if (!event) event = window.event;
+							if (!event.srcElement) event.srcElement = event.target;
+							if (event.propertyName != "value") return true;
+							var selectElem = document.getElementById("@(fieldId)");
+							if (!selectElem) return true;
+							var initialVal = observersHash.getElementById('@(propNm)_system').getInitialValue();
+							var oldVal = (selectElem.selectedIndex != -1) ? selectElem.options[selectElem.selectedIndex].value : "";
+							selectElem.selectedIndex = -1;
+							var i, val, lab, optionNd, option, inactive;
+							for (i = selectElem.options.length - 1; i >= 0; i--) 
+								selectElem.options.remove(i);
+							var filterVal = event.srcElement.value;
+							var optionNds = aras.getListFilterValues("@(listId)");
+							if (filterVal != "") optionNds = aras.uiGetFilteredListEx(optionNds, "^" + filterVal + "$");
+							if (optionNds.length == 0 && document.formNd)
+							{
+								optionNds = document.formNd.selectNodes("//Item/Relationships/Item[@@type='Body']/Relationships/Item[@@type='Field']/propertytype_id[@@keyed_name='@Model.PropertyNode.Name']/Item/data_source/Item/Relationships/Item[filter='" + filterVal + "']");
+							}
+							var emptyOption = null;
+							var curSelectedIndex = 0;
+							@if (!noBlank)
+							{
+								<text>
+									emptyOption = document.createElement("option");
+									selectElem.options.add(emptyOption);
+								</text>
+							}
+							for (var i = 0; i < optionNds.length; i++)
+							{
+								optionNd = optionNds[i];
+
+								lab = aras.getItemProperty(optionNd, "label");
+								val = aras.getItemProperty(optionNd, "value");
+								inactive = aras.getItemProperty(optionNd, "inactive") === '1';
+
+								// otions should not be filtered out during from populating
+								// they will be removed by init method because field's value may be unknown at now
+								const shouldBeDeleted = document.isFormPopulated && inactive && val !== initialVal;
+
+								if (shouldBeDeleted && val !== oldVal) {
+									continue;
+								}
+
+								option = document.createElement("option");
+								selectElem.options.add(option);
+								if (lab == "") lab = val;
+								option.value = val;
+								option.innerHTML = aras.preserveTags(lab);
+
+								if (inactive) {
+									option.dataset.inactive = 1;
+								}
+							}
+
+							curSelectedIndex = Array.prototype.findIndex.call(selectElem.options, option => option.value === oldVal );
+
+							@if (isColorList)
+							{
+								@:option.style.backgroundColor = val;
+							}
+							@if (noBlank)
+							{
+								@:var opts = selectElem.options;
+								@:if (opts.selectedIndex == 0 && opts[0].value != oldVal) { opts.selectedIndex =- 1; opts.selectedIndex=0; }
+							}
+							else
+							{
+								<text>
+									selectElem.selectedIndex = curSelectedIndex;
+									if (window.handleItemChange && selectElem.value !== oldVal) {
+										handleItemChange(selectElem.name, selectElem.value);
+									}
+								</text>
+							}
+							@if (isDropDown)
+							{
+								@:aras.updateDomSelectLabel(selectElem);
+							}
+						}
+
+						if (observersHash.getElementById("@(pattern)_system"))
+							observersHash.getElementById("@(pattern)_system").attachEvent("onpropertychange", @(funcName));
+					</script>
+				}
+			}
+		}
+	}
+
+
+		//field onChange
+		@Html.Raw(onchange)
+		@:	
+	
+	if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		<script type="text/javascript">
+			function system_@(fieldId)_selectedIndex(event) {
+				if (!event) event = window.event;
+				if (!event.srcElement) event.srcElement = event.target;
+				if (event.propertyName != "value") return true;
+				var ctrlElem = event.srcElement;
+				if (!ctrlElem) return true;
+				var select = document.getElementById("@(fieldId)");
+				var divSelect = document.getElementById("div_select_@(fieldId)");
+				if (!select) return true;
+				if (select.i_value == ctrlElem.value) return true;
+				var val = ctrlElem.value;
+				select.i_value = val;
+				@if (propDataType == "mv_list")
+				{
+					<text>
+						var tmpArr = aras.mvListPropertyValueToArray(val);
+						var opts = select.options;
+						if (opts) for (var i = 0; i < opts.length; i++)
+						{
+							var isFound = false;
+							for (var j = 0; j < tmpArr.length; j++)
+							{
+									if (opts[i].value == tmpArr[j]) isFound = true;
+							}
+							opts[i].selected = isFound;
+							opts[i].style["background-color"] = "white";
+							if (!(document.isEditMode) && isFound)
+							{
+								opts[i].style["background-color"] = "#3366C0";	
+							}
+						}
+					</text>
+				}
+				else
+				{
+					<text>
+						var opt;
+						if(val && "" !== val)
+						{
+							var optIndex = 0;
+							while (!opt && optIndex < select.options.length) {
+								if (select.options[optIndex].value.toLowerCase() === val.toLowerCase()) opt = select.options[optIndex];
+								optIndex++;
+							}
+						}
+						if (opt && opt.length)
+						{
+							opt = opt(0);
+						}
+						select.selectedIndex = (opt ? opt.index:-1);
+						@if (isColorList)
+						{
+							<text>
+								var tmpBgColor = (select.selectedIndex !== -1) ? select.options[select.selectedIndex].style.backgroundColor : '#ffffff';
+								divSelect.style.backgroundColor = tmpBgColor;
+							</text>	
+						}
+					</text>	
+				}
+				@if (isDropDown)
+				{
+					@:aras.updateDomSelectLabel(select);
+				}
+				return true;
+			}
+
+			function system_@(fieldId)_init(event) {
+				event = event || {};
+				const select = document.getElementById("@(fieldId)");
+
+				if (event.propertyName !== "initValue" || !select) {
+					return true;
+				}
+
+				@if(propDataType == "mv_list")
+				{
+					@:const valuesArray = aras.mvListPropertyValueToArray(event.target.value);
+				}
+				else
+				{
+					@:const valuesArray = [event.target.value];
+				}
+
+				for (let i = select.options.length - 1; i >= 0; i--) {
+					const option = select.options[i];
+					const optionValue = option.value;
+					const optionIsInactive = option.dataset.inactive;
+					if (optionIsInactive && !valuesArray.includes(optionValue)) {
+						select.remove(i);
+					}
+				}
+			}
+
+			@if (!String.IsNullOrEmpty(propNm))
+			{
+				@:if (observersHash.getElementById("@(propNm)_system")) {
+				@:	 observersHash.getElementById("@(propNm)_system").attachEvent("onpropertychange", system_@(fieldId)_selectedIndex);
+				@:	 observersHash.getElementById("@(propNm)_system").attachEvent("oninit", system_@(fieldId)_init);
+				@:}
+			} 
+												  
+			@if (!readOnlyProp)
+			{
+				expressionFunctionCode += @"var field = document.getElementById('" + fieldId + @"');
+					field.disabled = !isEditMode;" + "\r\n";
+				if (isDropDown)
+				{
+					expressionFunctionCode += "field.parentNode.className = isEditMode ? \"sys_f_div_select" + required + "\" : \"sys_f_div_select sys_f_div_select_disabled" + required + "\";";
+				}
+			}
+		</script>
+	}
+	
+	<script type="text/javascript">
+		function expression_@(fieldId)_setExpression(isEditMode)
+		{
+				@Html.Raw(expressionFunctionCode)
+			}
+		setTimeout('expression_@(fieldId)_setExpression(document.isEditMode)', 1);
+	</script>
+
+	if (isDropDown)
+	{
+		@:<span id="selected_option_@(fieldId)" class="sys_f_span_select"><!-- code marker --></span></div>@{/*TODO: remove this code line together with "code marker" comment. Closing "</span>" tag below does not exist in old output. Thus it is marked by "code marker" for debug purposes*/}
+	}
+
+	if (!String.IsNullOrEmpty(propNm) && !String.IsNullOrEmpty(Model.PropertyNode.DataSource.Value))
+	{
+		<script type="text/javascript">
+			document.getElementById("@(fieldId)").selectedIndex = -1;
+		</script>
+	}
+}
+

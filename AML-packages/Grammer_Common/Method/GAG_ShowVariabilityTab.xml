@@ -1,0 +1,25 @@
+﻿<AML>
+ <Item type="Method" id="F32B65EC145F439C969DA52DA5AE60CC" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const topWindow = aras.getMostTopWindowWithAras();
+const variabilityTabId = '5C9F7851A38448ADA1E1543E5828A81D';
+const variabilityStructureTabId = '09FE8DCB64B848CA82333DF6627B4B65';
+const showOnClassifications = ['Mechanical Part/D-Phantom'];
+const classification = topWindow.thisItem.getProperty('classification');
+
+aras.evalMethod('GAG_SetTabsVisibility', '', {
+	tabsVisibility: [
+		{
+			id: variabilityTabId,
+			isVisible: showOnClassifications.indexOf(classification) !== -1,
+		},
+		{
+			id: variabilityStructureTabId,
+			isVisible: showOnClassifications.indexOf(classification) !== -1,
+		},
+	],
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_ShowVariabilityTab</name>
+ </Item>
+</AML>

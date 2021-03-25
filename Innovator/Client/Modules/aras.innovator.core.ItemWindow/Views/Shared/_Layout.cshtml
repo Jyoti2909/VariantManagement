@@ -1,0 +1,199 @@
+﻿@{
+	Layout = "_baseLayout.cshtml";
+	bool hideMenu = ViewBag.HideMenu ?? false;
+	bool hideToolbar = ViewBag.HideToolbar ?? false;
+}
+@section init_window
+{
+	@if (IsSectionDefined("init_window"))
+	{
+		@RenderSection("init_window")
+	}
+	else
+	{
+		<script>
+			var nativeFocus = window.focus;
+			var paramObjectName = window.name + '_params';
+			const nativeParent = window.parent;
+			var parent = window;
+			if (window.frameElement) {
+
+				if(!window.opener) {
+					window.opener = nativeParent;
+				}
+
+				const getTabbarByTabId = function(tabId) {
+					const tabsContainer = aras.getMainWindow().mainLayout.tabsContainer;
+					return tabsContainer.getTabbarByTabId(tabId);
+				};
+				var arasTabsobj = window.opener.arasTabs;
+				arasTabsobj.setTitleTabWithFrame(window);
+
+				window.focus = function() {
+					const tabId = this.frameElement.id;
+					const tabbar = getTabbarByTabId(tabId);
+					tabbar.selectTab(tabId);
+				};
+
+				window.close = function (callback) {
+					if (!callback) {
+						const tabId = this.frameElement.id;
+						const tabbar = getTabbarByTabId(tabId);
+						tabbar.removeTab(tabId);
+						return;
+					}
+
+					callback(true);
+				};
+			}
+
+			window.addEventListener("unload", function(){ if (window.aras && window.itemID) { window.aras.uiUnregWindowEx(window.itemID); }});
+		</script>
+		if (IsSectionDefined("style"))
+		{
+			@RenderSection("style")
+		}
+		else
+		{
+			<style type="text/css">
+				@@import "@Url.ContentWithSalt("~/javascript/include.aspx?classes=arasClaro.css,common.css,discussion.css,common.min.css,_layout.css")";
+			</style>
+		}
+		<script type="text/javascript" id="ScriptSet1" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=ArasModules,ScriptSet1,TearOffMenuControllerNoCUI,pageReturnBlocker")"></script>
+		<script>
+			var aras = new Aras(window.opener[paramObjectName].aras);
+			var viewType = window.opener[paramObjectName].viewType;
+			var windowReadyObjectResolve = window.opener[paramObjectName].windowReadyObjectResolve;
+			ArasModules.intl.locale = aras.getSessionContextLocale();
+			aras.setWindowLangAttribute(window);
+			aras.setWindowTitle(window, window.opener[paramObjectName].title);
+		</script>
+		<script type="text/javascript" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=/dojo.js")" data-dojo-config="@(ViewBag.syncMode == null ? "async: true," : "") baseUrl:'@Url.ContentWithSalt("~/javascript/dojo")'"></script>
+		<script type="text/javascript" src="@Url.ContentWithSalt("~/javascript/dojo/layout.js")"></script>
+		<script type="text/javascript" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=arasInnovatorCUI")"></script>
+		<script>
+			window.cui = new CUI_ConfigurableUI();
+		</script>
+	}
+}
+@section init_widgets
+{
+	@if (IsSectionDefined("init_widgets"))
+	{
+		@RenderSection("init_widgets")
+	}
+	else
+	{
+		<script type="text/javascript">
+			require(["dojo/parser", "dijit/dijit", "Modules/aras.innovator.core.Core/Scripts/Classes/WidgetLoader", "dojo/domReady!"],
+				function (parser, dijit, WidgetLoader) {
+					parser.parse({ noStart: true }).then(function () {
+						var events = {
+							onLoadWidgets: document.createEvent("Event"),
+							onBeforeLoadWidgets: document.createEvent("Event")
+						};
+						events.onLoadWidgets.initEvent("loadWidgets", true, false);
+						events.onBeforeLoadWidgets.initEvent("beforeLoadWidgets", true, false);
+
+						document.dispatchEvent(events.onBeforeLoadWidgets);
+						var widgetLoader = new WidgetLoader(dijit.byId('CenterBorderContainer'));
+						if (window.startupSequence)
+						{
+							for (var widgetIndex = 0, widgetSequenceLength = window.startupSequence.length; widgetIndex < widgetSequenceLength; widgetIndex++)
+							{
+								var widget = dijit.byId(window.startupSequence[widgetIndex]);
+								widgetLoader.register(widget);
+							}
+						}
+
+						window.tearOffMenuController = new TearOffMenuController({ view: viewType, aras: aras });
+						@if (!hideToolbar)
+						{
+							<text>
+								window.tearOffMenuController.requireToolbar();
+								window.tearOffMenuController.when('ToolbarLoaded').then(function(control) {
+									window.tearOffMenuController.initToolbar(control, 'TearoffWindowToolbar');
+								});
+							</text>
+						}
+						@if (!hideMenu)
+						{
+							<text>
+								window.tearOffMenuController.requireMainMenu();
+								window.tearOffMenuController.when('MainMenuLoaded').then(function(control) {
+									window.tearOffMenuController.initMainMenu(control, 'TearoffWindowMainMenu');
+								});
+							</text>
+						}
+
+						return widgetLoader.start().then(function () {
+							window.tearOffMenuController.initController();
+							//compatibility code
+							clientControlsFactory.createControl("Aras.Client.Frames.TearOffMenu", { tearOffMenuController: window.tearOffMenuController }, function (control) {
+								document.dispatchEvent(events.onLoadWidgets);
+							});
+						});
+					});
+				});
+		</script>
+	}
+}
+@section header
+{
+		@RenderSection("header", false)
+}
+@section load_widgets
+{
+	@if (IsSectionDefined("load_widgets"))
+	{
+		@RenderSection("load_widgets")
+	}
+	else
+	{
+		<script type="text/javascript">
+			(function () {
+				var loadWidgetsListener = function () {
+					window.windowReadyObjectResolve(window);
+					var widgets = dijit.findWidgets(document.getElementById('BorderContainer'));
+					const sidebarSwitcher = document.querySelector('aras-switcher#viewers');
+					if (sidebarSwitcher) {
+						window.tabContainer = new TabContainerWrapper(sidebarSwitcher);
+						for (const widget of widgets) {
+							if (widget.domNode && widget.domNode.parentElement === tabContainer.switcher) {
+								window.tabContainer.createTab(widget, widget.id);
+							}
+						}
+					} else {
+						widgets.forEach(function(widget) {
+							if (widget.startup && !widget.isLoaded) {
+								widget.startup();
+							}
+						});
+					}
+				};
+
+				document.addEventListener("loadWidgets", loadWidgetsListener);
+			})();
+		</script>
+		<base href="@Url.ContentWithSalt("~/scripts/")">
+	}
+}
+@section body
+{
+	@if (IsSectionDefined("body"))
+	{
+		@RenderSection("body")
+	}
+	else
+	{
+		<iframe id="dimmer_spinner" src="@Url.ContentWithSalt("~/scripts/spinner.html")"></iframe>
+		<div id="top"></div>
+		<div id="BorderContainer" class="aras-flex">
+			<div id="center" class="aras-flex-grow">
+				@RenderSection("center", false)
+			</div>
+			<aras-splitter id="ssvc-splitter" class="aras-hide"></aras-splitter>
+			<div id="rightSidebarContentPane" class="aras-hide" style="min-width: 350px; width: 350px"></div>
+		</div>
+	}
+}

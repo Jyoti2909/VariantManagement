@@ -1,0 +1,37 @@
+﻿<AML>
+ <Item type="Method" id="42837F08720F48E885497CED664F1C66" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[List<char> invalidFileNameChars = new List<char>(Path.GetInvalidFileNameChars());
+
+string fileName = this.getProperty("mso_documentNumber", "");	
+string mso_title = this.getProperty("mso_title", "");
+
+string fileNameAddition = "";
+bool lastSymbolWasOk = true;
+for (int i = 0; i < mso_title.Length; ++i)
+{
+	if (!invalidFileNameChars.Contains(mso_title[i]))
+	{
+		if (!lastSymbolWasOk)
+			fileNameAddition += "_";
+		fileNameAddition += mso_title[i];
+		lastSymbolWasOk = true;
+	}
+	else
+	{
+		lastSymbolWasOk = false;
+	}
+}
+
+if (!string.IsNullOrEmpty(fileNameAddition))
+{
+	fileName += "-" + fileNameAddition;
+}
+
+this.setProperty("val", fileName);
+return this;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_Process_File_Naming</name>
+ </Item>
+</AML>

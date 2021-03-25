@@ -1,0 +1,180 @@
+﻿<AML>
+ <Item type="Life Cycle Map" id="D127DAF0C99247F4982A5733BD8300BB" action="add">
+  <description>Express DCO LifeCycle</description>
+  <start_state keyed_name="New" type="Life Cycle State">7F99A486678A4C258D39D0A2F1DA80DA</start_state>
+  <name>Express DCO</name>
+  <Relationships>
+   <Item type="Life Cycle State" id="A1B4713F65314E18B04E3DD67686DD3D" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <label xml:lang="en">Cancelled</label>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <state_permission_id keyed_name="Express Change - Closed" type="Permission">E9340F0B9C3742DD9C75A00EEF2CF3FC</state_permission_id>
+    <x>191</x>
+    <y>187</y>
+    <name>Cancelled</name>
+   </Item>
+   <Item type="Life Cycle State" id="FEE0AB70A3D34D379854AFDFE01B6DBD" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <label xml:lang="en">In Review</label>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <state_permission_id keyed_name="Express Change - InProgress" type="Permission">A1E323040D2B4D22A1A1D3D1042C55EC</state_permission_id>
+    <x>368</x>
+    <y>91</y>
+    <name>In Review</name>
+   </Item>
+   <Item type="Life Cycle State" id="C3F4E64625DF4C06B3044E5EB159A97F" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <label xml:lang="en">In Work</label>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <state_permission_id keyed_name="Express Change - InProgress" type="Permission">A1E323040D2B4D22A1A1D3D1042C55EC</state_permission_id>
+    <x>191</x>
+    <y>91</y>
+    <name>In Work</name>
+   </Item>
+   <Item type="Life Cycle State" id="7F99A486678A4C258D39D0A2F1DA80DA" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <label xml:lang="en">New</label>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <state_permission_id keyed_name="Express Change - New" type="Permission">536B5CB5F11C400F9046ABC2E9F5F64B</state_permission_id>
+    <x>39</x>
+    <y>91</y>
+    <name>New</name>
+   </Item>
+   <Item type="Life Cycle State" id="73E88F15B38047108543B9227E6AD2A2" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <label xml:lang="en">Released</label>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <state_permission_id keyed_name="Express Change - Closed" type="Permission">E9340F0B9C3742DD9C75A00EEF2CF3FC</state_permission_id>
+    <x>526</x>
+    <y>91</y>
+    <name>Released</name>
+   </Item>
+   <Item type="Life Cycle Transition" id="34C5FDF020634A32A5DCF0879FCB30B7" action="add">
+    <from_state keyed_name="New" type="Life Cycle State">7F99A486678A4C258D39D0A2F1DA80DA</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>384</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <to_state keyed_name="In Work" type="Life Cycle State">C3F4E64625DF4C06B3044E5EB159A97F</to_state>
+    <x>43</x>
+    <y>15</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="73DA0942F4A548069D9AFDF48BC92341" action="add">
+    <from_state keyed_name="New" type="Life Cycle State">7F99A486678A4C258D39D0A2F1DA80DA</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_OnChangeItemCancelled" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_OnChangeItemCancelled</name>
+     </Item>
+    </post_action>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>896</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <to_state keyed_name="Cancelled" type="Life Cycle State">A1B4713F65314E18B04E3DD67686DD3D</to_state>
+    <x>33</x>
+    <y>72</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="EAC8C865005F41FABC4193F6F3BD4110" action="add">
+    <from_state keyed_name="In Work" type="Life Cycle State">C3F4E64625DF4C06B3044E5EB159A97F</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <to_state keyed_name="In Review" type="Life Cycle State">FEE0AB70A3D34D379854AFDFE01B6DBD</to_state>
+    <x>71</x>
+    <y>16</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="F85C669052F6467DA2023438A514B765" action="add">
+    <from_state keyed_name="In Work" type="Life Cycle State">C3F4E64625DF4C06B3044E5EB159A97F</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_OnChangeItemReleased" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_OnChangeItemReleased</name>
+     </Item>
+    </post_action>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments>252,176|538,176</segments>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <to_state keyed_name="Released" type="Life Cycle State">73E88F15B38047108543B9227E6AD2A2</to_state>
+    <x>146</x>
+    <y>92</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="77D93E77378A4CE2AEA4255BE989625A" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">FEE0AB70A3D34D379854AFDFE01B6DBD</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_OnChangeItemReleased" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_OnChangeItemReleased</name>
+     </Item>
+    </post_action>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>512</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <to_state keyed_name="Released" type="Life Cycle State">73E88F15B38047108543B9227E6AD2A2</to_state>
+    <x>59</x>
+    <y>14</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="C1375C805899410BBF626AE3D98C9E75" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">FEE0AB70A3D34D379854AFDFE01B6DBD</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments>380,47|247,47</segments>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Express DCO" type="Life Cycle Map">D127DAF0C99247F4982A5733BD8300BB</source_id>
+    <to_state keyed_name="In Work" type="Life Cycle State">C3F4E64625DF4C06B3044E5EB159A97F</to_state>
+    <x>-104</x>
+    <y>-58</y>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

@@ -1,0 +1,81 @@
+﻿<AML>
+ <Item type="Method" id="DCB5BB4FEFC34F2FA40D7EBF9C17ADFA" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+			var dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			var businessLogic = new BusinessLogic(dataAccessLayer);
+			bool result = businessLogic.ValidateLoginName(this.getAttribute("user_id"));
+			return this.getInnovator().newResult("Result is " + result);
+			/*
+			The purpose of this method is to demonstrate the development tricks below.
+				a. Make a server-side method suitable for Pure Unit Testing (i.e. no connections to db, file system and other staff requiring special privileges) while tests execution.
+				b. Develop a server-side method through Visual Studio.
+				c. Write a unit test for the method.
+			So, let's start
+				Q1. How to add an existing method to this project?
+				A1. Open AllTests.sln in Visual Studio, build the solution. In Solution Explorer, RMB on CSharpMethods\MethodLinks, select Add\Existing Item in context menu, select an existing method xml file AS A LINK. Then build CSharpMethods project.
+					-> New "auto-generated" cs file is created in CompiledMethods folder. The file is added to CSharpMethods project. You should NOT commit the file. VS will ask you to reload the project, do it.
+				Q2. How to make a server-side method suitable for Pure Unit Testing?
+				A2. You should split it into three layers.
+					The 1st Layer. An entry point code taking input arguments, instantiating classes of other layers and returning a result. An example is several lines of the code above.
+					The 2nd Layer. BusinessLogic class or classes. It accepts interface references (not real implementations) of DataAccessLayer (i.e. the 3rd Layer classes). It will allow us to "fake" DataAccessLayer classes and return hardcoded data in tests instead of real connecting to db, file system, etc. The 2nd Layer is typically covered by Pure Unit Tests.
+					The 3rd Layer. DataAccessLayer together with its interfaces connecting to db, file system, etc.
+				Q3. How to develop a server-side method through Visual Studio?
+				A3. In Visual Studio Solution Explorer, double-click on MethodConverter project\Properties\Embedded.resx. Embedded.resx tab appears. Modify Strategy value from MethodXmlIsPrimary to MethodCSIsPrimary in the tab. Rebuild MethodConverter. Now, you can go to "CSharpMethods project\CompiledMethods\the auto-generated cs file created at A1" and modify its code in VS. If you build CSharpMethods then this new code is copied to the original method xml file.
+				Cautions:
+					- Do NOT commit Embedded.resx changes.
+					- You should manually (or through Solution Upgrade Import Tool) import the changes into Innovator DB for later real testing.
+				Q4. How to write a unit test for the method.
+				A4. In Visual Studio Solution Explorer go to CSharpMethods.UnitTests project and add a new cs file here. See SampleUnitTest.cs demonstrating an example of unit tests. You can use some of Visual Studio plugins or NUnit tools to run them.
+			*/
+		}
+
+		public class BusinessLogic
+		{
+			private IDataAccessLayer dataAccessLayer;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				this.dataAccessLayer = dataAccessLayer;
+			}
+
+			public bool ValidateLoginName(string userId)
+			{
+				Item user = dataAccessLayer.GetUser(userId);
+				if (user.isError())
+					return false;
+
+				string loginName = user.getProperty("login_name");
+				if (String.IsNullOrEmpty(loginName))
+					return false;
+
+				var regEx = new System.Text.RegularExpressions.Regex("^[a-z0-9_-]{3,16}$");
+				return regEx.IsMatch(loginName);
+			}
+		}
+
+		public interface IDataAccessLayer
+		{
+			Item GetUser(string id);
+		}
+
+		public class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this.innovator = innovator;
+			}
+
+			public Item GetUser(string id)
+			{
+				Item query = innovator.newItem("User", "get");
+				query.setID(id);
+				return query.apply();
+			}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>SampleMethod</name>
+ </Item>
+</AML>

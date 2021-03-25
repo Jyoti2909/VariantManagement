@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="217CD7B0459144C8BBD31C3A7B8F576A" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+  String fv_val = "1";
+
+try
+{
+  // Note that the sequence 'FileVersionInVault' belongs to 'com.aras.innovator.replication'
+  // package and the method belongs to the 'com.aras.innovator.core' package that should not
+  // depend on any other package. Nevertheless this is NOT a problem here because if the sequence
+  // 'FileVersionInVault' does not exist the 'GetNextSequenceValue(..)' call throws an exception
+  // that we catch. In practice both package always are loaded into a core database because
+  // both packages belong to the set of 'core' Innovator packages.
+  fv_val = CCO.DB.InnDatabase.GetNextSequenceValue("name", "FileVersionInVault");
+  if(String.IsNullOrEmpty(fv_val))
+    fv_val = "1";
+}
+catch(Exception)
+{}
+	
+this.setProperty("file_version", fv_val);
+
+return this;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>onBeforeAddUpdateLocated</name>
+ </Item>
+</AML>

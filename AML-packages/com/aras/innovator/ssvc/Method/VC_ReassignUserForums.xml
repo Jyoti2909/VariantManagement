@@ -1,0 +1,98 @@
+﻿<AML>
+ <Item type="Method" id="10A52F66E669491BBC6E1758A3A1C2FB" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*
+executed onBeforeDelete user
+cleanUp owner of AllForums, created by User
+cleanUp Forum "MyBookmark" of user
+should be cleaned up properties "want_view_by", "must_view_by" and "shared_with"
+*/
+string userId = this.getID();
+string oldAction = this.getAction();
+this.context = CCO;
+this.setAction("get");
+Item users = this.apply();
+for (int i = 0, count = users.getItemCount(); i < count; i++)
+{
+	Item currentUser = users.getItemByIndex(i);
+	ProcessUser(currentUser.getID());
+}
+this.setAction(oldAction);
+return this;
+}
+Aras.Server.Core.CallContext context;
+
+private void ProcessUser(string userId)
+{
+	string aliasId = GetAliasIdentityIdForUser(userId);
+	RemoveMyBookmarkForumForUser(aliasId);
+	RemoveNotSharedRegularForums(aliasId);
+	CleanUpOwnerPropertyOfForums(aliasId);
+	CleanupIdentityProperty("ForumWantViewBy", "want_view_id", aliasId);
+	CleanupIdentityProperty("ForumSharedWith", "shared_with_id", aliasId);
+	CleanupIdentityProperty("ForumMustViewBy", "must_view_id", aliasId);
+}
+
+private void CleanupIdentityProperty(string relshipName, string propertyName, string identityId)
+{
+	string table = context.DB.InnDatabase.GetTableName(relshipName);
+	Item relship = this.newItem(relshipName, "delete");
+	relship.setAttribute("where", String.Format(CultureInfo.InvariantCulture, "{0}.{1}='{2}'", table, propertyName, context.DB.InnDatabase.QuoteValue(identityId)));
+	relship.apply();
+}
+
+private Item EditForumItem(string forumId, string propertyName, string propertyValue)
+{
+	Item forum = this.newItem("Forum", "edit");
+	forum.setID(forumId);
+	forum.setProperty(propertyName, propertyValue);
+	return forum.apply();
+}
+
+private void RemoveNotSharedRegularForums(string aliasId)
+{
+	Item forums = this.newItem("Forum", "delete");
+	forums.setAttribute("where", String.Format(CultureInfo.InvariantCulture, "[FORUM].owned_by_id='{0}' and ([FORUM].id not in (SELECT source_id from innovator.[FORUMSHAREDWITH]))", context.DB.InnDatabase.QuoteValue(aliasId)));
+	forums.apply();
+}
+
+private void CleanUpOwnerPropertyOfForums(string aliasId)
+{
+	Item forums = this.newItem("Forum", "get");
+	forums.setProperty("forum_type", "Regular");
+	forums.setProperty("owned_by_id", aliasId);
+	forums = forums.apply();
+	if (forums.isError())
+	{
+		return;
+	}
+	List<string> ids = new List<string>();
+	for (int i = 0, count = forums.getItemCount(); i < count; i++)
+	{
+		Item current = forums.getItemByIndex(i);
+		ids.Add(String.Format(CultureInfo.InvariantCulture, "{0}", current.getID()));
+	}
+	Item editForums = this.newItem("Forum", "edit");
+	editForums.setAttribute("idlist", String.Join(", ", ids.ToArray()));
+	editForums.setPropertyAttribute("owned_by_id", "is_null", "1");
+	editForums.apply();
+}
+
+private void RemoveMyBookmarkForumForUser(string aliasId)
+{
+	Item forum = this.newItem("Forum", "delete");
+	string escapedAliasId = context.DB.InnDatabase.QuoteValue(aliasId);
+	forum.setAttribute("where", String.Format(CultureInfo.InvariantCulture, "[FORUM].forum_type='MyBookmarks' and [FORUM].owned_by_id = '{0}'", escapedAliasId));
+	forum = forum.apply();
+}
+
+private string GetAliasIdentityIdForUser(string userId)
+{
+	Item identity = this.newItem("User", "VC_GetUserIsAliasIdentity");
+	identity.setID(userId);
+	identity = identity.apply();
+	return identity.getID();]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_ReassignUserForums</name>
+ </Item>
+</AML>

@@ -1,0 +1,139 @@
+﻿<AML>
+ <Item type="Method" id="6433948460814C4D892B8D02BB8582DB" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string itemTypeId = this.getProperty("item_type_id");
+	Innovator inn = this.getInnovator();
+	IDataAccessLayer dataAccessLayer = new DataAccessLayer(inn);
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer, inn);
+	return businessLogic.GetActionsMenuButtons(itemTypeId);
+}
+
+internal class BusinessLogic
+{
+	private IDataAccessLayer dataAccessLayer;
+	private Innovator innovator;
+	// 'BC6028072B7C4D56B0F3EB67F43F126D' - itemview.relationshipsrowcontextmenu.default.actionsmenu
+	private const string ItemCommandBarDefaultActionsButtonId = "BC6028072B7C4D56B0F3EB67F43F126D";
+
+	internal BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+		this.innovator = innovator;
+	}
+
+	public Item GetActionsMenuButtons(string itemTypeId)
+	{
+		Item items = null;
+
+		if (!string.IsNullOrEmpty(itemTypeId))
+		{
+			string clickMethodId = this.dataAccessLayer.GetActionsClickMethodId();
+			string initMethodId = this.dataAccessLayer.GetActionsInitMethodId();
+			Item actions = this.dataAccessLayer.GetActions(itemTypeId);
+			items = HandleMenuButtons(actions, clickMethodId, initMethodId);
+		}
+
+		return items ?? this.innovator.newResult("");
+	}
+
+	private Item HandleMenuButtons(Item actions, string clickMethodId, string initMethodId)
+	{
+		int actionsCount = actions.getItemCount();
+		if (actionsCount > 0)
+		{
+			Item cuiItems = this.innovator.newItem();
+			for (int actionIndex = 0; actionIndex < actionsCount; actionIndex++)
+			{
+				Item currentAction = actions.getItemByIndex(actionIndex);
+				Item menuButton = currentAction.newItem("CommandBarMenuButton");
+				string actionId = currentAction.getID();
+				string actionType = currentAction.getProperty("type");
+				string location = currentAction.getProperty("location");
+				string canExecuteMethodName = currentAction.getPropertyAttribute("can_execute", "keyed_name");
+				menuButton.setProperty("name", currentAction.getProperty("name") ?? actionId);
+				menuButton.setProperty("label", currentAction.getProperty("label") ?? currentAction.getProperty("name"));
+
+				menuButton.setProperty("parent_menu", ItemCommandBarDefaultActionsButtonId);
+				menuButton.setProperty("action", "Add");
+				menuButton.setProperty("on_init_handler", initMethodId);
+				menuButton.setProperty("on_click_handler", clickMethodId);
+
+				Newtonsoft.Json.Linq.JObject additionalData = new Newtonsoft.Json.Linq.JObject();
+				additionalData["actionId"] = actionId;
+				additionalData["actionType"] = actionType;
+				additionalData["canExecuteMethodName"] = canExecuteMethodName;
+				additionalData["location"] = location;
+				menuButton.setProperty("additional_data", additionalData.ToString());
+
+				menuButton.setID(actionId);
+				menuButton.removeAttribute("isNew");
+				menuButton.removeAttribute("isTemp");
+				cuiItems.appendItem(menuButton);
+			}
+
+			// newItem() is creates empty node. It's should be deleted
+			cuiItems.removeItem(cuiItems.getItemByIndex(0));
+			return cuiItems;
+		}
+
+		return null;
+	}
+}
+
+internal interface IDataAccessLayer
+{
+	string GetActionsClickMethodId();
+	string GetActionsInitMethodId();
+
+	Item GetActions(string itemTypeId);
+}
+
+internal class DataAccessLayer : IDataAccessLayer
+{
+	// 'cui_ivrcm_action_click' - name of default click method for action
+	const string ActionsClickMethodName = "cui_ivrcm_action_click";
+	// 'cui_common_action_init' - name of common init method for action
+	const string ActionsInitMethodName = "cui_common_action_init";
+	private Innovator innovator;
+
+	internal DataAccessLayer(Innovator innovator)
+	{
+		this.innovator = innovator;
+	}
+
+	public string GetActionsClickMethodId() {
+		return GetActionsMethodId(ActionsClickMethodName);
+	}
+
+	public string GetActionsInitMethodId() {
+		return GetActionsMethodId(ActionsInitMethodName);
+	}
+
+	private string GetActionsMethodId(string methodName)
+	{
+		Item method = this.innovator.newItem("Method", "get");
+		method.setAttribute("select", "id");
+		method.setProperty("name", methodName);
+		method = method.apply();
+
+		return method.getID();
+	}
+
+	public Item GetActions(string itemTypeId)
+	{
+		Item itemActionss = this.innovator.newItem("Item Action", "get");
+		itemActionss.setProperty("source_id", itemTypeId);
+		Item relActions = this.innovator.newItem("Action", "get");
+		relActions.setAttribute("select", "name,label,can_execute,location,type");
+		Item logicOr = relActions.newOR();
+		logicOr.setProperty("type", "itemtype");
+		logicOr.setProperty("type", "item");
+		itemActionss.setRelatedItem(relActions);
+		itemActionss = itemActionss.apply();
+		return itemActionss.getItemsByXPath(Item.XPathResultItem + "/related_id/Item");
+	}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>cui_ivrcm_actions_builder</name>
+ </Item>
+</AML>

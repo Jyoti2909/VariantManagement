@@ -1,0 +1,183 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,ScriptSet1"></script>
+	<script type="text/javascript">
+		var par = window.frameElement.dialogArguments;
+		var aras = new Aras(par.aras);
+		aras.nn = 500;
+
+		var isEditMode = par.isEditMode;
+		var item = par.item;
+		var itemNd = item;
+		var Item = par.Item;
+		var itemID = par.itemID;
+		var noTabs = par.noTabs;
+		var itemTypeLabel = par.itemTypeLabel;
+		var itemTypeName = par.itemTypeName;
+		var itemType = par.itemType;
+		var keyed_name = par.keyed_name;
+		var scriptsURL = par.scriptsURL;
+		var dbName = par.dbName;
+		var sIT_title = itemTypeLabel ? itemTypeLabel : itemTypeName;
+		var title = sIT_title + ' - ' + keyed_name + (isEditMode ? '' : ' (read only)');
+		var isTearOff = true;
+		var viewMode = 'tab view';
+		var dialogOpener = par.opener;
+		opener = par.opener;
+
+		var myInnovator = new aras.getMostTopWindowWithAras(window).Innovator();
+		var tabsToDisable = par.tabsToDisable;
+		document.write('<title>' + title + '</title>\n');
+	</script>
+	<style type="text/css">
+		@import "../../../javascript/include.aspx?classes=arasClaro.css,common.css";
+
+		#top_splitter{
+			display: block;
+		}
+
+		html, body
+		{
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: true, baseUrl:'../../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../../javascript/dialog.js"></script>
+	<!--<script type="text/javascript" src="../../../javascript/item_window.js"></script>-->
+<script type="text/javascript">
+	var hideTabs = (noTabs != false);
+
+	function getItem() {
+		return item;
+	}
+
+	function setItem(value) {
+		item = value;
+	}
+
+	function updateRootItem(itemNd) {
+		if (!itemNd) {aras.AlertError("Failed to get the "+window.itemTypeName, "", ""); return false;}
+		if (itemNd.getAttribute("type")!=window.itemTypeName) {aras.AlertError("Invalid ItemType specified: ("+itemNd.getAttribute("type")+")."); return false;}
+		itemID = itemNd.getAttribute("id");
+		var wasLocked = aras.isLockedByUser(item);
+		item = itemNd;
+		itemID = itemNd.getAttribute("id");
+		if (isEditMode) {
+			isEditMode = wasLocked;
+			setEditMode();
+		} else {
+			isEditMode = wasLocked;
+			setViewMode();
+		}
+	}
+
+	function setEditMode() {
+		var prevMode = isEditMode;
+		isEditMode = true;
+		document.title = sIT_title + ' - ' + aras.getKeyedNameEx(item);
+		if (document.frames.tearoff_menu && document.frames.tearoff_menu.setEditMode) {
+			document.frames.tearoff_menu.setEditMode();
+		}
+		if (prevMode!=isEditMode && aras.uiGetFormID4ItemEx(item,"edit")!=aras.uiGetFormID4ItemEx(item,"view")) {
+			if (document.frames.instance) {
+				aras.uiShowItemInFrameEx(document.frames.instance,item,"edit",0);
+			}
+		} else if (document.frames.instance && document.frames.instance.document.forms.MainDataForm) {
+			aras.uiPopulateFormWithItemEx(document.frames.instance.document.forms.MainDataForm, item, itemType, true);
+		}
+		if (document.frames.relationships && document.frames.relationships.setEditMode) {
+			document.frames.relationships.setEditMode();
+		}
+	}
+
+	function setViewMode() {
+		var prevMode = isEditMode;
+		isEditMode = false;
+		document.title = sIT_title + " - " + aras.getKeyedNameEx(item) + " (read only)";
+		if (document.frames.tearoff_menu && document.frames.tearoff_menu.setViewMode) {
+			document.frames.tearoff_menu.setViewMode();
+		}
+		if (prevMode!=isEditMode && aras.uiGetFormID4ItemEx(item,"edit")!=aras.uiGetFormID4ItemEx(item,"view")) {
+			if (document.frames.instance) {
+				aras.uiShowItemInFrameEx(document.frames.instance,item,"view",0);
+			}
+		} else if (document.frames.instance && document.frames.instance.document.forms.MainDataForm) {
+			aras.uiPopulateFormWithItemEx(document.frames.instance.document.forms.MainDataForm, item, itemType, false);
+		}
+		if (document.frames.relationships && document.frames.relationships.setViewMode) {
+			document.frames.relationships.setViewMode();
+		}
+	}
+
+	onload = function onload_handler() {
+		var instance = document.getElementById("instance");
+		aras.uiShowItemInFrameEx(instance.contentWindow, item, (isEditMode ? 'edit' : 'view'), 0);
+
+		var relationships = document.getElementById("relationships");
+		var location = "?db=" + dbName + "&ITName=" + itemTypeName + "&itemID=" + itemID + "&editMode=" + (isEditMode ? 1 : 0) + "&tabbar=1&toolbar=1&where=dialog";
+		relationships.onload = function () { if(tabsToDisable.length!=0) disableTabs(); };
+		relationships.src = aras.getScriptsURL() + "relationships.html" + location;
+
+		instance.contentWindow.document.userChangeHandler = null;
+		aras.uiRegWindowEx(itemID, window);
+	}
+	
+	onbeforeunload = function onbeforeunload_handler() {
+		window.focus();
+	}
+
+	onunload = function onunload_handler() {
+		aras.uiUnregWindowEx(itemID);
+	}
+
+	var maxCheck = 300;
+	function disableTabs() {
+		var relationships = document.getElementById("relationships").contentWindow.relationships;
+		if(!relationships.currTabID) {
+			if(--maxCheck==0) {
+				alert("end");
+				return;
+			}
+			setTimeout("disableTabs()",10);
+			return;
+		}
+		for(var i = 0;i < tabsToDisable.length; i++) {
+			relationships.relTabbar.removeTabByLabel(tabsToDisable[i]);
+		}
+	}
+
+	var statusbar;
+	var resourceUrl = aras.getI18NXMLResource("tabview_statusbar.xml", aras.getBaseURL());
+	clientControlsFactory.createControl("Aras.Client.Controls.Experimental.StatusBar", {id: "bottom_statusBar", aras: aras, resourceUrl: resourceUrl, imageBase: "../../"}, function(control) {
+		statusbarCtrl = control;
+		var bottomNode = document.getElementById("bottom");
+		bottomNode.appendChild(statusbarCtrl.domNode);
+		statusbarCtrl.startup();
+
+		statusbar = clientControlsFactory.createControl("Aras.Client.Frames.StatusBar", ({aras: aras, statusbar: statusbarCtrl}));
+	});
+</script>
+</head>
+<body class="claro">
+	<div data-dojo-type="dijit/layout/BorderContainer" style="width: 100%; height: 100%;" id="BorderContainer">
+		<div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'center'" id="center">
+			<div data-dojo-type="dijit/layout/BorderContainer" style="width: 100%; height: 100%; padding:0px;" id="CenterBorderContainer">
+				<div data-dojo-type="dijit/layout/ContentPane" baseClass="dijitContentPaneNoPadding" data-dojo-props="region:'center'" id="formContentPane">
+					<iframe id="instance" src="../../../scripts/blank.html" scrolling="auto" frameborder="0" style="width: 100%;height: 100%;">
+					</iframe>
+				</div>
+				<div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="splitter:true, region:'bottom'" id="centerMiddle" style="height: 230px;">
+					<iframe id="relationships" src="../../../scripts/blank.html" frameborder="0" style="width:100%; height:100%;"></iframe>
+				</div>
+			</div>
+		</div>
+		<div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'bottom'" id="bottom" style="height: 21px; margin-top: 2px;" />
+	</div>
+</body>
+</html>

@@ -1,0 +1,65 @@
+﻿<AML>
+ <Item type="Method" id="AB16885727EA422DA397F336DC5BD6F9" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// PE_CheckChangeItemUsage
+// Checks if any version of an item is used as an Affected Item on a change item
+
+// Find all Affected Items where the affected_id or new_item_id property is set to a version of item
+Innovator inn = this.getInnovator();
+
+//We have to skip check for Aras PLM identity because it is used for promote Document/Part during promotion of Express ECO and Express DCO
+Aras.Server.Security.Identity plmIdentity = Aras.Server.Security.Identity.GetByName("Aras PLM");
+if(CCO.Permissions.IdentityListHasId(Aras.Server.Security.Permissions.Current.IdentitiesList, plmIdentity.Id))
+{
+  return inn.newResult("OK");
+}
+
+// Grant 'Aras PLM' permissions
+bool PermissionWasSet  = Aras.Server.Security.Permissions.GrantIdentity(plmIdentity);
+
+try
+{
+  string configId = this.getProperty("config_id","?");
+
+  Item affItem = this.newItem("Affected Item");
+  Item ccItem = this.newItem("Change Controlled Item");
+  ccItem.setProperty("config_id",this.getProperty("config_id","?"));
+  ccItem.setProperty("generation","0");
+  ccItem.setPropertyAttribute("generation","condition","gt");
+  Item orElement = affItem.newOR();
+  orElement.setPropertyItem("affected_id",ccItem);
+  orElement.setPropertyItem("new_item_id",ccItem);
+  
+  // Loop through the possible change items to see where the Affected Item is used
+  string[] chgItems = { "ECN", "ECR", "Simple ECO", "Express ECO", "Express DCO" };
+ 
+  foreach (string chgItem in chgItems)
+  {
+	Item chgRel = this.newItem(chgItem + " Affected Item", "get");
+	chgRel.setAttribute("select", "id, source_id(keyed_name)");
+	chgRel.setPropertyItem("related_id", affItem);
+	chgRel = chgRel.apply();
+	if (chgRel.getItemCount() > 0) 
+	{
+		string thisType = this.getType();
+		string thisKeyedName = this.getProperty("keyed_name", "");
+		Item changeItem = chgRel.getItemByIndex(0).getPropertyItem("source_id");
+		string changeType = changeItem.getType();
+		string changeKeyedName = changeItem.getProperty("keyed_name", "");
+		
+		String errorMessage = CCO.ErrorLookup.Lookup("PE_CheckChangeItemUsage", new Object[] { thisType, thisKeyedName, changeType, changeKeyedName });
+		return inn.newError(errorMessage);
+	}
+  }
+
+  return inn.newResult("OK");
+}
+finally
+{
+  // Revoke 'Aras PLM' permissions
+  if (PermissionWasSet) Aras.Server.Security.Permissions.RevokeIdentity(plmIdentity);
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_CheckChangeItemUsage</name>
+ </Item>
+</AML>

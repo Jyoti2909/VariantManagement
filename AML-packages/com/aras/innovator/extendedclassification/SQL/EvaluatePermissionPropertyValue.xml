@@ -1,0 +1,41 @@
+﻿<AML>
+ <Item type="SQL" id="65D41EFF2281481F90F17D7DD63280A4" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>EvaluatePermissionPropertyValue</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION [EvaluatePermissionPropertyValue]
+(
+	@type VARCHAR(32),
+	@permission_id CHAR(32),
+	@identity_list VARCHAR(MAX)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+        SELECT MAX (CASE 
+                      WHEN ( acs.can_update = '1' 
+                             AND @type = 'can_update' ) THEN 9 
+                      -- can_update permissions only  
+                      WHEN ( acs.can_get = '1' 
+                             AND @type = 'can_get' ) THEN 9 
+                      -- can_delete permissions only  
+                      WHEN ( acs.can_change_access = '1' 
+                             AND @type = 'can_change_access' ) THEN 9 
+                      -- can_change_access permissions only  
+                      ELSE NULL 
+                    -- No permissions on specified for specified access right  
+                    END) p 
+        FROM   (SELECT can_get, 
+                       can_update,
+                       can_change_access 
+                FROM   [ACCESS_PROPERTYVALUE] acs 
+                WHERE  acs.[SOURCE_ID] = @permission_id 
+                       AND (CHARINDEX(acs.[related_id] COLLATE Latin1_General_BIN2, @identity_list) > 0)
+               ) acs
+)]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>EvaluatePermissionPropertyValue</name>
+ </Item>
+</AML>

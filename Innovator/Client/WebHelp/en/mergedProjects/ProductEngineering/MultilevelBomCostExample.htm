@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = ".";
+  gCommonRootRelPath = ".";
+  gTopicId = "1";
+
+//]]></script>
+
+<script type="text/javascript" src="./template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="./template/scripts/common.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="./template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="assets/css/default.css"/>
+  <meta name="template" content="assets/masterpages/JAI_masterpage.htt"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="topic-check-list" content="Ran Smart Index"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Multilevel Bom Cost Example</title>
+  
+</head>
+<body>
+  <div>
+  <h1>Multilevel BOM Goal Example</h1>
+  <p>This is a more complex example of how the goal values are rolled up and calculated in a parent Part,  depending on the type of values the children parts have. The following is an example structure:</p>
+  <p class="Figure_indented"><img alt="" class="Image" src="assets/images/images/BOMReport.jpg" style="width: 100%; max-width: 659px;"/></p>
+  <p>To start the goal value roll-up process, all parent parts must have a goal value. So, let&#39;s enter target goals for these parts, like this</p>
+  <p class="Figure_indented"><img alt="" class="Image" src="assets/images/images/BOMReport2.jpg" style="width: 100%; max-width: 858px;"/></p>
+  <p>Notice that no target goal value was entered for 1levelChild2. You will see later that because of that, it will not participate in the my parent final roll-up. So far we see the same expected behavior as with a simpler example. As long as the children goal values are target, they do not alter the parent&#39;s goal value at all. Now, let&#39;s change some goal values to estimated, like this:</p>
+  <p class="Figure_indented"><img alt="" class="Image" src="assets/images/images/BOMReport3.jpg" style="width: 100%; max-width: 854px;"/></p>
+  <p>From the table above, you can see that the top-level goal value remains Target. That is because one of its children is not participating in the roll-up (no value entered for 1levelChild2). The same would be the case if it was participating in the roll-up, but one of its children had a target value. Now, let&#39;s allow the 1levelChild2 to participate in the roll-up, like this:</p>
+  <p class="Figure_indented"><img alt="" class="Image" src="assets/images/images/BOMReport4.jpg" style="width: 100%; max-width: 856px;"/></p>
+  <p>Notice now that my parent&#39;s value is finally calculated, and it is the sum of the calculated values of its children. From this point forward, if you change any parts goal value, it will immediately be reflected up the line. However, if you change a child&#39;s goal value from Estimated to Actual, it will not have much of an impact on the parents. Even if you enter an Estimated value for 1levelChild2, the calculation will still use the Calculated value. The only type of value that overrides Calculated is Actual. So, if change 1levelChild2 to an Actual value, we will get these results:</p>
+  <p class="Figure_indented"><img alt="" class="Image" src="assets/images/images/BOMReport5.jpg" style="width: 100%; max-width: 856px;"/></p>
+  <p>Notice in the table above that the Actual value of 1levelChild2 is used to roll-up the value for my parent.</p>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

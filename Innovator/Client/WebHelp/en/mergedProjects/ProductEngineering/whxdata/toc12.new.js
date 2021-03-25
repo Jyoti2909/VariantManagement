@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"The MCO","type":"item","url":"SimplifiedChangeManagement/The_MCO/mco_overview.htm"},{"name":"The MCO Process","type":"item","url":"SimplifiedChangeManagement/The_MCO/The_MCO_Process/The_MCO_Process.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

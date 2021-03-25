@@ -1,0 +1,35 @@
+﻿<AML>
+ <Item type="Method" id="8A6D156789EB41B5A806E0F75DA4E39B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const viewMode = inArgs.viewMode;
+const aras = window.aras;
+if (viewMode !== 'notification') {
+	return aras.evalMethod('OnShowItemDefault', inDom, inArgs);
+}
+
+const itemTypeInToc = 'Discussion';
+const itemType = aras.getItemTypeForClient(itemTypeInToc);
+const label = itemType.getProperty('label_plural');
+const itemTypeID = itemType.getId();
+
+if (itemType.getErrorCode() !== 0 && !itemTypeID) {
+	return;
+}
+
+const TOCView = aras.uiGetTOCView4ItemTypeEx(itemType.node);
+const url = aras.getItemProperty(TOCView, 'start_page');
+let parameters = aras.getItemProperty(TOCView, 'parameters');
+
+if (parameters !== '') {
+	parameters += '&';
+}
+
+parameters += 'itemtypeID=' + itemTypeID + '&itemtypeName=' + itemTypeInToc + '&startBookmarkId=allmessages';
+
+aras.browserHelper.toggleSpinner(document, true);
+window.arasTabs.openPage(url + '?' + parameters, itemTypeID, '../images/MyDiscussions.svg', label);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VCN_OnShowItem</name>
+ </Item>
+</AML>

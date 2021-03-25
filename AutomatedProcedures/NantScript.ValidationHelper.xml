@@ -1,0 +1,150 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project name="ValidationHelper">
+	<!--
+		Validate Encoding
+		This block is responsible for check if there is files with wrong encoding.
+		Some source code files and code tree file should have specific byte order mark and should be validated
+		in order to be sure that symbols will be similar on different languages.
+	-->
+	<target name="Validate.Encoding.Of.Code.Tree" description="Some files in code tree should have specific byte order mak (BOM)">
+		<property name="Path.To.Dir.To.Validate" value="${path::combine(Path.To.This.Git.Repository, 'Innovator\Client')}" />
+		<validate
+			arguments='-encoding UTF8 UTF16 -deep -extensions js txt htm html aspx xml css xsl xslt -path "${Path.To.Dir.To.Validate}" -ignoreFile ".\.encoding.ignore"'
+			workingdir="${Path.To.This.Git.Repository}"
+			if="${directory::exists(Path.To.Dir.To.Validate)}" />
+	</target>
+
+	<target name="Validate.Encoding.Of.Source.Code" description="Some source code files should have specific byte order mak (BOM)">
+		<validate
+			arguments='-encoding UTF8 -deep -extensions cs csproj -path "${Path.To.This.Git.Repository}" -ignoreFile ".\.encoding.ignore"'
+			workingdir="${Path.To.This.Git.Repository}" />
+
+		<property name="Path.To.Package.Include" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\package.include')}" />
+		<property name="Path.To.Package.Exclude" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\package.exclude')}" />
+		<validate
+			arguments='-encoding UTF8 -path "${Path.To.Package.Include}" "${Path.To.Package.Exclude}"'
+			workingdir="${Path.To.This.Git.Repository}" />
+	</target>
+
+	<target name="Validate.Version.Of.Code.Tree.Aras.Binaries" description="All Aras binaries should be the same version">
+		<echo message="Print binaries versions:" />
+
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="AgentService" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},AgentService\bin" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},ConversionServer\bin" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},Innovator\Client\bin" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},Innovator\Server\bin" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},OAuthServer\bin" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},SelfServiceReporting\bin" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},VaultServer\bin" />
+
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},AutomatedProcedures\tools\IOM_SDK\.NET" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},AutomatedProcedures\tools\LanguagePackManagementUtility" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},AutomatedProcedures\tools\PackageImportExportUtilities" />
+		<property name="List.Of.Paths.To.Folders.With.Binaries" value="${List.Of.Paths.To.Folders.With.Binaries},Tests\libraries\Aras.IntegrationTests.Framework" />
+
+		<property name="Binaries.Version.List" value="" />
+		<foreach item="String" property="Path.To.Folder.With.Binaries" in="${List.Of.Paths.To.Folders.With.Binaries}" delim=",">
+			<foreach item="File" property="Path.To.Binary">
+				<in>
+					<items basedir="${path::combine(Path.To.This.Git.Repository, Path.To.Folder.With.Binaries)}">
+						<include name="Aras.*.dll" />
+						<include name="Aras.*.exe" />
+						<include name="consoleUpgrade.exe" />
+						<include name="export.exe" />
+						<include name="import.exe" />
+						<include name="InnovatorService.exe" />
+						<include name="IOM.dll" />
+						<include name="LanguageTool.exe" />
+						<include name="Libs.dll" />
+						<exclude name="Aras.Common.dll" />
+						<exclude name="Aras.Ark.Common.dll" />
+						<exclude name="Aras.IntegrationTests.Framework.dll" />
+						<exclude name="Aras.Common.dll" />
+						<exclude name="Aras.Ark.Logger.dll" />
+					</items>
+				</in>
+				<do>
+					<property name="Binary.Version" value="${fileversioninfo::get-file-version(fileversioninfo::get-version-info(Path.To.Binary))}" />
+
+					<if test="${not string::contains(Binaries.Version.List, Binary.Version)}">
+						<property name="Binaries.Version.List" value="${Binaries.Version.List} ${Binary.Version}" />
+					</if>
+
+					<echo message="${Path.To.Binary}: ${Binary.Version}" />
+				</do>
+			</foreach>
+		</foreach>
+
+		<property name="Binaries.Version.List" value="${string::trim(Binaries.Version.List)}" />
+		<choose>
+			<when test="${string::contains(Binaries.Version.List, ' ')}">
+				<fail message="There are Aras binaries with different versions: ${string::replace(Binaries.Version.List, ' ', ', ')}" />
+			</when>
+			<otherwise>
+				<echo message="All Aras binaries are the same version: ${Binaries.Version.List}" />
+			</otherwise>
+		</choose>
+	</target>
+
+	<!--
+		Validate java script files
+			There are two validation tools that used for validation:
+				-jscs
+				-jsnode
+
+			Both tools included to NodeJS. You should install NodeJS in order to be able to lauch the validation (https://nodejs.org/en/download/).
+			There are following configuration files used for lauch of the validation:
+				1).jscsrc - contains validation rules and ignore paths for jscs;
+				2).jshintrc - contains validation rules for jshint;
+				3).jshintignore - contains ignore paths for jshint;
+				4)AutomatedProcedures\tools\NodeJS\package.json - specifies versions for validation tools (jscs, jshint) to be installed during continuous deploy.
+	-->
+	<target name="Run.Java.Script.Validation" depends="Client.Npm.Install">
+		<!--Set default timeout for javascript validation tasks to 900000 milliseconds which is 15 minutes. For cases when the faildation hangs. -->
+		<property name="Java.Script.Validation.Timeout" value="900000" overwrite="false" />
+		<exec program="cmd.exe" workingdir="${Path.To.Node.Js.Root.Dir}" verbose="true" timeout="${int::parse(Java.Script.Validation.Timeout)}">
+			<arg value="/C npm run lint" />
+		</exec>
+	</target>
+
+	<target name="Validate.License.Fields" depends="Get.Link.To.LicenseKeyService.Based.On.MAC.Address">
+		<fail if="${not property::exists('Innovator.License.Key') or string::get-length(Innovator.License.Key) == 0 
+		or not property::exists('Innovator.Activation.Key') or string::get-length(Innovator.Activation.Key) == 0}">
+			There are two properties that should be issued from ${Link.To.LicenseKeyService} :
+			- lic_key should be specied into the property 'Innovator.License.Key';
+			- act_key should be specied into the property 'Innovator.Activation.Key'.
+			Please specify properties 'Innovator.License.Key' and 'Innovator.Activation.Key'
+		</fail>
+	</target>
+
+	<target name="Check.CodeTree.Zip">
+		<property name="CodeTree.Zip.Property.Description" value="The property should contain absolute path to the zip file, which contains full code tree of Innovator instance for restoration process." />
+		<fail if="${not property::exists('Path.To.CodeTree.Zip')}"
+			message="Specify property 'Path.To.CodeTree.Zip'. ${CodeTree.Zip.Property.Description}"
+			verbose="true" />
+
+		<fail if="${not file::exists(Path.To.CodeTree.Zip)}"
+			message="File does not exist: ${Path.To.CodeTree.Zip}.${environment::newline()}Specify correct value for property 'Path.To.CodeTree.Zip'. ${CodeTree.Zip.Property.Description}"
+			verbose="true" />
+	</target>
+
+	<target name="Check.DB.Bak">
+		<property name="DB.Bak.Property.Description" value="The property should contain absolute path to the baseline database backup." />
+		<fail if="${not property::exists('Path.To.DB.Bak')}"
+			message="Specify property 'Path.To.DB.Bak'. ${DB.Bak.Property.Description}"
+			verbose="true" />
+
+		<fail if="${not file::exists(Path.To.DB.Bak)}"
+			message="File does not exist: ${Path.To.DB.Bak}.${environment::newline()}Specify correct value for property 'Path.To.DB.Bak'. ${DB.Bak.Property.Description}"
+			verbose="true" />
+	</target>
+
+	<target name="Validate.Feature.Licenses">
+		<ValidateFeatureLicenses
+				innovatorUrl="${Url.Of.Installed.Innovator}"
+				loginName="root"
+				password="${aras::compute-MD5(Password.Of.Root.Innovator.User)}"
+				databaseName="${MSSQL.Database.Name}" />
+	</target>
+</project>

@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<title>Directory Tree</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<style type="text/css">
+		@import "../../javascript/include.aspx?classes=arasClaro.css";
+		@import "../../styles/default.css";
+		@import "../../javascript/include.aspx?classes=common.css";
+	</style>
+	<script>
+		var par = parent.parent;
+		var aras = par.imageBrowserParams.aras;
+	</script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=XmlDocument"></script>
+	<script type="text/javascript">
+		var iconslistReady = false,
+			iconslistCont = "",
+			fileBase = aras.getScriptsURL() + "ImageBrowser/";
+		Object.defineProperty(window, "currViewMode",  {
+			get: function () {
+				return parent.currViewMode;
+			},
+			set: function (value) {
+				parent.currViewMode = value;
+			}
+		});
+
+		function initToolbar()
+		{
+			var anotherViewMode = currViewMode == "details_view" ? "icons_view" : "details_view";
+
+			var tb = document.toolbar.getActiveToolbar();
+			tb.getElement("details_view").setEnabled(true);
+			tb.getElement("icons_view").setEnabled(true);
+			tb.getElement(currViewMode).setState(true);
+			tb.getElement(anotherViewMode).setState(false);
+		}
+
+		function onToolbarBtnClick(clickedBtn)
+		{
+			var btnId = clickedBtn.getId();
+			var tb = document.toolbar.getActiveToolbar();
+
+			if (btnId == "set_nothing")
+			{
+				par.closeWindow("set_nothing");
+			}
+			else if (btnId == "ready_btn") {
+				var files = parent.document.getElementById('files');
+				var grid = files.contentWindow.document.grid;
+
+				if (grid) {
+					var rowId = grid.getSelectedId();
+
+					if (rowId) {
+						var url = grid.getUserData(rowId, "url");
+						par.closeWindow(url.substr(3));
+					} 
+					else {
+						aras.AlertError(aras.getResource("", "image_browser.select_an_image"), null, null, window);
+					}
+				}
+				else {
+					aras.AlertError(aras.getResource("", "image_browser.select_an_image"), null, null, window);
+				}
+			}
+			else if (btnId == "details_view" || btnId == "icons_view") {
+				if (btnId == currViewMode){
+					tb.getElement(btnId).setState(true);
+					return false;
+				}
+				currViewMode = btnId;
+
+				var icons_table = parent.document.getElementById("files").contentWindow.document.getElementById("iconsTable");
+				var details_table = parent.document.getElementById("files").contentWindow.document.getElementById("detailsTable");
+
+				if (btnId == "details_view"){
+					tb.getElement("icons_view").setState(false);
+					if (icons_table) icons_table.style.display = "none";
+					if (details_table) details_table.style.display = "";
+				}
+				else{
+					tb.getElement("details_view").setState(false);
+					if (details_table) details_table.style.display = "none";
+					if (icons_table) icons_table.style.display = "";
+				}
+
+				var date = new Date(); date.setFullYear(date.getFullYear() + 1);
+				parent.SetCookie("innovator_imagesView", "_" + currViewMode, date, "/");
+			}
+		}
+
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.ToolBar", { id: "top_toolbar", connectId: "toolbarContainer" }, function (control) {
+			document.toolbar = toolbar = control;
+			clientControlsFactory.on(toolbar, {
+				"onClick": onToolbarBtnClick
+			});
+			toolbar.loadXml(aras.getI18NXMLResource("imgviewer_toolbar.xml", fileBase + "../../"));
+			toolbar.show();
+			initToolbar();
+		});
+	</script>
+</head>
+<body class="claro" style="margin: 0px; padding: 0px;" scroll="no">
+	<div id="toolbarContainer"></div>
+</body>
+</html>

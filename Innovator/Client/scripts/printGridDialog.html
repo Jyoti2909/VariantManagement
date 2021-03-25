@@ -1,0 +1,88 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<style type="text/css">
+	@import "../javascript/dojo/resources/dojo.css";
+	@import "../javascript/dijit/themes/claro/claro.css";
+	@import "../javascript/include.aspx?classes=common.css";
+	html, body
+	{
+		height: 100%;
+		margin: 0px;
+		padding: 0px;
+		overflow: hidden;
+	}
+
+	#toolbarContainer
+	{
+		height: 30px;
+		width: 100%;
+	}
+
+	#printGrid
+	{
+		height: 100%;
+		width: 100%;
+		border: 0px;
+		top: 30px;
+		left: 0px;
+		margin: 0px;
+		padding: 0px;
+	}
+
+	#printGridContainer
+	{
+		position: fixed;
+		top: 30px;
+		bottom: 0px;
+		left: 0px;
+		right: 0px;
+		border-top: 1px solid #d4d4d4;
+	}
+	</style>
+	<script>
+		var aras = opener.parent.parent.aras;
+		document.title = aras.getResource("", "printgriddialog.search_results");
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=XmlDocument"></script>
+	<script type="text/javascript">
+		var toolbar;
+		var contentOfPrintWindow = opener.contentOfPrintWindow;
+
+		onbeforeprint = function() {
+			document.frames["printGrid"].focus();
+		};
+
+		function saveInCookie(name, val) {
+			window.localStorage.setItem(name, val);
+		}
+
+		function GetFromCookie(name) {
+			return window.localStorage.getItem(name);
+
+		}
+
+		onload = function onload_handler() {
+			clientControlsFactory.createControl("Aras.Client.Frames.printViewMenu", { aras: aras, connectId: "toolbarContainer" }, function (control) {
+				toolbar = control;
+				var doc = document.getElementById("printGrid").contentWindow.document.open();
+				doc.write(this.parent.contentOfPrintWindow);
+				doc.close();
+			});
+		};
+
+		onunload = function onunload_handler() {
+			var expDate = new Date();
+			expDate.setFullYear(expDate.getFullYear() + 1);
+		}
+	</script>
+</head>
+<body class="claro">
+	<div id="toolbarContainer"></div>
+	<div id="printGridContainer">
+		<iframe id="printGrid" src="blank.html"></iframe>
+	</div>
+</body>
+</html>

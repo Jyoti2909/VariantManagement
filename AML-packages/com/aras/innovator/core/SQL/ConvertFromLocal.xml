@@ -1,0 +1,43 @@
+﻿<AML>
+ <Item type="SQL" id="4D6F8EE6179645F99BAE94036C9E94EF" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>ConvertFromLocal</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION [ConvertFromLocal](@IN_DATE DATETIME,
+                                   @TZ_NAME NVARCHAR(50) = NULL)
+RETURNS DATETIME
+AS
+  BEGIN
+      IF @IN_DATE IS NULL
+        RETURN NULL
+
+      IF @TZ_NAME IS NULL
+        SET @TZ_NAME = (SELECT Isnull([VALUE], [DEFAULT_VALUE])
+                        FROM   [innovator].[VARIABLE]
+                        WHERE  [NAME] = 'CorporateTimeZone')
+
+      IF @TZ_NAME IS NULL
+        BEGIN
+            DECLARE @NEW_LINE NVARCHAR(2)
+
+            SET @NEW_LINE = Char(13) + Char(10)
+
+            DECLARE @ERROR_MSG NVARCHAR(256)
+
+            SET @ERROR_MSG = @NEW_LINE + @NEW_LINE
+                             + 'Error occured during execution of ConvertFromLocal function:'
+                             + @NEW_LINE
+            SET @ERROR_MSG = @ERROR_MSG
+                             + 'Timezone is not specified for date '''
+                             + CONVERT(NVARCHAR, @IN_DATE, 20) + '''.'
+                             + @NEW_LINE + @NEW_LINE
+            SET @ERROR_MSG = @ERROR_MSG + 0 --UDF's does not support RAISERROR function, here is a trick to raise conversion error with a useful message
+        END
+
+      RETURN [tz].[ConvertFromLocal](@IN_DATE, @TZ_NAME)
+  END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>ConvertFromLocal</name>
+ </Item>
+</AML>

@@ -1,0 +1,57 @@
+﻿<AML>
+ <Item type="Method" id="6624B26959274976ACDD7487B8A5E67E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+	//Old ReprotSet means that report was created in 11.0 SP3
+	//0 - reportset created in 11.0 SP3, 1 - reportset created after 11.0 SP3 
+	var inn = this.getInnovator();
+	var id = this.getID();
+	if (string.IsNullOrEmpty(id))
+	{
+		return inn.newError("Id attribute is missing");
+	}
+	var report = this.newItem("SelfServiceReport", "get");
+	report.setID(id);
+	report.setAttribute("select", "extension");
+	report = report.apply();
+
+	if (report.isError())
+	{
+		return report;
+	}
+
+	var reportSetExt = report.getProperty("extension");
+	if (string.IsNullOrEmpty(reportSetExt))
+	{
+		return inn.newResult("1");
+	}
+
+	var xml = inn.newXMLDocument();
+	xml.XmlResolver = null;
+	xml.LoadXml(reportSetExt);
+
+	if (xml.DocumentElement != null)
+	{
+		XmlNamespaceManager nsmgr = new XmlNamespaceManager(xml.NameTable);
+		nsmgr.AddNamespace("ns", xml.DocumentElement.GetAttribute("xmlns"));
+
+		var selectedItemTypesNode = xml.SelectSingleNode("//ns:SelectedItemTypes", nsmgr);
+		if (selectedItemTypesNode != null && !string.IsNullOrEmpty(selectedItemTypesNode.InnerText))
+		{
+			var htmlAsXml = inn.newXMLDocument();
+			htmlAsXml.XmlResolver = null;
+			htmlAsXml.LoadXml("<root>" + selectedItemTypesNode.InnerText + "</root>");
+			var allDivs = htmlAsXml.GetElementsByTagName("div");
+			var allIsRelDataKeys = htmlAsXml.SelectNodes("//label[@data-key='isRelationship']");
+			if (allIsRelDataKeys == null || (allDivs.Count != allIsRelDataKeys.Count))
+			{
+				return inn.newResult("0");
+			}
+		}
+	}
+
+	return inn.newResult("1");]]></method_code>
+  <method_type>C#</method_type>
+  <name>IsOldReportSet</name>
+ </Item>
+</AML>

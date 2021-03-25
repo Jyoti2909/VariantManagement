@@ -1,0 +1,85 @@
+﻿@import '../core/variables';
+@import './toolbar-variables';
+
+.aras-toolbar .aras-es-searchbox {
+	padding-right: 2px;
+	color: @neutral-3;
+	align-items: center;
+
+	&.aras-toolbar__es-searchbox {
+		display: inline-flex;
+		flex-shrink: 15;
+		min-width: 120px;
+	}
+	&__input {
+		border-bottom-right-radius: 0;
+		border-top-right-radius: 0;
+		border-right-width: 0;
+		padding-right: @toolbar-components-height;
+		width: 32rem;
+		.color-with-alpha(@neutral-fb, 0.7, @head-color-1);
+		min-width: 88px;
+		&:hover {
+			.color-with-alpha(@white, 0.7, @head-color-1);
+		}
+		&:focus {
+			.color-with-alpha(@white, 0.7, @head-color-1);
+		}
+
+		&::-ms-clear {
+			//remove default IE clear button
+			display: none;
+			width: 0;
+			height: 0;
+		}
+	}
+
+	&__reset {
+		margin-left: -26px;
+		cursor: pointer;
+		border-radius: 10px;
+		width: 20px;
+		flex-shrink: 0;
+		height: 20px;
+		margin-right: 6px;
+		&:hover {
+			background-color: @neutral-e;
+		}
+		&:active {
+			background-color: @color-2;
+		}
+		&::after,
+		&::before {
+			background-color: @neutral-7;
+			height: 0.75rem;
+			top: ~'calc(50% - 0.375rem)';
+		}
+		&_hidden {
+			display: none;
+		}
+	}
+
+	&__button {
+		height: @toolbar-components-height;
+		flex-shrink: 0;
+
+		&_loupe {
+			border-radius: 0;
+		}
+
+		&_mode {
+			border-bottom-left-radius: 0;
+			border-top-left-radius: 0;
+			width: 20px;
+			&:before {
+				width: 5px;
+				height: 5px;
+				border: none;
+				border-left: 1px solid @neutral-3;
+				border-bottom: 1px solid @neutral-3;
+				transform: rotate(-45deg);
+				margin-left: -1px;
+			}
+		}
+	}
+}

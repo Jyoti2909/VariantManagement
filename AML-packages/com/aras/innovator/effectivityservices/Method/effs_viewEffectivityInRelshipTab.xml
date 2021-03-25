@@ -1,0 +1,146 @@
+﻿<AML>
+ <Item type="Method" id="F29B811F9A7F4C5086B64B4B208FAC3D" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const aras = window.aras;
+const baseUrl = aras.getBaseURL();
+const effectivityExpressionItemGridViewPath = baseUrl + '/Modules/aras.innovator.core.EffectivityServices/Views/EffectivityExpressionItemGrid.html';
+const informationMessageViewPath = baseUrl + '/Modules/aras.innovator.core.EffectivityServices/Views/informationMessageView.html';
+const effsModuleSolutionBasedRelativePath = '../Modules/aras.innovator.core.EffectivityServices';
+
+const selectedRelationshipTabId = parent.relationships.relTabbar.GetSelectedTab();
+
+const splitter = document.getElementById(selectedRelationshipTabId + '_splitter');
+splitter.classList.toggle('aras-hide', false);
+
+const rightSplitterPane = document.getElementById(selectedRelationshipTabId + '_right_splitter_pane');
+rightSplitterPane.classList.toggle('aras-hide', false);
+
+const leftSplitterPaneWindow = relationshipsControl.iframesCollection[selectedRelationshipTabId].contentWindow;
+
+const isInArgsHaveDynamicEffectiveItemInfo = !!inArgs.getEffectiveItemInfo;
+const page = inArgs.page;
+const grid = inArgs.grid;
+const options = inArgs.options;
+
+let effectiveItemTypeId;
+let effectiveItemId;
+let extraAccessControlProviderMethodName;
+let effectivityExpressionItemGridDialogTitle;
+
+if (isInArgsHaveDynamicEffectiveItemInfo) {
+	const effectiveItemInfo = inArgs.getEffectiveItemInfo();
+
+	effectiveItemTypeId = effectiveItemInfo.effectiveItemTypeId;
+	effectiveItemId = effectiveItemInfo.effectiveItemId;
+	extraAccessControlProviderMethodName = effectiveItemInfo.extraAccessControlProviderMethodName;
+	effectivityExpressionItemGridDialogTitle = effectiveItemInfo.effectiveItemKeyedName;
+} else {
+	effectiveItemTypeId = inArgs.relationshipItemTypeId;
+	effectiveItemId = inArgs.relationshipItemId;
+	effectivityExpressionItemGridDialogTitle = inArgs.title;
+}
+
+const closeButtonClickHandler = function() {
+	splitter.classList.toggle('aras-hide', true);
+	rightSplitterPane.classList.toggle('aras-hide', true);
+
+	if (rightSplitterPane.gridOnSelectRowListenerHandle) {
+		grid.removeEventListener(rightSplitterPane.gridOnSelectRowListenerHandle);
+		rightSplitterPane.gridOnSelectRowListenerHandle = null;
+	}
+
+	if (rightSplitterPane.pageOnBeforeReloadListenerHandle) {
+		page.removeEventListener(rightSplitterPane.pageOnBeforeReloadListenerHandle);
+		rightSplitterPane.pageOnBeforeReloadListenerHandle = null;
+	}
+
+	if (rightSplitterPane.pageBeforeUnloadListenerHandle) {
+		leftSplitterPaneWindow.removeEventListener('beforeunload', rightSplitterPane.pageBeforeUnloadListenerHandle);
+		rightSplitterPane.pageBeforeUnloadListenerHandle = null;
+	}
+};
+
+const renderIframeVNodeInRightSplitterPane = function(viewPath, dialogArguments) {
+	const iframeVNode = Inferno.createVNode(
+		Inferno.getFlagsForElementVnode('iframe'),
+		'iframe',
+		'effs-relationship-container__pane-content effs-relationship-container__pane-content-iframe',
+		null,
+		ArasModules.utils.infernoFlags.hasInvalidChildren,
+		null,
+		null,
+		function(node) {
+			if (!node) {
+				return;
+			}
+
+			node.dialogArguments = Object.assign({}, dialogArguments, {closeButtonClickHandler: closeButtonClickHandler});
+
+			//"src" attribute can be set in createVNode function, but in this case iframe will be rendered only for the first call
+			//that's why it is set in callback function
+			node.src = viewPath;
+		}
+	);
+
+	Inferno.render(iframeVNode, rightSplitterPane);
+};
+
+const renderEffectivityExpressionItemGridIframe = function(
+		effectiveItemTypeId,
+		effectiveItemId,
+		extraAccessControlProviderMethodName,
+		effectivityExpressionItemGridDialogTitle) {
+	const dialogArguments = {
+		aras: aras,
+		effectiveItemTypeId: effectiveItemTypeId,
+		effectiveItemId: effectiveItemId,
+		extraAccessControlProviderMethodName: extraAccessControlProviderMethodName,
+		title: aras.getResource(effsModuleSolutionBasedRelativePath, 'effectivity_expression_item_grid.title') +
+			(effectivityExpressionItemGridDialogTitle ? aras.getResource(effsModuleSolutionBasedRelativePath,
+			'effectivity_expression_item_grid.title_divider') + effectivityExpressionItemGridDialogTitle : ''),
+		onCreateUpdateDeleteExpressionCallback: inArgs.onCreateUpdateDeleteExpressionCallback
+	};
+
+	renderIframeVNodeInRightSplitterPane(effectivityExpressionItemGridViewPath, dialogArguments);
+};
+
+renderEffectivityExpressionItemGridIframe(
+	effectiveItemTypeId,
+	effectiveItemId,
+	extraAccessControlProviderMethodName,
+	effectivityExpressionItemGridDialogTitle);
+
+if (!rightSplitterPane.pageBeforeUnloadListenerHandle) {
+	rightSplitterPane.pageBeforeUnloadListenerHandle = closeButtonClickHandler;
+	leftSplitterPaneWindow.addEventListener('beforeunload', rightSplitterPane.pageBeforeUnloadListenerHandle);
+}
+
+if (options && options.reshowOnGridSelectRow && !rightSplitterPane.gridOnSelectRowListenerHandle) {
+	rightSplitterPane.gridOnSelectRowListenerHandle = grid.addEventListener('onSelectRow', function() {
+		const effectiveItemInfo = inArgs.getEffectiveItemInfo();
+
+		renderEffectivityExpressionItemGridIframe(
+			effectiveItemInfo.effectiveItemTypeId,
+			effectiveItemInfo.effectiveItemId,
+			effectiveItemInfo.extraAccessControlProviderMethodName,
+			effectiveItemInfo.effectiveItemKeyedName);
+	});
+}
+
+if (options && options.clearPaneOnBeforePageReload && !rightSplitterPane.pageOnBeforeReloadListenerHandle) {
+	rightSplitterPane.pageOnBeforeReloadListenerHandle = page.addEventListener(
+		'onBeforeReload',
+		function() {
+			const informationMessageDialogArguments = {
+				aras: aras,
+				informationMessage: aras.getResource(effsModuleSolutionBasedRelativePath, 'effective_item_grid.single_row_must_be_selected_to_view_effectivity')
+			};
+
+			renderIframeVNodeInRightSplitterPane(informationMessageViewPath, informationMessageDialogArguments);
+		}
+	);
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_viewEffectivityInRelshipTab</name>
+ </Item>
+</AML>

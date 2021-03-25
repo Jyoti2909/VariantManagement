@@ -1,0 +1,99 @@
+﻿<AML>
+ <Item type="Method" id="3C0B3F04A65A4FCD8352E5316B8E9A63" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+
+
+System.Diagnostics.Debugger.Break();
+// everything is done within businessLogic
+businessLogic bl = new businessLogic(inn);
+
+return bl.execute();
+
+
+} // this bracket is somehow required to tell aras compiler that the method stops here.
+
+
+// this class is just easier to manage in c# since we can define our functions etc.
+
+internal class businessLogic {
+    
+    private Innovator myInn = null;
+
+    internal businessLogic(Innovator inn) {
+        this.myInn = inn;
+    }
+
+
+
+
+    
+    internal Item execute() {
+            System.Diagnostics.Debugger.Break();
+        try {
+            
+
+            
+            // this sql selects all the ids of the files which need to be converted. 
+            // you can add things in the where-clause to narrow down the total amount.
+            // we substract all the ids which have already conversion tasks (we don't want to convert twice)
+            StringBuilder sqlBuilder = new StringBuilder();
+            sqlBuilder = sqlBuilder.Append("select cad.native_file from innovator.CAD  cad ");
+            sqlBuilder = sqlBuilder.Append("where cad.classification in ('Mechanical/Assembly', 'Mechanical/Part')  ");
+            sqlBuilder = sqlBuilder.Append("except select ct.file_id from innovator.CONVERSIONTASK ct ");
+
+
+            // get the items information
+            Item res = myInn.applySQL(sqlBuilder.ToString());
+            
+            // split in each item
+            var changes = res.dom.SelectNodes("//Item");
+            string native_file_id = "";
+
+            // Now we will create a temp file object to call the createConversonTask
+            Item conv  = myInn.newItem("File");
+            conv.setAction("CreateConversionTask");
+            Item result ;
+            int cnt = 0;
+
+            
+            // loop through all results 
+        	foreach (XmlElement  chg in changes)
+        	{
+        	    // get the id 
+                native_file_id = getSingleNode(chg, "native_file");
+                conv.setID(native_file_id);
+                // create the conv task. Note that we don't know if actually a conversion task has been created or not. 
+                // for some files, the conversion rule does not match --> no conversion task created. 
+                result = conv.apply();
+                cnt = cnt + 1;
+        	}    
+             
+            result = myInn.newItem();
+            result.setProperty("Count",cnt.ToString());
+            return result;
+        }
+        catch (Exception e) {
+            throw e;
+        }
+        finally {
+                // do required stuff
+        }
+
+    }
+
+    private string getSingleNode(XmlElement node, string nodeName) {
+        if (node.SelectSingleNode(nodeName) is  null ) {
+            return null;
+        } else {
+            return node.SelectSingleNode(nodeName).InnerXml;
+        }
+    }
+
+// here should be a closing bracket for the class. for some reason, aras compile does not require this, he seems to add this himself.
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>xplm_createConversionTasks</name>
+ </Item>
+</AML>

@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="ABC0EEF3B9B94871BA5FB1DD7AC6DBDE" action="add">
+  <comments>Populates document library name when form is populated</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var spDoclibNameList = document.forms.MainDataForm.elements['sp_doclib_name'];
+
+var spDoclibId = aras.getItemProperty(document.item, 'sp_doclib_id');
+if (spDoclibId.length > 0) {
+	var spDoclibName = aras.getItemProperty(document.item, 'sp_doclib_name');
+	var option = new Option(spDoclibName, spDoclibId);
+	if (spDoclibNameList.length > 0 && spDoclibNameList.options[0].value !== '') {
+		for (var i = 0; i < spDoclibNameList.length; i++) {
+			if (spDoclibNameList.options[i].value == option.value) {
+				spDoclibNameList.selectedIndex = i;
+				break;
+			}
+		}
+	} else {
+		spDoclibNameList.options[0] = option;
+		spDoclibNameList.selectedIndex = 0;
+	}
+} else {
+	spDoclibNameList.disabled = true;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>SPDocLibDef_PopulateLibName</name>
+ </Item>
+</AML>

@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="7B2E53422721447AA56525BE90715D1E" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const serverMethod = aras.newIOMItem(inDom.getAttribute('type'), 'GetItemAccessReportData');
+serverMethod.setID(inDom.getAttribute('id'));
+const reportData = serverMethod.apply();
+
+let report = aras.newIOMItem('Report', 'get');
+report.setAttribute('select', 'xsl_stylesheet');
+report.setProperty('name', 'Item Access Report');
+report = report.apply();
+
+let result;
+let xsl_stylesheet = report.getProperty('xsl_stylesheet');
+if (xsl_stylesheet) {
+	const xslt_stylesheetDOM = aras.createXMLDocument();
+	xslt_stylesheetDOM.loadXML(xsl_stylesheet);
+
+	xsl_stylesheet = xslt_stylesheetDOM.xml;
+
+	const res = aras.createXMLDocument();
+	res.loadXML(reportData.dom.xml);
+
+	result = aras.applyXsltString(res, xsl_stylesheet);
+}
+
+return result;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ExecuteItemAccessReportClient</name>
+ </Item>
+</AML>

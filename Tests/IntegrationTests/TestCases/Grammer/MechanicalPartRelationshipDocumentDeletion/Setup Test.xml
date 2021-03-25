@@ -1,0 +1,288 @@
+﻿<TestCase author='pponkrashov@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description></Description>
+	<Request runAs='root:innovator'>
+		<Variables>
+			<Variable id='Password.Hash.Of.1' action='apply' xpath='
+								Query/AML/Item[@id="CED82416FC844393A565EFC59D64BD9D"]/password |
+								Query/AML/Item[@id="CED82416FC844393A565EFC59D64BD9D"]/confirm_password |
+								Query/AML/Item[@id="76D2600607694E168D4730C02D000BF7"]/password |
+								Query/AML/Item[@id="76D2600607694E168D4730C02D000BF7"]/confirm_password |
+								
+								Query/AML/Item[@id="2FF0E5DD0D0747078441D14EFFFFCC19"]/password |
+								Query/AML/Item[@id="2FF0E5DD0D0747078441D14EFFFFCC19"]/confirm_password |
+								Query/AML/Item[@id="7D7ACBEB87F54D408CCA3D40FFE5B679"]/password |
+								Query/AML/Item[@id="7D7ACBEB87F54D408CCA3D40FFE5B679"]/confirm_password |
+								
+								Query/AML/Item[@id="76E85081591D440EBE81FBD3708E7218"]/password |
+								Query/AML/Item[@id="76E85081591D440EBE81FBD3708E7218"]/confirm_password 
+								' />
+		</Variables>
+		<Query>
+			<AML>
+				<!-- Initialize 2 user to Industrial Engineer identity -->
+
+				<Item type='Identity' id='2B86BBD45BE3471CB0EEB312A2D43A11' action='add' doGetItem='0'>
+					<is_alias>1</is_alias>
+					<name>ietestuser1</name>
+				</Item>
+				<Item type='Member' id='5AE98DBB45F6410780455FA6C59F3EF1' action='add' doGetItem='0'>
+					<related_id keyed_name='ietestuser1' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43A11</related_id>
+					<sort_order>128</sort_order>
+					<source_id keyed_name='Industrial Engineer' type='Identity'>A8F3C6AC115C4349A89A06791B98E8C1</source_id>
+				</Item>
+				<Item type='User' id='CED82416FC844393A565EFC59D64BD9D' action='add' doGetItem='0'>
+					<login_name>ietestuser1</login_name>
+					<logon_enabled>1</logon_enabled>
+					<password>{applied from variable Password.Hash.Of.1}</password>
+					<confirm_password>{applied from variable Password.Hash.Of.1}</confirm_password>
+					<owned_by_id keyed_name='ietestuser1' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43A11</owned_by_id>
+					<Relationships>
+						<Item type='Alias' id='A4D3A4048C294889A3DCF238689FE121' action='add'>
+							<from_date>2020-08-10T13:39:13</from_date>
+							<related_id keyed_name='ietestuser1' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43A11</related_id>
+							<sort_order>128</sort_order>
+							<source_id keyed_name='CED82416FC844393A565EFC59D64BD9D' type='User'>CED82416FC844393A565EFC59D64BD9D</source_id>
+						</Item>
+					</Relationships>
+				</Item>
+
+				<Item type='Identity' id='4BF8132308294115AC441C23B2CAAA1A' action='add' doGetItem='0'>
+					<is_alias>1</is_alias>
+					<name>ietestuser2</name>
+				</Item>
+				<Item type='Member' id='74594BF1FC6646B9803F2D21A4622CF5' action='add' doGetItem='0'>
+					<related_id keyed_name='ietestuser2' type='Identity'>4BF8132308294115AC441C23B2CAAA1A</related_id>
+					<sort_order>128</sort_order>
+					<source_id keyed_name='Industrial Engineer' type='Identity'>A8F3C6AC115C4349A89A06791B98E8C1</source_id>
+				</Item>
+				<Item type='User' id='76D2600607694E168D4730C02D000BF7' action='add' doGetItem='0'>
+					<login_name>ietestuser2</login_name>
+					<logon_enabled>1</logon_enabled>
+					<password>{applied from variable Password.Hash.Of.1}</password>
+					<confirm_password>{applied from variable Password.Hash.Of.1}</confirm_password>
+					<owned_by_id keyed_name='ietestuser2' type='Identity'>4BF8132308294115AC441C23B2CAAA1A</owned_by_id>
+					<Relationships>
+						<Item type='Alias' id='D98D47FDEF3C41378C057CFC12661D6D' action='add'>
+							<from_date>2020-08-10T13:39:13</from_date>
+							<related_id keyed_name='ietestuser2' type='Identity'>4BF8132308294115AC441C23B2CAAA1A</related_id>
+							<sort_order>128</sort_order>
+							<source_id keyed_name='76D2600607694E168D4730C02D000BF7' type='User'>76D2600607694E168D4730C02D000BF7</source_id>
+						</Item>
+					</Relationships>
+				</Item>
+
+				<!-- Initialize 2 user to Product Engineer identity -->
+
+				<Item type='Identity' id='2B86BBD45BE3471CB0EEB312A2D43AC6' action='add' doGetItem='0'>
+					<is_alias>1</is_alias>
+					<name>petestuser1</name>
+				</Item>
+				<Item type='Member' id='5AE98DBB45F6410780455FA6C59F3EF2' action='add' doGetItem='0'>
+					<related_id keyed_name='petestuser1' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43AC6</related_id>
+					<sort_order>128</sort_order>
+					<source_id keyed_name='Product Engineer' type='Identity'>D8190B09A2604895AB3F6F35AC7DAF4D</source_id>
+				</Item>
+				<Item type='User' id='2FF0E5DD0D0747078441D14EFFFFCC19' action='add' doGetItem='0'>
+					<login_name>petestuser1</login_name>
+					<logon_enabled>1</logon_enabled>
+					<password>{applied from variable Password.Hash.Of.1}</password>
+					<confirm_password>{applied from variable Password.Hash.Of.1}</confirm_password>
+					<owned_by_id keyed_name='petestuser1' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43AC6</owned_by_id>
+					<Relationships>
+						<Item type='Alias' id='A4D3A4048C294889A3DCF238689FE120' action='add'>
+							<from_date>2020-08-10T13:39:13</from_date>
+							<related_id keyed_name='petestuser1' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43AC6</related_id>
+							<sort_order>128</sort_order>
+							<source_id keyed_name='2FF0E5DD0D0747078441D14EFFFFCC19' type='User'>2FF0E5DD0D0747078441D14EFFFFCC19</source_id>
+						</Item>
+					</Relationships>
+				</Item>
+
+				<Item type='Identity' id='C0CCDCB9B9A948A0BD40A46C308809D2' action='add' doGetItem='0'>
+					<is_alias>1</is_alias>
+					<name>petestuser2</name>
+				</Item>
+				<Item type='Member' id='57FE53CD588344D98C601A7640D44624' action='add' doGetItem='0'>
+					<related_id keyed_name='petestuser2' type='Identity'>C0CCDCB9B9A948A0BD40A46C308809D2</related_id>
+					<sort_order>128</sort_order>
+					<source_id keyed_name='Product Engineer' type='Identity'>D8190B09A2604895AB3F6F35AC7DAF4D</source_id>
+				</Item>
+				<Item type='User' id='7D7ACBEB87F54D408CCA3D40FFE5B679' action='add' doGetItem='0'>
+					<login_name>petestuser2</login_name>
+					<logon_enabled>1</logon_enabled>
+					<password>{applied from variable Password.Hash.Of.1}</password>
+					<confirm_password>{applied from variable Password.Hash.Of.1}</confirm_password>
+					<owned_by_id keyed_name='petestuser2' type='Identity'>C0CCDCB9B9A948A0BD40A46C308809D2</owned_by_id>
+					<Relationships>
+						<Item type='Alias' id='19AEFB950C6E4957A22343EEB5B4432B' action='add'>
+							<from_date>2020-08-10T13:39:13</from_date>
+							<related_id keyed_name='petestuser2' type='Identity'>C0CCDCB9B9A948A0BD40A46C308809D2</related_id>
+							<sort_order>128</sort_order>
+							<source_id keyed_name='7D7ACBEB87F54D408CCA3D40FFE5B679' type='User'>7D7ACBEB87F54D408CCA3D40FFE5B679</source_id>
+						</Item>
+					</Relationships>
+				</Item>
+
+				<!-- Initialize User5 to CAD-Designer and All Employees -->
+
+				<Item type='Identity' id='1B4BE052E0B14A8B81C06D62B95689A9' action='add' doGetItem='0'>
+					<is_alias>1</is_alias>
+					<name>testuser5</name>
+				</Item>
+				<Item type='Member' id='ACA4F91A60E747E0A4D4548837B08859' action='add' doGetItem='0'>
+					<related_id keyed_name='testuser5' type='Identity'>1B4BE052E0B14A8B81C06D62B95689A9</related_id>
+					<sort_order>128</sort_order>
+					<source_id keyed_name='All Employees' type='Identity'>B32BD81D1AD04207BF1E61E39A4E0E13</source_id>
+				</Item>
+				<Item type='Member' id='C744E0346AC94CECBEA6E03A4D42DDB3' action='add' doGetItem='0'>
+					<related_id keyed_name='testuser5' type='Identity'>1B4BE052E0B14A8B81C06D62B95689A9</related_id>
+					<sort_order>128</sort_order>
+					<source_id keyed_name='CAD-Designer' type='Identity'>65CBCEA10A1F4D7B99BC6180FA2AF7DF</source_id>
+				</Item>
+				<Item type='User' id='76E85081591D440EBE81FBD3708E7218' action='add' doGetItem='0'>
+					<login_name>testuser5</login_name>
+					<logon_enabled>1</logon_enabled>
+					<password>{applied from variable Password.Hash.Of.1}</password>
+					<confirm_password>{applied from variable Password.Hash.Of.1}</confirm_password>
+					<owned_by_id keyed_name='testuser5' type='Identity'>1B4BE052E0B14A8B81C06D62B95689A9</owned_by_id>
+					<Relationships>
+						<Item type='Alias' id='096994518FA94EF9B670ABA45F782F68' action='add'>
+							<from_date>2020-08-10T13:39:13</from_date>
+							<related_id keyed_name='testuser5' type='Identity'>1B4BE052E0B14A8B81C06D62B95689A9</related_id>
+							<sort_order>128</sort_order>
+							<source_id keyed_name='76E85081591D440EBE81FBD3708E7218' type='User'>76E85081591D440EBE81FBD3708E7218</source_id>
+						</Item>
+					</Relationships>
+				</Item>
+
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Identity' id='2B86BBD45BE3471CB0EEB312A2D43A11' />
+						<Item type='Member' id='5AE98DBB45F6410780455FA6C59F3EF1'>
+							<related_id>2B86BBD45BE3471CB0EEB312A2D43A11</related_id>
+						</Item>
+						<Item type='User' id='CED82416FC844393A565EFC59D64BD9D' />
+						<Item type='Identity' id='4BF8132308294115AC441C23B2CAAA1A' />
+						<Item type='Member' id='74594BF1FC6646B9803F2D21A4622CF5'>
+							<related_id>4BF8132308294115AC441C23B2CAAA1A</related_id>
+						</Item>
+						<Item type='User' id='76D2600607694E168D4730C02D000BF7' />
+						<Item type='Identity' id='2B86BBD45BE3471CB0EEB312A2D43AC6' />
+						<Item type='Member' id='5AE98DBB45F6410780455FA6C59F3EF2'>
+							<related_id>2B86BBD45BE3471CB0EEB312A2D43AC6</related_id>
+						</Item>
+						<Item type='User' id='2FF0E5DD0D0747078441D14EFFFFCC19' />
+						<Item type='Identity' id='C0CCDCB9B9A948A0BD40A46C308809D2' />
+						<Item type='Member' id='57FE53CD588344D98C601A7640D44624'>
+							<related_id>C0CCDCB9B9A948A0BD40A46C308809D2</related_id>
+						</Item>
+						<Item type='User' id='7D7ACBEB87F54D408CCA3D40FFE5B679' />
+						<Item type='Identity' id='1B4BE052E0B14A8B81C06D62B95689A9' />
+						<Item type='Member' id='ACA4F91A60E747E0A4D4548837B08859'>
+							<related_id>1B4BE052E0B14A8B81C06D62B95689A9</related_id>
+						</Item>
+						<Item type='Member' id='C744E0346AC94CECBEA6E03A4D42DDB3'>
+							<related_id>1B4BE052E0B14A8B81C06D62B95689A9</related_id>
+						</Item>
+						<Item type='User' id='76E85081591D440EBE81FBD3708E7218' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='D8190B09A2604895AB3F6F35AC7DAF4D|A8F3C6AC115C4349A89A06791B98E8C1|CED82416FC844393A565EFC59D64BD9D|2FF0E5DD0D0747078441D14EFFFFCC19|76D2600607694E168D4730C02D000BF7|7D7ACBEB87F54D408CCA3D40FFE5B679' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='ietestuser1:1'>
+		<Query>
+			<AML>
+				<Item type='Document' action='add' id='AADCB0C901604017A635127FB88F74B5' doGetItem='0'>
+					<name>Doc for Test2</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Document' id='AADCB0C901604017A635127FB88F74B5'/>
+					</Result>
+					<Message>
+						<event name='ids_modified' value=''/>
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='petestuser1:1'>
+		<Query>
+			<AML>
+				<Item type='Document' action='add' id='05B2CC634952431EB8C3C76C5804B15E' doGetItem='0'>
+					<name>Doc for Test</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Document' id='05B2CC634952431EB8C3C76C5804B15E'/>
+					</Result>
+					<Message>
+						<event name='ids_modified' value=''/>
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='Document' id='AADCB0C901604017A635127FB88F74B5' action='delete' />
+				<Item type='Document' id='05B2CC634952431EB8C3C76C5804B15E' action='delete' />
+				<Item type='History' action='delete' where="[History].created_by_id in (
+							'2FF0E5DD0D0747078441D14EFFFFCC19',
+							'CED82416FC844393A565EFC59D64BD9D',
+							'76D2600607694E168D4730C02D000BF7',
+							'7D7ACBEB87F54D408CCA3D40FFE5B679')" />
+				<Item type='History Container' action='delete' where="[History_Container].modified_by_id in (
+							'2FF0E5DD0D0747078441D14EFFFFCC19',
+							'CED82416FC844393A565EFC59D64BD9D',
+							'76D2600607694E168D4730C02D000BF7',
+							'7D7ACBEB87F54D408CCA3D40FFE5B679')" />
+				<Item type='Member' action='delete' idlist='5AE98DBB45F6410780455FA6C59F3EF2,5AE98DBB45F6410780455FA6C59F3EF2,57FE53CD588344D98C601A7640D44624,5AE98DBB45F6410780455FA6C59F3EF2,5AE98DBB45F6410780455FA6C59F3EF1,74594BF1FC6646B9803F2D21A4622CF5'/>
+				<Item type='User' action='delete' idlist='76E85081591D440EBE81FBD3708E7218,2FF0E5DD0D0747078441D14EFFFFCC19,CED82416FC844393A565EFC59D64BD9D,76D2600607694E168D4730C02D000BF7,7D7ACBEB87F54D408CCA3D40FFE5B679'/>
+				<Item type='Identity' action='delete' idlist='1B4BE052E0B14A8B81C06D62B95689A9,2B86BBD45BE3471CB0EEB312A2D43A11,4BF8132308294115AC441C23B2CAAA1A,2B86BBD45BE3471CB0EEB312A2D43AC6,C0CCDCB9B9A948A0BD40A46C308809D2' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

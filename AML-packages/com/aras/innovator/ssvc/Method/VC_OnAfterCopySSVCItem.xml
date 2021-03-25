@@ -1,0 +1,97 @@
+﻿<AML>
+ <Item type="Method" id="A6997823AB284F82BA45EC89D61B55D7" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	//MethodTemplateName=CSharpInOut;
+
+	this.inDom = inDom;
+	var connection = (Aras.Server.Core.IOMConnection) InnovatorServerASP;
+	inn = new Innovator(connection);
+
+	parentType = eventData.CopyResults.First().Value.ItemTypeName;
+	switch (parentType.ToLower())
+	{
+		case "itemtype":
+			templateType = "DiscussionTemplate" ;
+			break;
+		case "discussiontemplate":
+			templateType = "FeedTemplate" ;
+			break;
+		default:
+			return;
+	}
+
+	foreach (var pair in eventData.CopyResults)
+	{
+		string oldItemId = pair.Key;
+		string newItemId = pair.Value.NewId;
+		item = inDom.SelectSingleNode("/Item[@id='" + newItemId + "']");
+		if (item.Attributes["isTemp"] != null && item.Attributes["isTemp"].Value == "1")
+		{
+			parentIsTemp = true;
+			XmlNodeList templateNodes = item.SelectNodes("Relationships/Item[@type='" + templateType + "']");
+			foreach (XmlNode template in templateNodes)
+			{
+				template.ParentNode.RemoveChild(template);
+			}
+		}
+		else
+		{
+			ProcessSSVCTemplates(newItemId, "delete", String.Empty);
+		}
+		ProcessSSVCTemplates(oldItemId, "copy", newItemId);
+	}
+}
+
+private Innovator inn;
+private XmlDocument inDom;
+private XmlNode item;
+
+private bool parentIsTemp;
+private String parentType;
+private String templateType;
+
+private const string tmpFetchTemplatesRequest = "<AML><Item type='{0}' action='get' select='id' id='{1}'><Relationships><Item type='{2}' select='id' action='get'/></Relationships></Item></AML>";
+private const string tmpTemplateRequest = "<AML><Item type='{0}' action='{1}' id='{2}' {3} /></AML>";
+
+private void ProcessSSVCTemplates(string itemId, string action, string newItemId)
+{
+	bool isCopy = action == "copy";
+	string request = String.Format(tmpFetchTemplatesRequest, System.Security.SecurityElement.Escape(parentType), System.Security.SecurityElement.Escape(itemId), templateType);
+	Item response = inn.applyAML(request);
+	if (response.isError())
+	{
+		throw new Exception(response.getErrorString());
+	}
+	XmlNodeList templateNodes = response.dom.SelectNodes(Item.XPathResultItem + "/Relationships/Item");
+	foreach (XmlElement template in templateNodes)
+	{
+		request = String.Format(tmpTemplateRequest, System.Security.SecurityElement.Escape(templateType), System.Security.SecurityElement.Escape(action),
+			System.Security.SecurityElement.Escape(template.GetAttribute("id")), isCopy ? "do_add='0' do_lock='0'" :String.Empty);
+		response = inn.applyAML(request);
+		if (response.isError())
+		{
+			throw new Exception(response.getErrorString());
+		}
+		if (isCopy)
+		{
+			response.setProperty("source_id", newItemId);
+			if (!parentIsTemp)
+			{
+				response = response.apply("add");
+				if (response.isError())
+				{
+					throw new Exception(response.getErrorString());
+				}
+			}
+			else
+			{
+				XmlNode itemRels = item.SelectSingleNode("Relationships");
+				itemRels.AppendChild(inDom.ImportNode(response.node, true));
+			}
+		}
+	}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_OnAfterCopySSVCItem</name>
+ </Item>
+</AML>

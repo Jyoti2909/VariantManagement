@@ -1,0 +1,42 @@
+﻿<AML>
+ <Item type="Method" id="151D45AE6E054D26B300673092DE7C8A" action="add">
+  <comments>Add to select vault_url_pattern for set vault_url federated prop (IR-014890)</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+
+			string selectAttributeValue = this.getAttribute("select");
+			if (string.IsNullOrEmpty(selectAttributeValue))
+			{
+				return this;
+			}
+
+			bool isVaultUrlInSelect = false;
+			string[] values = selectAttributeValue.Split(',');
+
+			foreach (string attributeToSelect in values)
+			{
+				switch (attributeToSelect.Trim())
+				{
+					case "vault_url_pattern":
+						return this;
+					case "vault_url":
+						isVaultUrlInSelect = true;
+						break;
+				}
+			}
+
+			if (!isVaultUrlInSelect)
+			{
+				return this;
+			}
+
+			selectAttributeValue += ", vault_url_pattern";
+			this.setAttribute("select", selectAttributeValue);
+
+			return this;
+
+			]]></method_code>
+  <method_type>C#</method_type>
+  <name>Add to select vault_url_pattern</name>
+ </Item>
+</AML>

@@ -1,0 +1,41 @@
+﻿<AML>
+ <Item type="Method" id="BB338B14833D4B53A2718EF02474A75A" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string reference = this.getProperty("reference");
+string polysourceTypeName = this.getProperty("polysource_type_name");
+string ddId = this.getProperty("source_id");
+if (!string.IsNullOrEmpty(reference))
+{
+	Item ddItem = this.newItem("DiscussionDefinition", "get");
+	ddItem.setID(ddId);
+	ddItem.setAttribute("select", "item_type_name");
+	ddItem = ddItem.apply();
+	if (ddItem.isError())
+	{
+		this.getInnovator().newError(ddItem.getErrorString());
+	}
+
+	string itemTypeName = ddItem.getProperty("item_type_name");
+	if (string.IsNullOrEmpty(itemTypeName))
+	{
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_UnableGetItemTypeName"));
+	}
+
+	Item validateItem = this.newItem("Feed", "VC_ValidatePolysourceTypeProp");
+	validateItem.setID(this.getID());
+	validateItem.setAttribute("discussType", "DiscussionDefinition");
+	validateItem.setProperty("item_type_name", itemTypeName);
+	validateItem.setProperty("reference", reference);
+	validateItem.setProperty("polysource_type_name", polysourceTypeName);
+	validateItem = validateItem.apply();
+	if (validateItem.isError())
+	{
+		return validateItem;
+	}
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_ValidateFeedPolyTypeProp</name>
+ </Item>
+</AML>

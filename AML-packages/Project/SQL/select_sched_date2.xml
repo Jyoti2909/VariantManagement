@@ -1,0 +1,61 @@
+﻿<AML>
+ <Item type="SQL" id="3026E740FC3D485291C6774CAB864DCD" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_sched_date2</old_name>
+  <sqlserver_body><![CDATA[/*Purpose: select a scheduled date based on a ramp function
+            and precedence
+            for fwd scheduling
+              earlier of ((latest of es,  prop, cur, target), ls)
+            for bwd scheduling
+              later of ((earliest of ls, prop, cur, target), es)
+   Input:   3 dates, early, schedule, late, 
+            plus a flag 1 = forward 0 = backward
+   Output:  a single date.
+
+   Algorithm:                     **** L         
+                                 *
+                  F(S)          *      
+                               *            
+                         E ****
+                                 S
+                             
+*/
+
+CREATE FUNCTION [select_sched_date2]
+(
+	@EARLY DATETIME,
+	@PROP DATETIME,
+	@CUR DATETIME,                                
+	@TARGET DATETIME,
+	@LATE DATETIME,
+	@FLAG INT
+)
+RETURNS DATETIME
+AS
+BEGIN
+	DECLARE @PS AS DATETIME
+	IF @FLAG = 0
+	BEGIN
+		SET @PS = @EARLY
+		IF @PROP > @PS SET @PS = @PROP
+		IF @TARGET >= @PROP SET @PS = @TARGET
+		IF @TARGET IS NULL AND @CUR > @PS SET @PS = @CUR
+		IF @PS > @LATE SET @PS = @LATE
+	END
+	ELSE
+	BEGIN
+		SET @PS = @LATE
+		IF @PROP < @PS SET @PS = @PROP
+		IF @TARGET <= @PROP SET @PS = @TARGET
+		IF @TARGET IS NULL AND @CUR < @PS SET @PS = @CUR
+		IF @PS < @EARLY SET @PS = @EARLY
+	END
+	RETURN @PS  
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_sched_date2</name>
+ </Item>
+</AML>

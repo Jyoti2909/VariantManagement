@@ -1,0 +1,158 @@
+﻿<AML>
+ <Item type="Method" id="C505B60665D04F4595598DFB567D04E3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string itemTypeId = this.getProperty("item_type_id");
+
+	Innovator innovatorInstance = this.getInnovator();
+	IDataAccessLayer dataAccessLayer = new DataAccessLayer(innovatorInstance);
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer, innovatorInstance);
+	Item actionMenuButtons = businessLogic.GetActionsMenuButtons(itemTypeId, 10000);
+
+	return actionMenuButtons ?? innovatorInstance.newResult("");
+}
+
+internal class BusinessLogic
+{
+	private IDataAccessLayer dataAccessLayer;
+	private Innovator innovator;
+	// 'FFEBAEC1DE43491D8AF7C2684253E34A' - itemview.itemcommandbar.default.actions
+	public string parentMenuId = "FFEBAEC1DE43491D8AF7C2684253E34A";
+	public string initMethodName = "cui_common_action_init";
+	public string clickMethodName = "cui_ivicb_more_action_click";
+	public string beforeSeparatorName = "itemview.itemcommandbar.default.more.beforeactions";
+
+	internal BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+		this.innovator = innovator;
+	}
+
+	public Item GetActionsMenuButtons(string itemTypeId, int sortOrder = 0)
+	{
+		Item items = null;
+
+		if (!string.IsNullOrEmpty(itemTypeId))
+		{
+			Item actionsList = this.dataAccessLayer.GetItemTypeActions(itemTypeId);
+			items = CreateMenuButtons(actionsList, sortOrder);
+		}
+
+		return items;
+	}
+
+	private Item CreateMenuSeparator(string separatorName, int sortOrder)
+	{
+		Item menuSeparator = this.innovator.newItem("CommandBarMenuSeparator");
+		menuSeparator.setProperty("name", separatorName);
+		menuSeparator.setProperty("parent_menu", this.parentMenuId);
+		menuSeparator.setProperty("sort_order", sortOrder.ToString(CultureInfo.InvariantCulture));
+
+		return menuSeparator;
+	}
+
+	private Item CreateMenuButtons(Item actionsList, int sortOrder = 0)
+	{
+		int actionsCount = actionsList.getItemCount();
+
+		if (actionsCount > 0)
+		{
+			Item resultItems = this.innovator.newItem();
+			string initHandlerId = dataAccessLayer.GetMethodIdByName(this.initMethodName);
+			string clickHandlerId = dataAccessLayer.GetMethodIdByName(this.clickMethodName);
+
+			if (!string.IsNullOrEmpty(this.beforeSeparatorName))
+			{
+				resultItems.appendItem(this.CreateMenuSeparator(this.beforeSeparatorName, sortOrder));
+				sortOrder += 128;
+			}
+
+			for (int i = 0; i < actionsCount; i++)
+			{
+				Item currentAction = actionsList.getItemByIndex(i);
+				Item menuButton = currentAction.newItem("CommandBarMenuButton");
+				string actionId = currentAction.getID();
+				string buttonName = currentAction.getProperty("name") ?? actionId;
+				string canExecuteMethodName = currentAction.getPropertyAttribute("can_execute", "keyed_name");
+				string location = currentAction.getProperty("location");
+
+				menuButton.setID(actionId);
+				menuButton.setProperty("name", buttonName);
+				menuButton.setProperty("label", currentAction.getProperty("label") ?? buttonName);
+				menuButton.setProperty("action", "Add");
+				menuButton.setProperty("parent_menu", this.parentMenuId);
+				menuButton.setProperty("on_init_handler", initHandlerId);
+				menuButton.setProperty("on_click_handler", clickHandlerId);
+
+				menuButton.setProperty("additional_data", string.Format(CultureInfo.InvariantCulture, "{{\"canExecuteMethodName\":\"{0}\", \"location\":\"{1}\", \"actionId\":\"{2}\"}}",
+					canExecuteMethodName, location, actionId));
+
+				//TODO: apply the "if" statement code for all actions (not for specific list of the actions).
+				//It cannot be a general fix right now for performance reasons cause already implemented can_execute methods have poor performance
+				//for the case of "UpdateTearOffWindowState" event.
+				//E.g. ES_CanEnableConfiguration calls ES_GetConfigurationState which makes request to the server (see "indexedConfigurationItm.apply();")
+				if (actionId == "606B3E3DCAC64619B5C7630D7A53D9AA" || actionId == "CCDAD1F24D79427DA35CBCB925517DC3") {
+					menuButton.setProperty("include_events", "UpdateTearOffWindowState,SelectInGrid,SelectInToc");
+				}
+
+				menuButton.setProperty("sort_order", sortOrder.ToString(CultureInfo.InvariantCulture));
+				sortOrder += 128;
+
+				resultItems.appendItem(menuButton);
+			}
+
+			// newItem() is creates empty node. It's should be deleted
+			resultItems.removeItem(resultItems.getItemByIndex(0));
+
+			return resultItems;
+		}
+
+		return null;
+	}
+}
+
+internal interface IDataAccessLayer
+{
+	string GetMethodIdByName(string methodName);
+	Item GetItemTypeActions(string itemTypeId);
+}
+
+internal class DataAccessLayer : IDataAccessLayer
+{
+	private Innovator innovator;
+
+	internal DataAccessLayer(Innovator innovator)
+	{
+		this.innovator = innovator;
+	}
+
+	public string GetMethodIdByName(string methodName)
+	{
+		Item methodRequest = this.innovator.newItem("Method", "get");
+		methodRequest.setAttribute("select", "id");
+		methodRequest.setProperty("name", methodName);
+		methodRequest = methodRequest.apply();
+
+		return methodRequest.getID();
+	}
+
+	public Item GetItemTypeActions(string itemTypeId)
+	{
+		Item itemActions = this.innovator.newItem("Item Action", "get");
+		itemActions.setProperty("source_id", itemTypeId);
+
+		Item relActions = this.innovator.newItem("Action", "get");
+		relActions.setAttribute("select", "name,label,can_execute,location");
+
+		Item logicOr = relActions.newOR();
+		logicOr.setProperty("type", "itemtype");
+		logicOr.setProperty("type", "item");
+
+		itemActions.setRelatedItem(relActions);
+		itemActions = itemActions.apply();
+
+		return itemActions.getItemsByXPath(Item.XPathResultItem + "/related_id/Item");
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>cui_ivicb_more_actionsbuilder</name>
+ </Item>
+</AML>

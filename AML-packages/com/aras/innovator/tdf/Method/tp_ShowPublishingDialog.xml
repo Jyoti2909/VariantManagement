@@ -1,0 +1,58 @@
+﻿<AML>
+ <Item type="Method" id="EF23061E7B5E46829B87878E10108361" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var mainWindow = aras.getMainWindow();
+var targetWindow = window === mainWindow ? mainWindow.main : window;
+
+var consumeLicenseResult = aras.ConsumeLicense('Aras.PublishingService');
+
+if (consumeLicenseResult.isError) {
+	if (consumeLicenseResult.errorMessage.indexOf('FeatureHasNoLicensesException') > -1 ||
+		consumeLicenseResult.errorMessage.indexOf('FeatureLicenseValidationException') > -1) {
+		var win = aras.getMostTopWindowWithAras(window);
+		var advertisingUrl = aras.getResource('../Modules/aras.innovator.TDF', 'techdoc.advertising_url');
+		aras.AlertWarning(aras.getResource('../Modules/aras.innovator.TDF', 'techdoc.advertising_message', advertisingUrl), win.main || win);
+	} else {
+		aras.AlertError(consumeLicenseResult.errorMessage);
+	}
+	return;
+}
+
+if (aras.isTempEx(this.node) || aras.isDirtyEx(this.node)) {
+	if (aras.confirm(aras.getResource('../Modules/aras.innovator.TDF', 'publishing.need2save_item'))) {
+		var itemId = this.getID();
+		var result = aras.saveItemEx(this.node);
+		if (result === null) {
+			return;
+		}
+		if (typeof window.item !== 'function') {
+			window.item = result;
+		}
+		aras.uiReShowItemEx(itemId, result);
+	} else {
+		return;
+	}
+}
+
+var dialogParameters = {
+	title: aras.getResource('../Modules/aras.innovator.TDF', 'includes.publishingdialog'),
+	formId: 'C60B0A602ED74D43BE00B90E9BBD3A0A', // tp_PublishingForm
+	aras: aras,
+	parentWindow: targetWindow,
+	// server method that returns list of option families as string in JSON format
+	// {"familyName1": ["value1","value2",..], "familyName2":["value3","value4",..]}
+	optionFamiliesBuilderMethod: 'tp_GetOptionFamilies',
+	// option families also can be passed from here with following parameter
+	//optionFamilies: {firstFamily: ["value1,value2,.."], secondFamily:["value3","value4",..]}
+	isEditMode: true,
+	documentItem: this,
+	dialogWidth: 340, dialogHeight: 460, resizable: false,
+	content: 'ShowFormAsADialog.html'
+};
+targetWindow.ArasModules.Dialog.show('iframe', dialogParameters);
+return true;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>tp_ShowPublishingDialog</name>
+ </Item>
+</AML>

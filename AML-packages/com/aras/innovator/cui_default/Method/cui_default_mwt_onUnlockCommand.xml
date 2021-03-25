@@ -1,0 +1,18 @@
+﻿<AML>
+ <Item type="Method" id="5F5AA75A870E4347B58475686D2016BE" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const loggedUserId = aras.getCurrentUserID();
+const isAdmin = aras.isAdminUser();
+const itemIdsToUnclaim = options.selectedRowsIds.filter(rowId => {
+	const lockedById = options.rows.get(rowId, 'locked_by_id');
+
+	return options.rows.get(rowId, '@aras.action') !== 'add' &&
+		(lockedById === loggedUserId || (lockedById && isAdmin));
+});
+
+window.onUnlockCommand(itemIdsToUnclaim);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_mwt_onUnlockCommand</name>
+ </Item>
+</AML>

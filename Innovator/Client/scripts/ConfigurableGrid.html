@@ -1,0 +1,347 @@
+﻿<!DOCTYPE HTML>
+<!-- (c) Copyright by Aras Corporation, 2005-2014. -->
+<html>
+<head>
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../javascript/dojox/form/resources/CheckedMultiSelect.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/default.css";
+		@import "../styles/common.min.css";
+
+		html, body {
+			overflow: hidden;
+			position: relative;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+
+		#toolbarContainer {
+			position: relative;
+			height: 30px;
+			overflow: hidden;
+		}
+
+		#gridContainer {
+			position: absolute;
+			top: 30px;
+			left: 0px;
+			right: 0px;
+			bottom: 0px;
+		}
+	</style>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules,ScriptSet2,XmlDocument,ConfigurableGrid"></script>
+	<script>
+		//note, that aras is used, e.g., in method PM_ACW_cfgGridsOnLoad and ConfigurableGrid.js. Do not rename it.
+		var aras = parent.aras || parent.parent.aras;;
+		window.addEventListener('DOMContentLoaded', function() {
+			ArasModules.soap(null, {async: true, url: aras.getServerURL(), headers: aras.getHttpHeadersForSoapMessage('ApplyItem')});
+		});
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript">
+		var gridId = "",
+			grid = null,
+			item = null,
+			CUSTOM_TOOLBAR_SRC,
+			toolbar = null,
+			afterSaveHandlerKey = null,
+			beforeSaveHandlerKey = null,
+			beforeUnlockHandlerKey = null;
+
+		function onInitialize() {
+			gridId = QueryString("grid").toString();
+			item = parent.item;
+			CUSTOM_TOOLBAR_SRC = QueryString("custom_toolbar_src").toString();
+		}
+
+		function switchEditMode(item, b) {
+			if (grid) {
+				grid.setEditMode(b);
+				grid.initTopLevelNode(item);
+				grid.runQuery();
+			}
+		}
+
+		function setEditMode(item) {
+			switchEditMode(item, true);
+		}
+
+		function setViewMode(item) {
+			switchEditMode(item, false);
+		}
+
+		var pageIsFullyLoaded = false; //set to true inside window onload event handler
+		function onTabSelected() {
+			if (pageIsFullyLoaded && grid) {
+				grid.rePopulateGrid();
+			}
+		}
+
+		function gridHasSeparateDom() {
+			return grid ? grid.hasSeparateDom() : false;
+		}
+
+		// +++ special grid dom processing for cases when grid has it's own dom
+		var afterSaveCommand_AML = "";
+		function onBeforeSaveCommand() {
+			if (grid) {
+				grid.applet.turnEditOff();
+
+				if (gridHasSeparateDom()) {
+					afterSaveCommand_AML = "";
+
+					var dom = grid.getDom();
+					if (dom) {
+						afterSaveCommand_AML = dom.xml;
+						//now reset grid data to prevent double saving results: IR-005118 "Erratic behavior when saving documents"
+						dom.setAttribute("prevent_double_saving", "1");
+						//prevent_double_saving attribute will be removed if window is refreshed.
+						//if not that means that window is being closed because a new version is generated
+					}
+				}
+				return true;
+			}
+			return false;
+		}
+
+		function onAfterSaveCommand() {
+			if (!gridHasSeparateDom() || !grid || !afterSaveCommand_AML) {
+				return;
+			}
+
+			var i = new Innovator();
+
+			var q = new Item(item.getAttribute("type"), "get");
+			q.setAttribute("select", "id");
+			q.setProperty("config_id", aras.getItemProperty(item, "config_id"));
+			q.setProperty("is_current", "1");
+			var r = q.apply();
+
+			if (!r.isError()) {
+				var rid = r.getID();
+				var d = i.newXMLDocument();
+				d.loadXML(afterSaveCommand_AML);
+
+				var nds = d.selectNodes("/AML/Item/source_id[.='" + item.getAttribute("id") + "']");
+				for (var k = 0; k < nds.length; k++) {
+					nds.item(k).text = rid;
+				}
+
+				afterSaveCommand_AML = d.xml;
+				d = null;
+			}
+
+			var res = i.applyAML(afterSaveCommand_AML);
+			if (res.isError()) {
+				aras.AlertError(res, window);
+				return;
+			}
+		}
+
+		function onBeforeUnlockCommand() {
+			if (gridHasSeparateDom()) {
+				saveIfModified();
+			}
+			return true;
+		}
+
+		function saveIfModified() {
+			if (!gridHasSeparateDom() || !grid) {
+				return;
+			}
+			grid.saveInputtedData();
+			var dom = grid.getDom();
+			if (dom && dom.selectNodes("//Item[@action and @action!='skip']").length > 0 && !dom.getAttribute("prevent_double_saving") && item.getAttribute("action") != "skip") {
+
+				if (!aras.getCurrentPassword()) {
+					return; //special workaround to fix IR-006102
+				}
+				//if main window is closed (innovator session closed) then password is empty
+
+				// +++ ask if user wants to save changes
+				var param = {};
+				param.buttons = {
+					btnYes: aras.getResource("", "common.yes"),
+					btnNo: aras.getResource("", "common.no")
+				};
+				param.message = aras.getResource("", "configurablegrid.changes_will_be_discarded_html", grid.getGridName());
+				param.aras = aras;
+				param.content = "groupChgsDialog.html";
+
+				param.dialogWidth = 300;
+				param.dialogHeight = 150;
+				param.center = true;
+
+				// --- ask if user wants to save changes
+				return window.ArasModules.Dialog.show("iframe", param).promise.then(function (res) {
+					if (res == "btnYes") {
+						onBeforeSaveCommand();
+						onAfterSaveCommand();
+						return 1;
+					}
+					else if (res == "btnNo") {
+						return 0;
+					}
+					return -1;
+				});
+			}
+		}
+
+		function registerTopMenuEventsHandlers() {
+			var topWnd = aras.getMostTopWindowWithAras(window);
+			//Only for main window
+			if (!topWnd.registerCommandEventHandler) {
+				return;
+			}
+			//Only for tearof window
+			if (topWnd.registerCommandEventHandler) {
+				beforeSaveHandlerKey = topWnd.registerCommandEventHandler(window, onBeforeSaveCommand, "before", "save");
+
+				if (gridHasSeparateDom()) {
+					afterSaveHandlerKey = topWnd.registerCommandEventHandler(window, onAfterSaveCommand, "after", "save");
+					beforeUnlockHandlerKey = topWnd.registerCommandEventHandler(window, onBeforeUnlockCommand, "before", "unlock");
+				}
+			}
+		}
+
+		function unRegisterTopMenuEventsHandlers() {
+			var topWnd = aras.getMostTopWindowWithAras(window);
+			if (topWnd.unregisterCommandEventHandler) {
+				topWnd.unregisterCommandEventHandler(beforeSaveHandlerKey);
+
+				if (gridHasSeparateDom()) {
+					topWnd.unregisterCommandEventHandler(afterSaveHandlerKey);
+					topWnd.unregisterCommandEventHandler(beforeUnlockHandlerKey);
+				}
+			}
+		}
+		// --- special grid dom processing for cases when grid has it's own dom
+
+		function loadToolbar() {
+			toolbar.loadXml(aras.getI18NXMLResource("ConfigurableGrid_toolbar.xml"));
+			toolbar.show();
+		}
+
+		onload = function onload_handler() {
+			var customIframe = document.getElementById("customToolbarFrame");
+
+			if (!CUSTOM_TOOLBAR_SRC) {
+				customIframe.style.display = "none";
+
+				clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", { id: "top_toolbar", connectId: "toolbarContainer" }, function (control) {
+					toolbar = control;
+					clientControlsFactory.on(control, {
+						"onClick": function(btn) {
+							onToolbarButtonClick(btn);
+						},
+					});
+					loadToolbar();
+				});
+			}
+			else {
+				customIframe.src = CUSTOM_TOOLBAR_SRC;
+			}
+
+			grid = new ConfigurableGrid("gridContainer", "grid", gridId, item);
+
+			// Item window contains boolean isEditMode but another case when configurable grid shows in relationship.html as Dialog
+			if (typeof parent.isEditMode === 'boolean') {
+				grid.setEditMode(parent.isEditMode);
+			} else {
+				grid.setEditMode(parent.relationships.isEditMode);
+			}
+
+			grid.start();
+			grid.setVisible(true);
+			grid.runQuery(); //do not specify doMerge parameter to allow CGrid to choose the best behavior
+			window.parent.document.addEventListener('loadWidgets', function rePopulate() {
+				window.parent.document.removeEventListener('loadWidgets', rePopulate);
+				grid.rePopulateGrid();
+			});
+			registerTopMenuEventsHandlers();
+			pageIsFullyLoaded = true;
+		}
+
+		onbeforeunload = function onbeforeunload_handler() {
+			function handler(exitFlag) {
+				unRegisterTopMenuEventsHandlers();
+
+				if (exitFlag == -1) {
+					return false;
+				}
+				saveEditedData();
+				onbeforeunload = function () { return true;};
+				window.close();
+			}
+			var res = saveIfModified();
+			if (res && res.then) {
+				res.then(handler.bind(this));
+			} else {
+				return handler(res);
+			}
+		}
+
+		function saveEditedData() {
+			if (grid.selectedCell) {
+				grid.saveInputtedData();
+			}
+		}
+
+		function onToolbarButtonClick(btn) {
+			var btnID = new String(btn.getId());
+			processCommand(btnID);
+		}
+
+		function processCommand(cmdID) {
+			var cmdHandlerName = "on" + (cmdID.substr(0, 1).toUpperCase() + cmdID.substr(1)) + "Command";
+			var cmdHandler = window[cmdHandlerName];
+			if (!cmdHandler) {
+				return false;
+			}
+			return cmdHandler();
+		}
+
+		function onGetAMLCommand() {
+			aras.prompt("Current AML", grid.topLevelNode.xml);
+		}
+
+		function onExport2ExcelCommand() {
+			onExport2OfficeCommand("excel");
+		}
+
+		function onExport2WordCommand() {
+			onExport2OfficeCommand("word");
+		}
+
+		var system_progressbar1_gif = "../images/Progress.gif";
+		function onExport2OfficeCommand(targetAppType) {
+			if (!grid) {
+				return false;
+			}
+			var statusId = aras.showStatusMessage("status", aras.getResource("", "configurablegrid.exporting"), system_progressbar1_gif);
+			var resCallback = function () {
+				var res = grid.export2HTML();
+				return res.replace(/\r\n/g, "<br>"); //because Excel doesn't support multiple NewLines inside pre tag
+			};
+			aras.clearStatusMessage(statusId);
+
+			aras.saveString2File(resCallback, targetAppType);
+			return true;
+		}
+
+		onInitialize();
+	</script>
+</head>
+<body class="claro">
+	<div id="toolbarContainer">
+		<iframe id="customToolbarFrame" frameborder="0" style="width: 100%; height: 30px;"></iframe>
+	</div>
+	<div id="gridContainer">
+	</div>
+</body>
+</html>

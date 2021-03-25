@@ -1,0 +1,399 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="../../../styles/default.css" />
+		<link rel="stylesheet" type="text/css" href="../../../styles/common.min.css" />
+		<style type="text/css">
+			@import "../../../javascript/dojo/resources/dojo.css";
+			@import "../../../javascript/dijit/themes/claro/claro.css";
+			@import "../../../javascript/include.aspx?classes=common.css";
+
+			body {
+				margin: 0px;
+			}
+
+			#showOrder, #editOrder {
+				display: none;
+			}
+
+			#showOrder > ol {
+				padding: 0;
+				margin-top: 5px;
+			}
+
+			#showOrder > ol > li {
+				margin-top: 5px;
+			}
+
+			#showOrder > ol > li > span {
+				float: right;
+				color: rgb(175, 175, 175);
+			}
+
+			.title {
+				font-weight: bold;
+			}
+
+			.placeholder {
+				color: rgb(175, 175, 175);
+				font-style: italic;
+			}
+
+			.colOrder {
+				padding-left: 10px;
+				padding-right: 10px;
+				display: inline-flex;
+			}
+
+			.colDelete {
+				padding-left: 7px;
+			}
+
+			th {
+				padding-bottom: 5px;
+			}
+
+			.showProperties__property_deleted {
+				color: red;
+			}
+
+		</style>
+		<title></title>
+		<script type="text/javascript">
+			var frameArguments;
+			var aras;
+			var availableProperties;
+			var orderText;
+
+			var orderDirections;
+			var queryItem;
+			var initialProperties = {};
+			var findPropertiesXPath = 'Relationships/Item[@type=\'qry_QueryItemSortProperty\' and not(@action=\'delete\')]';
+
+			function start(args) {
+				// fill form with args
+				init(args);
+
+				switch (frameArguments.evType) {
+					case 'click': editSortOrder(); break; 
+					case 'hover': showSortOrder(); break;
+				}
+			}
+
+			function onCloseDialog() {
+				if (frameArguments.evType == 'click') {
+					var propName;
+					var isDirty;
+					var relationshipsNd = queryItem.node.selectSingleNode('Relationships');
+
+					var sortOrderTableEl = document.getElementById('sortOrderTable');
+					// except headers and last row
+					for (var i = 1; i < (sortOrderTableEl.rows.length - 1); i++) {
+						var row = sortOrderTableEl.rows[i];
+						var propSelect = row.childNodes['0'].getElementsByClassName('sys_f_select')[0];
+						var sortDirectionSelect = row.childNodes['2'].getElementsByClassName('sys_f_select')[0];
+
+						propName = propSelect.options[propSelect.selectedIndex].value;
+						var expectedDirection = sortDirectionSelect.options[sortDirectionSelect.selectedIndex].value;
+						var expectedOrder = (i * 128).toString();
+
+						var sortProperty = relationshipsNd ?
+							relationshipsNd.selectSingleNode('Item[@type=\'qry_QueryItemSortProperty\' and property_name=\'' + propName + '\']')
+							: null;
+						if (!sortProperty) {
+							var newProperty = queryItem.createRelationship('qry_QueryItemSortProperty', 'add');
+							newProperty.setProperty('property_name', propName);
+							newProperty.setProperty('sort_order', expectedOrder);
+							newProperty.setProperty('sort_order_direction', expectedDirection);
+							isDirty = true;
+						} else {
+							var currentDirection = aras.getItemProperty(sortProperty, 'sort_order_direction');
+							var currentSortOrder = aras.getItemProperty(sortProperty, 'sort_order');
+							if (currentDirection !== expectedDirection || currentSortOrder !== expectedOrder) {
+								aras.setItemProperty(sortProperty, 'sort_order_direction', expectedDirection);
+								aras.setItemProperty(sortProperty, 'sort_order', expectedOrder);
+								if (sortProperty.getAttribute('isNew') !== '1') {
+									sortProperty.setAttribute('action', 'update');
+								}
+								isDirty = true;
+							}
+							delete initialProperties[propName];
+						}
+					}
+					for (propName in initialProperties) {
+						var propNd = relationshipsNd.selectSingleNode('Item[@type=\'qry_QueryItemSortProperty\' and property_name=\'' + propName + '\']');
+						if (propNd.getAttribute('isNew') === '1') {
+							relationshipsNd.removeChild(propNd);
+						} else {
+							propNd.setAttribute('action', 'delete');
+						}
+						isDirty = true;
+					}
+					if (isDirty) {
+						queryItem.setAttribute('isDirty', '1');
+					}
+					if (frameArguments.closeCallback) {
+						frameArguments.closeCallback();
+					}
+					return queryItem;
+				}
+			}
+
+			function init(args) {
+				frameArguments = args;
+				aras = args.aras;
+				orderText = aras.getResource('../Modules/aras.innovator.QueryBuilder/', 'action.manage.sortorder_order');
+				availableProperties = frameArguments.currentElement.properties;
+
+				queryItem = aras.newIOMItem();
+				queryItem.dom = frameArguments.currentElement.node.ownerDocument;
+				queryItem.node = frameArguments.currentElement.node;
+			}
+
+			function showSortOrder() {
+				var showOrderEl = document.getElementById("showOrder");
+				createNewElement(showOrderEl, 'span', 'title', orderText);
+
+				var listElement = createNewElement(showOrderEl, 'ol');
+				var propertyNds = queryItem.node.selectNodes(findPropertiesXPath);
+				for (var i = 0; i < propertyNds.length; i++) {
+					var propertyName = aras.getItemProperty(propertyNds[i], 'property_name');
+					var property = getPropertyByName(propertyName, availableProperties) || 
+						{
+							name: propertyName,
+							label: propertyName,
+							className: 'showProperties__property_deleted'
+						};
+					createNewListElement(property, aras.getItemProperty(propertyNds[i], 'sort_order_direction'), listElement);
+				}
+
+				showOrderEl.style.display = "block";
+			}
+
+			function getPropertyByName(name, properties) {
+				return properties.filter(function(property) {
+					return property.name === name;
+				})[0];
+			}
+
+			function createNewListElement(property, direction, parentElement) {
+				var newElement = createNewElement(parentElement, 'li', property.className, property.label);
+				createNewElement(newElement, 'span', null, aras.getResource('../Modules/aras.innovator.QueryBuilder/', 'action.manage.sortorder_' + direction));
+			}
+
+			function createNewElement(parentElement, elementName, classes, textContent) {
+				var newElement = document.createElement(elementName);
+				if (classes) {
+					newElement.className = classes;
+				}
+				if (textContent) {
+					newElement.textContent = textContent;
+				}
+				parentElement.appendChild(newElement);
+				return newElement;
+			}
+
+			function editSortOrder() {
+				var propertyText = aras.getResource('../Modules/aras.innovator.QueryBuilder/', 'action.manage.sortorder_property');
+				var directionText = aras.getResource('../Modules/aras.innovator.QueryBuilder/', 'action.manage.sortorder_direction');
+				orderDirections = getOrderDirections();
+
+				var editOrderEl = document.getElementById("editOrder");
+				var sortOrderTableEl = createNewElement(editOrderEl, 'table');
+				sortOrderTableEl.id = 'sortOrderTable';
+
+				var headers = createNewElement(sortOrderTableEl, 'tr');
+				createNewElement(headers, 'th', 'title', propertyText);
+				createNewElement(headers, 'th', 'title colOrder', orderText);
+				createNewElement(headers, 'th', 'title', directionText);
+				createNewElement(headers, 'th', 'colDelete');
+
+				var propertyNds = queryItem.node.selectNodes(findPropertiesXPath);
+				for (var i = 0; i < propertyNds.length; i++) {
+					var propertyName = aras.getItemProperty(propertyNds[i], 'property_name');
+					var property = getPropertyByName(propertyName, availableProperties) || {name: propertyName, label: propertyName};
+					initialProperties[property.name] = property;
+					createEditOrderBlock(property, aras.getItemProperty(propertyNds[i], 'sort_order_direction'), sortOrderTableEl);
+				}
+				createEditOrderBlock(null, null, sortOrderTableEl);
+
+				editOrderEl.style.display = "block";
+			}
+
+			function getOrderDirections() {
+				var qryItem = aras.newIOMItem('Value', 'get');
+				qryItem.setAttribute('select', 'label, value');
+				qryItem.setProperty('source_id', '3058035024AE47C48FEF221C5B373650'); // qry_SortDirection
+				qryItem = qryItem.apply();
+
+				var directions = [];
+				for (var i = 0; i < qryItem.getItemCount(); i++) {
+					var direction = qryItem.getItemByIndex(i);
+					directions.push({
+						value: direction.getProperty('value'),
+						label: direction.getProperty('label')
+					});
+				}
+				return directions;
+			}
+
+			function createEditOrderBlock(property, direction, parentElement) {
+				var row = createNewElement(parentElement, 'tr');
+				var cell = createNewElement(row, 'td');
+				createPropertyDropdownElement(property, cell);
+
+				if (property) {
+					showAdditionalFields(row, direction);
+				}
+			}
+
+			function showAdditionalFields(row, direction) {
+				var cell = createNewElement(row, 'td', 'colOrder');
+				createImgElement(cell, 'moveUpBtn', onSortOrderUp);
+				createImgElement(cell, 'moveDownBtn', onSortOrderDown);
+
+				cell = createNewElement(row, 'td');
+				createDirectionDropdownElement(direction, cell);
+
+				cell = createNewElement(row, 'td', 'colDelete');
+				createImgElement(cell, 'deleteBtn', onDeleteHandler);
+			}
+
+			function createPropertyDropdownElement(property, parentElement) {
+				var containerDiv = createNewElement(parentElement, 'div', 'container_select_prop');
+				parentElement = containerDiv;
+
+				parentElement = createNewElement(parentElement, 'div', 'sys_f_div_select');
+				var selectElement = createNewElement(parentElement, 'select', 'sys_f_select');
+				newElement = createNewElement(parentElement, 'span', 'sys_f_span_select');
+
+				fillPropertySelect(property, selectElement);
+			}
+
+			function createDirectionDropdownElement(direction, parentElement) {
+				var containerDiv = createNewElement(parentElement, 'div', 'container_select_direction');
+				parentElement = containerDiv;
+
+				parentElement = createNewElement(parentElement, 'div', 'sys_f_div_select');
+				var selectElement = createNewElement(parentElement, 'select', 'sys_f_select');
+				newElement = createNewElement(parentElement, 'span', 'sys_f_span_select');
+
+				fillDirectionSelect(direction, selectElement);
+			}
+
+			function fillDirectionSelect(selectedDirection, select) {
+				var selectedIndex = 0;
+				for (var i = 0; i < this.orderDirections.length; i++) {
+					var direction = this.orderDirections[i];
+					select.add(new Option(direction.label, direction.value));
+					if (selectedDirection === direction.value) {
+						selectedIndex = i;
+					}
+				}
+				select.selectedIndex = selectedIndex;
+				this.onChangeDirectionSelect.call(select, null);
+				select.addEventListener('change', this.onChangeDirectionSelect);
+			}
+
+			function onChangeDirectionSelect(ev, keepPlaceholder) {
+				var spanSelect = this.parentNode.querySelector('.sys_f_span_select');
+				spanSelect.textContent = this.options[this.selectedIndex].textContent;
+			}
+
+			function fillPropertySelect(selectedProperty, select) {
+				var selectedIndex, selectedPropName;
+				if (!selectedProperty) {
+					selectedIndex = 0;
+					addPlaceholderOption(select);
+				} else {
+					selectedPropName = selectedProperty.name;
+				}
+				for (var i = 0; i < this.availableProperties.length; i++) {
+					var property = this.availableProperties[i];
+					select.add(new Option(property.label, property.name));
+					if (!selectedIndex && selectedPropName === property.name) {
+						selectedIndex = i;
+					}
+				}
+				if (selectedProperty && !selectedIndex) {
+					select.add(new Option(selectedProperty.label, selectedProperty.name));
+					selectedIndex = i;
+				}
+				select.selectedIndex = selectedIndex;
+				this.onChangePropertySelect.call(select, null, true);
+				select.addEventListener('change', this.onChangePropertySelect);
+			}
+
+			function onChangePropertySelect(ev, keepPlaceholder) {
+
+				var spanSelect = this.parentNode.querySelector('.sys_f_span_select');
+				spanSelect.textContent = this.options[this.selectedIndex].textContent;
+
+				if (!keepPlaceholder && spanSelect.classList.contains('placeholder')) {
+					var currentRow = getTableRowByChild(this);
+					showAdditionalFields(currentRow)
+					spanSelect.classList.remove('placeholder');
+
+					var sortOrderTableEl = document.getElementById('sortOrderTable');
+					createEditOrderBlock(null, null, sortOrderTableEl);
+				}
+			}
+
+			function addPlaceholderOption(select) {
+				var option = document.createElement('option');
+				option.setAttribute('value', '');
+				option.setAttribute('disabled', '');
+				option.setAttribute('selected', '');
+				option.textContent = aras.getResource('../Modules/aras.innovator.QueryBuilder/', 'action.manage.add_property');
+				select.appendChild(option);
+				select.parentNode.querySelector('.sys_f_span_select').classList.add('placeholder');
+			}
+
+			function createImgElement(parentElement, clsName, onClickHandler) {
+				var spanElement = document.createElement('span');
+				spanElement.className = clsName;
+				spanElement.onclick = onClickHandler;
+				parentElement.appendChild(spanElement);
+			}
+
+			function getTableRowByChild(childEl) {
+				var currentRow = childEl;
+				while (currentRow.localName !== 'tr') {
+					currentRow = currentRow.parentNode;
+				}
+				return currentRow;
+			}
+
+			function onDeleteHandler() {
+				var sortOrderTableEl = document.getElementById('sortOrderTable');
+				var currentRow = getTableRowByChild(this);
+				sortOrderTableEl.removeChild(currentRow);
+			}
+
+			function onSortOrderUp() {
+				var currentRow = getTableRowByChild(this);
+				if (currentRow.rowIndex > 1) {
+					var sortOrderTableEl = document.getElementById('sortOrderTable');
+					sortOrderTableEl.insertBefore(currentRow, sortOrderTableEl.rows[currentRow.rowIndex - 1])
+				}
+			}
+
+			function onSortOrderDown() {
+				var currentRow = getTableRowByChild(this);
+				var sortOrderTableEl = document.getElementById('sortOrderTable');
+				var tableRows = sortOrderTableEl.rows;
+				if (currentRow.rowIndex < (tableRows.length - 2)) { // 2 rows: "Add Property" row and last row
+					sortOrderTableEl.insertBefore(currentRow, sortOrderTableEl.rows[currentRow.rowIndex + 1].nextSibling)
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<div id="showOrder"></div>
+		<div id="editOrder"></div>
+		<div class="tooltip-buttons hide">
+			<button class="aras-btn hover">Save</button>
+			<button class="aras-btn btn_cancel hover">Cancel</button>
+		</div>
+	</body>
+</html>

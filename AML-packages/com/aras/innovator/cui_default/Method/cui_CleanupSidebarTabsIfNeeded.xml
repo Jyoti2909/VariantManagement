@@ -1,0 +1,74 @@
+﻿<AML>
+ <Item type="Method" id="628FCCB16C5A41BC93D23C6E7E8B3290" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Innovator innovator = this.getInnovator();
+	DataAccessLayer dataAccessLayer = new DataAccessLayer(innovator);
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer, this);
+	return businessLogic.GetSidebarTabItemsToRemove();
+}
+
+internal class BusinessLogic
+{
+	internal const string cmfEditorButtonId = "05706351DB5040909C9A09AB501B984B";
+	internal const string worldIdentityId = "A73B655731924CD0B027E4F4D5FCC0A9";
+	private IDataAccessLayer dataAccessLayer;
+	private Item methodItem;
+
+	internal BusinessLogic(IDataAccessLayer dataAccessLayer, Item methodItem)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+		this.methodItem = methodItem;
+	}
+
+	internal Item GetSidebarTabItemsToRemove()
+	{
+		string itemTypeId = this.methodItem.getProperty("item_type_id");
+
+		bool isContentTypeButtonEnabled = dataAccessLayer.IsItemTypeLinkedByContentType(itemTypeId);
+		if (!isContentTypeButtonEnabled)
+		{
+			return CreateItemWithRemoveAction(cmfEditorButtonId);
+		}
+
+		return null;
+	}
+
+	private Item CreateItemWithRemoveAction(string itemId)
+	{
+		Item originalItem = this.methodItem.getItemsByXPath("//Item[@id='" + itemId + "']");
+
+		Item itemToRemove = this.methodItem.newItem("CommandBarSectionItem");
+		itemToRemove.setProperty("action", "Remove");
+		itemToRemove.setProperty("role", worldIdentityId);
+		itemToRemove.setRelatedItem(originalItem);
+		return itemToRemove;
+	}
+}
+
+internal interface IDataAccessLayer
+{
+	bool IsItemTypeLinkedByContentType(string itemTypeId);
+}
+
+internal class DataAccessLayer : IDataAccessLayer
+{
+	private Innovator innovator;
+
+	internal DataAccessLayer(Innovator innovator)
+	{
+		this.innovator = innovator;
+	}
+
+	public bool IsItemTypeLinkedByContentType(string itemTypeId)
+	{
+		Item contentTypeItems = this.innovator.newItem("cmf_ContentType", "get");
+		contentTypeItems.setAttribute("select", "id");
+		contentTypeItems.setProperty("linked_item_type", itemTypeId);
+		contentTypeItems = contentTypeItems.apply();
+		return !contentTypeItems.isEmpty();
+	}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>cui_CleanupSidebarTabsIfNeeded</name>
+ </Item>
+</AML>

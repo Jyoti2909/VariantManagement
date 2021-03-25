@@ -1,0 +1,69 @@
+﻿<AML>
+ <Item type="Method" id="6CD03BB207D84865BC833AD67AA6872D" action="add">
+  <comments>Method for change filename, if file with the same name exist in package</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string sourceId = this.getProperty("source_id");
+string relatedId = this.getProperty("related_id");
+Item query = this.newItem("File", "get");
+query.setProperty("id", relatedId);
+query = query.apply();
+if (query.isError())
+{
+	return query;	
+}
+
+Item relatedItem = this.newItem("File", "get");
+relatedItem.setProperty("filename", query.getProperty("filename"));
+Item packageFile = this.newItem("FileExchangePackageFile", "get");
+packageFile.setProperty("source_id", sourceId);
+packageFile.setRelatedItem(relatedItem);
+
+query = packageFile.apply();
+if (query.getItemCount() < 2)
+{
+	return this;
+}
+
+for (int i = 0; i < query.getItemCount(); i++)
+{
+	Item file = query.getItemByIndex(i);
+	file = file.getRelatedItem();
+	string fileId = file.getID();	
+	string fname = file.getProperty("filename");
+	
+	string[] array = fname.Split('.');
+	fname = string.Empty;
+	if (array.Length == 1)
+	{
+		fname = array[0] + "_" + fileId;
+	}
+	else
+	{
+		for (int j = 0; j < array.Length; j++)
+		{
+			fname += array[j];
+			if (j == array.Length - 2)
+				fname += "_" + fileId;
+			if (j != array.Length - 1)
+				fname += ".";
+		}
+	}
+	file = this.newItem("File");
+	file.setAttribute("action", "RenameFile");
+	file.setID(fileId);
+	file.setProperty("filename", fname);
+	
+	// get super user identity
+	Aras.Server.Security.Identity identity = Aras.Server.Security.Identity.GetByName("Super User");
+	bool permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(identity);
+	
+	file = file.apply();
+	
+	if (permsWasSet)
+		Aras.Server.Security.Permissions.RevokeIdentity(identity);
+}	
+return this;			 ]]></method_code>
+  <method_type>C#</method_type>
+  <name>FE_ChangeFileName</name>
+ </Item>
+</AML>

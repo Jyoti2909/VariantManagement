@@ -1,0 +1,254 @@
+﻿<AML>
+ <Item type="SQL" id="B1A2F893BE56473599D42B3A71E274C0" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>PE_SearchPartCircularReferences</old_name>
+  <sqlserver_body><![CDATA[/*
+name: PE_SearchPartCircularReferences
+solution: PLM
+created: 
+purpose: Check all Parts in DB to find circular references
+notes:
+*/
+
+CREATE PROCEDURE PE_SearchPartCircularReferences(@loops_count INT)
+AS
+BEGIN
+  DECLARE @LOOPS_INFO TABLE(
+    loop_number INT,
+    source_id CHAR(32) COLLATE database_default,
+    related_id CHAR(32) COLLATE database_default,
+    sort_order INT);
+  
+  -- 1. Create a list of not tested Parts.
+  CREATE TABLE #tmp_PARTS_TO_USE(id CHAR(32) COLLATE database_default PRIMARY KEY);
+  INSERT INTO #tmp_PARTS_TO_USE(id)
+  SELECT id
+  FROM PART
+  WHERE IS_CURRENT = '1';
+  
+  IF (@@ROWCOUNT = 0) /* there are no Parts in DB */
+  BEGIN
+    GOTO finish;
+  END
+  
+  CREATE TABLE #tmp_BOMS_TO_USE(id CHAR(32) COLLATE database_default PRIMARY KEY,
+                               source_id CHAR(32) COLLATE database_default,
+                               related_id CHAR(32) COLLATE database_default);
+
+  /* store a list of PART_BOM which are */
+  CREATE TABLE #tmp_BOMS_IN_LOOP(id CHAR(32) COLLATE database_default PRIMARY KEY,
+                               source_id CHAR(32) COLLATE database_default,
+                               related_id CHAR(32) COLLATE database_default);
+  
+  INSERT INTO #tmp_BOMS_TO_USE(id, source_id, related_id)
+  SELECT PB.id, PB.source_id, PB.related_id
+  FROM PART_BOM AS PB
+  INNER JOIN PART AS PR1 ON PB.SOURCE_ID = PR1.ID
+  INNER JOIN PART AS PR2 ON PB.RELATED_ID = PR2.ID
+  WHERE related_id IS NOT NULL AND PR1.IS_CURRENT='1' AND PR2.IS_CURRENT='1';
+  
+  IF (@@ROWCOUNT > 0) /* there are Part BOMs in DB */
+  BEGIN
+    CREATE INDEX ind_tmp_BOMS_TO_USE_source_id ON #tmp_BOMS_TO_USE(source_id);
+    CREATE INDEX ind_tmp_BOMS_TO_USE_related_id ON #tmp_BOMS_TO_USE(related_id);
+    CREATE INDEX ind_tmp_BOMS_IN_LOOP_source_id ON #tmp_BOMS_IN_LOOP(source_id);
+    CREATE INDEX ind_tmp_BOMS_IN_LOOP_related_id ON #tmp_BOMS_IN_LOOP(related_id);
+  END
+  
+  DECLARE @LEAF_PARTS TABLE(id CHAR(32) COLLATE database_default PRIMARY KEY);
+  DECLARE @LEAF_PARTS_COUNT INT; 
+  DECLARE @most_referenced_part AS CHAR(32);
+  WHILE (EXISTS(SELECT TOP 1 id FROM #tmp_PARTS_TO_USE))
+  BEGIN 
+    /* find leaf nodes */
+    
+    INSERT INTO @LEAF_PARTS(id)
+    SELECT p.id
+    FROM #tmp_PARTS_TO_USE p LEFT OUTER JOIN #tmp_BOMS_TO_USE pb ON p.id=pb.related_id
+    WHERE pb.id IS NULL;
+   
+    SET @LEAF_PARTS_COUNT = @@ROWCOUNT;
+    
+    INSERT INTO @LEAF_PARTS(id)
+    SELECT p.id
+    FROM #tmp_PARTS_TO_USE p LEFT OUTER JOIN #tmp_BOMS_TO_USE pb ON p.id=pb.source_id
+    WHERE pb.id IS NULL AND p.id NOT IN (SELECT id FROM @LEAF_PARTS);    
+    
+    
+    SET @LEAF_PARTS_COUNT = @LEAF_PARTS_COUNT + @@ROWCOUNT;
+    
+    IF (@LEAF_PARTS_COUNT = 0) /* there are no leaf nodes any more but we know that there are parts*/
+                               /* this means there is a circular reference */    
+    BEGIN
+      /* let's find a most referenced part */
+      IF @most_referenced_part IS NULL 
+      BEGIN
+      SELECT TOP 1 @most_referenced_part=related_id
+      FROM #tmp_BOMS_TO_USE
+      GROUP BY related_id
+      ORDER BY COUNT(related_id) DESC;
+      END
+      /* create a list of PART_BOM referencing the part */
+      INSERT INTO #tmp_BOMS_IN_LOOP(id, source_id, related_id)
+      SELECT  id, source_id, @most_referenced_part
+      FROM #tmp_BOMS_TO_USE
+      WHERE related_id=@most_referenced_part;
+      
+      /* remove the part from a list of parts */
+      DELETE FROM #tmp_PARTS_TO_USE
+      WHERE id=@most_referenced_part;
+       
+      DELETE FROM #tmp_BOMS_TO_USE
+      WHERE related_id=@most_referenced_part    
+      DECLARE @tmp_most_referenced_part AS CHAR(32);
+      SET @tmp_most_referenced_part = @most_referenced_part
+      
+      SELECT TOP 1 @most_referenced_part=related_id
+      FROM #tmp_BOMS_TO_USE
+      GROUP BY related_id
+      ORDER BY COUNT(related_id) DESC;      
+      
+      DELETE FROM #tmp_BOMS_TO_USE
+      WHERE  source_id=@tmp_most_referenced_part     
+      
+      DELETE FROM @LEAF_PARTS;
+      CONTINUE;/* try to find leaf nodes again */
+    END
+    
+    /* delete BOMs pointing to leaf Parts */
+    DELETE FROM #tmp_BOMS_TO_USE
+    WHERE related_id IN (SELECT id FROM @LEAF_PARTS) OR source_id IN (SELECT id FROM @LEAF_PARTS);   
+   
+    /* delete leaf Parts */
+    DELETE FROM #tmp_PARTS_TO_USE
+    WHERE id IN (SELECT id FROM @LEAF_PARTS);
+
+    /* empty leaf parts list */
+    DELETE FROM @LEAF_PARTS;
+  END  
+  DROP TABLE #tmp_BOMS_TO_USE;
+  /* +++ iterate over leaf Parts */
+
+  DECLARE @detected_loops_number AS INT;
+  SELECT @detected_loops_number=COUNT(*)
+  FROM #tmp_BOMS_IN_LOOP;
+  
+  IF @loops_count IS NULL OR @detected_loops_number < @loops_count
+  BEGIN
+    SET @loops_count = @detected_loops_number;
+  END
+  
+  DECLARE @current_loop_number AS INT;
+  SET @current_loop_number = 0;
+  
+  DECLARE @CURRENT_LOOP_INFO TABLE(
+    source_id CHAR(32) COLLATE database_default,
+    related_id CHAR(32) COLLATE database_default,
+    sort_order INT);
+
+  DECLARE @NEXT_LEVEL TABLE(
+    source_id CHAR(32) COLLATE database_default,
+    related_id CHAR(32) COLLATE database_default)
+
+  
+  DECLARE detected_loops_cursor CURSOR FAST_FORWARD
+  FOR SELECT source_id, related_id
+  FROM #tmp_BOMS_IN_LOOP;
+  OPEN detected_loops_cursor;
+    WHILE @current_loop_number < @loops_count
+    BEGIN
+      DECLARE @part_A AS CHAR(32);
+      DECLARE @part_B AS CHAR(32);
+      DECLARE @current_level AS INT;
+      
+      FETCH NEXT FROM detected_loops_cursor
+      INTO @part_A, @part_B;
+      
+      SET @current_level = 0;
+      
+      DELETE FROM @CURRENT_LOOP_INFO;
+      
+      INSERT INTO @CURRENT_LOOP_INFO(source_id, related_id, sort_order)
+      VALUES(@part_A, @part_B, @current_level);
+
+      INSERT INTO @LOOPS_INFO(loop_number, source_id, related_id, sort_order)
+      VALUES(@current_loop_number, @part_A, @part_B, @current_level);
+      
+      IF @part_A != @part_B
+      BEGIN
+        /* +++ check part dependencies level by level until reference to part_A is found */
+        WHILE (1=1)
+        BEGIN
+          DELETE FROM @NEXT_LEVEL;
+          
+          INSERT INTO @NEXT_LEVEL(source_id, related_id)
+          SELECT source_id, related_id
+          FROM PART_BOM AS PB
+		  INNER JOIN PART AS PR ON PB.related_id = PR.id
+          WHERE PB.source_id IN (SELECT related_id
+                              FROM @CURRENT_LOOP_INFO
+                              WHERE sort_order=@current_level)
+							  AND PR.is_current = '1';
+          
+          /* test for end of the loop */
+          DECLARE @prev_part AS CHAR(32);
+          SET @prev_part = (SELECT TOP 1 source_id
+                            FROM @NEXT_LEVEL
+                            WHERE related_id=@part_A);
+          
+          SET @current_level = @current_level + 1;
+          
+          IF @prev_part IS NULL
+          BEGIN
+            INSERT INTO @CURRENT_LOOP_INFO(source_id, related_id, sort_order)
+            SELECT source_id, related_id, @current_level
+            FROM @NEXT_LEVEL;
+          END
+          ELSE /* end of the loop is detected */
+          BEGIN
+            WHILE @current_level > 0
+            BEGIN
+              INSERT INTO @LOOPS_INFO(loop_number, source_id, related_id, sort_order)
+              VALUES(@current_loop_number, @prev_part, @part_A, @current_level);
+              
+              SET @part_A = @prev_part;
+              
+              SELECT @prev_part=source_id
+              FROM @CURRENT_LOOP_INFO
+              WHERE related_id=@part_A;
+              
+              SET @current_level = @current_level - 1;
+            END
+            
+            /* we found a loop. break. */
+            BREAK;
+          END
+        END
+        /* --- check part dependencies level by level until reference to part_A is found */
+      END
+      
+      SET @current_loop_number = @current_loop_number + 1;
+    END
+  CLOSE detected_loops_cursor;
+  DEALLOCATE detected_loops_cursor;
+
+  DROP TABLE #tmp_BOMS_IN_LOOP;
+  
+finish:
+  DROP TABLE #tmp_PARTS_TO_USE;
+  
+  SELECT li.loop_number, li.sort_order,
+         li.source_id, s.keyed_name source_keyed_name, s.generation source_generation,
+         li.related_id, r.keyed_name related_keyed_name, r.generation related_generation
+  FROM @LOOPS_INFO li
+    INNER JOIN PART s ON li.source_id=s.id
+    INNER JOIN PART r ON li.related_id=r.id
+  ORDER BY li.loop_number, li.sort_order;
+END
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>PE_SearchPartCircularReferences</name>
+ </Item>
+</AML>

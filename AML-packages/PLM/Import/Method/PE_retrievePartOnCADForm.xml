@@ -1,0 +1,79 @@
+﻿<AML>
+ <Item type="Method" id="8DDB141EC947462BABFA4E7103CCF25E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+window.setPartsTabVisilbe = function(isvisible)
+{
+  if(!parent.relationships || parent.relationships.relTabbar.GetTabOrder("|") === "")
+	{
+	  setTimeout("window.setPartsTabVisilbe(" + isvisible + ")", 100);
+		return;
+	}
+	
+	var relshipId = aras.getRelationshipTypeId("CAD Part");
+	parent.relationships.relTabbar.SetTabVisible(relshipId , isvisible);
+}
+	
+retrievePart();
+
+function retrievePart()
+	{
+		if (!document.thisItem || !document.getElementById("part") || !document.getElementById("partid") || !document.getElementById("partupdated"))
+		{
+			return;
+		}
+
+		document.getElementById("partupdated").style.display = "none";
+		        
+		var aml = "" +
+		"<AML>" +
+		"	<Item type='CAD' id='" + document.thisItem.getID() + "' action='PE_CAD_ExecuteQueryDefinition' />" +
+		"</AML>";
+
+		var tempItem = document.thisItem.newItem();
+		tempItem.loadAML(aml);
+		tempItem = tempItem.apply();
+		if (tempItem.isError())
+		{
+			aras.AlertError(tempItem);
+		}
+
+		if (tempItem.getItemCount() <= 0)
+		{
+			window.setPartsTabVisilbe(false);
+			return;
+		}
+		
+		var relshipId = aras.getRelationshipTypeId("CAD Part");
+		
+		if(tempItem.getItemCount() == 1)
+		{
+			var textPropName = aras.browserHelper.getTextContentPropertyName();
+		  document.getElementById("part")[textPropName] = tempItem.getPropertyAttribute("id", "keyed_name");
+		  document.getElementById("partid").value = tempItem.getProperty("id");
+		  
+		  var linkStatus = tempItem.getProperty("link_status");
+		  SetLink(linkStatus);
+		  
+			window.setPartsTabVisilbe(false);
+		}
+		else
+		{
+		  document.getElementById("part").innerHTML = "See tab"
+		  document.getElementById("partid").value = "tab";
+		  window.setPartsTabVisilbe(true);
+		}
+	}
+
+	function SetLink(linkStatus) {
+		var partupdated = document.getElementById("partupdated");
+		partupdated.style.display = "inline";
+		partupdated.src = linkStatus;
+		partupdated.width = 16;
+		partupdated.height = 16;
+	}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PE_retrievePartOnCADForm</name>
+ </Item>
+</AML>

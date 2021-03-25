@@ -1,0 +1,64 @@
+﻿<AML>
+ <Item type="SQL" id="415279FAF1C54138929B6A8E36EA2955" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>get_pending_ready_activity2</old_name>
+  <sqlserver_body><![CDATA[/*This must return all ACTIVITY2 which are pending but ready to be activated 
+along with the associated assignments*/ 
+CREATE PROCEDURE [Get_pending_ready_activity2](@WBS_ID  CHAR(32), 
+                                               @TZ_NAME NVARCHAR(50) = NULL) 
+AS 
+  BEGIN 
+      DECLARE @now DATETIME 
+      DECLARE @now_n INT 
+      DECLARE @items TABLE ( 
+        ID               CHAR(32) COLLATE database_default, 
+        [type]           VARCHAR(32) COLLATE database_default, 
+        [state]          VARCHAR(32) COLLATE database_default, 
+        date_start_sched DATETIME ) 
+      DECLARE @ACTIVITIES TABLE( 
+        ID CHAR(32) COLLATE database_default PRIMARY KEY) 
+ 
+      EXEC [innovator].[Business_calendar_compile_check] @TZ_NAME 
+ 
+      SET @now = Getutcdate() 
+      SET @now_n = (SELECT VALUE 
+                    FROM   [innovator].[Business_day_number](@now, @TZ_NAME)) 
+ 
+      INSERT @ACTIVITIES 
+      SELECT ID 
+      FROM   Select_activities(@WBS_ID) 
+ 
+      INSERT @ITEMS 
+      SELECT A1.ID, 
+             'Activity2', 
+             A2.STATE, 
+             A2.DATE_START_SCHED 
+      FROM   @ACTIVITIES A1, 
+             ACTIVITY2 A2 
+      WHERE  ( A1.ID = A2.ID ) 
+             AND ( A2.state = 'Pending' ) 
+             AND ( A2.DATE_START_SCHED IS NOT NULL ) 
+             AND ( Abs((SELECT VALUE 
+                        FROM   [innovator].[Business_day_number](A2.DATE_START_SCHED, @TZ_NAME))) <= Abs(@now_n) ) 
+ 
+      -- business day number is negative when it's non work day   
+      INSERT @ITEMS 
+      SELECT ID, 
+             'Activity2 Assignment', 
+             STATE, 
+             NULL 
+      FROM   ACTIVITY2_ASSIGNMENT 
+      WHERE  SOURCE_ID IN (SELECT ID 
+                           FROM   @ITEMS) 
+             AND state = 'Pending' 
+ 
+      SELECT * 
+      FROM   @ITEMS 
+  END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>get_pending_ready_activity2</name>
+ </Item>
+</AML>

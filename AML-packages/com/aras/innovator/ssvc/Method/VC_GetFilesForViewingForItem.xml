@@ -1,0 +1,217 @@
+﻿<AML>
+ <Item type="Method" id="32534C81A6B4465FBEC83A059B23ABC5" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			var dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			var businessLogic = new BusinessLogic(dataAccessLayer);
+			string itemId = this.getProperty("itemId");
+			string itemTypeName = this.getProperty("itemTypeName");
+			bool isXmlFormatRequested = this.getProperty("xml_format") == "1";
+
+			return businessLogic.GetFilesForViewingByItem(itemTypeName, itemId, isXmlFormatRequested);
+		}
+
+		public class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dataAccessLayer;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dataAccessLayer = dataAccessLayer;
+			}
+
+			const string xPathToFileTypesViewer = "file_type/Item/Relationships/Item/related_id[@type='Viewer' or Item[@type='Viewer']]";
+			const string xPathToRepresentationFileTypesViewer = "Relationships/Item/Relationships/Item/related_id/Item[@type='File']/" + xPathToFileTypesViewer;
+
+			public Item GetFilesForViewingByItem(string itemTypeName, string itemId, bool xmlFormatRequested)
+			{
+				Item itemsForViewing = _dataAccessLayer.GetItemsForAggregation(itemTypeName, itemId);
+				Item filesForViewing = _dataAccessLayer.GetFilesForViewing(itemsForViewing, itemTypeName);
+				Item dvdFilesForViewing = _dataAccessLayer.GetDVDItemsAsFiles(itemTypeName, itemId);
+
+				if (!dvdFilesForViewing.isError())
+				{
+					XmlNode resultNd = filesForViewing.dom.SelectSingleNode("//Result");
+					XmlNodeList dvdFileItems = dvdFilesForViewing.dom.SelectNodes("//Result/Item[@type='File']");
+
+					foreach (XmlNode dvdFile in dvdFileItems)
+					{
+						resultNd.AppendChild(resultNd.OwnerDocument.ImportNode(dvdFile, true));
+					}
+				}
+
+				if (xmlFormatRequested)
+				{
+					return filesForViewing;
+				}
+
+				const string xPathToItemsForProcessing =
+					"//Result/Item[@type='File' and (" + xPathToFileTypesViewer + " or " +
+					xPathToRepresentationFileTypesViewer + ")]";
+
+				var jsonArray = ConvertItemsToJSONForClient(filesForViewing.dom.SelectNodes(xPathToItemsForProcessing));
+				return filesForViewing.getInnovator().newResult(jsonArray.ToString(Newtonsoft.Json.Formatting.None));
+			}
+
+			internal static Newtonsoft.Json.Linq.JArray ConvertItemsToJSONForClient(XmlNodeList items)
+			{
+				Newtonsoft.Json.Linq.JArray result = new Newtonsoft.Json.Linq.JArray();
+
+				const string fileItemWithViewerXPath = "Relationships/Item[@type='fr_Representation']/Relationships/Item[@type='fr_RepresentationFile']/related_id/Item[@type='File' and " + xPathToFileTypesViewer + "]";
+				System.Text.RegularExpressions.Regex viewerModuleRegEx = new System.Text.RegularExpressions.Regex("[^&?]*?module=(?<moduleName>[^&?]*)");
+
+				foreach (XmlElement fileItem in items)
+				{
+					XmlElement fileItemWithViewer = fileItem.SelectSingleNode(fileItemWithViewerXPath) as XmlElement ?? fileItem;
+					XmlElement viewerItem = fileItemWithViewer.SelectSingleNode(xPathToFileTypesViewer) as XmlElement;
+
+					Newtonsoft.Json.Linq.JObject itemObject = new Newtonsoft.Json.Linq.JObject();
+
+					itemObject["id"] = fileItemWithViewer.GetAttribute("id");
+					itemObject["label"] = GetLabelForFile(fileItem, fileItemWithViewer);
+					itemObject["keyedName"] = fileItem.SelectSingleNode("keyed_name")?.InnerText ?? string.Empty;
+					itemObject["fileName"] = fileItemWithViewer.SelectSingleNode("filename")?.InnerText ?? string.Empty;
+
+					AddIfNotNullOrEmpty(itemObject, "holderKeyedName",
+						fileItem.GetAttribute("markup_holder_keyed_name"));
+					AddIfNotNullOrEmpty(itemObject, "fileSelectorTypeId",
+						fileItem.GetAttribute("file_selector_type_id"));
+					AddIfNotNullOrEmpty(itemObject, "fileSelectorId",
+						fileItem.GetAttribute("file_selector_id"));
+					AddIfNotNullOrEmpty(itemObject, "markupHolderId",
+						fileItem.GetAttribute("markup_holder_id"));
+					AddIfNotNullOrEmpty(itemObject, "markupHolderConfigId",
+						fileItem.GetAttribute("markup_holder_config_id"));
+					AddIfNotNullOrEmpty(itemObject, "markupHolderItemtypeName",
+						fileItem.GetAttribute("markup_holder_itemtype_name"));
+
+					XmlNode dvdSpecificProperty = fileItem.SelectSingleNode("tgvd_id");
+					if (dvdSpecificProperty != null)
+					{
+						itemObject["tgvdId"] = dvdSpecificProperty.InnerText;
+					}
+
+					dvdSpecificProperty = fileItem.SelectSingleNode("dvd_id");
+					if (dvdSpecificProperty != null)
+					{
+						itemObject["dvdId"] = dvdSpecificProperty.InnerText;
+					}
+
+					var viewerObject = new Newtonsoft.Json.Linq.JObject();
+
+					var viewerModuleMatch = viewerModuleRegEx.Match(viewerItem.SelectSingleNode("Item/viewer_url")?.InnerText ?? "");
+					if (viewerModuleMatch.Groups["moduleName"].Success)
+					{
+						viewerObject["module"] = viewerModuleMatch.Groups["moduleName"].Value;
+					}
+
+					string keyedName = viewerItem.SelectSingleNode("@keyed_name|Item/keyed_name")?.InnerText ?? "";
+
+					viewerObject["name"] = keyedName.Replace(" ", "");
+					viewerObject["keyedName"] = keyedName;
+
+					itemObject["viewer"] = viewerObject;
+
+					result.Add(itemObject);
+				}
+
+				void AddIfNotNullOrEmpty(Newtonsoft.Json.Linq.JObject itemObject, string propertyName, string propertyValue)
+				{
+					if (!string.IsNullOrEmpty(propertyValue))
+					{
+						itemObject[propertyName] = propertyValue;
+					}
+				}
+
+				return result;
+			}
+
+			private static string GetLabelForFile(XmlElement fileItem, XmlElement fileItemWithViewer)
+			{
+				string result = string.Empty;
+
+				if (fileItem.SelectSingleNode("dvd_id") != null)
+				{
+					result = fileItem.SelectSingleNode("dvd_name")?.InnerText;
+				}
+				else
+				{
+					result = fileItemWithViewer.SelectSingleNode("filename")?.InnerText ?? "";
+					result = result.Substring(0, result.LastIndexOf(".", StringComparison.OrdinalIgnoreCase));
+				}
+
+				return result;
+			}
+		}
+
+		public interface IDataAccessLayer
+		{
+			Item GetItemsForAggregation(string itemTypeName, string itemId);
+			Item GetDVDItemsAsFiles(string itemTypeName, string itemId);
+			Item GetFilesForViewing(Item items, string itemTypeName);
+		}
+
+		public class DataAccessLayer : IDataAccessLayer
+		{
+			private readonly Innovator _innovator;
+
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this._innovator = innovator;
+			}
+
+			public Item GetItemsForAggregation(string itemTypeName, string itemId)
+			{
+				Item itemsForAggregations = this._innovator.newItem("Method", "VC_GetItemsForAggregation");
+				Item rel = this._innovator.newItem(itemTypeName, "get");
+				rel.setAttribute("id", itemId);
+				itemsForAggregations.addRelationship(rel);
+				return itemsForAggregations.apply();
+			}
+
+			public Item GetDVDItemsAsFiles(string itemTypeName, string itemId)
+			{
+				Item vc_SelectDVDItemsAsFilesMethod = this._innovator.newItem("Method", "get");
+				vc_SelectDVDItemsAsFilesMethod.setProperty("name", "VC_SelectDVDItemsAsFiles");
+				vc_SelectDVDItemsAsFilesMethod = vc_SelectDVDItemsAsFilesMethod.apply();
+
+				if (vc_SelectDVDItemsAsFilesMethod.isEmpty())
+				{
+					return this._innovator.newResult("");
+				}
+
+				Item dvdItemsForAggregation = this._innovator.newItem("Method", "VC_SelectDVDItemsAsFiles");
+				dvdItemsForAggregation.setProperty("item_type_name", itemTypeName);
+				dvdItemsForAggregation.setProperty("item_id", itemId);
+
+				return dvdItemsForAggregation.apply();
+			}
+
+			public Item GetFilesForViewing(Item items, string itemTypeName)
+			{
+				if (items == null || items.isError())
+				{
+					return items;
+				}
+
+				Item filesForViewingRequest = _innovator.newItem(itemTypeName, "VC_GetFilesForViewing");
+				foreach (Item item in EnumerateCollectionItem(items))
+				{
+					filesForViewingRequest.addRelationship(item);
+				}
+				Item filesForViewing = filesForViewingRequest.apply();
+
+				return filesForViewing;
+			}
+
+
+			private static IEnumerable<Item> EnumerateCollectionItem(Item collectionItem)
+			{
+				for (var i = 0; i < collectionItem.getItemCount(); i++)
+				{
+					yield return collectionItem.getItemByIndex(i);
+				}
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_GetFilesForViewingForItem</name>
+ </Item>
+</AML>

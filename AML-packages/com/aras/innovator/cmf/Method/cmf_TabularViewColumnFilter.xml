@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="703297F98DDE4E7F8376773DD8146AA4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var elementNodes = item.selectNodes('Relationships/Item[@type=\'cmf_ElementType\' and not(@action=\'delete\')]');
+
+var allElementIds = '';
+if (elementNodes.length > 0) {
+	for (var i = 0; i < elementNodes.length; i++) {
+		allElementIds += '\'' + elementNodes[i].getAttribute('id') + '\', ';
+	}
+	allElementIds = allElementIds.substring(0, allElementIds.length - 2);
+	var filter = inDom.ownerDocument.createElement('source_id');
+	filter.setAttribute('condition', 'in');
+	filter.text = allElementIds;
+	inDom.appendChild(filter);
+} else {
+	var stubFilter = {};
+	stubFilter['source_id'] = {
+		filterValue: aras.getItemProperty(item, 'source_id'),
+		isFilterFixed: true
+	};
+	return stubFilter;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cmf_TabularViewColumnFilter</name>
+ </Item>
+</AML>

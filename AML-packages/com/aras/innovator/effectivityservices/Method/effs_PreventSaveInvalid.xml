@@ -1,0 +1,47 @@
+﻿<AML>
+ <Item type="Method" id="D04DF4B0D2E1402AAC66ABB72ADFF6C3" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!window.parent.isItemWindow) {
+	return;
+}
+
+const itemWindow = window.parent;
+const ruleEditorField = getFieldByName('rule_editor');
+const ruleEditorFrame = ruleEditorField.querySelector('iframe');
+const ruleEditorControl = ruleEditorFrame.contentWindow.ruleEditorController.editorControl;
+const nativeUnlockCommand = itemWindow.onUnlockCommand;
+
+const onBeforeSaveHandler = function() {
+	let error = '';
+
+	if (!ruleEditorControl.isInputValid()) {
+		error = aras.getResource('../Modules/aras.innovator.core.EffectivityServices',
+			'can_not_save_invalid_definition');
+	}
+
+	return error;
+};
+itemWindow.registerCommandEventHandler(window, onBeforeSaveHandler, 'before', 'save');
+
+//Add wraper function for 'onUnlockCommand'. Prevent base onLock functionality if user try to save invalid expression.
+//We picked wraper function approach because of we don't know the value of saveChanges variable in 'onbefounlock' event handler.
+//Variable 'saveChanges' is true when user press save button on unsaved changes dialog. But it makes sense to call onBeforeSaveHandler
+//only when user press save button.
+if (typeof nativeUnlockCommand === 'function') {
+	itemWindow.onUnlockCommand = function(saveChanges) {
+		if (saveChanges) {
+			const error = onBeforeSaveHandler();
+			if (error && typeof (error) === 'string') {
+				aras.AlertError(error);
+				return false;
+			}
+		}
+
+		return nativeUnlockCommand(saveChanges);
+	};
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_PreventSaveInvalidExr</name>
+ </Item>
+</AML>

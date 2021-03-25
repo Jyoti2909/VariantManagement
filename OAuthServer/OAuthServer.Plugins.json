@@ -1,0 +1,52 @@
+{
+	"OAuthServer.Plugins": [
+		{
+			// Persisted SqliteStorage for OAuthServer
+			"Name": "Aras.OAuth.Server.Plugins.SqliteStorage",
+			"Enabled": true,
+			"Options":
+			{
+				"ConnectionString": "Data Source=App_Data\\OAuthServer.sqlite",
+				"EnableTokenCleanup": true,
+				"TokenCleanupInterval": 3600
+			}
+		},
+		{
+			// Data protection keys storage on file system for OAuthServer
+			"Name": "Aras.OAuth.Server.Plugins.DataProtectionKeysFileSystemStorage",
+			"Enabled": true,
+			"Options": {
+				"KeysDirectoryPath": ".\\App_Data"
+			}
+		},
+		{
+			// Enables Custom protocol type for OAuthServer
+			"Name": "Aras.OAuth.Server.Plugins.CustomProtocol",
+			"Enabled": false
+		},
+		{
+			// Windows authentication for OAuthServer.
+			// Make sure that WindowsUserByNameClaimMapper also enabled. 
+			"Name": "Aras.OAuth.Server.Plugins.WindowsAuthentication",
+			"Enabled": true,
+			"Options": {
+				// Do not define `Windows` authentication type name
+				// because it is already reserved by IISIntegration module.
+				"AuthenticationType": "WindowsRemote",
+				"DisplayName": "Windows"
+			}
+		},
+		{
+			// Windows user to innovator user by name claim mapper.
+			// To support Windows authentication this plugin must be enabled together with WindowsAuthentication plugin.
+			"Name": "Aras.OAuth.Server.Plugins.WindowsUserByNameClaimMapper",
+			"Enabled": true,
+			"Options": {
+				"AuthenticationType": "WindowsRemote",
+				"AllowedDomainNames": ".*",
+				"AllowedDomainUsers": ".+",
+				"DeniedDomainUsers": "^admin$|^root$|^vadmin$|^authadmin$|^esadmin$"
+			}
+		}
+	]
+}

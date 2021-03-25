@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="30977B697C514ED1A56ED3492EB8971D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var hidden = true;
+var canExecute = true;
+if (inArgs.control && inArgs.control.additionalData) {
+	var additionalData = JSON.parse(inArgs.control.additionalData);
+	switch (additionalData.actionType || additionalData.separatorType) {
+		case 'itemtype':
+			if (inArgs.itemTypeId) {
+				hidden = false;
+			}
+			break;
+		case 'item':
+			if (inArgs.itemId) {
+				hidden = false;
+			}
+			break;
+		default:
+			break;
+	}
+
+	canExecute = aras.canInvokeActionImpl(additionalData.canExecuteMethodName, additionalData.location);
+}
+
+return {'cui_invisible': hidden, 'cui_disabled': !canExecute};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_init_action_menu_button</name>
+ </Item>
+</AML>

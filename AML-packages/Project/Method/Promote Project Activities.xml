@@ -1,0 +1,124 @@
+﻿<AML>
+ <Item type="Method" id="3BFAB58C0FDB4DE4909A95BA437BA94E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA['inDom format:
+'  <Item type='Method' action='Unlock Project Tree'>
+'    <body top_wbs_id='TOP_WBS_ID_VAL'/>
+'  </Item>
+Dim tmpInn As Innovator = Me.getInnovator()
+Dim tmpNd As XmlElement = CType(Me.node.selectSingleNode("body[@top_wbs_id]"), XmlElement)
+If IsNothing(tmpNd) Then Return tmpInn.newError("Invalid input parameters.")
+
+Dim parentID As String = tmpNd.getAttribute("top_wbs_id")
+Dim tzName As String = CCO.Utilities.GetVarValue("CorporateTimeZone", "")
+If tzName = "" Then _
+	Return tmpInn.newError("CorporateTimeZone Variable is not set.")
+
+Dim callframe As Item = Me.newItem("SQL", "SQL PROCESS")
+callframe.setproperty("name", "get_pending_ready_activity2")
+callframe.setproperty("PROCESS", "CALL")
+callframe.setproperty("ARG1", parentID)
+callframe.setproperty("ARG2", tzName)
+
+Dim r As Item = callframe.apply()
+If r.isError() Then Return(r)
+
+Dim pendingActivities As XmlNodeList = r.dom.SelectNodes("descendant::Item[@type='Activity2'][state='Pending']")
+Dim i As Integer = 0
+  
+Dim activity2Item As XmlElement
+Dim activity2AssignmentItem As XmlElement
+Dim assignmentState As String
+Dim activityId As String
+Dim assignmentId As String
+Dim tmpOutDom As XmlDocument
+Dim q As Item = tmpInn.newItem("", "")
+
+q.loadAML("<Item type='Activity2' action='PromoteItem'><state>Active</state></Item>")
+For Each activity2Item In pendingActivities
+	activityId = activity2Item.getAttribute("id")
+	q.setAttribute("type", "Activity2")
+	q.setAttribute("id", activityId)
+	r = q.apply()
+	If r.isError() Then Return r
+  
+	activity2AssignmentItem = activity2Item.SelectSingleNode(String.Format("descendant::Item[@type='Activity2 Assignment' and source_id='{0}']", activityId))
+	If Not IsNothing(activity2AssignmentItem) Then
+		assignmentId = activity2AssignmentItem.getAttribute("id")
+		assignmentState = CCO.Xml.GetItemProperty(activity2AssignmentItem,"state")
+		If assignmentState = "Pending" Then
+			q.setAttribute("type", "Activity2 Assignment")
+			q.setAttribute("id", assignmentId)
+			r = q.apply()
+			If r.isError() Then _
+				Return tmpInn.newError("Could not promote an activity with Pending assignment to Active state")
+		End If
+	End If
+Next activity2Item
+
+' +++ Synchronize Activity2 Assignment items states with their source Activity2 +++
+'     Steps:
+'     1) Reset LifeCycle For Active Assignments where source Activity2 state is 'Pending'
+'     2) Promote Pending Assignments to Active where source Activity2 state is 'Active' or 'Complete'
+Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+Dim rs As Aras.Server.Core.InnovatorDataSet
+Dim sql As String
+Dim ptrnSql As String = " SELECT aas.id id, aas.locked_by_id locked_by_id FROM [ACTIVITY2] a, [ACTIVITY2_ASSIGNMENT] aas " + _
+                        " WHERE (a.id in (SELECT id FROM SELECT_ACTIVITIES('{0}'))) AND a.id=aas.source_id AND {1} AND {2}"
+Dim reqDom As New XmlDocument
+reqDom.LoadXml("<Item />")
+Dim reqItem As XmlElement = reqDom.documentElement
+Dim reqDom2 As XmlDocument
+Dim reqItem2 As System.Xml.XmlElement
+tmpOutDom = CCO.XML.CreateXMLDocument()
+Dim item_id As String
+Dim locked_by_id As String
+  
+Dim stepNum As Integer
+
+For stepNum = 1 To 2 
+	parentID = If(string.IsNullOrEmpty(parentID), parentID, parentID.Replace("'", "''"))
+	If stepNum = 1 Then
+		sql = String.Format(ptrnSql, parentID, "a.state='Pending'", "aas.state='Active'")
+	ElseIf stepNum = 2
+		sql = String.Format(ptrnSql, parentID, "(a.state='Active' OR a.state='Complete')", "aas.state='Pending'")
+		reqDom2 = CCO.XML.CreateXMLDocument()
+		reqDom2.LoadXml("<Item type='Activity2 Assignment' action='PromoteItem'><state>Active</state></Item>")
+		reqItem2 = reqDom2.documentElement
+	End If
+
+	rs = conn.ExecuteSelect(sql) 
+	While Not rs.EoF
+		item_id = rs.Value("id", "WRONG_ID")
+		locked_by_id = rs.Value("locked_by_id", String.Empty)
+		reqItem.setAttribute("id", item_id)
+		reqItem.setAttribute("type", "Activity2 Assignment")
+		reqItem.setAttribute("doGetItem", "0")
+
+		If locked_by_id <> String.Empty Then
+			reqItem.setAttribute("action", "unlock")
+			CCO.ApplyItem.ApplyItem(reqDom, tmpOutDom)
+			If(CCO.Xml.HasFault(tmpOutDom, False)) Then _
+				Return tmpInn.newError(String.Format("Could not unlock Activity2 Assignment with id='{0}'", item_id))
+		End If
+
+		If stepNum = 1 Then
+			reqItem.setAttribute("action", "resetLifecycle")
+			CCO.ApplyItem.ApplyItem(reqDom, tmpOutDom)
+			If(CCO.Xml.HasFault(tmpOutDom, False)) Then _
+				Return tmpInn.newError(String.Format("Could not reset Lifecycle for Activity2 Assignment with id='{0}'", item_id))
+		ElseIf stepNum = 2
+			reqItem2.setAttribute("id", item_id)
+			CCO.ApplyItem.ApplyItem(reqDom2, tmpOutDom)
+			If(CCO.Xml.HasFault(tmpOutDom, False)) Then _
+				Return tmpInn.newError(String.Format("Could not Promote Activity2 Assignment with id='{0}' to Active State", item_id))
+		End If
+		rs.MoveNext()
+	End While
+Next stepNum
+' --- Synchronize Activity2 Assignment items states with their source Activity2 ---
+Return tmpInn.newResult("SUCCESS")]]></method_code>
+  <method_type>VB</method_type>
+  <name>Promote Project Activities</name>
+ </Item>
+</AML>

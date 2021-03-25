@@ -1,0 +1,76 @@
+﻿<AML>
+ <Item type="Method" id="B543A9B009AC4BC0932BEB744846AC45" action="add">
+  <comments>Client side method invoked on "Test Connection" button click</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+const ConnectionVerifier = (function () {
+	return {
+	   verifyConnection:
+	   function fVerifyConnection(it){
+		   const serverMeth = getServerMethod(it);
+		   if (typeof(serverMeth) !== "string" || serverMeth.trim().length === 0){
+			   return aras.IomInnovator.newError("Server side method to verify connection is not set.");
+		   }
+		   const serverMethParams = collectParameters(it);
+		   const resI = aras.IomInnovator.applyMethod(serverMeth, serverMethParams);
+		   return resI;
+	   }
+	};
+
+	function getServerMethod(it){
+		let serverMeth = "";
+		const itemToSearchInId = it.getProperty("eid_provider");
+		let itemToSearchInType = it.getPropertyAttribute("eid_provider", "type");
+		if (!itemToSearchInType){
+			//The case while adding a new definition
+			const itemToSearchIn = it.getPropertyItem("eid_provider");
+			itemToSearchInType = (itemToSearchIn !== null && typeof(itemToSearchIn) === "object") ?
+				itemToSearchIn.getType() : itemToSearchInType;
+		}
+		let auxiliaryServerMeth = "EID_VerifyConnectionObtainMethod";
+		let serverMethParams = "<params>";
+		serverMethParams += "<itemToSearchInId>" + itemToSearchInId + "</itemToSearchInId>";
+		serverMethParams += "<itemToSearchInType>" + itemToSearchInType +"</itemToSearchInType>";
+		serverMethParams += "</params>";
+		let resI = aras.IomInnovator.applyMethod(auxiliaryServerMeth, serverMethParams);
+		if (!resI.isError()){
+			serverMeth = resI.getResult();
+		}
+		return serverMeth;
+	}
+
+	function collectParameters(it){
+		const eid_connection_string = it.getProperty("eid_connection_string");
+		const eid_user_name = it.getProperty("eid_user_name");
+		const eid_password_key = it.getProperty("eid_password_key");
+		const eid_provider_id = it.getProperty("eid_provider");
+		const eid_provider_type = it.getPropertyAttribute("eid_provider", "type");
+
+		let serverMethParams = "<params>";
+		serverMethParams += "<eid_connection_string>" + eid_connection_string + "</eid_connection_string>";
+		serverMethParams += "<eid_user_name>" + eid_user_name + "</eid_user_name>";
+		serverMethParams += "<eid_password_key>" + eid_password_key + "</eid_password_key>";
+		
+		serverMethParams += "<eid_provider_id>" + eid_provider_id + "</eid_provider_id>";
+		serverMethParams += "<eid_provider_type>" + eid_provider_type + "</eid_provider_type>";
+		serverMethParams += "</params>";
+		return serverMethParams;
+	}
+}());
+
+const resI = ConnectionVerifier.verifyConnection(document.thisItem);
+if (resI.isError()){
+	aras.AlertError(resI.getErrorString());
+} else {
+	const resS = resI.getResult();
+	if (resS.toUpperCase() === "OK"){
+		aras.AlertSuccess(resS);
+	} else {
+		aras.AlertWarning(resS);
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>EID_VerifyConnectionOnClient</name>
+ </Item>
+</AML>

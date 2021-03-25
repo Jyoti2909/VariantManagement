@@ -1,0 +1,74 @@
+﻿@model Models.FieldRenderModel
+
+@{
+	var fieldId = Model.FieldNode.Id;
+	var fieldNm = Model.FieldNode.Name;
+	var propNm = String.Empty;
+	if (!Model.PropertyNode.IsNull)
+	{
+		propNm = Model.PropertyNode.Name;
+	}
+
+	var style = String.Empty;
+
+	if (Model.Mode == "edit_form" || Model.Mode == "view_form")
+	{
+		style = "style='visibility:hidden;'";
+	}
+}
+
+<iframe id="@(fieldId)" name="@(fieldNm)" src="../scripts/blank.html" frameborder="0" @(style)></iframe>
+
+@{
+	if (!Model.PropertyNode.IsNull)
+	{
+		var dsId = Model.PropertyNode.DataSource;
+		if (dsId != null)
+		{
+			var dsItNm = dsId.Name;
+			var funcName = "system_" + fieldId + "_src";
+			
+			<script type="text/javascript">
+				function @(funcName)(event) {
+					if (event.propertyName != "value") {
+						return true;
+					} 
+					var ctrlElem = event.srcElement;
+					if (!ctrlElem) {
+						return true;
+					}
+					var iframe = document.getElementById("@(fieldId)");
+					if (!iframe) {
+						return true;
+					}
+					var frameElem = iframe.contentWindow;
+					if (!frameElem) {
+						return true;
+					}
+					if (iframe.value == ctrlElem.value) {
+						return true;
+					}
+					var itemId = ctrlElem.value;
+					iframe.value = itemId;
+					var doc;
+					var itm = document.item.selectSingleNode("@(propNm)/Item");
+					if (!itm) {
+						itm = aras.getItemById("@(dsItNm)",itemId,0);
+					}
+					if (!itm) {
+						doc = frameElem.document.open();
+						doc.write("@(dsItNm) with id " + itemId + " not found !");
+						doc.close();
+					} 
+					else {
+						aras.uiShowItemInFrameEx(frameElem, itm, "default", window.parent.nestedLevel + 1);
+					}
+					return true;
+				}
+				if (observersHash.getElementById("@(propNm)_system")) {
+					observersHash.getElementById("@(propNm)_system").attachEvent("onpropertychange", @(funcName));	
+				}
+			</script> 
+		}		
+	}	
+}

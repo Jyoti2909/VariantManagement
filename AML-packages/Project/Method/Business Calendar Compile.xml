@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="11D769747170405CBF05A3A2E614BC96" action="add">
+  <comments>Compiles all the Business Calendar Year items into an internal table</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' This takes 5 seconds to regenerate 30 years of business
+' calendars. So one could argue for making this method
+' the event handler for onAfterAdd, onAfterUpdate, onAfterDelete
+' the [Business Calendar] item type.
+
+Dim tzName As String = CCO.Utilities.GetVarValue("CorporateTimeZone", "")
+If tzName = "" Then _
+	Return Me.getInnovator.newError("CorporateTimeZone Variable is not set.")
+		
+Dim callframe As Item = Me.newitem("SQL", "SQL PROCESS")
+callframe.setproperty("name", "business_calendar_compile")
+callframe.setproperty("PROCESS", "CALL")
+callframe.setproperty("ARG1", "1")
+callframe.setproperty("ARG2", tzName)
+Dim resultframe As Item = callframe.apply()
+If resultframe.isError() Then Return(resultframe)
+
+Dim result_status As String = resultframe.getproperty("result_status")
+Dim result_text As String = resultframe.getproperty("result_text")
+
+If result_status <> "SUCCESS" Then _
+	Return Me.getInnovator.newError("business_calendar_compile " + result_text)
+Return Me.getInnovator.newResult(result_text)
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>Business Calendar Compile</name>
+ </Item>
+</AML>

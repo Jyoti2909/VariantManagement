@@ -1,0 +1,54 @@
+﻿<AML>
+ <Item type="SQL" id="1C7B2FD3BD4C4FCC8FE33FA2BC111CB3" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>business_calendar_compile_check</old_name>
+  <sqlserver_body><![CDATA[/*The DAY_DATE is a smalldatetime, which is unique and covers the
+entire business calendar range, from the least to the
+greatest business_calendar_year.
+
+The DAY_NUMBER is positive if it is a business workday, otherwise
+it is the negative of the day number of the next business workday.
+This is a hackish way of avoiding the use of two columns, one of which
+would probably be a bit.*/
+
+CREATE PROCEDURE [business_calendar_compile_check](@TZ_NAME NVARCHAR(50) = NULL)
+AS
+BEGIN
+	IF EXISTS (SELECT top 1 id FROM [innovator].BUSINESS_CALENDAR) RETURN
+	DECLARE @DAY_NUMBER INT
+	DECLARE @DAY_VALUE INT
+	DECLARE @DAY_DATE DATETIME
+	DECLARE @START_DATE DATETIME
+	DECLARE @END_DATE DATETIME
+	DECLARE @YEAR INT
+	DECLARE @WORKDAY INT
+	SET @YEAR = (SELECT MIN(YEAR) FROM [innovator].BUSINESS_CALENDAR_YEAR)
+	SET @START_DATE = CONVERT(CHAR(4),@YEAR) + '-01-01T00:00:00'
+	SET @YEAR = (SELECT MAX(YEAR) FROM [innovator].BUSINESS_CALENDAR_YEAR) + 1
+	SET @END_DATE = CONVERT(CHAR(4),@YEAR) + '-01-01T00:00:00'
+	SET @DAY_NUMBER = 1
+	SET @DAY_DATE = @START_DATE
+	WHILE @DAY_DATE < @END_DATE
+	BEGIN
+		SET @WORKDAY = [innovator].Business_Workday(@DAY_DATE, @TZ_NAME)
+		IF @WORKDAY = 1
+		BEGIN
+			SET @DAY_VALUE = @DAY_NUMBER
+			SET @DAY_NUMBER = @DAY_NUMBER + 1
+		END
+		ELSE
+			SET @DAY_VALUE = - @DAY_NUMBER
+
+		INSERT INTO BUSINESS_CALENDAR 
+		(DAY_DATE, DAY_NUMBER, ID) VALUES
+		(CAST(@DAY_DATE AS SMALLDATETIME), @DAY_VALUE, INNOVATOR.ITEM_ID(NEWID()))
+		SET @DAY_DATE = DATEADD(Day, 1, @DAY_DATE)
+	END
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>business_calendar_compile_check</name>
+ </Item>
+</AML>

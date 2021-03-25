@@ -1,0 +1,34 @@
+﻿<AML>
+ <Item type="ConversionRule" id="56FBFE9272D34D50BD8811AEB7F5B76C" action="add">
+  <converter_type keyed_name="dr_DerivedRelationshipGenerator" type="ConverterType">2A7CF79FBC3B43F8B6F5608CA051AEC8</converter_type>
+  <cutoff>24</cutoff>
+  <delay>5</delay>
+  <enabled>1</enabled>
+  <timeout>60</timeout>
+  <name>dr_DerivedRelationshipGeneratorRule</name>
+  <Relationships>
+   <Item type="ConversionRuleEventTemplate" id="78F2DFDA50CA4F6C8C21796A0FF910A3" action="add">
+    <event_type>OnConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="InvokeMethodOnConvertDR" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>InvokeMethodOnConvertDR</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="dr_DerivedRelationshipGeneratorRule" type="ConversionRule">56FBFE9272D34D50BD8811AEB7F5B76C</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="C0CE22360C9C424184F84C9EEB78F880" action="add">
+    <event_type>OnAfterConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="dr_PromoteRelshipFamilyToActive" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>dr_PromoteRelshipFamilyToActive</name>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="dr_DerivedRelationshipGeneratorRule" type="ConversionRule">56FBFE9272D34D50BD8811AEB7F5B76C</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

@@ -1,0 +1,129 @@
+<AML>
+	<Item type="Identity" id="2277A475CBB3481CB24FE145BD5DC950" action="add">
+		<description>A group of shop workers</description>
+		<is_alias>0</is_alias>
+		<name>S013 Shop Workers</name>
+	</Item>
+	<Item type="Member" action="add">
+		<related_id type="Identity">{userAliasId}</related_id>
+		<source_id keyed_name="S013 Shop Workers" type="Identity">2277A475CBB3481CB24FE145BD5DC950</source_id>
+	</Item>
+	<Item type="Permission" id="36FE6129E5A24EF1BB34558105E68C32" action="add">
+		<is_private>0</is_private>
+		<name>S013 ShopWokersForIT</name>
+		<Relationships>
+			<Item type="Access" id="6006DB4E7BE24EB9AAE6E5CB87FA93FC" action="add">
+				<can_change_access>1</can_change_access>
+				<can_delete>1</can_delete>
+				<can_discover>1</can_discover>
+				<can_get>1</can_get>
+				<can_update>1</can_update>
+				<related_id keyed_name="S013 Shop Workers" type="Identity">2277A475CBB3481CB24FE145BD5DC950</related_id>
+				<show_permissions_warning>0</show_permissions_warning>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="List" id="58CE8613CCBA48E59032DF57A5388A77" action="add">
+		<description>Wood used in construction.</description>
+		<name>S013 Type of Wood</name>
+		<Relationships>
+			<Item type="Value" action="add">
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{oakTypeValue}</i18n:label>
+				<value>{oakTypeValue}</value>
+			</Item>
+			<Item type="Value" action="add">
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{birchTypeValue}</i18n:label>
+				<value>{birchTypeValue}</value>
+			</Item>
+			<Item type="Value" action="add">
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{mapleTypeValue}</i18n:label>
+				<value>{mapleTypeValue}</value>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="List" id="FD6DF6DAF242456488E21B111024FBAB" action="add">
+		<description>Paint color for chairs.</description>
+		<name>S013 Paint Color</name>
+		<Relationships>
+			<Item type="Value" action="add">
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">Red</i18n:label>
+				<value>#EF0808</value>
+			</Item>
+			<Item type="Value" action="add">
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">Blue</i18n:label>
+				<value>#1908EF</value>
+			</Item>
+			<Item type="Value" action="add">
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">Green</i18n:label>
+				<value>#1A8804</value>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="Sequence" id="D2F7536319B04427AB96B9FB260ED0EC" action="add">
+		<initial_value>0</initial_value>
+		<pad_to>2</pad_to>
+		<pad_with>K</pad_with>
+		<prefix>1</prefix>
+		<step>3</step>
+		<suffix>A</suffix>
+		<name>S013 Chair Numbers</name>
+	</Item>
+	<Item type="ItemType" id="962EF699B3A44B14BECE23108718B843" action="add">
+		<allow_private_permission>1</allow_private_permission>
+		<enforce_discovery>1</enforce_discovery>
+		<implementation_type>table</implementation_type>
+		<label xml:lang="en">S013 Chair</label>
+		<label_plural xml:lang="en">S013 Chairs</label_plural>
+		<show_parameters_tab>1</show_parameters_tab>
+		<name>S013 Chair</name>
+		<Relationships>
+			<Item type="Property" action="add">
+				<data_source keyed_name="S013 Type of Wood">58CE8613CCBA48E59032DF57A5388A77</data_source>
+				<data_type>list</data_type>
+				<is_required>1</is_required>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{wood_type}</i18n:label>
+				<stored_length>256</stored_length>
+				<name>wood_type</name>
+			</Item>
+			<Item type="Property" action="add">
+				<data_source keyed_name="S013 Chair Numbers">D2F7536319B04427AB96B9FB260ED0EC</data_source>
+				<data_type>sequence</data_type>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{chair_number}</i18n:label>
+				<name>chair_number</name>
+			</Item>
+			<Item type="Property" action="add">
+				<data_source keyed_name="S013 Paint Color">FD6DF6DAF242456488E21B111024FBAB</data_source>
+				<data_type>color list</data_type>
+				<is_required>1</is_required>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{paint_color}</i18n:label>
+				<stored_length>32</stored_length>
+				<name>paint_color</name>
+			</Item>
+			<Item type="Property" action="add">
+				<data_type>date</data_type>
+				<is_required>1</is_required>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{date_created}</i18n:label>
+				<pattern>short_date</pattern>
+				<name>date_created</name>
+			</Item>
+			<Item type="Property" id="D54EA71AC18E4AC7B0DABF573B6E25C1" action="add">
+				<data_source keyed_name="File" type="ItemType" name="File">8052A558B9084D41B9F11805E464F443</data_source>
+				<data_type>item</data_type>
+				<item_behavior>float</item_behavior>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{blueprint}</i18n:label>
+				<name>blueprint</name>
+			</Item>
+			<Item type="TOC Access" action="add">
+				<related_id keyed_name="S013 Shop Workers" type="Identity">2277A475CBB3481CB24FE145BD5DC950</related_id>
+			</Item>
+			<Item type="Can Add" action="add">
+				<can_add>1</can_add>
+				<related_id keyed_name="S013 Shop Workers" type="Identity">2277A475CBB3481CB24FE145BD5DC950</related_id>
+			</Item>
+			<Item type="Allowed Permission" action="add">
+				<is_default>1</is_default>
+				<related_id keyed_name="S013 ShopWokersForIT" type="Permission">36FE6129E5A24EF1BB34558105E68C32</related_id>
+			</Item>
+		</Relationships>
+	</Item>
+</AML>

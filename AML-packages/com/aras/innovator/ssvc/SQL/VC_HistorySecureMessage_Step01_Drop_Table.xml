@@ -1,0 +1,19 @@
+﻿<AML>
+ <Item type="SQL" id="80EB659F3F7C423EA7732C3382A1B6C1" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>VC_HistorySecureMessage_Step01_Drop_Table</old_name>
+  <sqlserver_body><![CDATA[IF  EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID(N'[innovator].[HISTORYSECUREMESSAGE]'))
+  IF EXISTS (SELECT * FROM [HISTORYSECUREMESSAGE]) 
+    RAISERROR ('Cannot drop [HISTORYSECUREMESSAGE] since records exist there', 16, 1)
+  ELSE
+    DROP TABLE [HISTORYSECUREMESSAGE]
+
+
+IF  EXISTS (SELECT * FROM sys.views WHERE object_id = OBJECT_ID(N'[innovator].[HISTORYSECUREMESSAGE]'))
+  DROP VIEW [HISTORYSECUREMESSAGE]]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>table</type>
+  <name>VC_HistorySecureMessage_Step01_Drop_Table</name>
+ </Item>
+</AML>

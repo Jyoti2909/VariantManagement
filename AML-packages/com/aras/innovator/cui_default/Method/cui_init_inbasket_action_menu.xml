@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="6D3C416E061C4DD186BE499924BF992C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[let hidden = true;
+let canExecute = true;
+const additionalData = target.additional_data || {};
+const itemIds = options.selectedRowsIds || [];
+if (itemIds.length === 1 && window.currQryItem) {
+	const currentQueryItemResult = window.currQryItem.getResult();
+	const itemInGrid = currentQueryItemResult.selectSingleNode('Item[@id="' + itemIds[0] + '"]');
+	const itemTypeNode = itemInGrid.selectSingleNode('itemtype');
+	if (itemTypeNode && itemTypeNode.text) {
+		const typeId = itemTypeNode.text;
+		hidden = additionalData.itemTypeId !== typeId;
+	}
+}
+
+if (additionalData.canExecuteMethodName) {
+	canExecute = aras.canInvokeActionImpl(additionalData.canExecuteMethodName, additionalData.location);
+	// If CUI Location is not 'MainWindowMainMenu', visibility should be calculated based on canInvokeAction results.
+	if (additionalData.cuiLocation != 'MainWindowMainMenu') {
+		hidden = !canExecute;
+	}
+}
+
+return {hidden: hidden, disabled: !canExecute};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_init_inbasket_action_menu</name>
+ </Item>
+</AML>

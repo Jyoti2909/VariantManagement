@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"User Notifications","type":"item","url":"User_Notifications/user_notifications.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

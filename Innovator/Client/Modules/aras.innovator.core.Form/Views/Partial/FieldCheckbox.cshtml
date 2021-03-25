@@ -1,0 +1,95 @@
+﻿@using System
+@using System.Web.Mvc.Html
+@using Models.Helpers
+@model Models.FieldRenderModel
+@{
+	var fieldId = Model.FieldNode.Id;
+	var fieldNm = Model.FieldNode.Name;
+	var propNm = String.Empty;
+	if (!Model.PropertyNode.IsNull)
+	{
+		propNm = Model.PropertyNode.Name;
+	}
+
+	var tabIndex = Model.FieldNode.TabStop ? Model.FieldNode.TabIndex.Value : "-1";
+	var funcName = "system_" + fieldId + "_checked";
+	var readOnlyProp = MethodsExUtils.UiIsFieldReadOnly(Model.FieldNode, Model.PropertyNode);
+	var isDisabled = (readOnlyProp && Model.Mode != "search" && !Model.PropertyNode.IsNull) ? "DISABLED" : String.Empty;
+	var onChangeCode = String.Empty;
+	var fieldEvents = String.Empty;
+
+	if (Model.Mode == "search")
+	{
+		Html.Partial("Partial/FieldCheckboxImageEx", Model);
+	}
+	else
+	{
+		if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+		{
+			var methodCode = MethodsExUtils.GetEventHandlerCode(Model.FieldNode, "onchange", true, null);
+			if (!Model.PropertyNode.IsNull)
+			{
+				onChangeCode += @"if (window.handleItemChange) 
+									handleItemChange('" + propNm + "',( (this.checked) ? '1' : '0'));\r\n";
+			}
+
+			if (!String.IsNullOrEmpty(methodCode))
+			{
+				onChangeCode += methodCode;
+				onChangeCode += "\r\n/*Fix for mistakes with missed closing comments brackets*/\r\n";
+			}
+
+			if (!string.IsNullOrEmpty(onChangeCode))
+			{
+				onChangeCode = @"
+							onchange = ""
+								" + onChangeCode + @"""
+							";
+			}
+
+			fieldEvents = MethodsExUtils.AssignFieldEventEx(Model.FieldNode, "onchange", null);
+		}
+		@helper WriteScript(Models.FieldRenderModel Model, string funcName, string fieldId, string propNm)
+		{
+			if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+			{
+				<script type="text/javascript">
+					function @(funcName)(event)
+					{
+						if (!event) event = window.event;
+						if (!event.srcElement) event.srcElement = event.target;
+						if (event.propertyName != "value") return true;
+						var ctrlElem = event.srcElement;
+						if (!ctrlElem) return true;
+						var checkbox = document.getElementById("@(fieldId)");
+						if (!checkbox) return true;
+						if (checkbox.i_value == ctrlElem.value) return true;
+						var val = ctrlElem.value;
+						checkbox.i_value = val;
+						var checkbox_checked = (val == "1" ? true : false);
+						if (checkbox_checked != checkbox.checked) checkbox.checked = checkbox_checked;
+						return true;   
+					}@if (!Model.PropertyNode.IsNull)
+					 { @:if (observersHash.getElementById("@(propNm)_system"))
+						@:	observersHash.getElementById("@(propNm)_system").attachEvent("onpropertychange", @(funcName));
+					}
+				</script>
+			}
+		}
+		
+		<input type="checkbox" id="@(fieldId)" aria-labelledby="@(fieldId)_label" name="@fieldNm" class="arasCheckboxOrRadio @(fieldNm)" @Html.Raw(onChangeCode) @Html.Raw(fieldEvents) @Html.Raw(String.IsNullOrEmpty(tabIndex) ? "" : " tabindex=\"" + tabIndex + "\"") @(isDisabled)/><label for="@(fieldId)"/>@WriteScript(Model, funcName, fieldId, propNm)
+	}
+}
+<script type="text/javascript">
+	function expression_@(fieldId)_setExpression(isEditMode)
+	{
+		@if (Model.Mode != "edit_form" && Model.Mode != "view_form" 
+					&& !readOnlyProp)
+		{
+			@:if (isEditMode === undefined) return;
+			@:var field = document.getElementById('@(fieldId)');
+			@:field.disabled = !isEditMode;
+		}	
+	}
+	expression_@(fieldId)_setExpression(document.isEditMode);
+</script>

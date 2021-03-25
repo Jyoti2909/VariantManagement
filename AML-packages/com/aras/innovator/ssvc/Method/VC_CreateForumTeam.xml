@@ -1,0 +1,42 @@
+﻿<AML>
+ <Item type="Method" id="BF5211467ABC405982B6DC23CB5064C2" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	var forumType = this.getProperty("forum_type");
+	if (forumType != "MyBookmarks")
+	{
+		var forumId = this.getID();
+		var teamId = this.getProperty("team_id");
+		if (string.IsNullOrEmpty(teamId))
+		{
+			Aras.Server.Security.Identity admin = null;
+			bool permsWasSet = false;
+			try
+			{
+				admin = Aras.Server.Security.Identity.GetByName("Super User");
+				permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(admin);
+				var teamItem = this.newItem("Team", "add");
+				teamItem.setProperty("name", forumId);
+				teamItem.setProperty("is_system", "1");
+				teamItem = teamItem.apply();
+				if (teamItem.isError())
+				{
+					return teamItem;
+				}
+				teamId = teamItem.getID();
+			}
+			finally
+			{
+				if (permsWasSet)
+				{
+					Aras.Server.Security.Permissions.RevokeIdentity(admin);
+				}
+			}
+		}
+		this.setProperty("team_id", teamId);
+	}
+	
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_CreateForumTeam</name>
+ </Item>
+</AML>

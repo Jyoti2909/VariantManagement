@@ -1,0 +1,111 @@
+﻿<AML>
+ <Item type="Method" id="734E15DB03DF47A59D2DB10695AB6971" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	Innovator inn = this.getInnovator();
+	return Validate(inn, CCO.ErrorLookup);
+}
+
+private readonly List<string> derivedRelationshipsMetadataItemTypes = new List<string>
+{
+	"dr_RelationshipFamily",
+	"dr_FamilyElement",
+	"dr_FamilyElement qry_QueryItem",
+	"dr_Relationship",
+	"unidr_Departure",
+	"unidr_Destination",
+	"unidr_Relationship"
+};
+
+internal Item Validate(Innovator innovator, Aras.Server.Core.ErrorLookup errorLookup)
+{
+	var familyElementId = this.getProperty("source_id");
+	var familyElement = this.newItem("dr_FamilyElement", "get");
+	familyElement.setAttribute("select", "dr_relationship_id, source_id");
+	familyElement.setID(familyElementId);
+	familyElement = familyElement.apply();
+	if (familyElement.isError()) {
+		return familyElement;
+	}
+
+	var derivedRelationshipId = familyElement.getProperty("dr_relationship_id");
+	var derivedRelationship = this.newItem("dr_Relationship", "get");
+	derivedRelationship.setAttribute("select", "destination_itemtype_id");
+	derivedRelationship.setID(derivedRelationshipId);
+	derivedRelationship = derivedRelationship.apply();
+	if (derivedRelationship.isError()) {
+		return derivedRelationship;
+	}
+
+	var relationshipFamilyid = familyElement.getProperty("source_id");
+	var relationshipFamily = this.newItem("dr_RelationshipFamily", "get");
+	relationshipFamily.setAttribute("select", "query_definition_id");
+	relationshipFamily.setID(relationshipFamilyid);
+	relationshipFamily = relationshipFamily.apply();
+	if (relationshipFamily.isError()) {
+		return relationshipFamily;
+	}
+
+	var queryDefinitionId = relationshipFamily.getProperty("query_definition_id");
+	var queryDefinition = this.newItem();
+	var queryAml = @"<AML>
+		<Item action='get' id='{0}' select='id' type='qry_QueryDefinition'>
+			<Relationships>
+				<Item type='qry_QueryItem' action='get' select='id,ref_id,item_type' />
+				<Item type='qry_QueryReference' action='get' select='id,ref_id,parent_ref_id,child_ref_id' />
+			</Relationships>
+		</Item>
+	</AML>";
+	queryDefinition.loadAML(string.Format(CultureInfo.InvariantCulture, queryAml, System.Security.SecurityElement.Escape(queryDefinitionId)));
+	queryDefinition = queryDefinition.apply();
+	if (queryDefinition.isError()) {
+		return queryDefinition;
+	}
+
+	var parentRefId = this.getProperty("parent_query_reference_ref_id");
+	var queryReference = queryDefinition.getItemsByXPath("//Relationships/Item[@type=\"qry_QueryReference\" and ref_id=\"" + parentRefId + "\"]");
+
+	if (queryReference.getItemCount() == 0) {
+		string message = string.Format(CultureInfo.InvariantCulture, errorLookup.Lookup("dr_WrongParentQueryReferenceRefId"), parentRefId);
+		return innovator.newError(message);
+	}
+
+	var queryItem = queryDefinition.getItemsByXPath("Relationships/Item[ref_id=\"" + queryReference.getProperty("child_ref_id") + "\"]");
+	
+	var destinationItemTypeId = queryItem.getProperty("item_type");
+	var destinationItemType = this.newItem("ItemType", "get");
+	destinationItemType.setID(destinationItemTypeId);
+	destinationItemType.setAttribute("select", "implementation_type, name");
+	destinationItemType = destinationItemType.apply();
+	var implementationType = destinationItemType.getProperty("implementation_type");
+	if (string.Equals(implementationType, "federated", StringComparison.Ordinal)) {
+		string message = string.Format(
+			CultureInfo.InvariantCulture,
+			errorLookup.Lookup("dr_ForbidFederatedItemTypeUsage"),
+			destinationItemType.getProperty("name"));
+		return innovator.newError(message);
+	}
+	if (string.Equals(implementationType, "polymorphic", StringComparison.Ordinal)) {
+		string message = string.Format(
+			CultureInfo.InvariantCulture,
+			errorLookup.Lookup("dr_ForbidPolymorphicItemTypeUsage"),
+			destinationItemType.getProperty("name"));
+		return innovator.newError(message);
+	}
+
+	string destinationItemTypeName = destinationItemType.getProperty("name");
+	if (derivedRelationshipsMetadataItemTypes.Contains(destinationItemTypeName))
+	{
+		string message = string.Format(CultureInfo.InvariantCulture, errorLookup.Lookup("dr_NotSupportedItemType"), destinationItemTypeName);
+		return innovator.newError(message);
+	}
+
+	if (derivedRelationship.getProperty("destination_itemtype_id") != destinationItemTypeId)
+	{
+		string message = string.Format(CultureInfo.InvariantCulture, errorLookup.Lookup("dr_WrongDestinationItemtypeId"));
+		return innovator.newError(message);
+	}
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_validateDestinationIT</name>
+ </Item>
+</AML>

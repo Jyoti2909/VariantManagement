@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"About Revisions","type":"item","url":"About_Revisions.htm"},{"name":"Creating a Revision","type":"item","url":"Creating_a_Revsion.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

@@ -1,0 +1,19 @@
+﻿<AML>
+ <Item type="SQL" id="A680B1FBFAC348D5B0C6D2991BE5251A" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>Workflow_Task_Step01_Drop</old_name>
+  <sqlserver_body><![CDATA[IF  EXISTS (SELECT * FROM sys.tables WHERE object_id = OBJECT_ID(N'[innovator].[WORKFLOW_TASK]'))
+  IF EXISTS (SELECT * FROM [WORKFLOW_TASK]) 
+    RAISERROR ('Cannot drop [WORKFLOW_TASK] since records exist there', 16, 1)
+  ELSE
+    DROP TABLE [WORKFLOW_TASK]
+
+
+IF  EXISTS (SELECT * FROM sys.views WHERE object_id = OBJECT_ID(N'[innovator].[WORKFLOW_TASK]'))
+  DROP VIEW [WORKFLOW_TASK]]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>table</type>
+  <name>Workflow_Task_Step01_Drop</name>
+ </Item>
+</AML>

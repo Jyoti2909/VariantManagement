@@ -1,0 +1,93 @@
+﻿<AML>
+ <Item type="Method" id="2830614E3AAB4E248AA012240677082F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var EdrStatusField = (function () {
+	function EdrStatusField(element) {
+		this.element = element;
+		this.edrStatusText = [
+			"Getting Started",
+			"In Process",
+			"In Process",
+			"Complete"
+		];
+	}
+
+	EdrStatusField.prototype.getStatus = function (edrs) {
+		var finishedCount = 0;
+		for (var i = 0; i < edrs.length; i++) {
+			if (edrs[i].state === "Pending Closure" || edrs[i].state === "Released") {
+				finishedCount++;
+			}
+		}
+
+		if (finishedCount >= edrs.length) {
+			return 3 /* Complete */;
+		}
+
+		var status;
+		var percentOfFinished = finishedCount / edrs.length;
+		if (percentOfFinished <= 0.3) {
+			status = 0 /* GettingStarted */;
+		} else if (percentOfFinished <= 0.6) {
+			status = 1 /* UnderHalf */;
+		} else {
+			status = 2 /* OverHalf */;
+		}
+		return status;
+	};
+
+	EdrStatusField.prototype.update = function (edrs) {
+		var status = this.getStatus(edrs);
+		var text = this.edrStatusText[status];
+		this.element.setAttribute("data-status", status.toString());
+		this.element.textContent = text;
+	};
+	
+	return EdrStatusField;
+})();
+
+function populateEdrStatus() {
+    if (!document.thisItem) {
+        return;
+    }
+    var edrs = getRelatedEdrs(document.thisItem.getAttribute("id"));
+    if (edrs.length === 0) {
+        return;
+    }
+    var field = getFieldByName("edr_status");
+    field.style.visibility = "visible";
+    
+    var edrStatusField = new EdrStatusField(field.querySelector(".status"));
+    edrStatusField.update(edrs);
+}
+
+function getRelatedEdrs(ecoId) {
+	var emptyArray = [];
+	if (!ecoId) {
+		return emptyArray;
+	}
+	var qry = aras.IomInnovator.newItem("Express ECO EDR", "get");
+	qry.setAttribute("select", "related_id");
+	qry.setProperty("source_id", ecoId);
+	var result = qry.apply();
+	if (result.isError()) {
+		return emptyArray;
+	}
+	var count = result.getItemCount();
+	var edrs = [];
+	for (var i = 0; i < count; i++) {
+		var edrItem = result.getItemByIndex(i).getPropertyItem("related_id");
+
+		//edrItem can be null if no permissions for related_id
+		if (edrItem) {
+			edrs.push({ state: edrItem.getProperty("state")});
+		}
+	}
+	return edrs;
+}
+
+populateEdrStatus();]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Express Fill EDR Status Field</name>
+ </Item>
+</AML>

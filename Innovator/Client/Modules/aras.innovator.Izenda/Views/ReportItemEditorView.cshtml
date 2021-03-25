@@ -1,0 +1,25 @@
+﻿@{
+	Layout = "../../aras.innovator.core.ItemWindow/Views/Shared/_Layout.cshtml";
+}
+@section header
+{
+	<script src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=ReportItemEditorView,ItemWindowWithCommon&files=TopWindowHelper")"></script>
+
+		<!-- must be here, not in ReportDesigner stuff -->
+  	<link rel="stylesheet" type="text/css" href="@Url.ContentWithSalt("~/javascript/include.aspx?classes=InnovatorIzendaUI.css")" />
+
+	<script type="text/javascript">
+		@{ char ch = '/'; }
+		var arasObj = TopWindowHelper.getMostTopWindowWithAras(window).aras;
+		var adhocReportingBaseUrl = arasObj.getInnovatorUrl() + "SelfServiceReporting";
+		var adhocReportingDebug = !!arasObj.DEBUG;
+
+		window.addEventListener('DOMContentLoaded', function() {
+			arasObj.browserHelper.toggleSpinner(document, false);
+		});
+	</script>
+}
+@section center
+{
+	<div id="innReportDesignerContainer"></div>
+}

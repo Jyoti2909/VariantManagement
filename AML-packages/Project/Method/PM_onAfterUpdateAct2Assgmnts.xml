@@ -1,0 +1,91 @@
+﻿<AML>
+ <Item type="Method" id="72ADB4F4CF884BBDB3F373B26697B6F6" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string role = this.getProperty("role");
+if (String.IsNullOrEmpty(role))
+{
+  XmlNode roleNd = this.node.SelectSingleNode("Item/role");
+  if (null != roleNd)
+  {
+    role = roleNd.InnerText;
+  }
+}
+
+if (String.IsNullOrEmpty(role))
+{
+  //Role is not specified thus there is nothing to do.
+  //We cannot empty leader because that could be set manually.
+  return null;
+}
+
+string id = this.getID();
+if (String.IsNullOrEmpty(id))
+{
+  id = this.getPropertyAttribute("Item", "id");
+}
+
+Innovator tmpInn = this.getInnovator();
+Item itm = tmpInn.newItem();
+itm.loadAML(
+  "<Item type='Project Team' action='get' select='id'>" +
+    "<source_id>" +
+      "<Item type='Project' action='get' select='id'>" +
+        "<project_number condition='in'>" +
+          "SELECT proj_num " +
+          "FROM [ACTIVITY2] " +
+          "WHERE id = (SELECT source_id " +
+                      "FROM [ACTIVITY2_ASSIGNMENT] " +
+                      "WHERE id = '" + System.Security.SecurityElement.Escape(id.Replace("'", "''")) + "')" +
+        "</project_number>" +
+      "</Item>" +
+    "</source_id>" + 
+  "</Item>");
+itm.setProperty("role", role);
+itm = itm.apply();
+
+if (itm.isEmpty())
+{
+  //role value seems to be damaged
+  //however this is possible when Project Team relationship is not in DB yet.
+  //thus just do nothing
+  return null;
+}
+
+if (itm.isError())
+{
+  return itm;
+}
+
+if (itm.getItemCount() > 1)
+{
+  throw new NotImplementedException("Project Team is invalid");
+}
+
+string activityId = this.getProperty("source_id");
+if (String.IsNullOrEmpty(activityId))
+{
+  Item tmp = this.getItemsByXPath("Item");
+  if (tmp.getItemCount() != 0)
+  {
+    activityId = tmp.getItemByIndex(0).getProperty("source_id");
+  }
+}
+
+if (String.IsNullOrEmpty(activityId))
+{
+  throw new NotImplementedException("Empty activity_id is not supported");
+}
+
+itm.setProperty("activity_id", activityId);
+
+Item r = tmpInn.applyMethod("PM_updateAssigneesPerRole", itm.node.OuterXml);
+if (r.isError())
+{
+  return r;
+}
+
+return null;]]></method_code>
+  <method_type>C#</method_type>
+  <name>PM_onAfterUpdateAct2Assgmnts</name>
+ </Item>
+</AML>

@@ -1,0 +1,166 @@
+﻿<TestCase author='apetrovsky@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>
+		Create Parent item as industrial engineer.
+		Add Manufacturer Parts into Parent part item as relationship as industrial engineer.
+		Delete Parent item and get error as industrial engineer.
+	</Description>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial engineer identity
+			When:
+				The user tries to create a part with Mechanical Part/MBOM only Part classification.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='AEC4B8128AC94702BECB38A5194B1573' doGetItem='0'>
+					<classification>Mechanical Part/MBOM only Part</classification>
+					<name>Parent Item</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='AEC4B8128AC94702BECB38A5194B1573' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='root:innovator'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial engineer identity
+			When:
+				The user tries to create a Manufacturer Part.
+			Then:
+				The user should create the Manufacturer Part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Manufacturer Part' action='add' id='E67FA64203434D5C8DC55AF5461A685F' doGetItem='0'>
+					<has_files>0</has_files>
+					<item_number>Test</item_number>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Manufacturer Part' id='E67FA64203434D5C8DC55AF5461A685F' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial engineer identity
+			When:
+				The user tries to add Manufacturer Parts into Parent Item.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part AML' action='add' id='B4917438FE71400AB096ABA0642CA1C5' doGetItem='0'>
+					<related_id>E67FA64203434D5C8DC55AF5461A685F</related_id>
+					<source_id>AEC4B8128AC94702BECB38A5194B1573</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part AML" id="B4917438FE71400AB096ABA0642CA1C5">
+							<related_id>E67FA64203434D5C8DC55AF5461A685F</related_id>
+						</Item>
+					</Result>
+					<Message>
+						<event name="ids_modified" value="AEC4B8128AC94702BECB38A5194B1573|B4917438FE71400AB096ABA0642CA1C5" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with industrial engineer identity
+			When:
+				The user tries to delete item with the Manufacturer Parts relationship.
+			Then:
+				The request should return error.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='delete' id='AEC4B8128AC94702BECB38A5194B1573' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/' xmlns:i18n='http://www.aras.com/I18N'>
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault>
+						<faultcode>1</faultcode>
+						<faultactor />
+						<faultstring>1 generation of this item cannot be deleted because it has linked relationships.</faultstring>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='Part AML' action='delete' id='B4917438FE71400AB096ABA0642CA1C5' />
+				<Item type='Manufacturer Part' action='delete' id='E67FA64203434D5C8DC55AF5461A685F' />
+				<Item type='Part' action='delete' id='AEC4B8128AC94702BECB38A5194B1573' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

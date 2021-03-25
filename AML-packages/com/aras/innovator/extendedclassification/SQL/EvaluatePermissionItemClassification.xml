@@ -1,0 +1,43 @@
+﻿<AML>
+ <Item type="SQL" id="88FA71AD67534AF4A1208D71F2A86A28" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>EvaluatePermissionItemClassification</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION EvaluatePermissionItemClassification
+(
+	@type VARCHAR(32),
+	@xclass_id CHAR(32),
+	@identity_list VARCHAR(MAX),
+	@item_type_id CHAR(32)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+		SELECT MAX (CASE 
+                      WHEN ( acs.can_classify = '1' 
+                             AND @type = 'can_classify' ) THEN 9 
+                      -- can_update permissions only  
+                      WHEN ( acs.can_unclassify = '1' 
+                             AND @type = 'can_unclassify' ) THEN 9 
+                      -- can_delete permissions only  
+                      WHEN ( acs.can_get_isclassified = '1' 
+                             AND @type = 'can_get_isclassified' ) THEN 9 
+                      -- can_change_access permissions only  
+                      ELSE 0 
+                    -- No permissions on specified for specified access right  
+                    END) p 
+        FROM   (SELECT acs.can_classify, 
+                       acs.can_unclassify,
+                       acs.can_get_isclassified 
+			    from [innovator].[XCLASS_CLASSIFICATION_PERM] xclass_perm 
+				INNER JOIN [Access_ItemClassification] acs ON acs.SOURCE_ID = xclass_perm.RELATED_ID
+                WHERE xclass_perm.SOURCE_ID = @xclass_id AND xclass_perm.ITEMTYPE_ID = @item_type_id AND
+					   (CHARINDEX(acs.[related_id] COLLATE Latin1_General_BIN2, @identity_list) > 0)
+               ) acs
+)]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>EvaluatePermissionItemClassification</name>
+ </Item>
+</AML>

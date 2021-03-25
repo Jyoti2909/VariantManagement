@@ -1,0 +1,95 @@
+﻿<AML>
+ <Item type="Method" id="6E69DA41DE004FAD83C0495C7CFB5EAC" action="add">
+  <comments>Validate threads, period, paging and parameter values for crawlers</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var crawler = {};
+var value = srcElement.value;
+var propertyName = srcElement.name;
+var res = true;
+var mostTopWindow = window.aras.getMostTopWindowWithAras();
+var aras = mostTopWindow.aras;
+
+/* If property is_required and its value invalid it must be validated by native validator first */
+var itemType = aras.getItemTypeByFormID(params.formID);
+var property = itemType.selectSingleNode('Relationships/Item[@type=\'Property\' and (name=\'' + propertyName + '\')]');
+var propertyDataType = property.selectSingleNode('data_type').text;
+var propertyIsRequired = property.selectSingleNode('is_required').text;
+if (!aras.isInteger(value) && propertyDataType === 'integer' && propertyIsRequired === '1' && value !== '') {
+	return;
+}
+
+require([
+	'ES/Scripts/Classes/Crawlers/Crawler',
+	'ES/Scripts/Classes/Crawlers/ESItemCrawler',
+	'ES/Scripts/Classes/Crawlers/ESFileCrawler',
+	'ES/Scripts/Classes/Crawlers/ESQueueCrawler',
+	'ES/Scripts/Classes/Crawlers/ESPermissionCrawler',
+	'ES/Scripts/Classes/Crawlers/ESSolrCleanerCrawler'],
+	function(Crawler, ESItemCrawler, ESFileCrawler, ESQueueCrawler, ESPermissionCrawler, ESSolrCleanerCrawler) {
+		var crawlerType = parent.thisItem.getProperty('crawler_type','');
+
+		switch (crawlerType) {
+			case 'ESItemCrawler':
+				crawler = new ESItemCrawler(aras);
+				break;
+			case 'ESFileCrawler':
+				crawler = new ESFileCrawler(aras);
+				break;
+			case 'ESQueueCrawler':
+				crawler = new ESQueueCrawler(aras);
+				break;
+			case 'ESPermissionCrawler':
+				crawler = new ESPermissionCrawler(aras);
+				break;
+			case 'ESSolrCleanerCrawler':
+				crawler = new ESSolrCleanerCrawler(aras);
+				break;
+			default:
+				return;
+		}
+
+		switch (propertyName) {
+			case 'crawler_threads':
+				res = crawler.isValidThreads(value);
+				break;
+			case 'crawler_paging':
+				res = crawler.isValidPaging(value);
+				break;
+			case 'crawler_period':
+				res = crawler.isValidPeriod(value);
+				break;
+			case 'crawler_parameters':
+				res = crawler.isValidParameters(value);
+				break;
+		}
+
+		if (!res) {
+			var confirmDialog = (mostTopWindow.main || mostTopWindow).ArasModules.Dialog.show('iframe', {
+				buttons: {
+					btnYes: 'Edit',
+					btnCancel: 'Replace'
+				},
+				defaultButton: 'btnCancel',
+				aras: aras,
+				center: true,
+				dialogHeight: 180,
+				dialogWidth: 300,
+				message: crawler.lastValidationMessage,
+				content: 'groupChgsDialog.html'
+			});
+			confirmDialog.promise.then(function(result) {
+				if (result === 'btnYes') {
+					setTimeout(srcElement.focus(),0);
+				} else {
+					var oldValue = crawler.getOldPropertyValue(parent.itemID, propertyName);
+					window.handleItemChange(propertyName, oldValue);
+				}
+			});
+		}
+	}
+);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_ValidateCrawler</name>
+ </Item>
+</AML>

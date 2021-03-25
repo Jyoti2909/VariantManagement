@@ -1,0 +1,67 @@
+﻿@using System
+@using System.Linq
+@using Models.AML.Enums
+@using Models.AML.ItemTypes
+@model Models.AML.ItemTypes.ItemType
+<script type="text/javascript">
+	function Observer(value) {
+		this.handlers = [];
+		this.value = value || "";
+	}
+
+	Observer.prototype = {
+		attachEvent: function(fake, handler) {
+			this.handlers.push(handler);
+		},
+
+		setValue: function(value) {
+			if (this.value == value) return;
+			this.value = value;
+			var event = {
+				propertyName: "value",
+				target: { value: this.value },
+				srcElement: { value: this.value },
+				type: "propertychange",
+				contentWindow: window
+			};
+			for (var i = 0; i < this.handlers.length; i++) {
+				this.handlers[i](event);
+			}
+		},
+
+		getValue: function() {
+			return this.value;
+		},
+
+		getInitialValue: function() {
+			return this.initialValue;
+		},
+
+		init: function(value) {
+			this.initialValue = value;
+			var event = {
+				propertyName: "initValue",
+				target: {
+					value: value
+				},
+				type: "init",
+				contentWindow: window
+			};
+			for (var i = 0; i < this.handlers.length; i++) {
+				this.handlers[i](event);
+			}
+		}
+	}
+	var observersHash = {};
+	observersHash.getElementById = function (id) { return this[id]; };
+	@if (Model != null)
+	{
+		var properties = Model.Relationships.Items.Where(item => item.Type == ItemNodeType.Property && !String.IsNullOrEmpty(item.Name));
+		foreach (var property in properties.Cast<Property>())
+		{
+@:observersHash["@(property.Name)_system"] = new Observer();
+		}
+	}
+
+
+</script>

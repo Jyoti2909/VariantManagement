@@ -1,0 +1,115 @@
+﻿<AML>
+ <Item type="Method" id="2F6A3A688A504D87857A081BC36FB8F0" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			' name: onSaveActivity2
+			' purpose: APQP. Promote Activity2 to Active when set date_start_act.
+			' created: 9-JUN-2005 Alex Cheushev
+			' (c) Copyright by Aras Corporation, 2005-2007.
+
+			Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+			Dim role as String = Me.getProperty("lead_role")
+			Dim projNum as String = Me.getProperty("proj_num")
+			If (Not String.IsNullOrEmpty(role) And String.IsNullOrEmpty(Me.getProperty("managed_by_id")) And Not String.IsNullOrEmpty(projNum)) Then
+				Dim team As Item = Me.newItem()
+				team.loadAML(
+					"<Item type='Project Team' action='get' select='related_id(id)'>" +
+						"<source_id>" +
+		"<Item type='Project' action='get' select='id' where="" state = 'Pending' or state = 'Active' "">" +
+								"<project_number>" +
+									System.Security.SecurityElement.Escape(projNum) + 
+								"</project_number>" +
+							"</Item>" +
+						"</source_id>" + 
+					"</Item>")
+				team.setProperty("role", role)
+				team = team.apply()
+				If (Not team.isEmpty() And Not team.isError() And team.getItemCount() = 1) Then
+					Dim identityRelatedId As String = team.getProperty("related_id")
+					If (Not String.IsNullOrEmpty(identityRelatedId)) Then
+						Dim id = Me.getAttribute("id")
+						id = If(string.IsNullOrEmpty(id), id, id.Replace("'", "''"))
+						Dim updateString As String = "UPDATE [Activity2] " & vbCrLf _
+										& "SET managed_by_id = '" + identityRelatedId.Replace("'", "''") + "' " & vbCrLf _
+										& "WHERE  id = '" + id + "' "
+						conn.ExecuteSQL(updateString)
+					End If
+				End If
+			End If
+
+			'+++++ Validate Activity: if managed_by_id is not set then setup it ++++++
+			Dim source_id As String = Me.getAttribute("id")
+			If Not String.IsNullOrEmpty(source_id) Then
+				Dim updt As String = String.Format(CultureInfo.InvariantCulture, "" _
+				  & "UPDATE [Activity2] " & vbCrLf _
+				  & "SET    managed_by_id = (SELECT TOP 1 related_id " & vbCrLf _
+				  & "                        FROM   [Activity2_Assignment] " & vbCrLf _
+				  & "                        WHERE  ( work_est >= (SELECT MAX(work_est) " & vbCrLf _
+				  & "                                              FROM   [Activity2_Assignment] " & vbCrLf _
+				  & "                                              WHERE  source_id = '{0}' " & vbCrLf _
+				  & "                                                     AND related_id IS NOT NULL) " & vbCrLf _
+				  & "                                  OR work_est IS NULL ) " & vbCrLf _
+				  & "                               AND source_id = '{0}' " & vbCrLf _
+				  & "                               AND related_id IS NOT NULL " & vbCrLf _
+				  & "                        ORDER  BY work_est DESC, " & vbCrLf _
+				  & "                                  sort_order) " & vbCrLf _
+				  & "WHERE  id = '{0}' " & vbCrLf _
+				  & "       AND managed_by_id IS NULL ", source_id.Replace("'", "''"))
+
+				conn.ExecuteSQL(updt)
+			End If
+			'----- Validate Activity: if managed_by_id is not set then setup it ------
+
+
+			Dim pr As Boolean = False
+			Dim itm As Item = Me.newItem("Activity2 Assignment", "get")
+			itm.setAttribute("select", "id")
+			itm.setProperty("source_id", Me.getID())
+			itm.setPropertyCondition("date_start_act", "is not null")
+			itm = itm.apply()
+
+			If (String.Equals(Me.getProperty("state"), "Pending", StringComparison.Ordinal) AndAlso _
+			 (Not String.IsNullOrEmpty(Me.getProperty("date_start_act")) OrElse itm.getItemCount() > 0)) Then
+
+				If Not String.IsNullOrEmpty(Me.getProperty("locked_by_id")) Then
+					pr = True
+
+					itm = Me.newItem("Activity2")
+					itm.setID(Me.getID())
+					itm.setAttribute("doGetItem", "0")
+					itm = itm.unlockItem()
+					If itm.isError() Then Return itm
+				End If
+
+				itm = PromoteItm("Activity2", Me.getID())
+				If itm.isError() Then Return itm
+
+				Dim Act2As As Item = Me.getRelationships("Activity2 Assignment")
+				If Act2As.getItemCount() > 0 Then
+
+					itm = PromoteItm("Activity2 Assignment", Act2As.getItemByIndex(0).getID())
+					If itm.isError() Then Return itm
+				End If
+
+				If pr Then
+					itm = Me.newItem("Activity2")
+					itm.setID(Me.getID())
+					itm = itm.lockItem()
+					If itm.isError() Then Return itm
+				End If
+			End If
+
+			itm = Me.newItem("Activity2", "get")
+			itm.setID(Me.getID())
+			Return Me.apply()
+		End Function
+
+		Function PromoteItm(ByVal typeName As String, ByVal id As String) As Item
+
+			Dim itm As Item = Me.newItem(typeName)
+			itm.setID(id)
+			itm.setAttribute("doGetItem", "0")
+			Return itm.promote("Active", "")]]></method_code>
+  <method_type>VB</method_type>
+  <name>onSaveActivity2</name>
+ </Item>
+</AML>

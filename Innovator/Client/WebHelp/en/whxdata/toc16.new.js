@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"My Discussions","type":"book","url":"My_Discussions.htm","key":"toc17"},{"name":"My InBasket","type":"item","url":"My_inBasket.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

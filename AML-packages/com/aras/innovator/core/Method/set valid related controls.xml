@@ -1,0 +1,75 @@
+﻿<AML>
+ <Item type="Method" id="33D6A6BA26AD4B85B35127A53018B565" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*version:3*/
+function methodExec() {
+	var mainDataForm = document.forms.MainDataForm;
+	var val = '';
+	var relItem = null;
+	var relItemExists = false;
+	var isDependent;
+
+	var input = mainDataForm.elements['related_id'];
+	if (input) {
+		val = input.value;
+	}
+
+	if (val !== '') {
+		relItem = aras.getItemByKeyedName('ItemType', val);
+
+		if (relItem) {
+			isDependent = aras.getItemProperty(relItem, 'is_dependent');
+			relItemExists = true;
+		}
+	}
+
+	isDependent = (isDependent == '1');
+
+	var list = {};
+	var relatedOptionFld = getFieldByName('related_option');
+	var inputs = relatedOptionFld.getElementsByTagName('input');
+
+	for (var i = 0, L = inputs.length; i < L; i++) {
+		input = inputs.item(i);
+		if (input.type == 'radio') {
+			val = input.value;
+			if ('0' == val || '1' == val || '2' == val) {
+				list[val] = input;
+			}
+		}
+	}
+
+	if (isDependent) {
+		if (list['0'].checked) {
+			list['2'].checked = true;
+		}
+		list['0'].disabled = true;
+	} else {
+		if (list['0'].disabled) {
+			list['0'].disabled = false;
+		}
+	}
+
+	var _rnChb = mainDataForm.elements['related_notnull'];
+	if (_rnChb) {
+		_rnChb.disabled = !relItemExists;
+	}
+}
+
+function doWait() {
+	if (parent && parent.frames && parent.frames['tearoff_menu'] && parent.frames['tearoff_menu'].setControlEnabled) {
+		methodExec();
+	} else {
+		setTimeout(doWait,10);
+	}
+}
+
+if (document.isEditMode) {
+	doWait();
+}
+return true;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>set valid related controls</name>
+ </Item>
+</AML>

@@ -1,0 +1,24 @@
+﻿<AML>
+ <Item type="Method" id="A360A47111AF4D7D8A08F31AEE279CE0" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovatorInstance = this.getInnovator();
+Item methodItem = this.getPropertyItem("related_id");
+if (methodItem == null || string.IsNullOrEmpty(methodItem.getProperty("method_type", string.Empty)))
+{
+	string methodId = this.getProperty("related_id");
+	methodItem = innovatorInstance.newItem("Method", "get");
+	methodItem.setID(methodId);
+	methodItem = methodItem.apply();
+}
+
+string methodType = methodItem.getProperty("method_type");
+if (!string.Equals(methodType, "C#", StringComparison.InvariantCultureIgnoreCase))
+{
+    return innovatorInstance.newError(CCO.ErrorLookup.Lookup("MSO_MethodTypeMustBeCSharp"));
+}
+
+return methodItem;]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_CheckMethodTypeOfServerEvent</name>
+ </Item>
+</AML>

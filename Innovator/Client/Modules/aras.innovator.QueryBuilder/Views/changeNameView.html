@@ -1,0 +1,117 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="../../../styles/default.css" />
+		<style type="text/css">
+			@import "../../../javascript/dojo/resources/dojo.css";
+			@import "../../../javascript/dijit/themes/claro/claro.css";
+			@import "../../../javascript/include.aspx?classes=common.css";
+
+			body {
+				margin: 0px;
+				overflow: hidden;
+			}
+
+			.title {
+				font-weight: bold;
+				display: block;
+				margin-bottom: 5px;
+			}
+
+			#changeName {
+				margin-top: 5px;
+			}
+			#nameField {
+				width: 128px;
+			}
+			#nameField, .button {
+				vertical-align: middle;
+			}
+
+			.button {
+				display: inline-block;
+				cursor: pointer; 
+				background-size: 22px !important;
+				width: 22px;
+				height: 22px;
+				background-color: transparent !important;
+				margin-left: 3px;
+			}
+
+			.button:hover {
+				background-color: rgb(221, 231, 245) !important;
+			}
+
+			#btnApply {
+				background: url("../../../images/Checkmark.svg") no-repeat center;
+			}
+
+			#btnCancel {
+				background: url("../../../images/Delete.svg?changeName=1") no-repeat center;
+			}
+		</style>
+		<title></title>
+			<script type="text/javascript">
+				var frameArguments;
+				var aras;
+				var thisDialog;
+				var isCanceled = true;
+				var closeHandlerFromArgs;
+
+				function start(args, tooltipDialog) {
+					// fill form with args
+					init(args);
+					thisDialog = tooltipDialog;
+
+					var labelEl = document.getElementById('labelSpan');
+					labelEl.textContent = aras.getResource('../Modules/aras.innovator.QueryBuilder/', 'action.changename');
+					var nameEl = document.getElementById('nameField');
+					nameEl.setAttribute('value', aras.getItemProperty(frameArguments.currentElement.node, 'alias'));
+				}
+
+				function onCloseDialog() {
+					if (!isCanceled) {
+						var nameEl = document.getElementById('nameField');
+						var newName = nameEl.value.trim();
+						if (newName !== '') {
+							aras.setItemProperty(frameArguments.currentElement.node, 'alias', newName);
+							if (frameArguments.currentElement.node.getAttribute('isNew') !== '1') {
+								frameArguments.currentElement.node.setAttribute('action', 'update');
+							}
+							frameArguments.currentElement._element.name = newName;
+							frameArguments.tree.refreshView();
+						}
+					}
+				}
+
+				function init(args) {
+					frameArguments = args;
+					aras = args.aras;
+					closeHandlerFromArgs = args.close;
+					var btnCancel = document.getElementById('btnCancel');
+					btnCancel.onclick = onCancel;
+
+					var btnApply = document.getElementById('btnApply');
+					btnApply.onclick = onApply;
+				}
+
+				function onCancel() {
+					closeHandlerFromArgs();
+				}
+
+				function onApply() {
+					isCanceled = false;
+					onCloseDialog();
+					closeHandlerFromArgs();
+				}
+			</script>
+	</head>
+	<body>
+		<div id="changeName">
+			<span id="labelSpan" class="title"></span>
+			<input type="text" id="nameField" />
+			<span id="btnApply" class="button"></span>
+			<span id="btnCancel" class="button"></span>
+		</div>
+	</body>
+</html>

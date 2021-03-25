@@ -1,0 +1,156 @@
+﻿<style type="text/css">
+	#VIS_ID_CONTAINER svg {
+		overflow: hidden;
+	}
+
+	#VIS_ID_CONTAINER .node rect {
+		stroke: #333;
+		fill: #fff;
+	}
+	#VIS_ID_CONTAINER .edgePath path {
+		stroke: #333;
+		fill: #333;
+		stroke-width: 1.5px;
+	}
+
+	#VIS_ID_CONTAINER .label {
+		color: #000000;
+		font-weight: normal;
+		font-size: 100%;
+	}
+</style>
+
+<div id="VIS_ID_CONTAINER">
+	<div id="VIS_ID"></div>
+</div>
+
+<script type="text/javascript" src="d3.v3.min.js"></script>
+<script type="text/javascript" src="dagre-d3.min.js"></script>
+
+<script type="text/javascript">
+	(function init() {
+		var services = window.ReportingServices;
+
+		(function () {
+			/* Backward Compatibility Section */
+			if (VIS_CONTEXT.props && VIS_CONTEXT.props.length > 2 && VIS_CONTEXT.props && VIS_CONTEXT.props.indexOf('metric') > 0) {
+				var props = {};
+				try {
+					var oldProps = JSON.parse(VIS_CONTEXT.props);
+					props['Metric'] = oldProps['metric'];
+				} catch (e) {
+					props = {};
+				}
+				VIS_CONTEXT.props = JSON.stringify(props);
+			}
+		})();
+
+		var vis = new izenda.visualization({
+			id: 'VIS_ID',
+			rows: VIS_ROWS,
+			columns: VIS_COLUMNS,
+			context: VIS_CONTEXT,
+			status: VIS_FORMJSASTATUS,
+			requirements: { d3: true, svg: true },
+			validate: function (columns, rows) {
+				return columns.length > 2
+					&& izenda.visualization.isMetric(columns[2]);
+			},
+			dataLayout: 'graph',
+			draw: draw
+		});
+
+		vis.initHeader({
+			metrics: [{
+				name: 'Metric'
+			}]
+		});
+
+		var subscriptions = [];
+		function draw() {
+			subscriptions.forEach(function (subscription) { subscription.remove(); });
+
+			if (utility.ie() > 0)
+				services.updateStyle('izenda-VIS_ID-style', '.edgePath path { fill: none !important; }');
+
+			var svgElement = d3.select(vis.element.get(0))
+					.append('svg:svg')
+					.attr('width', vis.width)
+					.attr('height', vis.height),
+				groupElement = svgElement.append('svg:g');
+
+			var zoom = d3.behavior.zoom().on('zoom', function () {
+				groupElement.attr('transform', 'translate(' + d3.event.translate + ')' + 'scale(' + d3.event.scale + ')');
+			});
+			svgElement.call(zoom);
+
+			function safeName(name) {
+				return izenda.visualization.wordwrap(name, 15);
+			}
+
+			function getMetricValue(edge, metric) {
+				var value = vis.itemValue(edge, metric);
+				if (!isNaN(value)) {
+					var columnFormatter = vis.columns.find(function (d) { return d.name === metric; }).formatter;
+					value = columnFormatter ? columnFormatter(value, edge, vis, metric) : value;
+				} else {
+					value = '';
+				}
+				return value;
+			}
+
+			var graph = new dagreD3.graphlib.Graph().setGraph({});
+
+			var nodes = [];
+			var metric = vis.getProperty('Metric');
+			for (var i = 0; i < vis.edges.length; ++i) {
+				var edge = vis.edges[i];
+
+				var node1 = safeName(vis.itemLabel(edge, 0));
+				if (nodes.indexOf(node1) < 0) {
+					graph.setNode(node1, { label: node1 });
+					nodes.push(node1);
+				}
+
+				var node2 = safeName(vis.itemLabel(edge, 1));
+				if (nodes.indexOf(node2) < 0) {
+					graph.setNode(node2, { label: node2 });
+					nodes.push(node2);
+				}
+
+				var value = getMetricValue(edge, metric);
+				graph.setEdge(node1, node2, { label: value, lineInterpolate: 'basis' });
+			}
+
+			graph.nodes().forEach(function (node) {
+				var dagreNode = graph.node(node);
+				dagreNode.rx = dagreNode.ry = 10;
+			});
+
+			var render = new dagreD3.render();
+
+			render(groupElement, graph);
+
+			var initialScale = 0.75;
+			zoom.translate([(svgElement.attr('width') - graph.graph().width * initialScale) / 2, 20])
+				.scale(initialScale)
+				.event(svgElement);
+
+			subscriptions.push(vis.events.subscribe('MetricChange', function () {
+				var metric = vis.getProperty('Metric');
+				groupElement
+					.selectAll('g.edgeLabel')
+					.each(function (dagreEdgeObj, index) {
+						var dagreEdge = graph.edge(dagreEdgeObj);
+						var value = getMetricValue(vis.edges[index], metric);
+						dagreEdge.label = value;
+					});
+				render(groupElement, graph);
+			}));
+		}
+
+		vis.draw();
+
+		izenda.visualization.registerResize('VIS_ID', init, vis.clear);
+	})();
+</script>

@@ -1,0 +1,337 @@
+﻿<AML>
+ <Item type="Method" id="63EACA04088B4292B2E5792EB2C34E9E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var documentActionsGroup = this.newItem("MSO_RibbonItem", "add");
+documentActionsGroup.setProperty("mso_label", "Actions");
+documentActionsGroup.setProperty("mso_name", "actionsGroup");
+documentActionsGroup.setProperty("mso_visible", "1");
+documentActionsGroup.setProperty("classification", "Group");
+
+    var newDocumentButton = this.newItem("MSO_RibbonItem", "add");
+    newDocumentButton.setProperty("mso_label", "New Aras Document");
+    newDocumentButton.setProperty("mso_name", "new_aras_document");
+    newDocumentButton.setProperty("mso_visible", "1");
+    newDocumentButton.setProperty("classification", "Button");
+
+    var openDocumentButton = this.newItem("MSO_RibbonItem", "add");
+    openDocumentButton.setProperty("mso_label", "Open from Aras");
+    openDocumentButton.setProperty("mso_name", "open");
+    openDocumentButton.setProperty("mso_visible", "1");
+    openDocumentButton.setProperty("classification", "Button");
+
+        var openLinkedDocumentButton = this.newItem("MSO_RibbonItem", "add");
+        openLinkedDocumentButton.setProperty("mso_label", "Open from linked Item");
+        openLinkedDocumentButton.setProperty("mso_name", "open_from_linked_item");
+        openLinkedDocumentButton.setProperty("mso_visible", "1");
+        openLinkedDocumentButton.setProperty("classification", "Button");
+
+        var childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+        childRibbonItem.setRelatedItem(openLinkedDocumentButton);
+    openDocumentButton.addRelationship(childRibbonItem);
+
+    var saveDocumentButton = this.newItem("MSO_RibbonItem", "add");
+    saveDocumentButton.setProperty("mso_label", "Save to Aras");
+    saveDocumentButton.setProperty("mso_name", "save_to_aras");
+    saveDocumentButton.setProperty("mso_visible", "1");
+    saveDocumentButton.setProperty("classification", "Button");
+
+        var saveAsDocumentButton = this.newItem("MSO_RibbonItem", "add");
+        saveAsDocumentButton.setProperty("mso_label", "Save As to Aras");
+        saveAsDocumentButton.setProperty("mso_name", "save_as_to_aras");
+        saveAsDocumentButton.setProperty("mso_visible", "1");
+        saveAsDocumentButton.setProperty("classification", "Button");
+
+        childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+        childRibbonItem.setRelatedItem(saveAsDocumentButton);
+    saveDocumentButton.addRelationship(childRibbonItem);
+
+    var saveAndCloseDocumentButton = this.newItem("MSO_RibbonItem", "add");
+    saveAndCloseDocumentButton.setProperty("mso_label", "Save and Close");
+    saveAndCloseDocumentButton.setProperty("mso_name", "save_and_close");
+    saveAndCloseDocumentButton.setProperty("mso_visible", "1");
+    saveAndCloseDocumentButton.setProperty("classification", "Button");
+    
+    var lockDocumentButton = this.newItem("MSO_RibbonItem", "add");
+    lockDocumentButton.setProperty("mso_label", "Claim for Edit");
+    lockDocumentButton.setProperty("mso_name", "lock");
+    lockDocumentButton.setProperty("mso_visible", "1");
+    lockDocumentButton.setProperty("classification", "Button");
+
+    var unLockDocumentButton =  this.newItem("MSO_RibbonItem", "add");
+    unLockDocumentButton.setProperty("mso_label", "Release Claim");
+    unLockDocumentButton.setProperty("mso_name", "unlock");
+    unLockDocumentButton.setProperty("mso_visible", "1");
+    unLockDocumentButton.setProperty("classification", "Button");
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(newDocumentButton);
+documentActionsGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(openDocumentButton);
+documentActionsGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(saveDocumentButton);
+documentActionsGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(saveAndCloseDocumentButton);
+documentActionsGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(lockDocumentButton);
+documentActionsGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(unLockDocumentButton);
+documentActionsGroup.addRelationship(childRibbonItem);
+
+var ribbonItemSetting = this.newItem("MSO_RibbonItemSettings", "add");
+ribbonItemSetting.setRelatedItem(documentActionsGroup);
+this.addRelationship(ribbonItemSetting);
+
+var propertiesGroup = this.newItem("MSO_RibbonItem", "add");
+propertiesGroup.setProperty("mso_label", "Properties");
+propertiesGroup.setProperty("mso_name", "propertiesGroup");
+propertiesGroup.setProperty("mso_visible", "1");
+propertiesGroup.setProperty("classification", "Group");
+
+    var refreshButton = this.newItem("MSO_RibbonItem", "add");
+    refreshButton.setProperty("mso_label", "Refresh");
+    refreshButton.setProperty("mso_name", "refresh");
+    refreshButton.setProperty("mso_visible", "1");
+    refreshButton.setProperty("classification", "Button");
+
+        var refreshSettingsButton = this.newItem("MSO_RibbonItem", "add");
+        refreshSettingsButton.setProperty("mso_label", "Refresh Settings");
+        refreshSettingsButton.setProperty("mso_name", "refreshSettingsButton");
+        refreshSettingsButton.setProperty("mso_visible", "1");
+        refreshSettingsButton.setProperty("classification", "Button");
+
+        childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+        childRibbonItem.setRelatedItem(refreshSettingsButton);
+    refreshButton.addRelationship(childRibbonItem);
+
+    var numberTextBox = this.newItem("MSO_RibbonItem", "add");
+    numberTextBox.setProperty("mso_label", "Number");
+    numberTextBox.setProperty("mso_name", "number");
+    numberTextBox.setProperty("mso_visible", "1");
+    numberTextBox.setProperty("classification", "TextBox");
+
+    var templateTextBox = this.newItem("MSO_RibbonItem", "add");
+    templateTextBox.setProperty("mso_label", "Template");
+    templateTextBox.setProperty("mso_name", "template");
+    templateTextBox.setProperty("mso_visible", "1");
+    templateTextBox.setProperty("classification", "TextBox");
+
+    var revisionTextBox = this.newItem("MSO_RibbonItem", "add");
+    revisionTextBox.setProperty("mso_label", "Revision");
+    revisionTextBox.setProperty("mso_name", "revision");
+    revisionTextBox.setProperty("mso_visible", "1");
+    revisionTextBox.setProperty("classification", "TextBox");
+
+    var lockedTextBox = this.newItem("MSO_RibbonItem", "add");
+    lockedTextBox.setProperty("mso_label", "Claimed by");
+    lockedTextBox.setProperty("mso_name", "locked_by");
+    lockedTextBox.setProperty("mso_visible", "1");
+    lockedTextBox.setProperty("classification", "TextBox");
+
+    var stateTextBox = this.newItem("MSO_RibbonItem", "add");
+    stateTextBox.setProperty("mso_label", "State");
+    stateTextBox.setProperty("mso_name", "state");
+    stateTextBox.setProperty("mso_visible", "1");
+    stateTextBox.setProperty("classification", "TextBox");
+
+    var typeTextBox = this.newItem("MSO_RibbonItem", "add");
+    typeTextBox.setProperty("mso_label", "Type");
+    typeTextBox.setProperty("mso_name", "type");
+    typeTextBox.setProperty("mso_visible", "1");
+    typeTextBox.setProperty("classification", "TextBox");
+
+    var addLinkButton = this.newItem("MSO_RibbonItem", "add");
+    addLinkButton.setProperty("mso_label", "Links");
+    addLinkButton.setProperty("mso_name", "add_or_remove_links");
+    addLinkButton.setProperty("mso_visible", "1");
+    addLinkButton.setProperty("classification", "Button");
+
+    var propertiesButton = this.newItem("MSO_RibbonItem", "add");
+    propertiesButton.setProperty("mso_label", "Properties");
+    propertiesButton.setProperty("mso_name", "properties");
+    propertiesButton.setProperty("mso_visible", "1");
+    propertiesButton.setProperty("classification", "Button");
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(refreshButton);
+propertiesGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(numberTextBox);
+propertiesGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(templateTextBox);
+propertiesGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(revisionTextBox);
+propertiesGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(lockedTextBox);
+propertiesGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(stateTextBox);
+propertiesGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(typeTextBox);
+propertiesGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(addLinkButton);
+propertiesGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(propertiesButton);
+propertiesGroup.addRelationship(childRibbonItem);
+
+ribbonItemSetting = this.newItem("MSO_RibbonItemSettings", "add");
+ribbonItemSetting.setRelatedItem(propertiesGroup);
+this.addRelationship(ribbonItemSetting);
+
+var versionsGroup = this.newItem("MSO_RibbonItem", "add");
+versionsGroup.setProperty("mso_label", "Versions");
+versionsGroup.setProperty("mso_name", "versionsGroup");
+versionsGroup.setProperty("mso_visible", "1");
+versionsGroup.setProperty("classification", "Group");
+
+    var versionButton = this.newItem("MSO_RibbonItem", "add");
+    versionButton.setProperty("mso_label", "Version");
+    versionButton.setProperty("mso_name", "version");
+    versionButton.setProperty("mso_visible", "1");
+    versionButton.setProperty("classification", "Button");
+
+    var getLatestButton = this.newItem("MSO_RibbonItem", "add");
+    getLatestButton.setProperty("mso_label", "Get Latest Version");
+    getLatestButton.setProperty("mso_name", "get_latest");
+    getLatestButton.setProperty("mso_visible", "1");
+    getLatestButton.setProperty("classification", "Button");
+
+    var detachButton = this.newItem("MSO_RibbonItem", "add");
+    detachButton.setProperty("mso_label", "Detach from Aras");
+    detachButton.setProperty("mso_name", "detach");
+    detachButton.setProperty("mso_visible", "1");
+    detachButton.setProperty("classification", "Button");
+
+    var browseVersionsButton = this.newItem("MSO_RibbonItem", "add");
+    browseVersionsButton.setProperty("mso_label", "Browse Versions");
+    browseVersionsButton.setProperty("mso_name", "versions");
+    browseVersionsButton.setProperty("mso_visible", "1");
+    browseVersionsButton.setProperty("classification", "Button");
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(versionButton);
+versionsGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(getLatestButton);
+versionsGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(detachButton);
+versionsGroup.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(browseVersionsButton);
+versionsGroup.addRelationship(childRibbonItem);
+
+ribbonItemSetting = this.newItem("MSO_RibbonItemSettings", "add");
+ribbonItemSetting.setRelatedItem(versionsGroup);
+this.addRelationship(ribbonItemSetting);
+
+var collaborationGroup = this.newItem("MSO_RibbonItem", "add");
+collaborationGroup.setProperty("mso_label", "Collaboration");
+collaborationGroup.setProperty("mso_name", "collaboration");
+collaborationGroup.setProperty("mso_visible", "1");
+collaborationGroup.setProperty("classification", "Group");
+
+    var discussionButton = this.newItem("MSO_RibbonItem", "add");
+    discussionButton.setProperty("mso_label", "Discussion");
+    discussionButton.setProperty("mso_name", "discussion");
+    discussionButton.setProperty("mso_visible", "1");
+    discussionButton.setProperty("classification", "Button");
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(discussionButton);
+collaborationGroup.addRelationship(childRibbonItem);
+
+ribbonItemSetting = this.newItem("MSO_RibbonItemSettings", "add");
+ribbonItemSetting.setRelatedItem(collaborationGroup);
+this.addRelationship(ribbonItemSetting);
+
+var settingsGroup = this.newItem("MSO_RibbonItem", "add");
+settingsGroup.setProperty("mso_label", "Settings");
+settingsGroup.setProperty("mso_name", "settings");
+settingsGroup.setProperty("mso_visible", "1");
+settingsGroup.setProperty("classification", "Group");
+
+    var preferencesButton = this.newItem("MSO_RibbonItem", "add");
+    preferencesButton.setProperty("mso_label", "Discussion");
+    preferencesButton.setProperty("mso_name", "discussion");
+    preferencesButton.setProperty("mso_visible", "1");
+    preferencesButton.setProperty("classification", "Button");
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(preferencesButton);
+settingsGroup.addRelationship(childRibbonItem);
+
+ribbonItemSetting = this.newItem("MSO_RibbonItemSettings", "add");
+ribbonItemSetting.setRelatedItem(settingsGroup);
+this.addRelationship(ribbonItemSetting);
+
+var helpGroup = this.newItem("MSO_RibbonItem", "add");
+helpGroup.setProperty("mso_label", "HelpGroup");
+helpGroup.setProperty("mso_name", "helpGroup");
+helpGroup.setProperty("mso_visible", "1");
+helpGroup.setProperty("classification", "Group");
+
+    var helpButton = this.newItem("MSO_RibbonItem", "add");
+    helpButton.setProperty("mso_label", "Help");
+    helpButton.setProperty("mso_name", "help");
+    helpButton.setProperty("mso_visible", "1");
+    helpButton.setProperty("classification", "Button");
+
+        var sessionButton = this.newItem("MSO_RibbonItem", "add");
+        sessionButton.setProperty("mso_label", "Session");
+        sessionButton.setProperty("mso_name", "about_my_session");
+        sessionButton.setProperty("mso_visible", "1");
+        sessionButton.setProperty("classification", "Button");
+
+        var aboutButton = this.newItem("MSO_RibbonItem", "add");
+        aboutButton.setProperty("mso_label", "About");
+        aboutButton.setProperty("mso_name", "about");
+        aboutButton.setProperty("mso_visible", "1");
+        aboutButton.setProperty("classification", "Button");
+
+    childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+    childRibbonItem.setRelatedItem(sessionButton);
+    helpButton.addRelationship(childRibbonItem);
+
+    childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+    childRibbonItem.setRelatedItem(aboutButton);
+    helpButton.addRelationship(childRibbonItem);
+
+childRibbonItem = this.newItem("MSO_ChildRibbonItem", "add");
+childRibbonItem.setRelatedItem(helpButton);
+helpGroup.addRelationship(childRibbonItem);
+
+ribbonItemSetting = this.newItem("MSO_RibbonItemSettings", "add");
+ribbonItemSetting.setRelatedItem(helpGroup);
+this.addRelationship(ribbonItemSetting);
+return this;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>MSO_OnAfterNewCommonSettings</name>
+ </Item>
+</AML>

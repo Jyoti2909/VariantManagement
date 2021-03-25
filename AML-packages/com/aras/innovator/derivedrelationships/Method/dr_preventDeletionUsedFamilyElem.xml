@@ -1,0 +1,24 @@
+﻿<AML>
+ <Item type="Method" id="1B7BA14C7DAA4DC7BCFBEC920881E5BE" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var thisFamilyElement = this.newItem("dr_FamilyElement", "get");
+thisFamilyElement.setID(this.getID());
+thisFamilyElement.setAttribute("select", "dr_relationship_id");
+thisFamilyElement = thisFamilyElement.apply();
+
+if (thisFamilyElement.isError()) {
+	return thisFamilyElement;
+}
+
+var derivedRelationshipId = thisFamilyElement.getProperty("dr_relationship_id");
+var derivedRelationship = this.newItem("dr_Relationship", "delete");
+derivedRelationship.setID(derivedRelationshipId);
+derivedRelationship = derivedRelationship.apply();
+if (derivedRelationship.isError()) {
+	return derivedRelationship;
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_preventDeletionUsedFamilyElem</name>
+ </Item>
+</AML>

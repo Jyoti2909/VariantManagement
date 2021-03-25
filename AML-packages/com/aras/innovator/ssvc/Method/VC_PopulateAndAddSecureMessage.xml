@@ -1,0 +1,431 @@
+﻿<AML>
+ <Item type="Method" id="543977F41FAB4D2585972F0AAA2E3B6C" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	string boardId;
+	string replyToId = this.getProperty("reply_to_id");
+	string messageId = this.getID();
+	List<string> shareWithIdentities = new List<string>();
+	if (String.IsNullOrEmpty(messageId))
+	{
+		messageId = this.getInnovator().getNewID();
+	}
+
+	var isReply = !String.IsNullOrEmpty(replyToId);
+	if (isReply)
+	{
+		string[] propsArray = new[] { "item_type_name", "item_id", "thread_id", "item_type_id", "item_keyed_name", "item_state", "item_major_rev", "item_config_id", "item_version" };
+		Item parentMessage = GetItem("SecureMessage", replyToId, string.Join(",", propsArray) + ", source_id(id)", true);
+		if (parentMessage.isError())
+		{
+			return parentMessage;
+		}
+
+		boardId = parentMessage.getProperty("source_id");
+		foreach (string propertyName in propsArray)
+		{
+			this.setProperty(propertyName, parentMessage.getProperty(propertyName));
+		}
+
+		// handling of message visibility
+		Item relship;
+		var relationships = this.getItemsByXPath("//Relationships/Item[@type='SecureMessageVisibilityFilter']");
+		int itemsCount = relationships.getItemCount();
+		if (itemsCount != 0)
+		{
+			for (int i = 0; i < itemsCount; i++)
+			{
+				relship = relationships.getItemByIndex(i);
+				this.removeRelationship(relship);
+			}
+		}
+		
+		ProcessRelationshipsForReply(parentMessage, messageId, CCO);
+	}
+	else
+	{
+		string type = this.getProperty("item_type_name");
+		if (string.IsNullOrEmpty(type))
+		{
+			throw new ArgumentException(CCO.ErrorLookup.Lookup("SSVC_ItemTypeNAmeCantBeEmpty"));
+		}
+		string id = this.getProperty("item_id");
+		if (string.IsNullOrEmpty(id))
+		{
+			throw new ArgumentException(CCO.ErrorLookup.Lookup("SSVC_ItemIdCantBeEmpty"));
+		}
+
+		string[] propertyNames = new[] { "state", "major_rev", "config_id", "keyed_name" };
+
+		Item item = GetItem(type, id, string.Join(",", propertyNames) + ", generation", false);
+		if (item.isError())
+		{
+			return item;
+		}
+		if (item.getAttribute("discover_only") == "1")
+		{
+			return this.getInnovator().newError(string.Format(CCO.ErrorLookup.Lookup("SSVC_ItemDiscoverOnlyPrivilege"), id));
+		}
+
+		Item board = CreateBoardIfNeed(item.getType(), item.getProperty("config_id"), item.getProperty("keyed_name"));
+		if (board.isError())
+		{
+			return board;
+		}
+		boardId = board.getID();
+
+		this.setProperty("item_type_id", item.getAttribute("typeId"));
+		this.setProperty("thread_id", messageId);
+		this.setProperty("item_version", item.getProperty("generation"));
+
+		foreach (string propertyName in propertyNames)
+		{
+			this.setProperty("item_" + propertyName, item.getProperty(propertyName));
+		}
+
+		// handling of message visibility
+		var relationships = this.getItemsByXPath("//Relationships/Item[@type='SecureMessageVisibilityFilter']");
+		int itemsCount = relationships.getItemCount();
+		if (itemsCount != 0)
+		{
+			Item relship;
+			for (int i = 0; i < itemsCount; i++)
+			{
+				relship = relationships.getItemByIndex(i);
+				if (relship.getProperty("is_creator") == "1")
+				{
+					this.removeRelationship(relship);
+				}
+				else
+				{
+					relship.setProperty("source_id", messageId);
+					relship.setProperty("source_type", SecureMessageItemTypeId);
+					shareWithIdentities.Add(relship.getProperty("related_id"));
+				}
+			}
+			relship = this.createRelationship("SecureMessageVisibilityFilter", "add");
+			relship.setProperty("is_creator", "1");
+			string userAlias = CCO.Identity.GetUserAliases(string.Empty);
+			userAlias = userAlias.Split(',')[0];
+			relship.setProperty("related_id", userAlias);
+			relship.setProperty("source_id", messageId);
+			relship.setProperty("source_type", SecureMessageItemTypeId);
+			isVisibilityFilterExists = true;
+		}
+		AddMentionedIdentities(messageId, shareWithIdentities, CCO);
+	}
+
+	Item itemToApply = PopulateSecureMessage(boardId, messageId, CCO.ErrorLookup);
+	if (itemToApply.isError())
+	{
+		return itemToApply;
+	}
+	bool doGetItem = this.getAttribute("doGetItem") != "0";
+	itemToApply.setAttribute("doGetItem", "0");
+
+	Aras.Server.Security.Identity SMRWIdentity = null;
+	bool permsWasSet = false;
+	try
+	{
+		SMRWIdentity = Aras.Server.Security.Identity.GetByName("SecureMessageReaderWriter");
+		permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(SMRWIdentity);
+		itemToApply = itemToApply.apply();
+		if (itemToApply.isError() || !doGetItem)
+		{
+			return itemToApply;
+		}
+		else
+		{
+			if (!String.IsNullOrEmpty(_relationshipType))
+			{
+				Item item = this.newItem(_relationshipType, "get");
+				itemToApply.addRelationship(item);
+			}
+			if (isVisibilityFilterExists)
+			{
+				Item item = this.newItem("SecureMessageVisibilityFilter", "get");
+				item.setAttribute("select", "is_creator, related_id");
+				item.setAttribute("related_expand", "0");
+				itemToApply.addRelationship(item);
+			}
+			itemToApply = itemToApply.apply("get");
+		}
+		return itemToApply;
+	}
+	finally
+	{
+		if (permsWasSet)
+		{
+			Aras.Server.Security.Permissions.RevokeIdentity(SMRWIdentity);
+		}
+	}
+}
+
+private const string SecureMessageItemTypeId = "F0A8BC4265E44C47A127AEC1975F4C89";
+private string _relationshipType;
+private bool isVisibilityFilterExists = false;
+
+private void ProcessRelationshipsForReply(Item parentMessage, string messageId, Aras.Server.Core.CallContext callContext)
+{
+    List<string> shareWithIdentities = new List<string>();
+    var relationships = parentMessage.getItemsByXPath("//Relationships/Item[@type='SecureMessageVisibilityFilter']");
+	var itemsCount = relationships.getItemCount();
+	if (itemsCount != 0)
+	{
+		for (int i = 0; i < itemsCount; i++)
+		{
+			Item parentRelship = relationships.getItemByIndex(i);
+			string classification = parentRelship.getProperty("classification");
+			if(String.Equals("UserMention", classification, StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+			var relship = this.createRelationship("SecureMessageVisibilityFilter", "add");
+
+			string userIdentity = parentRelship.getProperty("related_id");
+			string creatorIdentity = callContext.Identity.GetUserAliases(string.Empty);
+			creatorIdentity = creatorIdentity.Split(',')[0];
+
+			string isCreator = creatorIdentity == userIdentity ? "1" : "0";
+			if(creatorIdentity != userIdentity)
+			{
+				shareWithIdentities.Add(userIdentity);
+			}
+
+			relship.setProperty("is_creator", isCreator);
+			relship.setProperty("related_id", userIdentity);
+			relship.setProperty("source_id", messageId);
+			relship.setProperty("source_type", SecureMessageItemTypeId);
+		}
+		isVisibilityFilterExists = true;
+		AddMentionedIdentities(messageId, shareWithIdentities, callContext);
+	}
+}
+
+private void AddMentionedIdentities(string messageId, List<string> shareWithIdentities, Aras.Server.Core.CallContext callContext){
+	List<string> userMentions = GetUserMentionIds(this.getProperty("comments"));
+	if(userMentions.Count > 0)
+	{
+		List<string> mentionsIdentity = GetMentionIdentities(shareWithIdentities, userMentions, callContext);
+		foreach(var mention in mentionsIdentity)
+		{
+			var newFilter = this.createRelationship("SecureMessageVisibilityFilter", "add");
+			newFilter.setProperty("related_id", mention);
+			newFilter.setProperty("source_id", messageId);
+			newFilter.setProperty("source_type", SecureMessageItemTypeId);
+			newFilter.setProperty("classification", "UserMention");
+		}
+	}
+}
+
+private Item GetItem(string type, string id, string select, bool getMessageFilter)
+{
+	Item it = this.newItem(type, "get");
+	it.setAttribute("id", id);
+	if (!string.IsNullOrEmpty(select))
+	{
+		it.setAttribute("select", select);
+	}
+	if(getMessageFilter)
+	{
+		Item rel = this.newItem("SecureMessageVisibilityFilter");
+		rel.setAttribute("select", "id, is_creator, classification, related_id");
+		rel.setAttribute("related_expand", "0");
+		it.addRelationship(rel);
+	}
+	return it.apply();
+}
+
+private Item CreateBoardIfNeed(string type, string configId, string keyedName)
+{
+	Item board = this.newItem("Board", "get");
+	board.setAttribute("select", "id");
+	board.setProperty("item_config_id", configId);
+	Item result = board.apply();
+	if (result.getItemCount() == 0)
+	{
+		board.setAction("add");
+		board.setAttribute("doGetItem", "0");
+		board.setProperty("item_type_name", type);
+		board.setProperty("item_keyed_name", keyedName);
+		result = board.apply();
+	}
+	return result;
+}
+
+private static List<string> GetUserMentionIds(string sourceMessage)
+{
+	List<string> userIds = new List<string>();
+	if(sourceMessage == null)
+	{
+		return userIds;
+	}
+	while (sourceMessage.Contains("<user_ref"))
+	{
+		var startIndex = sourceMessage.IndexOf("<user_ref", StringComparison.OrdinalIgnoreCase);
+		var endIndex = sourceMessage.IndexOf("/>", startIndex, StringComparison.OrdinalIgnoreCase);
+		if (endIndex > startIndex)
+		{
+			var substring = sourceMessage.Substring(startIndex, endIndex + 2 - startIndex);
+			var xmlDocument = Aras.Server.Core.XML.CreateNewXMLDocument(substring);
+			if (xmlDocument == null || xmlDocument.FirstChild == null)
+			{
+				break;
+			}
+			else
+			{
+				var userId = xmlDocument.FirstChild.Attributes["user_id"];
+				if (userId != null && !String.IsNullOrEmpty(userId.Value))
+				{
+					userIds.Add(userId.Value);
+					sourceMessage = sourceMessage.Replace(substring, "");
+				}
+				else
+				{
+					break;
+				}
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	return userIds.Distinct().ToList();
+}
+
+private List<string> GetMentionIdentities(List<string> shareWithIdentity, List<string> userIds, Aras.Server.Core.CallContext callContext)
+{
+	List<string> resultList = new List<string>();
+	foreach(var userId in userIds)
+	{
+		var aliasIdentityId = GetUserIsAliasIdentityId(userId, callContext);
+		if(shareWithIdentity.Contains(aliasIdentityId))
+		{
+			// shareWith is alias identity of mentioned person, no need double record
+			continue;
+		}
+		var allUserIdentities = GetAllUserIdentities(userId, aliasIdentityId, callContext);
+		if(allUserIdentities.Intersect(shareWithIdentity).Any())
+		{
+			resultList.Add(aliasIdentityId);
+		}
+	}
+	return resultList;
+}
+
+private static List<string> GetAllUserIdentities(string userId, string aliasIdentityId, Aras.Server.Core.CallContext callContext)
+{
+	const string worldIdentityId = "A73B655731924CD0B027E4F4D5FCC0A9";
+	Aras.Server.Core.InnovatorDatabase database = callContext.DB.InnDatabase;
+	List<string> identityMembers = Aras.Server.Security.Permissions.GetAncestorIdentityIds(database, new string[]{ aliasIdentityId}).ToList();
+	identityMembers.Add(worldIdentityId);
+	return identityMembers;
+}
+
+private string GetUserIsAliasIdentityId(string userId, Aras.Server.Core.CallContext callContext)
+{
+	Item alias = this.newItem("Alias", "get");
+	alias.setProperty("source_id", userId);
+	Item identity = this.newItem("Identity", "get");
+	identity.setProperty("is_alias", "1");
+	alias.setPropertyItem("related_id", identity);
+	alias = alias.apply();
+	if (alias.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(callContext.ErrorLookup.Lookup("SSVC_GetAllUserIdentitiesNoIsAliasIdentity"));
+	}
+	else if (alias.getItemCount() > 1)
+	{
+		throw new Aras.Server.Core.InnovatorServerException(callContext.ErrorLookup.Lookup("SSVC_GetAllUserIdentitiesMoreThanOneIsAliasIdentity"));
+	}
+	return alias.getProperty("related_id");
+}
+
+private string[] allowedRelationships =
+{
+	"SecureMessageMarkup",
+	"SecureMessageAudio",
+	"SecureMessageVideo"
+};
+
+private Item PopulateSecureMessage(string boardId, string messageId, Aras.Server.Core.ErrorLookup errorLookup)
+{
+	this.setType("StoredSecureMessage");
+	this.setProperty("source_id", boardId);
+	this.setID(messageId);
+	if (String.IsNullOrEmpty(this.getProperty("classification")))
+	{
+		this.setProperty("classification", "Manual");
+	}
+
+	var relationships = this.getItemsByXPath("//Relationships/Item[not(@type='SecureMessageVisibilityFilter')]");
+	var itemsCount = relationships.getItemCount();
+	if (itemsCount != 0)
+	{
+		if (itemsCount > 1)
+		{
+			return this.getInnovator().newError(errorLookup.Lookup("SSVC_SMOnlyOneRelationship"));
+		}
+
+		var relationship = relationships.getItemByIndex(0);
+		_relationshipType = relationship.getAttribute("type");
+		if (!allowedRelationships.Contains(_relationshipType))
+		{
+			return this.getInnovator().newError(string.Format(CultureInfo.InvariantCulture, errorLookup.Lookup("SSVC_NotAllowedRelationship"), _relationshipType));
+		}
+
+		//If "SecureMessageAudio" or "SecureMessageVideo" we need to set only source props
+		relationship.setProperty("source_id", messageId);
+		relationship.setProperty("source_type", SecureMessageItemTypeId);
+		this.setProperty("classification", _relationshipType.Replace("SecureMessage", ""));
+
+		//If "SecureMessageMarkup" we need to set additional props. Source props will be set later.
+		if (_relationshipType == "SecureMessageMarkup")
+		{
+			var topMarkupMessageId = relationship.getProperty("top_markup_message_id");
+			if (string.IsNullOrEmpty(topMarkupMessageId))
+			{
+				string markupHolderId = relationship.getProperty("markup_holder_id");
+				Item markupHolderItem = this.newItem(relationship.getProperty("markup_holder_itemtype_name"), "get");
+				markupHolderItem.setID(markupHolderId);
+				markupHolderItem.setAttribute("select", "config_id,major_rev,generation,state");
+				markupHolderItem = markupHolderItem.apply();
+				if (markupHolderItem.isError())
+				{
+					return markupHolderItem;
+				}
+
+				relationship.setProperty("markup_holder_id", markupHolderId);
+				relationship.setProperty("markup_holder_type_id", markupHolderItem.getAttribute("typeId"));
+				relationship.setProperty("markup_holder_config_id", markupHolderItem.getProperty("config_id"));
+				relationship.setProperty("markup_holder_major_rev", markupHolderItem.getProperty("major_rev"));
+				relationship.setProperty("markup_holder_version", markupHolderItem.getProperty("generation"));
+				relationship.setProperty("markup_holder_state", markupHolderItem.getProperty("state"));
+			}
+			else
+			{
+				var propsArray = new[] { "markup_holder_id", "markup_holder_type_id", "markup_holder_config_id", "markup_holder_major_rev", "markup_holder_version", "markup_holder_state" };
+				Item markupMessageItem = this.newItem("SecureMessageMarkup", "get");
+				markupMessageItem.setID(topMarkupMessageId);
+				markupMessageItem.setAttribute("select", string.Join(",", propsArray));
+				markupMessageItem = markupMessageItem.apply();
+				if (markupMessageItem.isError() || string.IsNullOrEmpty(markupMessageItem.getResult()))
+				{
+					return this.getInnovator().newError(string.Format(CultureInfo.InvariantCulture, errorLookup.Lookup("SSVC_SecureMessageMarkupNotFound"), topMarkupMessageId));
+				}
+
+				foreach (string propertyName in propsArray)
+				{
+					relationship.setProperty(propertyName, markupMessageItem.getProperty(propertyName));
+				}
+			}
+
+		}
+	}
+	this.setProperty("created_on_tick", DateTime.UtcNow.Ticks.ToString());
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_PopulateAndAddSecureMessage</name>
+ </Item>
+</AML>

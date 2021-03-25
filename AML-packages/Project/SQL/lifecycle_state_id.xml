@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="SQL" id="E1A2E31D8538416CB382EA8DCBF38163" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>lifecycle_state_id</old_name>
+  <sqlserver_body><![CDATA[/* name: lifecycle_state_id.xml
+created: 28-MAR-2003 George J. Carrette, for Army WVA project.
+purpose: to support item creation from sql code.
+*/
+create function innovator.lifecycle_state_id(@MAP_NAME VARCHAR(32),
+                                       @STATE_NAME VARCHAR(32))
+RETURNS CHAR(32)
+AS
+BEGIN
+RETURN(
+SELECT LIFE_CYCLE_STATE.ID 
+FROM LIFE_CYCLE_STATE,LIFE_CYCLE_MAP
+WHERE LIFE_CYCLE_STATE.NAME = @STATE_NAME AND
+      LIFE_CYCLE_MAP.NAME = @MAP_NAME AND
+      LIFE_CYCLE_MAP.ID = LIFE_CYCLE_STATE.SOURCE_ID
+)
+END
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>lifecycle_state_id</name>
+ </Item>
+</AML>

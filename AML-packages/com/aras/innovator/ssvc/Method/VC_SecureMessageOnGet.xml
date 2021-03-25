@@ -1,0 +1,86 @@
+﻿<AML>
+ <Item type="Method" id="88387D0D03D545358DA197F2F78C7106" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharpInOut;
+	string [] smRelationships = {
+		"SecureMessageMarkup",
+		"SecureMessageAudio",
+		"SecureMessageVideo"
+	};
+	var connection = (Aras.Server.Core.IOMConnection) InnovatorServerASP;
+	Aras.Server.Core.CallContext CCO = connection.CCO;
+	Innovator inn = new Innovator(connection);
+	Item itm = inn.newItem();
+	itm.loadAML(inDom.OuterXml);
+	string type = itm.getType();
+	if (itm.getAttribute("serverEvents") == "0")
+	{
+		throw new Aras.Server.Core.InnovatorServerException(string.Format(CCO.ErrorLookup.Lookup("SSVC_ItemsCantBeObtained"), type));
+	}
+	Aras.Server.Security.Identity identity = Aras.Server.Security.Identity.GetByName("SecureMessageReaderWriter");
+	bool permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(identity);
+	Item resultItem = inn.newItem();
+	try
+	{
+		eventData.BaseGetItem(outDom);
+		resultItem.loadAML(outDom.InnerXml);
+		if (resultItem.isError())
+		{
+			if (resultItem.getErrorCode() == "0" && smRelationships.Contains(type))
+			{
+				outDom.LoadXml(inn.newResult("").dom.InnerXml);
+			}
+		}
+		else
+		{
+			XmlNodeList secureMessages = outDom.SelectNodes(Item.XPathResultItem);
+			for (int i = secureMessages.Count - 1; i >= 0; i--)
+			{
+				XmlElement secureMessage = secureMessages[i] as XmlElement;
+				if (IsMessageErased(secureMessage))
+				{
+					Aras.Server.Core.XML.SetItemPropertyNullInternal(secureMessage, "comments", true);
+					XmlNode relshipsNode = secureMessage.SelectSingleNode("Relationships");
+					if (relshipsNode != null)
+					{
+						secureMessage.RemoveChild(relshipsNode);
+					}
+				}
+			}
+		}
+	}
+	finally
+	{
+		if (permsWasSet)
+		{
+			Aras.Server.Security.Permissions.RevokeIdentity(identity);
+		}
+	}
+}
+
+private static bool IsMessageErased(XmlElement element)
+{
+	const string disabledByIdPropertyName = "disabled_by_id";
+	XmlNode disabledById = element.SelectSingleNode(disabledByIdPropertyName);
+
+	bool isErased;
+	if (disabledById == null)
+	{
+		isErased = false;
+	}
+	else if (!string.IsNullOrEmpty(disabledById.InnerText))
+	{
+		isErased = true;
+	}
+	else
+	{
+		XmlAttribute isNullAttribute = disabledById.Attributes["is_null"];
+		isErased = isNullAttribute == null || string.Equals(isNullAttribute.Value, "0", StringComparison.Ordinal);
+	}
+
+	return isErased;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_SecureMessageOnGet</name>
+ </Item>
+</AML>

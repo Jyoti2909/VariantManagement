@@ -1,0 +1,19 @@
+﻿<AML>
+ <Item type="Method" id="6E51D5D17D604150AF9453E539AF5804" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!control) {
+	return;
+}
+if (control.getText() !== '') {
+	return;
+}
+
+let tgvdItemId = inArgs.contextParams.tgvContext.getViewDefinitionId();
+
+let item = aras.itemsCache.getItem(tgvdItemId) || aras.getItemById('rb_TreeGridViewDefinition', tgvdItemId);
+const defaultValue = 2;
+control.setText(aras.getItemProperty(item, 'max_query_depth') || defaultValue);]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>rb_TGVExpandInitHandler</name>
+ </Item>
+</AML>

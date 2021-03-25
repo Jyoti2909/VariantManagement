@@ -1,0 +1,94 @@
+<div id="itemTypesTab">
+	<div id="itemTypeModes" data-dojo-attach-point="itemTypeModes">
+		<span id="itm_featured" aras_ui_resource_key="reportdesigner.itm_featured">Featured</span>
+		<span id="itm_all" aras_ui_resource_key="reportdesigner.itm_all">All</span>
+		<span id="itm_advanced" aras_ui_resource_key="reportdesigner.itm_advanced" style="display:none">Advanced</span>
+	</div>
+	<div id="breadcrumbs" data-dojo-attach-point="breadcrumbs"></div>
+	<div data-dojo-attach-point="treeContainer" id="treeContainer" style="overflow-x: auto; white-space: nowrap;">
+		<div id="itemTypesNProps" class="border">
+			<div class="half_label" data-dojo-attach-point="leftTreeLabel" aras_ui_resource_key="reportdesigner.base_item_type">Select Top Level ItemType</div>
+			<div id="baseItemTypesWidget" data-dojo-attach-point="baseItemTypesWidget"></div>
+			<div id="itemTypeTree" data-dojo-attach-point="itemTypeTree"></div>
+		</div>
+
+		<div id="selection" class="border" style="overflow-x: auto;" data-dojo-attach-point="selectedItemsTree">
+			<div class="half_label" aras_ui_resource_key="common.contents">Reporting Structure</div>
+			<div id="selectedItems"></div>
+		</div>
+
+		<div adhochelpcontrol="true" id="item_types_help"></div>
+	</div>
+
+	<div style="clear: both"></div>
+	<div class="bottom-controls" data-dojo-attach-point="bottomControls">
+		<div class="checkboxes">
+			<input type="checkbox" id="AllowNulls" name="AllowNulls" data-dojo-attach-point="allowNullsCheckbox"><label for="AllowNulls" aras_ui_resource_key="reportdesigner.allow_nulls">Allow Nulls</label>
+		</div>
+		<button id="continueToProperties" class="form_btn btn" data-dojo-attach-point="continueToProperties" disabled="disabled" aras_ui_resource_key="reportdesigner.continue_to_props">Continue To Properties</button>
+	</div>
+
+
+	<script type="text/template" id="baseItemTypeXml">
+		<table enablehtml="false" icon0="" icon1="" treelines="1" thinborder="true">
+			<menu></menu>
+			<thead>
+				<th></th>
+			</thead>
+			<tr level="0" id="TreeBaseItemType" icon0="{5}" icon1="{5}">
+				<userdata key="className" value="tree-base-item-type" />
+				<userdata key="itemTypeId" value="{6}" />
+				<userdata key="name" value="{7}" />
+				<td>{0}</td>
+				{1}
+			{2}
+			{3}
+			{4}
+			</tr>
+		</table>
+	</script>
+	
+	<!-- keep span tag on single line! -->
+	<script type="text/template" id="rightDataNode">
+		<div id="{0}" class="tree-node" icon0="{5}" icon1="{5}">
+			<label data-key="itemTypeId" data-value="{1}"></label>
+			<label data-key="rule" data-value="{2}"></label>
+			<label data-key="columnName" data-value="{3}"></label>
+			<label data-key="countSuffix" data-value="{6}"></label>
+			<label data-key="format" data-value="rich"></label>
+			<label data-key="tabLabel" data-value="{7}"></label>
+			<label data-key="caption" data-value="{8}"></label>
+			<label data-key="isRelationship" data-value="{9}"></label>
+			<span>{4}<p class="delete-node-btn"></p></span>
+		</div>
+	</script>
+
+	<script type="application/xml" id="amlSelectRelated">
+    <AML>
+    <!-- not bad to test on Form: 47573682FB7549F59ADECD4BFE04F1DE -->
+        <Item type='RelationshipType' action='get' select='related_id,relationship_id,name,label,large_icon'><source_id>{0}</source_id>
+        <relationship_id>
+        <Item type='ItemType' action='get' select='instance_data,name,label,large_icon'>
+        </Item>
+        </relationship_id>
+        <related_id>
+        <Item type='ItemType' action='get' select='instance_data,name,label,large_icon'>
+        </Item>
+        </related_id>
+        </Item>
+    </AML>
+	</script>
+	<script type="application/xml" id="amlSelectItemTypeProps">
+		<AML>
+			<Item type="ItemType" id="{0}" action="get" select="id,name,label,large_icon">
+				<Relationships>
+					<Item type="Property" action="get" select="id,name,label,data_source" {1}>
+						<data_source>
+							<Item type="ItemType" action="get" select="id,name,label,large_icon"/>
+						</data_source>
+					</Item>
+				</Relationships>
+			</Item>
+		</AML>
+	</script>
+</div>

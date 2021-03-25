@@ -1,0 +1,25 @@
+﻿<AML>
+ <Item type="Method" id="A93249D0377C4493B5834437BD6B878B" action="add">
+  <comments>Limit crawlers count</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[if (this.getProperty("crawler_type") == "ESItemCrawler") {
+	return this;
+}
+
+Innovator inn = this.getInnovator();
+
+Item crawler = inn.newItem("ES_Crawler", "get");
+crawler.setAttribute("select", "id");
+crawler.setProperty("crawler_type", this.getProperty("crawler_type"));
+crawler = crawler.apply();
+
+if (!crawler.isError()) {
+	if (crawler.getItemCount() > 0 && (this.getID() != crawler.getID())) {
+		return inn.newError("There can not be more than one instance of this crawler.");
+	}
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>ES_LimitCrawler</name>
+ </Item>
+</AML>

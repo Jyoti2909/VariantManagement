@@ -1,0 +1,21 @@
+﻿<AML>
+ <Item type="Method" id="8011535212394FE99F90843E6AB320EC" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const hidden = options.selectedRowsIds.length < 2;
+if (hidden) {
+	return { hidden };
+}
+
+const isNew = options.selectedRowsIds.every(selectedRowId => options.rows.get(selectedRowId, '@aras.action') === 'add');
+const isPolymorphicIT = options.isPolymorphic;
+const isPromoteDisabled = window.isFunctionDisabled(options.itemTypeName, 'Promote');
+const disabled = isNew || isPolymorphicIT || isPromoteDisabled;
+
+return {
+	disabled,
+	hidden: false
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_pmig_mass_promote_init</name>
+ </Item>
+</AML>

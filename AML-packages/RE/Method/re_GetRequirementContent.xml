@@ -1,0 +1,383 @@
+﻿<AML>
+ <Item type="Method" id="7360A1B688B3439885272F239C893F1E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Innovator inn = this.getInnovator();
+	String reqId = this.getID();
+	String langCode = "en";
+	String type = this.getType();
+	Item rootBlockItem;
+	Item xmlSchema;
+	String arasBlockId;
+	List<KeyValuePair<int, XmlNode>> chaptersList = null;
+	if (type == "re_Requirement")
+	{
+		String blockStructureAml = String.Format(CultureInfo.CurrentCulture, @"
+			<Item type='re_Requirement' id='{0}' select='id,content,req_document_type,config_id,name,is_current,major_rev,generation' action='get' language='{1}'>
+				<req_document_type>
+					<Item type='tp_XmlSchema' select='name,content,target_namespace' action='get'>
+						<Relationships>
+							<Item type='tp_XmlSchemaElement' action='get' select='name,content_generator,is_content_dynamic'/>
+						</Relationships>
+					</Item>
+				</req_document_type>
+				<Relationships>
+					<Item type='re_ImageReference' action='get' select='reference_id,ignore_all_versions,ignored_version_id,related_id(id,src,is_current,major_rev,generation)' />
+				</Relationships>
+			</Item>", reqId, langCode);
+
+		rootBlockItem = inn.newItem();
+		rootBlockItem.loadAML(blockStructureAml);
+		rootBlockItem = rootBlockItem.apply();
+
+		if (rootBlockItem.isError())
+		// something's wrong. There is no element with such reqId or the user does not have permissions to get it
+		{
+			return inn.newError(rootBlockItem.getErrorString());
+		}
+
+		xmlSchema = rootBlockItem.getPropertyItem("req_document_type");
+		arasBlockId = rootBlockItem.getProperty("config_id");
+	}
+	else
+	{
+		// type == "re_Requirement_Document"
+		Item requirementDocument = inn.newItem(type, "get");
+		requirementDocument.setID(reqId);
+		Item docRequirement = inn.newItem("re_Req_Doc_Content", "get");
+		docRequirement.setAttribute("orderBy", "chapter");
+		docRequirement.setAttribute("select", "chapter,related_id(id,content)");
+		Item requirement = inn.newItem("re_Requirement", "get");
+		requirement.setAttribute("language", langCode);
+		docRequirement.setRelatedItem(requirement);
+
+		Item reqImageReference = inn.newItem("re_ImageReference", "get");
+		reqImageReference.setAttribute("select", "reference_id,ignore_all_versions,ignored_version_id,related_id(id,src,is_current,major_rev,generation)");
+		requirement.addRelationship(reqImageReference);
+
+		requirementDocument.addRelationship(docRequirement);
+
+		requirementDocument = requirementDocument.apply();
+		if (requirementDocument.isError())
+		{
+			return requirementDocument;
+		}
+		string schemaId = this.getProperty("req_document_type");
+		xmlSchema = GetXmlSchemaForReqDocument(schemaId, inn, requirementDocument);
+		if (xmlSchema.isError())
+		{
+			return xmlSchema;
+		}
+
+		chaptersList = GetChaptersList(requirementDocument);
+		rootBlockItem = requirementDocument.getItemsByXPath(Item.XPathResult + "/Item/Relationships/Item/related_id/Item[@type='re_Requirement']");
+		arasBlockId = requirementDocument.getProperty("config_id");
+	}
+
+	StringBuilder docContent = new StringBuilder();
+	XmlWriterSettings settings = new XmlWriterSettings();
+	settings.Indent = false;
+	settings.OmitXmlDeclaration = true;
+
+	using (XmlWriter xw = XmlWriter.Create(docContent, settings))
+	{
+		xw.WriteStartElement("aras", "document", "http://aras.com/ArasTechDoc");
+		{
+			xw.WriteStartAttribute("xmlns");
+			xw.WriteValue(xmlSchema.getProperty("target_namespace"));
+			xw.WriteEndAttribute();
+
+			xw.WriteStartAttribute("schemaid");
+			xw.WriteValue(xmlSchema.getID());
+			xw.WriteEndAttribute();
+
+			xw.WriteStartElement("aras", "content", "http://aras.com/ArasTechDoc");
+			{
+				if (type == "re_Requirement") {
+					AppendBlock(xw, langCode, rootBlockItem, arasBlockId);
+				} else {
+					AppendBlockForReqDocument(xw, langCode, rootBlockItem, arasBlockId, chaptersList);
+				}
+			}
+			xw.WriteEndElement();
+
+			// build referencesXmls and updated content for elements with dynamic content generators
+			Dictionary<String, String> referenceItemXmls = GetAllReferenceXmls(rootBlockItem, langCode);
+
+			// append document external references to output
+			xw.WriteStartElement("aras", "references", "http://aras.com/ArasTechDoc");
+			{
+				foreach (KeyValuePair<String, String> referenceXmlData in referenceItemXmls)
+				{
+					xw.WriteRaw(referenceXmlData.Value);
+				}
+
+			}
+
+		}
+		xw.WriteEndElement();
+	}
+
+	return inn.newResult(docContent.ToString());
+}
+
+static Item GetXmlSchemaForReqDocument(string schemaId, Innovator inn, Item requirementDocument)
+{
+	Item xmlSchema = inn.newItem("tp_XmlSchema", "get");
+	if (String.IsNullOrEmpty(schemaId))
+	{
+		Item relationships = requirementDocument.getRelationships("re_Req_Doc_Content");
+		if (relationships.getItemCount() > 0)
+		{
+			Item firstRelatinship = relationships.getItemByIndex(0);
+			Item firstRequirement = firstRelatinship.getRelatedItem();
+			schemaId = firstRequirement.getProperty("req_document_type");
+		}
+	}
+	if (!String.IsNullOrEmpty(schemaId))
+	{
+		xmlSchema.setID(schemaId);
+	} else {
+		xmlSchema.setProperty("application", "re_Requirement");
+	}
+
+	xmlSchema = xmlSchema.apply();
+	return xmlSchema.isCollection() ? inn.newError("It is impossible to associate xml schema with Requirements Document.") : xmlSchema;
+}
+
+internal static Dictionary<String, String> GetAllReferenceXmls(Item targetDocument, String languageCode)
+{
+	// reference content preparation section:
+	// reference elements content should be generated before dynamic content to set required references if that will be needed
+	// Use // in xpath because we need to get references from all levels
+	Item documentReferences = targetDocument.getItemsByXPath("//Relationships/Item[@type='re_ImageReference']");
+	int referenceCount = documentReferences.getItemCount();
+	String referenceId;
+
+	HashSet<String> existingReferences = new HashSet<String>();
+	Dictionary<String, String> referenceItemXmls = new Dictionary<String, String>();
+	StringBuilder referenceXmlContent = new StringBuilder();
+
+	XmlWriterSettings writerSettings = new XmlWriterSettings();
+	writerSettings.Indent = false;
+	writerSettings.OmitXmlDeclaration = true;
+	writerSettings.ConformanceLevel = ConformanceLevel.Fragment;
+	using (XmlWriter fragmentWriter = XmlWriter.Create(referenceXmlContent, writerSettings))
+	{
+		for (int referenceIndex = 0; referenceIndex < referenceCount; referenceIndex++)
+		{
+			Item currentReference = documentReferences.getItemByIndex(referenceIndex);
+			referenceId = currentReference.getProperty("reference_id");
+
+			if (!IsReferenceDuplicate(currentReference, existingReferences))
+			{
+				// Only ImageReferences are supported for Requirement
+				AppendImage(fragmentWriter, currentReference);
+				fragmentWriter.Flush();
+				referenceItemXmls.Add(referenceId, referenceXmlContent.ToString());
+				referenceXmlContent.Clear();
+			}
+		}
+	}
+
+	return referenceItemXmls;
+}
+
+static void AppendImage(XmlWriter xw, Item imageReference)
+{
+	Item imageItem = imageReference.getRelatedItem();
+	Boolean hasReferenceItem = imageItem != null;
+
+	xw.WriteStartElement("aras", "image", "http://aras.com/ArasTechDoc");
+	{
+		System.Web.Script.Serialization.JavaScriptSerializer jsSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+		Dictionary<string, string> referenceProperties = new Dictionary<string, string>();
+
+		if (hasReferenceItem)
+		{
+			String isCurrent = imageItem.getProperty("is_current");
+			String latestVersionId = "";
+
+			if (isCurrent == "0")
+			{
+				Item latestItemVersion = imageItem.newItem(imageItem.getType(), "getItemLastVersion");
+				latestItemVersion.setID(imageItem.getID());
+				latestItemVersion = latestItemVersion.apply();
+
+				if (!latestItemVersion.isError())
+				{
+					latestVersionId = latestItemVersion.getID();
+				}
+			}
+
+			referenceProperties.Add("isCurrent", imageItem.getProperty("is_current"));
+			referenceProperties.Add("majorVersion", imageItem.getProperty("major_rev"));
+			referenceProperties.Add("minorVersion", imageItem.getProperty("generation"));
+			referenceProperties.Add("latestVersionId", latestVersionId);
+
+			if (imageItem.getAttribute("discover_only") == "1")
+			{
+				xw.WriteAttributeString("isBlocked", "true");
+			}
+			else
+			{
+				xw.WriteAttributeString("src", imageItem.getProperty("src"));
+			}
+			xw.WriteAttributeString("imageId", imageItem.getID());
+		}
+		else
+		{
+			if (imageReference.getPropertyAttribute("related_id", "is_null") == "0")
+			{
+				xw.WriteAttributeString("isBlocked", "true");
+				String blockUid = Guid.NewGuid().ToString().Replace("-", "").ToUpper(CultureInfo.CurrentCulture);
+				xw.WriteAttributeString("imageId", blockUid);
+			}
+		}
+
+		referenceProperties.Add("referenceId", imageReference.getID());
+		referenceProperties.Add("ignoredVersionId", imageReference.getProperty("ignored_version_id"));
+		referenceProperties.Add("ignoreAllVersions", imageReference.getProperty("ignore_all_versions"));
+
+		// add required attributes
+		xw.WriteAttributeString("ref-id", imageReference.getProperty("reference_id"));
+		xw.WriteAttributeString("referenceProperties", jsSerializer.Serialize(referenceProperties));
+	}
+
+	xw.WriteEndElement();
+}
+
+static void AppendBlockForReqDocument(XmlWriter xw, String langCode, Item rootBlock, string blockId, List<KeyValuePair<int, XmlNode>> sortedChapters)
+{
+	xw.WriteStartElement("aras", "block", "http://aras.com/ArasTechDoc");
+	{
+		xw.WriteAttributeString("blockId", blockId);
+		xw.WriteAttributeString("by-reference", "internal");
+		xw.WriteAttributeString("aras", "id", null, blockId);
+
+		int chaptersCount = sortedChapters.Count();
+		int itemsCount = rootBlock.getItemCount();
+		foreach (KeyValuePair<int, XmlNode> chapter in sortedChapters)
+		{
+			int sortIndex = chapter.Key;
+			if (sortIndex < itemsCount)
+			{
+				Item blockItem = rootBlock.getItemByIndex(sortIndex);
+				Boolean isBlocked = blockItem.getAttribute("discover_only") == "1";
+
+				if (isBlocked)
+				{
+					xw.WriteStartElement("aras", "blocked", "http://aras.com/ArasTechDoc");
+					{
+						xw.WriteAttributeString("isBlocked", "true");
+					}
+					xw.WriteEndElement();
+				}
+				else
+				{
+					string content = blockItem.getProperty("content", "", langCode);
+					int position = content.IndexOf("</aras:emph></Requirement-Chapter>");
+					xw.WriteRaw(content.Insert(position, string.Format(CultureInfo.InvariantCulture, "{0} - ", chapter.Value.InnerText)));
+				}
+			}
+		}
+	}
+	xw.WriteEndElement();
+}
+
+static List<KeyValuePair<int, XmlNode>> GetChaptersList(Item requirementDocument)
+{
+	XmlNodeList chaptersXML = requirementDocument.dom.SelectNodes(Item.XPathResult + "/Item/Relationships/Item/chapter");
+	List<KeyValuePair<int, XmlNode>> chaptersList = new List<KeyValuePair<int, XmlNode>>();
+	for (int index = 0; index < chaptersXML.Count; index++)
+	{
+		chaptersList.Add(new KeyValuePair<int, XmlNode>(index, chaptersXML[index]));
+	}
+	Comparison<KeyValuePair<int, XmlNode>> comparer = new Comparison<KeyValuePair<int, XmlNode>>(SortChapters);
+	chaptersList.Sort(comparer);
+	return chaptersList;
+}
+
+static int SortChapters(KeyValuePair<int, XmlNode> prevItem, KeyValuePair<int, XmlNode> nextItem)
+{
+	int result = 0;
+	string prevChapter = prevItem.Value.InnerText;
+	string nextChapter = nextItem.Value.InnerText;
+	List<int> prevSplitResult = prevChapter.Split('.').Select(value => int.Parse(value)).ToList();
+	List<int> nextSplitResult = nextChapter.Split('.').Select(value => int.Parse(value)).ToList();
+	for (int i = 0; i < Math.Max(prevSplitResult.Count, nextSplitResult.Count); i++)
+	{
+		if (prevSplitResult.Count - 1 < i)
+		{
+			result = -1;
+			return result;
+		}
+		else if (nextSplitResult.Count - 1 < i)
+		{
+			result = 1;
+			return result;
+		}
+		else
+		{
+			result = prevSplitResult[i] - nextSplitResult[i];
+			if (result != 0)
+			{
+				return result;
+			}
+		}
+	}
+	return result;
+}
+
+static void AppendBlock(XmlWriter xw, String langCode, Item blockItems, string blockId)
+{
+
+	xw.WriteStartElement("aras", "block", "http://aras.com/ArasTechDoc");
+	{
+		xw.WriteAttributeString("blockId", blockId);
+		xw.WriteAttributeString("by-reference", "internal");
+		xw.WriteAttributeString("aras", "id", null, blockId);
+
+		int itemsCount = blockItems.getItemCount();
+		for (int itemIndex = 0; itemIndex < itemsCount; itemIndex++)
+		{
+			Item blockItem = blockItems.getItemByIndex(itemIndex);
+			Boolean isBlocked = blockItem.getAttribute("discover_only") == "1";
+
+			if (isBlocked)
+			{
+				xw.WriteStartElement("aras", "blocked", "http://aras.com/ArasTechDoc");
+				{
+					xw.WriteAttributeString("isBlocked", "true");
+				}
+				xw.WriteEndElement();
+			}
+			else
+			{
+				xw.WriteRaw(blockItem.getProperty("content", "", langCode));
+			}
+		}
+	}
+	xw.WriteEndElement();
+}
+
+static Boolean IsReferenceDuplicate(Item referenceItem, HashSet<String> existingIds)
+{
+	if (referenceItem != null)
+	{
+		String referenceId = referenceItem.getProperty("reference_id");
+
+		if (!existingIds.Contains(referenceId))
+		{
+			existingIds.Add(referenceId);
+		}
+		else
+		{
+			return true;
+		}
+	}
+
+	return false;]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_GetRequirementContent</name>
+ </Item>
+</AML>

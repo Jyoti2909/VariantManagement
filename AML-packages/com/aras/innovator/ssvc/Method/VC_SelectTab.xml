@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="3BC58A186DBB4C9AB4F71A9772E74BCD" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var tabContainer = dijit.byId('viewers');
+if (inArgs.control.viewerName === 'HOOPSViewer' && aras.Browser.isIe() && aras.Browser.getMajorVersionNumber() < 11) {
+	aras.AlertError(aras.getResource('../Modules/aras.innovator.viewers/', 'browser_is_not_supported'));
+	this.set('checked', false);
+	return;
+}
+if ((inArgs.control.viewerName === 'PDFViewer' || inArgs.control.viewerName === 'AdvancedImageViewer') &&
+					aras.Browser.isIe() && aras.Browser.getMajorVersionNumber() < 11) {
+	aras.AlertError(aras.getResource('../Modules/aras.innovator.viewers/', 'browser_is_not_supported_pdf'));
+	this.set('checked', false);
+	return;
+}
+var callback = function(viewerContainer) {
+	var frame = viewerContainer.getChildren()[0].viewerFrame;
+	if (frame && !frame.contentWindow.SSVCViewer) {
+		frame.contentWindow.onViewerIsReady = function() {
+			var args = frame.contentWindow.VC.Utils.Page.GetParams();
+			frame.contentWindow.SSVCViewer.displayFile(args.fileUrl);
+		};
+	}
+};
+tabContainer.selectTab(inArgs.control.tabId, callback);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VC_SelectTab</name>
+ </Item>
+</AML>

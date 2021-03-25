@@ -1,0 +1,47 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" type="text/css" href="../../../javascript/include.aspx?classes=common.min.css"/>
+	<link rel="stylesheet" type="text/css" href="../Styles/EffectivityStyles.min.css"/>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,XmlDocument,ToolbarWrapper,pageReturnBlocker"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js"
+		data-dojo-config="async: true, isDebug: false, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../../jsBundles/cui.js"></script>
+	<script type="text/javascript" src="../Scripts/EffectivityExpressionItemGridController.js"></script>
+	<script type="text/javascript" src="../Scripts/effs_gridFormatters.js"></script>
+	<script type="text/javascript">
+		window.addEventListener('DOMContentLoaded', function() {
+			require(['EffectivityServices/Scripts/EffectivityExpressionItemsLoader'], function(EffectivityExpressionItemsLoader) {
+				const dialogArguments = window.frameElement.dialogArguments;
+				const aras = dialogArguments.aras;
+				const effectivityExpressionItemsLoader = new EffectivityExpressionItemsLoader(aras, dialogArguments.effectiveItemTypeId);
+				const parameters = {
+					aras: aras,
+					effectivityExpressionItemsLoader: effectivityExpressionItemsLoader,
+					effectiveItemId: dialogArguments.effectiveItemId,
+					effectiveItemTypeId: dialogArguments.effectiveItemTypeId,
+					extraAccessControlProviderMethodName: dialogArguments.extraAccessControlProviderMethodName,
+					title: dialogArguments.title,
+					titleConnectId: 'title_container',
+					closeButtonConnectId: 'close_button_container',
+					toolbarConnectId: 'toolbar_container',
+					gridConnectId: 'grid_container',
+					closeButtonClickHandler: dialogArguments.closeButtonClickHandler,
+					onCreateUpdateDeleteExpressionCallback: dialogArguments.onCreateUpdateDeleteExpressionCallback
+				};
+				new EffectivityExpressionItemGridController(parameters);
+			});
+		});
+	</script>
+</head>
+<body class="effs-expression-item-grid aras-flex aras-flex_column">
+	<div class="effs-titlebar aras-titlebar aras-titlebar_c aras-flex">
+		<img class="aras-toolbar__item aras-toolbar__icon" src="../../../images/EffExpression.svg">
+		<span id="title_container" class="effs-titlebar__title aras-toolbar__item aras-toolbar__title"></span>
+		<span id="close_button_container" class="effs-titlebar__close-button aras-toolbar__item aras-toolbar__icon aras-hide aras-dialog__close-button aras-icon-close"></span>
+	</div>
+	<div id="toolbar_container" class='effs-expression-item-grid__item_margin-top_small'></div>
+	<div id="grid_container" class='effs-expression-item-grid__item_margin-top_regular'></div>
+</body>
+</html>

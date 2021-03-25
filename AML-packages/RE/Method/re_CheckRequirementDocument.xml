@@ -1,0 +1,45 @@
+﻿<AML>
+ <Item type="Method" id="14D4BF4A818F4E83B14AE472BF06EA7C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string forbiddenStates = this.getProperty("forbidden_states");
+	//If there is no forbidden states then return
+	if (string.IsNullOrEmpty(forbiddenStates))
+	{
+		return this;
+	}
+
+	string requirementId = this.getProperty("requirementId");
+	string newState = this.getProperty("new_state");
+
+	//Get Requirements Documents by Requirement id
+	Item requirementDocuments = this.newItem("re_Requirement_Document", "get");
+	Item reqDocContent = this.newItem("re_Req_Doc_Content", "get");
+	Item requirement = this.newItem("re_Requirement", "get");
+	requirement.setID(requirementId);
+	reqDocContent.setRelatedItem(requirement);
+	requirementDocuments.addRelationship(reqDocContent);
+	requirementDocuments = requirementDocuments.apply();
+
+	if (requirementDocuments.isError())
+	{
+		return this;
+	}
+
+	int reqDocsCount = requirementDocuments.getItemCount();
+	for (int docIndex = 0; docIndex < reqDocsCount; docIndex++)
+	{
+		Item reqDocument = requirementDocuments.getItemByIndex(docIndex);
+		string stateOfRequirementDocument = reqDocument.getProperty("state");
+		if (forbiddenStates.IndexOf(stateOfRequirementDocument, StringComparison.Ordinal) != -1)
+		{
+			string itemNumber = reqDocument.getProperty("item_number");
+			return this.getInnovator().newError("Cannot promote Requirement to '" + newState + "' state because Requirements Document " + itemNumber + " is in '" + stateOfRequirementDocument + "' state.");
+		}
+	}
+
+	//Compare current state with forbidden states
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_CheckRequirementDocument</name>
+ </Item>
+</AML>

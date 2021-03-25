@@ -1,0 +1,27 @@
+﻿<AML>
+ <Item type="Method" id="4AC1967B0AAC4DB58CAA96E98BC84716" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var onLoadCallBack = function() {
+	require([
+		'ES/Scripts/Classes/Utils'
+	], function(Utils) {
+		var utils = new Utils({
+			arasObj: aras
+		});
+		var dialogIframe = dialog.contentNode.querySelector('iframe');
+		utils.processMultilingualNodes(dialogIframe.contentDocument);
+	});
+};
+
+var dialog = ArasModules.Dialog.show('iframe', {
+	title: aras.getResource('../Modules/aras.innovator.ES', 'service.fp.legend.title'),
+	aras: aras,
+	dialogWidth: 260,
+	dialogHeight: 100,
+	content: '../Modules/aras.innovator.ES/Views/Templates/ServiceGroupLegend.html',
+	onLoad: onLoadCallBack
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_OnToolbarLegendButtonClick</name>
+ </Item>
+</AML>

@@ -1,0 +1,56 @@
+﻿<AML>
+ <Item type="Method" id="6E72FE69A62E4931BF9E0823127E8241" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string activityID = this.getProperty("source_id");
+if (string.IsNullOrEmpty(activityID))
+{
+	Item thisActAssignment = this.newItem("Activity Assignment", "get");
+	thisActAssignment.setID(this.getID());
+	thisActAssignment.setAttribute("select", "source_id");
+	thisActAssignment = thisActAssignment.apply();
+	if (thisActAssignment.isError())
+		return thisActAssignment;
+	else
+		activityID = thisActAssignment.getProperty("source_id");
+}
+
+Item activityVariables = this.newItem("Activity Variable", "get");
+activityVariables.setProperty("source_id", activityID);
+activityVariables.setAttribute("select", "default_value");
+activityVariables = activityVariables.apply();
+
+// Create variable values and task values
+for (int i = 0; i < activityVariables.getItemCount(); i++)
+{
+	Item activityVariable = activityVariables.getItemByIndex(i);
+		
+	Item variable = this.createRelationship("Activity Variable Value", "add");
+	variable.setAttribute("doGetItem", "0");
+	variable.setProperty("variable", activityVariable.getAttribute("id"));
+	variable.setProperty("value", activityVariable.getProperty("default_value"));
+	variable.setProperty("sort_order", (128 * (i + 1)).ToString());
+}
+
+Item activityTasks = this.newItem("Activity Task", "get");
+activityTasks.setProperty("source_id", activityID);
+activityTasks.setAttribute("select", "id");
+activityTasks = activityTasks.apply();
+
+for (int i = 0; i < activityTasks.getItemCount(); i++)
+{
+	Item activityTask = activityTasks.getItemByIndex(i);
+		
+	Item task = this.createRelationship("Activity Task Value", "add");
+	task.setAttribute("doGetItem", "0");
+	task.setProperty("task", activityTask.getProperty("id"));
+	task.setProperty("sort_order", (128 * (i + 1)).ToString());
+}
+
+if (activityTasks.getItemCount() > 0 || activityVariables.getItemCount() > 0)
+	this.setAction("edit");
+
+return this.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>OnAfterAddActivityAssignment</name>
+ </Item>
+</AML>

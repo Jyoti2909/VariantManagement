@@ -1,0 +1,215 @@
+﻿<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:vs="http://schemas.microsoft.com/Visual-Studio-Intellisense" elementFormDefault="qualified" attributeFormDefault="unqualified" vs:helpNamespace="http://schemas.microsoft.com/.NetConfiguration/v2.0">
+	<xsd:simpleType name="BrowserNameList">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Internet Explorer"/>
+			<xsd:enumeration value="Firefox60"/>
+			<xsd:enumeration value="Firefox68"/>
+			<xsd:enumeration value="Chrome"/>
+			<xsd:enumeration value="Microsoft Edge Chromium"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="ClientOSList">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Windows"/>
+			<xsd:enumeration value="Microsoft Windows 10 Enterprise"/>
+			<xsd:enumeration value="Microsoft Windows 10 Pro"/>
+			<xsd:enumeration value="mac"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="ReportingLevelList">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="BusinessActionsOnly"/>
+			<xsd:enumeration value="Full"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="InnovatorVersionList">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="12.0"/>
+			<xsd:enumeration value="12.0 SP1"/>
+			<xsd:enumeration value="12.0 SP2"/>
+			<xsd:enumeration value="12.0 SP3"/>
+			<xsd:enumeration value="12.0 SP4"/>
+			<xsd:enumeration value="12.0 SP5"/>
+			<xsd:enumeration value="12.0 SP6"/>
+			<xsd:enumeration value="12.0 SP7"/>
+			<xsd:enumeration value="12.0 SP8"/>
+			<xsd:enumeration value="12.0 SP9"/>
+			<xsd:enumeration value="12.0 SP10"/>
+			<xsd:enumeration value="12.0 SP11"/>
+			<xsd:enumeration value="12.0 SP12"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="InnovatorModeList">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Tabs"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:simpleType name="Url">
+		<xsd:restriction base="xsd:anyURI">
+			<xsd:pattern value="https?://.+" />
+		</xsd:restriction>
+	</xsd:simpleType>
+
+	<xsd:element name="MyArasSettings">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="arasSettings" vs:help="configuration/appSettings">
+					<xsd:complexType>
+						<xsd:choice minOccurs="0" maxOccurs="unbounded">
+
+							<xsd:element name="Browser" vs:help="configuration/appSettings/Browser">
+								<xsd:complexType>
+									<xsd:attribute name="Name" type="BrowserNameList" />
+									<xsd:attribute name="UseIncognitoMode" type="xsd:boolean" />
+									<xsd:attribute name="UseCleanSessionBeforeFirstTest" type="xsd:boolean" />
+									<xsd:attribute name="PathToExecutableLocation" type="xsd:string" />
+
+									<xsd:attribute name="lockAttributes" type="xsd:string" />
+									<xsd:attribute name="lockAllAttributesExcept" type="xsd:string" />
+									<xsd:attribute name="lockElements" type="xsd:string" />
+									<xsd:attribute name="lockAllElementsExcept" type="xsd:string" />
+									<xsd:anyAttribute namespace="http://schemas.microsoft.com/XML-Document-Transform" processContents="strict"/>
+								</xsd:complexType>
+							</xsd:element>
+
+							<xsd:element name="Chrome" vs:help="configuration/appSettings/Chrome">
+								<xsd:complexType>
+									<xsd:attribute name="UseUserSettings" type="xsd:boolean" />
+									<xsd:attribute name="PathToUserProfile" type="xsd:string" />
+
+									<xsd:attribute name="lockAttributes" type="xsd:string" />
+									<xsd:attribute name="lockAllAttributesExcept" type="xsd:string" />
+									<xsd:attribute name="lockElements" type="xsd:string" />
+									<xsd:attribute name="lockAllElementsExcept" type="xsd:string" />
+									<xsd:anyAttribute namespace="http://schemas.microsoft.com/XML-Document-Transform" processContents="strict"/>
+								</xsd:complexType>
+							</xsd:element>
+
+							<xsd:element name="Logging" vs:help="configuration/appSettings/Logging">
+								<xsd:complexType>
+									<xsd:attribute name="PathToLogsFolder" type="xsd:string" />
+									<xsd:attribute name="PathToWorkDir" type="xsd:string" />
+									<xsd:attribute name="ReportingLevel" type="ReportingLevelList"  />
+
+									<xsd:attribute name="lockAttributes" type="xsd:string" />
+									<xsd:attribute name="lockAllAttributesExcept" type="xsd:string" />
+									<xsd:attribute name="lockElements" type="xsd:string" />
+									<xsd:attribute name="lockAllElementsExcept" type="xsd:string" />
+									<xsd:anyAttribute namespace="http://schemas.microsoft.com/XML-Document-Transform" processContents="strict"/>
+								</xsd:complexType>
+							</xsd:element>
+
+							<xsd:element name="Localization" vs:help="configuration/appSettings/Localization">
+								<xsd:complexType>
+									<xsd:attribute name="ClientOSLanguage" type="xsd:language" />
+									<xsd:attribute name="DatabaseLanguage" type="xsd:language" />
+
+									<xsd:attribute name="lockAttributes" type="xsd:string" />
+									<xsd:attribute name="lockAllAttributesExcept" type="xsd:string" />
+									<xsd:attribute name="lockElements" type="xsd:string" />
+									<xsd:attribute name="lockAllElementsExcept" type="xsd:string" />
+									<xsd:anyAttribute namespace="http://schemas.microsoft.com/XML-Document-Transform" processContents="strict"/>
+								</xsd:complexType>
+							</xsd:element>
+
+							<xsd:element name="InnovatorApp" vs:help="configuration/appSettings/InnovatorApp">
+								<xsd:complexType>
+									<xsd:attribute name="ServerUrl" type="Url" />
+									<xsd:attribute name="ClientUrl" type="Url" />
+									<xsd:attribute name="Database" type="xsd:string" />
+									<xsd:attribute name="Version" type="InnovatorVersionList" />
+									<xsd:attribute name="Mode" type="InnovatorModeList" />
+									<xsd:attribute name="ClientTimeZone" type="xsd:string" />
+									<xsd:attribute name="BuildNumber" type="xsd:unsignedInt" />
+									<xsd:attribute name="ClientOS" type="ClientOSList" />
+									<xsd:attribute name="ProductName" type="xsd:string" />
+
+									<xsd:attribute name="lockAttributes" type="xsd:string" />
+									<xsd:attribute name="lockAllAttributesExcept" type="xsd:string" />
+									<xsd:attribute name="lockElements" type="xsd:string" />
+									<xsd:attribute name="lockAllElementsExcept" type="xsd:string" />
+									<xsd:anyAttribute namespace="http://schemas.microsoft.com/XML-Document-Transform" processContents="strict"/>
+								</xsd:complexType>
+							</xsd:element>
+
+              <xsd:element name="Timeouts" vs:help="configuration/appSettings/Timeouts">
+                <xsd:complexType>
+                  <xsd:attribute name="Short" type="xsd:int"/>
+                  <xsd:attribute name="Default" type="xsd:int"/>
+                  <xsd:attribute name="Long" type="xsd:int"/>
+                </xsd:complexType>
+              </xsd:element>
+
+              <xsd:element name="SeleniumGrid" vs:help="configuration/appSettings/SeleniumGrid">
+                <xsd:complexType>
+                  <xsd:sequence>
+                    <xsd:element name="Nodes">
+                      <xsd:complexType>
+                        <xsd:sequence>
+                          <xsd:element minOccurs="1" maxOccurs="unbounded" name="Node">
+                            <xsd:complexType>
+                              <xsd:attribute name="MachineAlias" type="xsd:string" use="required" />
+                              <xsd:attribute name="AdminName" type="xsd:string" use="required" />
+                              <xsd:attribute name="AdminPassword" type="xsd:string" use="required" />
+                            </xsd:complexType>
+                          </xsd:element>
+                        </xsd:sequence>
+                      </xsd:complexType>
+                    </xsd:element>
+                  </xsd:sequence>
+
+                  <xsd:attribute name="UseSeleniumGrid" type="xsd:boolean" />
+                  <xsd:attribute name="ServerUrl" type="Url" />
+
+                  <xsd:attribute name="lockAttributes" type="xsd:string" />
+                  <xsd:attribute name="lockAllAttributesExcept" type="xsd:string" />
+                  <xsd:attribute name="lockElements" type="xsd:string" />
+                  <xsd:attribute name="lockAllElementsExcept" type="xsd:string" />
+                  <xsd:anyAttribute namespace="http://schemas.microsoft.com/XML-Document-Transform" processContents="strict"/>
+
+                </xsd:complexType>
+              </xsd:element>
+
+							<xsd:element name="Subscriptions" vs:help="configuration/appSettings/Subscriptions">
+								<xsd:complexType>
+									<xsd:attribute name="ArasPremierSubscription" type="xsd:string" />
+									<xsd:attribute name="ArasPDFViewer" type="xsd:string" />
+									<xsd:attribute name="ArasSelfServiceReporting" type="xsd:string" />
+									<xsd:attribute name="ArasHTMLtoPDFConverter" type="xsd:string" />
+									<xsd:attribute name="ArasEssentialsSubscription" type="xsd:string" />
+
+									<xsd:attribute name="lockAttributes" type="xsd:string" />
+									<xsd:attribute name="lockAllAttributesExcept" type="xsd:string" />
+									<xsd:attribute name="lockElements" type="xsd:string" />
+									<xsd:attribute name="lockAllElementsExcept" type="xsd:string" />
+									<xsd:anyAttribute namespace="http://schemas.microsoft.com/XML-Document-Transform" processContents="strict"/>
+								</xsd:complexType>
+							</xsd:element>
+
+							<xsd:element name="CELevel3" vs:help="configuration/appSettings/CELevel3">
+								<xsd:complexType>
+									<xsd:attribute name="ActivationKey" type="xsd:string" />
+									<xsd:attribute name="IHSUsername" type="xsd:string" />
+									<xsd:attribute name="IHSPassword" type="xsd:string" />
+									<xsd:attribute name="IHSKey" type="xsd:string" />
+
+									<xsd:attribute name="lockAttributes" type="xsd:string" />
+									<xsd:attribute name="lockAllAttributesExcept" type="xsd:string" />
+									<xsd:attribute name="lockElements" type="xsd:string" />
+									<xsd:attribute name="lockAllElementsExcept" type="xsd:string" />
+									<xsd:anyAttribute namespace="http://schemas.microsoft.com/XML-Document-Transform" processContents="strict"/>
+								</xsd:complexType>
+							</xsd:element>
+
+						</xsd:choice>
+					</xsd:complexType>
+				</xsd:element>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+</xsd:schema>

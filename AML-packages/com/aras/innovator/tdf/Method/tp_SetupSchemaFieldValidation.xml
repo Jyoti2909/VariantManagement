@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="66583126B0BC4D3EA8AEE8938F6331B3" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!window.schemaValidationSetupProvider) {
+	require([
+		'TDF/Scripts/Aras/Client/Controls/TechDoc/UI/SchemaForm/SchemaValidationSetupProvider',
+		'../vendors/ace-editor/ace.js'],
+		function(ValidationSetupProvider) {
+			require(['../vendors/ace-editor/ext-language_tools.js'], function() {
+				window.schemaValidationSetupProvider = new ValidationSetupProvider({
+					aras: aras,
+					editMode: document.isEditMode,
+					schemaItem: document.item,
+					ace: ace
+				});
+			});
+		}
+	);
+} else {
+	window.schemaValidationSetupProvider.refreshEditor({
+		editMode: document.isEditMode,
+		schemaItem: document.item
+	});
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>tp_SetupSchemaFieldValidation</name>
+ </Item>
+</AML>

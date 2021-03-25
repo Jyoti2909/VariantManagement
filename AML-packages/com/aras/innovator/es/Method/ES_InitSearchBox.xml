@@ -1,0 +1,69 @@
+﻿<AML>
+ <Item type="Method" id="C6C47B3E1B014426B53E6C59F59AADF8" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var infernoFlags = ArasModules.utils.infernoFlags;
+var searchboxClass = 'aras-toolbar__es-searchbox aras-es-searchbox';
+var searchboxInputClass = 'aras-input aras-toolbar__input aras-es-searchbox__input';
+var searchboxResetClass = 'aras-es-searchbox__reset aras-icon-close aras-es-searchbox__reset_hidden';
+
+var searchboxButtonLoupeClass = 'aras-button aras-es-searchbox__button aras-es-searchbox__button_loupe';
+
+Toolbar.extendFormatters({esSearchBox: function(item, options) {
+	var resetButtonClickHandler = function(event) {
+		var inputElement = event.target.previousSibling;
+		inputElement.value = '';
+		this.classList.add('aras-es-searchbox__reset_hidden');
+	};
+	var searchButtonClickHandler = function(event) {
+		var evt = new CustomEvent('aras-es-search-click', {bubbles: true});
+		event.target.dispatchEvent(evt);
+	};
+
+	var inputNode = Inferno.createVNode(Inferno.getFlagsForElementVnode('input'), 'input', searchboxInputClass, null,
+	infernoFlags.hasInvalidChildren, {
+		'aria-label': aras.getResource('', 'es.searchbox_label'),
+		type: 'text',
+		id: 'aras-es-toolbar-input',
+		onInput: function(event) {
+			event.target.nextSibling.classList.toggle('aras-es-searchbox__reset_hidden', this.value === '');
+		},
+		onkeydown: function(event) {
+			if (event.key === 'Enter') {
+				searchButtonClickHandler(event);
+			}
+			event.stopPropagation();
+		}
+	});
+	var resetButtonNode = Inferno.createVNode(Inferno.getFlagsForElementVnode('span'), 'span', searchboxResetClass, null,
+	infernoFlags.hasInvalidChildren, {
+		onclick: resetButtonClickHandler
+	});
+	const iconNode = ArasModules.SvgManager.createInfernoVNode(
+		item.image,
+		{class: 'aras-button__icon'}
+	);
+
+	var searchButtonNode = Inferno.createVNode(Inferno.getFlagsForElementVnode('button'), 'button', searchboxButtonLoupeClass, iconNode,
+	infernoFlags.hasVNodeChildren, {
+		'aria-label': aras.getResource('', 'es.searchbox_search_button_label'),
+		onclick: searchButtonClickHandler
+	});
+
+	return Inferno.createVNode(Inferno.getFlagsForElementVnode('span'), 'span', searchboxClass, [
+			inputNode,
+			resetButtonNode,
+			searchButtonNode
+		], infernoFlags.hasNonKeyedChildren, {
+			'data-id': item.id,
+			role: 'search'
+		}, null, options.itemRefCallback);
+}});
+
+return {
+	'type': 'esSearchBox'
+};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_InitSearchBox</name>
+ </Item>
+</AML>

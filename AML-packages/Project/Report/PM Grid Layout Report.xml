@@ -1,0 +1,93 @@
+﻿<AML>
+ <Item type="Report" id="3D22F46DB57F40DB93A74CA1EE19535D" action="add">
+  <location>server</location>
+  <method keyed_name="getPMGridLayoutReport" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>getPMGridLayoutReport</name>
+   </Item>
+  </method>
+  <report_query><![CDATA[<Item type="PM_ProjectGridLayout" action="get" select="is_system,label,name,position">
+  <source_id>
+    <Item type="Preference" id="{@id}" select="id" />
+  </source_id>
+  <Relationships>
+    <Item type="PM_ProjectColumnDescription" action="get" select="row_type,data_source"/>
+  </Relationships>
+</Item>]]></report_query>
+  <target>window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:aras="http://www.aras-corp.com">
+  <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes"/>
+  <xsl:variable name="items" select="//Item"></xsl:variable>
+  <xsl:template match="/">
+    <html>
+      <head>
+        <title>PM Grid Layout Report</title>
+        <style type="text/css">
+	.divH3 {
+		background-color : #6A5ACD;
+		color : #FFFFE0;
+		padding : 2 2 2 2;
+		font-weight : bold;
+		font-family : sans-serif;
+		font-size : 14px;
+	}
+	td {
+		text-align : center;
+		font-size : 13px;
+	}
+	.special_td {
+	  font-weight : bold;
+		text-align : center;
+		font-size : 13px;
+	}
+	th {
+		background-color : #C8C8C8;
+		font-size : 12px;
+		font-family : Arial;
+	}
+</style>
+      </head>
+      <body>
+        <div class="divH3" align="center">PM Grid Layout Report</div>
+        <table width="100%" cellspacing="2" cellpadding="0">
+    <tr>
+      <th>Project Tree</th>
+      <xsl:apply-templates mode="get_th" select="$items" >
+        <xsl:sort select="position" />
+      </xsl:apply-templates>
+    </tr>
+    <tr>
+      <td class="special_td">WBS Element</td>
+      <xsl:apply-templates mode="get_td" select="$items">
+        <xsl:sort select="position" />
+        <xsl:with-param name="type" select="'wbs'" />
+      </xsl:apply-templates>
+    </tr>
+    <tr>
+      <td class="special_td">Activity</td>
+      <xsl:apply-templates mode="get_td" select="$items">
+        <xsl:sort select="position" />
+        <xsl:with-param name="type" select="'act'" />
+      </xsl:apply-templates>
+    </tr>
+        </table>
+      </body>
+    </html>
+  </xsl:template>
+  <xsl:template match="Item" mode="get_th">
+    <th>
+      <xsl:value-of select="label"/>
+    </th>
+  </xsl:template>
+  <xsl:template match="Item" mode="get_td">
+    <xsl:param name="type"></xsl:param>
+    <td>
+      <xsl:value-of select="*[local-name()=$type]"/>
+    </td>
+  </xsl:template>
+</xsl:stylesheet>
+]]></xsl_stylesheet>
+  <name>PM Grid Layout Report</name>
+ </Item>
+</AML>

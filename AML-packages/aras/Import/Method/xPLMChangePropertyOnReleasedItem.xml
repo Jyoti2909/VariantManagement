@@ -1,0 +1,143 @@
+﻿<AML>
+ <Item type="Method" id="5C3C7D88F55B491CAC7BFEF8CE0A1F6C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+//System.Diagnostics.Debugger.Break();
+Aras.Server.Security.Identity plmIdentity = Aras.Server.Security.Identity.GetByName("Aras PLM");
+bool PermissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(plmIdentity);
+
+
+//Param "ITEM_TYPE" ->  Itemtype which should be updated
+//Param "ITEM_ID" -> ID of the Item which should updated
+//Param "PROPERTY_NAME" -> Name of Property which should be updated
+//Param "PROPERTY_VALUE" -> Value of Property which should be updated
+//Param "CHECK_IDENTITY" -> To prevent all users to be able add and replace relationships to released items
+//                          then with CHECK_IDENTITY set to 1 the method will check if the current user
+//                          is in the identity set in param IDENTITY_TO_BE_CHECKED
+//                          CHECK_IDENTITY is set to 0 in standard
+//Param "IDENTITY_TO_BE_CHECKED" -> The identity name in which the user must be if CHECK_IDENTITY is set to 1
+//                                  If CHECK_IDENTITY is set to 1 IDENTITY_TO_BE_CHECKED must have a valid value
+
+
+string itemType = this.getProperty("ITEM_TYPE","");
+string itemID = this.getProperty("ITEM_ID","");
+string propertyName = this.getProperty("PROPERTY_NAME","");
+string propertyValue = this.getProperty("PROPERTY_VALUE","");
+string checkIdentity = this.getProperty("CHECK_IDENTITY","0");
+string identityToBeChecked = this.getProperty("IDENTITY_TO_BE_CHECKED","");
+
+
+//checks
+if(itemType.Length == 0)
+{
+	return inn.newError("No ITEM_TYPE set in xPLMChangePropertyOnReleasedItem");
+}
+
+if(itemID.Length == 0)
+{
+	return inn.newError("No ITEM_ID set in xPLMChangePropertyOnReleasedItem");
+}
+
+if(propertyName.Length == 0)
+{
+	return inn.newError("No PROPERTY_NAME set in xPLMChangePropertyOnReleasedItem");
+}
+
+if(propertyValue.Length == 0)
+{
+	return inn.newError("No PROPERTY_VALUE set in xPLMChangePropertyOnReleasedItem");
+}
+
+if(checkIdentity == "1")
+{
+	if(identityToBeChecked.Length == 0)
+	{	return inn.newError("xPLMChangePropertyOnReleasedItem: CHECK_IDENTITY is set to 1 but IDENTITY_TO_BE_CHECKED is empty. Operation aborted!");}
+	
+	Item identityToBeCheckedItem = inn.getItemByKeyedName("Identity",identityToBeChecked);
+	if(identityToBeCheckedItem == null)
+	{
+	 return inn.newError("xPLMChangePropertyOnReleasedItem: IDENTITY_TO_BE_CHECKED is not a valid Identity. Operation aborted!");
+	}
+	
+	
+	string[] currentUserIdentitiesList = Aras.Server.Security.Permissions.Current.IdentitiesList.Split(new Char[]{','});
+	string identityToBeCheckedItemID = identityToBeCheckedItem.getID();
+	bool currentUserIsAllowedToRunMethod = false;
+	
+	foreach(string identity in currentUserIdentitiesList)
+	{
+		if(identityToBeCheckedItemID == identity.Replace("'",""))
+		{
+			currentUserIsAllowedToRunMethod = true;
+			break;
+		}
+	}
+	
+	if(!currentUserIsAllowedToRunMethod)
+	{
+		return inn.newError("xPLMChangePropertyOnReleasedItem: Current User is not in Identity: "+identityToBeChecked+". Operation not allowed for current user!");
+	}
+
+}
+
+
+//work
+
+
+
+
+Item baseItem = inn.getItemById(itemType,itemID);
+if(baseItem == null)
+{
+	return inn.newError(String.Format("xPLMChangePropertyOnReleasedItem: No Item of Type {0} found for ID {1} ",itemType,itemID));
+}
+
+int lockState = baseItem.fetchLockStatus();
+
+if (lockState == -1)
+{
+	return inn.newError(String.Format("xPLMChangePropertyOnReleasedItem: Failed to get lock state of Item {1} Type {0}",itemType,itemID));
+}
+
+if (lockState == 2)
+{
+	return inn.newError(String.Format("xPLMChangePropertyOnReleasedItem: Item of Type {0} with ID {1} locked by other user",itemType,itemID));
+}
+
+if(lockState == 0)
+{
+	baseItem.setAction("lock");
+	baseItem = baseItem.apply();
+	if(baseItem.isError())
+	{
+		return baseItem;
+	}
+	
+	baseItem.setAction("edit");
+	
+}
+
+if(lockState == 1)
+{
+	baseItem.setAction("update");
+}
+
+baseItem.setProperty(propertyName,propertyValue);
+baseItem = baseItem.apply();
+if(baseItem.isError())
+{
+	return baseItem;
+}
+
+
+
+if (PermissionWasSet)
+{
+	Aras.Server.Security.Permissions.RevokeIdentity(plmIdentity);
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>xPLMChangePropertyOnReleasedItem</name>
+ </Item>
+</AML>

@@ -1,0 +1,142 @@
+﻿<!DOCTYPE HTML>
+<!-- (c) Copyright by Aras Corporation, 2005-2013. -->
+<html>
+<head>
+	<title></title>
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/default.css";
+
+		html, body {
+			width : 100%;
+			height : 100%;
+		}
+
+		body {
+			min-height: 100%;
+			padding: 0;
+			margin : 0;
+		}
+
+		td {
+			font-size: 14px;
+			margin-left: 10px;
+			margin-right: 10px;
+			color: black;
+		}
+		div.buttons {
+			width: 100%;
+			height: 25px;
+			padding: 10px 0;
+		}
+		#title1 {
+			font-size: 14px;
+		}
+
+		.parent-container {
+			min-height: 100%;
+			padding: 10px 10px 45px 10px;
+			box-sizing: border-box;
+		}
+		.title {
+			padding-bottom: 10px;
+		}
+
+		.buttons {
+			margin-top: -45px;
+		}
+	</style>
+	<script type="text/javascript" src="../javascript/PopulateDocByLabels.js"></script>
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<script type="text/javascript">
+		window.dialogArguments = (window.frameElement && window.frameElement.dialogArguments) ? window.frameElement.dialogArguments : (window.dialogArguments || parent.dialogArguments);
+		var aras = dialogArguments.aras;
+		document.title = aras.getResource("", "itemtypeselectiondialog.select_item_type");
+
+		onload = function () {
+			populateLabels();
+			var r1 = document.getElementsByName("r1");
+			if (r1.length == 1) {
+				r1 = r1[0];
+				r1.checked = true;
+				selectedItemType = r1.value;
+				btnOK.disabled = false;
+				btnOK.className="btn";
+				btnOK.focus();
+			}
+
+			fitDialogSizeToContent();
+		}
+
+		function fitDialogSizeToContent() {
+			var width;
+			var bodyHeight = document.body.scrollHeight;
+			if (dialogArguments.dialog) {
+				width = dialogArguments.dialog.dialogNode.clientWidth;
+				dialogArguments.dialog.resizeContent(width, bodyHeight);
+			} else {
+				// in case when 'showModalDialog' was used
+				if(aras.Browser.isFf()) {
+					width = window.innerWidth;
+					var headerHeight = window.outerHeight - window.innerHeight; // the only way to compute height of dialog's header
+					var dialogHeight = bodyHeight + headerHeight;
+					window.resizeTo(width, dialogHeight); // FF resizes modal dialogs through this method (window.dialogHeight = ... doesn't work for FF)
+				} else if(aras.Browser.isIe()) {
+					// window.dialogHeight it's a height of content so we don't have to bother about header height
+					window.dialogHeight = bodyHeight + 'px'; // IE resizes modal dialogs through this method (window.resizeTo() doesn't work for IE)
+				}
+			}
+		};
+
+		function closeWindow(value) {
+			if (dialogArguments.dialog) {
+				dialogArguments.dialog.close(value);
+			} else {
+				window.returnValue = value;
+				window.close();
+			}
+		}
+
+		function populateLabels() {
+			document.getElementById("btnOK").value = aras.getResource("", "common.ok");
+			document.getElementById("btnCancel").value = aras.getResource("", "common.cancel");
+			document.getElementById("title1").innerHTML = aras.getResource("", "itemtypeselectiondialog.select_itemtype_to_create_item");
+		}
+
+		function radiobuttonClick(element, event) {
+			element.checked = true; 
+			selectedItemType = element.value; 
+			btnOK.disabled = false; 
+			btnOK.className = "btn";
+			event.stopPropagation();
+		}
+	</script>
+</head>
+<body class="claro">
+	<div class="parent-container">
+		<div align="center" class="title">
+			<b id="title1"></b>
+		</div>
+		<script type="text/javascript">
+			var itemTypesList = dialogArguments.itemTypesList;
+			var selectedItemType = null;
+			if (!itemTypesList) {
+				alert("Incorrect dialog argument. Expected: itemTypesList.");//just for developers
+				closeWindow();
+			}
+
+			document.write("<table align=center>");
+			for (var i = 0; i < itemTypesList.length; i++) {
+				document.write("<tr><td onclick='radiobuttonClick(rd=document.getElementById(\"rd_" + i + "\"), event);'><input class='arasCheckboxOrRadio' type='radio' onclick='radiobuttonClick(this, event);' name='r1' id='rd_" + i + "' value='" + itemTypesList[i].name + "' onfocus='blur()'><label>" + aras.EscapeSpecialChars(itemTypesList[i].label) + "</label></td></tr>");
+			}
+			document.write("</table>");
+		</script>
+	</div>
+	<div class="buttons" align="center" id="buttons">
+		<input type="button" id="btnOK" class="btn disabled" disabled="disabled" onclick="closeWindow(selectedItemType);" />
+		<input type="button" id="btnCancel" class="btn cancel_button" onclick="closeWindow()" style="margin-left: 10px;" />
+	</div>
+</body>
+</html>

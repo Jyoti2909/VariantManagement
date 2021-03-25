@@ -1,0 +1,314 @@
+﻿<AML>
+ <Item type="Form" id="2FFC8C7553B3471589CFAFE8612C0C40" action="add">
+  <category_form>0</category_form>
+  <height>234</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>699</width>
+  <name>MSO_RibbonTreeStructure</name>
+  <Relationships>
+   <Item type="Body" id="5A3ECB8EB93543CB93BB970A246C0C20" action="add">
+    <bg_color>#FFFFFF</bg_color>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="MSO_RibbonTreeStructure" type="Form">2FFC8C7553B3471589CFAFE8612C0C40</source_id>
+    <Relationships>
+     <Item type="Field" id="B8B82ED1D62A42599F6FEBE80334A265" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>tahoma, arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<style type="text/css">
+	@import "../public/styles/controls.css";
+	
+	html, body {
+		overflow: hidden;
+		width: 100%;
+		height: 100%;
+		margin: 0px;
+		padding: 0px;
+	}
+	.sys_f_container, .sys_f_table {
+		width: 100%;
+		height: 100%;
+	}
+</style>
+<script type="text/javascript" src="../javascript/include.aspx?classes=XmlDocument"></script>
+<script type="text/javascript">
+var editedPropertyName = "mso_visible";
+var editedColumnIndex;
+var grid;
+var toolbar;
+
+var innovator = new top.Innovator();
+
+aras.registerEventHandler("ItemSave", window, ItemSaveListener);
+aras.registerEventHandler("ItemLock", window, ItemLockListener);
+window.onresize = fixGridHeight;
+
+function ItemSaveListener(params) {
+	if (!document.thisItem || document.thisItem.getId() != params.itemID) {
+		return;
+	}
+
+	initTree();
+}
+
+function ItemLockListener(params) {
+	if (!document.thisItem || document.thisItem.getId() != params.itemID) {
+		return;
+	}
+
+	if(!params.newLockedValue){
+		initTree();
+	}
+}
+
+var onload_handler = function () {
+		
+	clientControlsFactory.createControl("Aras.Client.Controls.Public.TreeGridContainer",  {connectId: "grid", CellWasChanged: function () { debbuger; }, arasDocumentationHelper: {}, canEdit_Experimental: function () { if(document.thisItem.isLocked()=="0"){return false;} else{return true;} }}, function(control) {
+		grid = control;
+		grid.setMultiselect(false);
+		clientControlsFactory.on(grid, {
+			"onApplyEdit_Experimental": onApplyEdit_Experimental
+		});
+
+		initTree();
+		fixGridHeight();
+	});
+}
+
+function fixGridHeight() {
+	var el = document.getElementById("grid");
+	top.aras.fixLiquidContainerHeight(document, el);
+}
+
+window.addEventListener("DOMContentLoaded", onload_handler);
+
+function initTree() {
+	if (!document.thisItem){
+		return;
+	}
+
+	var resItem = innovator.newItem("MSO_CommonSettings", "MSO_GetRibbonStructure");
+	resItem.setID(document.item.getAttribute("id"));
+	resItem = resItem.apply();
+	if (resItem.isError()) {
+		top.aras.AlertError(resItem.getErrorString());
+		return;
+	}
+
+	var result = resItem.getResult();
+
+	var xmlResult = new XmlDocument();
+	xmlResult.loadXML(result);
+	var thNodes = xmlResult.selectNodes("//th");
+	for(var index = 0; index < thNodes.length; index++){
+		if(thNodes[index].attributes.getNamedItem("abbr").value == editedPropertyName){
+			editedColumnIndex = index;
+			break;
+		}
+	}
+
+	grid.InitXML(resItem.getResult());
+}
+
+function onApplyEdit_Experimental(rowId, column, value ) {
+if (!rowId){
+	rowId = grid.getSelectedId();
+}
+
+if (!rowId){
+	return;
+}
+
+editItemWithChild(parseInt(rowId), value);
+updateParentNode(parseInt(rowId), value);
+}
+
+
+function editRelationship(rowId, value){
+	var convertedValue = value ? "1" : "0";
+
+	var currentItem = innovator.newItem();
+	currentItem.loadAML(document.thisItem.node.xml);
+	
+	var isEditedCurrentItem = false;
+
+	var editedItem;
+	var generalRelationShip= null;
+	var previousLevel = rowId;
+	for (var index = rowId; index > 0 && previousLevel > 0; index--) {
+		var level = grid.GetUserData(index, "level");
+		if (level >= previousLevel) {
+			continue;
+		}
+		var itemID = grid.GetUserData(index, "gridData_rowItemID");
+		var typeRelationship= grid.GetUserData(index, "typeRelationship");
+		var currentType= grid.GetUserData(index, "currentType");
+		var relationshipId = grid.GetUserData(index, "relationshipId");
+
+		editedItem = innovator.newItem(currentType, "edit");
+		editedItem.setID(itemID);
+		if(index == rowId){
+			editedItem.setProperty(editedPropertyName, convertedValue);
+			editedItem.setAttribute("isDirty", "1");
+		}
+
+		var xpath = ".//Item[@id='" + itemID + "']";
+		var existedInRelationships = currentItem.node.selectSingleNode(xpath);
+		if(existedInRelationships != null){
+			existedInRelationships = currentItem.getItemsByXPath(xpath);
+			if (index == rowId) {
+				replasePropertyNodes(editedItem,existedInRelationships);
+			}
+			else{
+				existedInRelationships.addRelationship(generalRelationShip);
+			}
+
+			isEditedCurrentItem = true;
+			break;
+		}
+
+		if (generalRelationShip != null) {
+			editedItem.addRelationship(generalRelationShip);
+		}
+
+		generalRelationShip = innovator.newItem(typeRelationship, "edit");
+		generalRelationShip.setID(relationshipId);
+		generalRelationShip.setRelatedItem(editedItem);
+		previousLevel = level;
+	}
+
+
+	if (document.thisItem.node.lastChild.tagName == "Relationships" && isEditedCurrentItem) {
+		document.thisItem.node.replaceChild(currentItem.node.lastChild, document.thisItem.node.lastChild);
+	}
+	else if (document.thisItem.node.lastChild.tagName == "Relationships") {
+		document.thisItem.node.lastChild.appendChild(generalRelationShip.node);
+	}
+	else{
+		relationshipsNode = document.createNode("", "Relationships", "");
+		relationshipsNode.appendChild(generalRelationShip.node);
+		document.thisItem.node.appendChild(relationshipsNode);
+	}		
+}
+
+function editItemWithChild(rowId, value){
+	var childCount = grid.GetUserData(rowId, "childCount");
+	var lastChild = parseInt(childCount) + parseInt(rowId);
+
+	var index = rowId;
+	var currentLevel = grid.GetUserData(rowId, "level");
+	var level;
+	
+	do {
+		var currentCellValue = grid.getCellValue(index, editedColumnIndex);
+		if (currentCellValue != value.toString()) {
+			grid.setCellValue(index, editedColumnIndex, value);
+			editRelationship(index, value);
+			var childCount = grid.GetUserData(index, "childCount");
+			if (childCount != "0") {
+				index =	editItemWithChild(index+1, value);
+			}
+		}
+
+		index++;
+		level = grid.GetUserData(index, "level");
+	} while (currentLevel < level);
+
+	return --index;
+}
+
+function updateParentNode(childRowId, value){
+	var previousLevel = childRowId;
+	if (value) {
+		for (var index = childRowId; index > 0 && previousLevel > 0; index--){
+			var level = grid.GetUserData(index, "level");	
+			if (level >= previousLevel) {
+				continue;
+			}
+
+			var currentCellValue = grid.getCellValue(index, editedColumnIndex);
+			if (currentCellValue != value) {
+				grid.setCellValue(index, editedColumnIndex, value);
+				editRelationship(index, value);
+			}
+
+			previousLevel = level;
+		}
+	}
+	else{
+		var indexMainNode
+		var levelMainNode=0;
+		//Search main node
+		for (indexMainNode = childRowId-1; indexMainNode>=0; indexMainNode--) {
+			var level = grid.GetUserData(indexMainNode, "level");
+			if (level == levelMainNode) {
+				break;
+			}
+		}
+
+		if (indexMainNode >= 0) {
+			let currentLevelNode;
+			let rowCount = grid.GetRowCount();
+
+			let index = indexMainNode;
+			do {
+				index++;
+				currentLevelNode = grid.GetUserData(index, "level");
+				var cell = grid.cells_Experimental(index, editedColumnIndex, true);
+				if(cell == null)
+					break;
+
+				var cellValue = cell.getValue();
+				if(cellValue && currentLevelNode > levelMainNode){
+					return;
+				}
+				
+			} while (currentLevelNode  > levelMainNode );
+
+			editItemWithChild(indexMainNode, value);
+		}
+	}
+	
+}
+
+function replasePropertyNodes(fromItem, toItem)
+{
+	for (let index = 0; index < fromItem.node.childNodes.length; index++) {
+		childNode = fromItem.node.childNodes[index];
+		var xpath = "//Item[@id='" + toItem.getID() + "']/" + childNode.nodeName;
+		selectedNode = toItem.node.selectSingleNode(xpath);
+		if (selectedNode == null) {
+			toItem.node.appendChild(childNode);
+		} else {
+			selectedNode.text = childNode.text
+		}
+	}
+}
+</script>
+<table class="claro" style="width: 100%; height: 100%; position: absolute; top: 0px; left: 0px;" cellspacing="0" cellpadding="0">
+	<tr style="vertical-align: top;">
+		<td id="grid" style="width: 100%; height: 100%;">
+		</td>
+	</tr>
+</table>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">html0</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="5A3ECB8EB93543CB93BB970A246C0C20" type="Body">5A3ECB8EB93543CB93BB970A246C0C20</source_id>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>0</y>
+      <name>html0</name>
+     </Item>
+    </Relationships>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

@@ -1,0 +1,46 @@
+﻿<AML>
+ <Item type="Method" id="7FF18CA005914493B8EB7BB256BA0420" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!options.selectedRow) {
+	return {
+		hidden: true
+	};
+}
+
+let isDisabled = true;
+let isHidden = false;
+
+// If source item is in edit mode, then check selected rows and update deafult status
+if (window.RELATED_IT_NAME !== 'File' && window.grid && window.getLockedStatusStr && window.aras.isEditStateEx(window.item)) {
+	const selectedIds = window.grid.getSelectedItemIds();
+	let allItemsAreEditable = true;
+
+	for (let i = 0; i < selectedIds.length; i++) {
+		const itemId = selectedIds[i];
+		const selectedItem = window.getRelatedItem(itemId);
+		const status = window.getLockedStatusStr(itemId);
+		const isItemCanBeLockedByUser = selectedItem && (aras.uiItemCanBeLockedByUser(selectedItem, false, false) || aras.isLockedByUser(selectedItem));
+		const isDiscoverOnly = selectedItem && selectedItem.parentNode.getAttribute('discover_only') === '1';
+		const isEditableItem = options.editableItems.has(selectedItem && selectedItem.id);
+
+		// Hide button is selected item in edit state
+		if (!selectedItem || isDiscoverOnly || isEditableItem) {
+			isHidden = true;
+			break;
+		}
+
+		// All selected items should be editable to enable button
+		allItemsAreEditable = allItemsAreEditable && status !== 'alien' && (isItemCanBeLockedByUser || aras.isNew(selectedItem));
+	}
+
+	isDisabled = !allItemsAreEditable;
+}
+
+return {
+	hidden: isHidden,
+	disabled: isDisabled
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivrcm_edit_init</name>
+ </Item>
+</AML>

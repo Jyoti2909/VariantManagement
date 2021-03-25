@@ -1,0 +1,20 @@
+﻿<AML>
+ <Item type="Method" id="25EFC6C0C5874B5AB0EC56B2DB901C51" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const itemTypeId = options.relatedItemTypeId || options.relationshipItemTypeId;
+const itemTypeDescriptor = aras.getItemTypeForClient(itemTypeId, 'id');
+const image = itemTypeDescriptor.getProperty('large_icon', '../images/DefaultItemType.svg');
+const label = itemTypeDescriptor.getProperty('label_plural') || itemTypeDescriptor.getProperty('name');
+const tooltipTemplate = target.tooltip_template.replace('{0}', label);
+
+return {
+	cssClass: 'aras-toolbar__icon',
+	image: image,
+	tooltip_template: tooltipTemplate,
+	type: 'image'
+};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivrtb_icon_init</name>
+ </Item>
+</AML>

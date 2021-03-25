@@ -1,0 +1,1027 @@
+﻿<TestCase author="pponkrashov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../TestCase.xsd">
+	<Description>Setup for GECO affected items tests</Description>
+	<Request name="Common.GetInBasketTask">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadTrUser1 and new GECO
+			When:
+				As cadTrUser1
+				Get active InBasket Task
+			Then:
+				InBasket Task is returned
+				Which means that workflow has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="GECO.Id" action="apply" xpath="Query/AML/Item/item" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+					<item>{GECO.Id}</item>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" id="{Activity.Assigment.Id}">
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to" />
+		</Comparison>
+	</Request>
+	<Request name="Common.GetInBasketTask.CADService">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadTrUser1 and new GECO
+			When:
+				As cadTrUser1
+				Get active InBasket Task
+			Then:
+				InBasket Task is returned
+				Which means that workflow has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<assigned_to keyed_name="CAD Service" type="Identity">7E7B92578D5C4391AFEC6249CA682533</assigned_to>
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" id="{Activity.Assigment.Id}">
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to" />
+		</Comparison>
+	</Request>
+
+	<Request name="Common.Promotion.StartCADTask">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Start CAD Task' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Task2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[3]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Start CAD Task</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Activity Task" id="{Task2.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.StartMechanicalPartTask">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Start CAD Task' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Task2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[3]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Start Mechanical Part Task</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Activity Task" id="{Task2.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.StartReview">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Start Review' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables name="Common.Promotion.StartReview.Variables">
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query name="Common.Promotion.StartReview.Query">
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Start Review</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.ReworkRequired">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Rework required' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables name="Common.Promotion.ReworkRequired.Variables">
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query name="Common.Promotion.ReworkRequired.Query">
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Rework required</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.CPartCheckCompleted">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'C-Part Check Completed' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">C-Part Check completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="C-Part Check" type="Activity">C08D0CAF05DE4DF79B07D3226982585C</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.MasterDataReviewCompleted">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Master Data Review Completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="Master Data Review" type="Activity">CCE4E5EA3C45425AA4FCB4698F94F2D6</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.InternalReviewCompleted">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Internal Review Completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="Internal review" type="Activity">6AD458574CE342D4A3052B8ABED694E1</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.ExternalReviewCompleted">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">External Review Completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" typeId="937CE47DE2854308BE6FF5AB1CFB19D4" id="64F6534FE1264A3DBE352AE715A1D76B">
+							<id keyed_name="External Review" type="Activity">64F6534FE1264A3DBE352AE715A1D76B</id>
+							<Relationships>
+								<Item type="Activity Assignment" typeId="85924010F3184E77B24E9142FDBB481B" id="08F9AC2CAE07451D895C92CD68A8C089">
+									<id keyed_name="08F9AC2CAE07451D895C92CD68A8C089" type="Activity Assignment">08F9AC2CAE07451D895C92CD68A8C089</id>
+									<source_id keyed_name="External Review" type="Activity">64F6534FE1264A3DBE352AE715A1D76B</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="0D05F687E85A404496EFAAC5E7EF2012">
+									<id keyed_name="0D05F687E85A404496EFAAC5E7EF2012" type="Activity Task">0D05F687E85A404496EFAAC5E7EF2012</id>
+									<source_id keyed_name="External Review" type="Activity">64F6534FE1264A3DBE352AE715A1D76B</source_id>
+								</Item>
+								<Item type="Workflow Process Path" typeId="34682D3EB66141ECACC8796C9D3A42B8" id="63C5E4EF741D462BBBC9538375A6ACA4">
+									<id keyed_name="63C5E4EF741D462BBBC9538375A6ACA4" type="Workflow Process Path">63C5E4EF741D462BBBC9538375A6ACA4</id>
+									<source_id keyed_name="External Review" type="Activity">64F6534FE1264A3DBE352AE715A1D76B</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.CADQualityCheckCompleted">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'C-Part Check Completed' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">CAD Quality Check completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="CAD Quality Check" type="Activity">E0A8D8C9EB8B473188E935CAE465C3F0</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.PartQualityCheckCompleted">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'C-Part Check Completed' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Mechanical Part Quality Check completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="CAD Quality Check" type="Activity">E0A8D8C9EB8B473188E935CAE465C3F0</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.NormCheckCompleted">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Norm Check Completed' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Norm Check Completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="Norm Check" type="Activity">F64C2327D24F4B6A8C6F852D14AE0478</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.DevelopmentRelease">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Development Release' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Task2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[3]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Development Release</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="Development Release" type="Activity">21B3BD8983C6419F8DAA0B2E3070DEFE</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Activity Task" id="{Task2.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.TechnologyReviewCompleted">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Development Release' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Technology Review Completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="Technology Review" type="Activity">615417C1B4E14C219396A7D7BBF067D0</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request name="Common.Promotion.CancelGECO">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Cancel GECO' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id='Activity.Assigment.Id' action='apply' xpath='Query/AML/Item/Relationships/Item/id' />
+			<Variable id='Activity.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Variable id='Task1.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id' />
+			<Variable id='Task2.Id' action='set' xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[3]/@id' />
+			<Variable id='Process.Path.Id' action='set' xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Activity' action='get' select='id'>
+					<Relationships>
+						<Item type='Activity Assignment' action='get' select='id'>
+							<id></id>
+						</Item>
+						<Item type='Activity Task' action='get' select='id' />
+						<Item type='Workflow Process Path' action='get' select='id' >
+							<name condition='eq'>Cancel GECO</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" typeId="937CE47DE2854308BE6FF5AB1CFB19D4" id="FCE1C377EC9F4927815746A748E972A4">
+							<id keyed_name="Planning" type="Activity">FCE1C377EC9F4927815746A748E972A4</id>
+							<Relationships>
+								<Item type="Activity Assignment" typeId="85924010F3184E77B24E9142FDBB481B" id="29CBF9D2D917401ABE34843DE1B11374">
+									<id keyed_name="29CBF9D2D917401ABE34843DE1B11374" type="Activity Assignment">29CBF9D2D917401ABE34843DE1B11374</id>
+									<source_id keyed_name="Planning" type="Activity">FCE1C377EC9F4927815746A748E972A4</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="B6D61189BBE247ECBF1924D1C1D97474">
+									<id keyed_name="B6D61189BBE247ECBF1924D1C1D97474" type="Activity Task">B6D61189BBE247ECBF1924D1C1D97474</id>
+									<source_id keyed_name="Planning" type="Activity">FCE1C377EC9F4927815746A748E972A4</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="4AF52EE8EBC34A219C086E4520D21FAB">
+									<id keyed_name="4AF52EE8EBC34A219C086E4520D21FAB" type="Activity Task">4AF52EE8EBC34A219C086E4520D21FAB</id>
+									<source_id keyed_name="Planning" type="Activity">FCE1C377EC9F4927815746A748E972A4</source_id>
+								</Item>
+								<Item type="Workflow Process Path" typeId="34682D3EB66141ECACC8796C9D3A42B8" id="24704666799045F3BB77B14996613F55">
+									<id keyed_name="24704666799045F3BB77B14996613F55" type="Workflow Process Path">24704666799045F3BB77B14996613F55</id>
+									<source_id keyed_name="Planning" type="Activity">FCE1C377EC9F4927815746A748E972A4</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id' />
+		</Comparison>
+	</Request>
+
+	<Request name="Common.EvaluateActivityWithTwoTask">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query name="Common.EvaluateActivityWithTwoTask.Query">
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>{Activity.Id}</Activity>
+					<ActivityAssignment>{Activity.Assigment.Id}</ActivityAssignment>
+					<Paths>
+						<Path id="{Process.Path.Id}">
+							<![CDATA[Process Name]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="{Task1.Id}" completed="1"></Task>
+						<Task id="{Task2.Id}" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request name="Common.EvaluateActivityWithSingleTask">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query name="Common.EvaluateActivityWithSingleTask.Query">
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>{Activity.Id}</Activity>
+					<ActivityAssignment>{Activity.Assigment.Id}</ActivityAssignment>
+					<Paths>
+						<Path id="{Process.Path.Id}">
+							<![CDATA[Process Name]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="{Task1.Id}" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+</TestCase>

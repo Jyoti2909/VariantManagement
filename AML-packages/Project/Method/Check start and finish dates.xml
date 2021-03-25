@@ -1,0 +1,66 @@
+﻿<AML>
+ <Item type="Method" id="E5D55646813A42B2A5DEAD55B06F13BD" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[function DoCheckDates()
+{
+  var func_incDate = window.incDateToFirstWorking;
+  var func_decDate = window.decDateToFirstWorking;
+
+  checkDates("date_start_target", "date_due_target");
+}
+
+function checkDates(sPropStart, sPropFinish)
+{
+  var dStart = top.aras.getItemProperty(document.item, sPropStart);
+  var dFinish = top.aras.getItemProperty(document.item, sPropFinish);
+  if (!dStart || !dFinish) return;
+  
+  var type = "Project";
+  var startDateFormat = top.aras.getDotNetDatePattern(getDatePropertyPattern(type, sPropStart));
+  var finishDateFormat = top.aras.getDotNetDatePattern(getDatePropertyPattern(type, sPropFinish));
+  
+  if (compareDates(dStart, dFinish) <= 0) return;
+  
+  var text = top.aras.getResource("project", "pr_methods.ts_after_tf_warning");
+  if (srcElement.name == "date_due_target")
+    text = top.aras.getResource("project", "pr_methods.ts_before_tf_warning");
+  
+  var increaseTargetFinish = window.top.aras.confirm(text);
+  if (increaseTargetFinish)
+  {
+    if (srcElement.name == "date_start_target")
+    {
+      dFinish = incDateToFirstWorking(dStart);
+      dFinish = top.aras.convertFromNeutral(dFinish, "date", finishDateFormat);
+      handleItemChange(sPropFinish, dFinish, "date", finishDateFormat);
+    }
+    else if (srcElement.name == "date_due_target")
+    {
+      dStart = decDateToFirstWorking(dFinish);
+      dStart  = top.aras.convertFromNeutral(dStart, "date", startDateFormat);
+      handleItemChange(sPropStart, dStart, "date", startDateFormat);
+    }
+  }
+  else
+  {
+    dFinish = top.aras.convertFromNeutral(dFinish, "date", startDateFormat);
+    handleItemChange(sPropStart, dFinish, "date", startDateFormat);
+  }
+}
+
+//fake global vars for incDate/decDate functionality
+var old_a = window.a;
+window.a = top.aras;
+try
+{
+  DoCheckDates();
+}
+finally
+{
+  //restore global vars faked for incDate/decDate functionality
+  window.a = old_a;
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Check start and finish dates</name>
+ </Item>
+</AML>

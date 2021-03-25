@@ -1,0 +1,147 @@
+﻿@using System
+@using Models
+@using Models.AML.Enums
+@using Models.Helpers
+@model Models.FieldRenderModel
+
+@{
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=XClassesFormControl")"></script>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/Modules/aras.innovator.ExtendedClassification/scripts/xClassesFormControl/controlFormHandlers.js")"></script>
+
+	int textWidth = 100;
+	int fieldWidth = 126;
+
+	if (!String.IsNullOrEmpty(Model.FieldNode.XClassFieldWidth.Value))
+	{
+		int.TryParse(Model.FieldNode.XClassFieldWidth.Value, out fieldWidth);
+	}
+	if (!String.IsNullOrEmpty(Model.FieldNode.XClassTextWidth.Value))
+	{
+		int.TryParse(Model.FieldNode.XClassTextWidth.Value, out textWidth);
+	}
+
+	const int additionalPaddingAndMargins = 73;
+
+	var fieldNode = Model.FieldNode;
+	var textAlign = !fieldNode.TextAlign.IsNull ? "text-align:" + fieldNode.TextAlign.Value + ";" : String.Empty;
+	var fontFamily = !String.IsNullOrEmpty(Model.FieldNode.FontFamily) ? "font-family:" + Model.FieldNode.FontFamily + ";" : String.Empty;
+	var fontSize = !String.IsNullOrEmpty(Model.FieldNode.FontSize) ? "font-size:" + Model.FieldNode.FontSize + ";" : String.Empty;
+	var fontWeight = !String.IsNullOrEmpty(Model.FieldNode.FontWeight) ? "font-weight:" + Model.FieldNode.FontWeight + ";" : String.Empty;
+	var fontColor = !String.IsNullOrEmpty(Model.FieldNode.FontColor) ? "color:" + Model.FieldNode.FontColor + ";" : String.Empty;
+	var backgroundColor = !fieldNode.BGColor.IsNull ? "background-color:" + fieldNode.BGColor.Value + ";" : String.Empty;
+	var formBackgroundColor = !String.IsNullOrEmpty(Model.FormBodyBGColor) ? "background-color:" + Model.FormBodyBGColor + ";" : "background-color:#FFFFFF";
+	int minFieldWidth = fieldWidth + textWidth + additionalPaddingAndMargins;
+
+	string controlLabel = !String.IsNullOrEmpty(Model.FieldNode.Label.Value) ? Model.FieldNode.Label.Value : MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.default_label");
+
+	if (Model.Mode == "edit_form" || Model.Mode == "view_form")
+	{
+		string xClassSample1 = MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.edit_form.xClass_Sample_1");
+		string xClassSample2 = MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.edit_form.xClass_Sample_2");
+		string xPropertyA = MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.edit_form.xProperty_A");
+		string xPropertyB = MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.edit_form.xProperty_B");
+		string xPropertyC = MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.edit_form.xProperty_C");
+		string xPropertyX = MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.edit_form.xProperty_X");
+		string xPropertyY = MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.edit_form.xProperty_Y");
+		string xPropertyYValue = MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.edit_form.xProperty_Y.value");
+		string xPropertyZ = MethodsExUtils.GetResource(Model.ResourceNode, "xClassesControl.edit_form.xProperty_Z");
+
+		<div style="position: relative;" class="aras-form" style="box-sizing: border-box; min-width: @Html.Raw(minFieldWidth)px;">
+			<fieldset class="aras-field-xclasses aras-field-xclasses_expanded aras-field-xclasses_readonly" style="@Html.Raw(backgroundColor)">
+				<legend style="@Html.Raw(formBackgroundColor)">
+					<span class="aras-field-xclasses-expand-arrow"></span>
+					<span style="text-transform: none;@Html.Raw(textAlign)@Html.Raw(fontFamily)@Html.Raw(fontSize)@Html.Raw(fontWeight)@Html.Raw(fontColor)">@Html.Raw(MethodsExUtils.PreserveTags(controlLabel))</span>
+					<div class="aras-field-xclasses-ellipses" style="@Html.Raw(formBackgroundColor)"><div>...</div></div>
+				</legend>
+				<div class="nav-container">
+					<ul class="aras-nav">
+						<li data-key="Fixed_Capacitor_class_name" class="aras-nav__parent aras-nav__parent_expanded">
+							<div>
+								<span></span>
+								<span>@Html.Raw(MethodsExUtils.PreserveTags(xClassSample1))</span>
+							</div>
+							<ul>
+								<li>
+									<div style="width: @Html.Raw(textWidth)px;">@Html.Raw(MethodsExUtils.PreserveTags(xPropertyA))</div>
+									<div style="width: @Html.Raw(fieldWidth)px;">
+										<input readonly required="" type="text" style="width: 100%;">
+									</div>
+								</li>
+								<li>
+									<div style="width: @Html.Raw(textWidth)px;">@Html.Raw(MethodsExUtils.PreserveTags(xPropertyB))</div>
+									<div style="width: @Html.Raw(fieldWidth)px;">
+										<input readonly type="text" style="width: 100%;">
+									</div>
+								</li>
+								<li>
+									<div style="width: @Html.Raw(textWidth)px;">@Html.Raw(MethodsExUtils.PreserveTags(xPropertyC))</div>
+									<div style="width: @Html.Raw(fieldWidth)px;">
+										<input readonly required="" type="text" style="width: 100%;">
+									</div>
+								</li>
+							</ul>
+						</li>
+						<li data-key="Custom_Packaging_class_name" class="aras-nav__parent aras-nav__parent_expanded">
+							<div>
+								<span></span>
+								<span>@Html.Raw(MethodsExUtils.PreserveTags(xClassSample2))</span>
+							</div>
+							<ul style="">
+								<li>
+									<div style="width: @Html.Raw(textWidth)px;">@Html.Raw(MethodsExUtils.PreserveTags(xPropertyX))</div>
+									<div style="width: @Html.Raw(fieldWidth)px;">
+										<input readonly type="text" style="width: 100%;">
+									</div>
+								</li>
+								<li>
+									<div style="width: @Html.Raw(textWidth)px;">@Html.Raw(MethodsExUtils.PreserveTags(xPropertyY))</div>
+									<div style="width: @Html.Raw(fieldWidth)px;">
+										<select style="width: 100%;" disabled>
+											<option selected="1">@Html.Raw(MethodsExUtils.PreserveTags(xPropertyYValue))</option>
+										</select>
+									</div>
+								</li>
+								<li>
+									<div style="width: @Html.Raw(textWidth)px;">@Html.Raw(MethodsExUtils.PreserveTags(xPropertyZ))</div>
+									<div style="width: @Html.Raw(fieldWidth)px;">
+										<label class="aras-form-boolean">
+											<input disabled="1" type="checkbox">
+											<span></span>
+										</label>
+									</div>
+								</li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+			</fieldset>
+		</div>
+	}
+	else
+	{
+		string setExpressionFuncName = "expression_" + Model.FieldNode.Id + "_setExpression";
+
+		string fieldId = "xlasses-" + Model.FieldNode.Id;
+
+		<div style="position: relative;" class="aras-form" id="@Html.Raw(fieldId)">
+			<fieldset class="aras-field-xclasses aras-field-xclasses_empty aras-field-xclasses_readonly"  style="box-sizing: border-box; min-width: @Html.Raw(minFieldWidth)px; @Html.Raw(backgroundColor)">
+				<legend  style="@Html.Raw(formBackgroundColor)">
+					<span class="aras-field-xclasses-expand-arrow"></span>
+					<span style="text-transform: none;@Html.Raw(textAlign)@Html.Raw(fontFamily)@Html.Raw(fontSize)@Html.Raw(fontWeight)@Html.Raw(fontColor)">@Html.Raw(MethodsExUtils.PreserveTags(controlLabel))</span>
+					<div class="aras-field-xclasses-ellipses" style="@Html.Raw(formBackgroundColor)"><div>...</div></div>
+				</legend>
+				<div class="nav-container"></div>
+			</fieldset>
+			<script>
+				var controlDomElement = document.querySelector('#@Html.Raw(fieldId)');
+				window.xClassesControl = new XClassesFormControl(controlDomElement, document.itemTypeID);
+
+				window['@Html.Raw(setExpressionFuncName)'] = function (isEditMode) {
+					xClassesControl.setEditMode(isEditMode);
+				};
+
+				window.addEventListener('load', controlFormHandlers.formOnLoadHandler);
+			</script>
+		</div>
+	}
+}

@@ -1,0 +1,144 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html dir="ltr" mozdisallowselectionprint moznomarginboxes>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="google" content="notranslate">
+    <title>PDF</title>
+    <link rel="stylesheet" href="../../../javascript/dijit/themes/claro/claro.css" />
+
+    <link rel="stylesheet" href="../styles/svgSettings.css" />
+    <link rel="stylesheet" href="../styles/Viewer.css" />
+    <link rel="stylesheet" href="../styles/ViewerToolbar.css" type="text/css" />
+    <link rel="stylesheet" href="../styles/Dialogs.css" type="text/css" />
+    <link rel="stylesheet" href="../../../styles/controls/toolbar.css" type="text/css" />
+    <link rel="stylesheet" href="../../../javascript/include.aspx?classes=common.min.css" />
+
+    <script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,XmlDocument"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+    <script type="text/javascript" src="../../../javascript/cookie.js"></script>
+
+	<script src="../Scripts/3rdPartyLibs/pdftronwebviewer-v2.2/lib/core/external/jquery-3.2.1.min.js" type="text/javascript"></script>
+
+    <script type="text/javascript" src="../../../javascript/pageReturnBlocker.js"></script>
+    <script type="text/javascript" src="../Scripts/canvg/canvg.js"></script>
+    <script type="text/javascript" src="../Scripts/canvg/rgbcolor.js"></script>
+    <script type="text/javascript" src="../../../javascript/ClientUrlsUtility.js"></script>
+    <script type="text/javascript" src="../Scripts/Utils.js"></script>
+    <script type="text/javascript" src="../../aras.innovator.SSVC/Scripts/ArasHelper.js"></script>
+</head>
+
+<body tabindex="1" class="claro" style="overflow:hidden;">
+
+    <script type="text/javascript">
+		var setParentForWorker = window.parent.mainWnd.opener;
+        require(["dojo/ready"], function(ready) {
+            ready(function() {
+                function getCoreScript(dom, url) {
+                    return new Promise(function(resolve, reject) {
+                    	var scriptTag = VC.Utils.Page.LoadScripts(dom, url);
+                        scriptTag.onload = function() {
+                           resolve(this);
+                        }
+                        scriptTag.onerror = function() {
+                            reject();
+                        }
+
+                    });
+                }
+                function initViewer()
+                {
+                	VC.Utils.registerModulePaths();
+                	VC.Utils.Page.LoadGeometry();
+                	VC.Utils.Page.LoadModules(["PdfTronClientViewer", "ViewerAgent"]);
+                	VC.Utils.Page.LoadStyles(document, "../styles/PdfTronViewer.css");
+
+                    var args = VC.Utils.Page.GetParams();
+                    window.aras = args.itemWindow ? args.itemWindow.aras : top.aras;
+                    args.aras = window.aras;
+                    args.baseUrl = window.aras.getBaseURL();
+                    args.maxZoom = VC.ViewerAgent.getVariable(VC.Utils.Enums.ServerVariable.PDFMaxZoom);
+                    args.cData = cData;
+                    args.cDataErrorInfo = cDataErrorInfo;
+                    window.SSVCViewer = new VC.PdfTronClientViewer(args);
+
+                    window.SSVCViewer.onInitTempViewer = VC.ViewerAgent.initTemporaryViewer;
+                    window.SSVCViewer.onRecordMeasurmentClick = VC.ViewerAgent.sendMeasurmentMessage;
+                    window.SSVCViewer.onSetHighlightText = VC.ViewerAgent.setHighlightText;
+                    window.SSVCViewer.onGetDiscussionFeedText = VC.ViewerAgent.getDiscussionFeedText;
+                    window.SSVCViewer.onSetDiscussionFeedText = VC.ViewerAgent.setDiscussionFeedText;
+                    window.SSVCViewer.onSetComparisonData = VC.ViewerAgent.addComparisonDataToCache;
+                    window.SSVCViewer.onRestoreComparisonData = VC.ViewerAgent.restoreData;
+
+                    window.SSVCViewer.clearComparisonData = VC.ViewerAgent.comparisonManager.clearCacheData;
+                    window.SSVCViewer.updateComparisonData = VC.ViewerAgent.comparisonManager.updateData;
+                    window.SSVCViewer.onBindDocumentVersions = VC.ViewerAgent.getDocumentVersionsList;
+                    window.SSVCViewer.onHandleScrollStateEvent = VC.ViewerAgent.handleScrollState;
+                    if (window.onViewerIsReady) {
+                    	window.onViewerIsReady();
+                    }
+                }
+                var docEl = setParentForWorker.document;
+                var cDataErrorInfo = {};
+                var cData = VC.Utils.getPdfFileInfo(window.params.fileUrl, VC.Utils.Enums.PdfHandlerActions.ClientData, cDataErrorInfo);
+                if (!setParentForWorker.CoreControls) {
+                    getCoreScript(
+                        docEl,
+                        top.aras.getBaseURL() + "/Modules/aras.innovator.Viewers/Scripts/3rdPartyLibs/pdftronwebviewer-v2.2/lib/core/external/jquery-3.2.1.min.js")
+                        .then(function() {
+                            getCoreScript(
+                                docEl,
+                                //'getEnumerator' function of array was overridden with PDFTron in CoreControls.js file.
+                                //but 'getEnumerator' is used in compiling IOM module (IOM.ScriptSharp.js)
+                                //so, adding CoreControls.js file to tabs-content-iframe brokes Aras Innovator instance
+                                //workaround: 'getEnumerator' has been replaced on 'getEnum' in CoreControls.js file in 'Library_Development.git' repository
+                                //in commit for 'IR-073842 Integrate latest PDFTron libraries' issue
+                                //this problem should be fixed by PDFTron, but while it exists CoreControls.js should be merged during upgrade to next version of PDFTron
+                                top.aras.getBaseURL() + "/Modules/aras.innovator.Viewers/Scripts/3rdPartyLibs/pdftronwebviewer-v2.2/lib/core/CoreControls.js")
+                                .then(function() {
+                                    if (!setParentForWorker.workerHandlers) {
+
+                                        setParentForWorker.CoreControls.setWorkerPath("../Modules/aras.innovator.Viewers/Scripts/3rdPartyLibs/pdftronwebviewer-v2.2/lib/core");
+                                        setParentForWorker.workerHandlers = {
+                                            workerLoadingProgress: function(percentComplete) {
+                                                //Actions.loadingPdfWorker(percentComplete);
+                                                console.log(percentComplete);
+                                            },
+                                            pnaclCrashError: function(msg, genericMsg) {
+                                                /* eslint-disable no-console */
+                                                console.log('PNaClCrashError: ' + msg + ', ' + genericMsg);
+                                                /* eslint-enable no-console */
+                                            },
+                                            pnaclLoadError: function(msg, genericMsg) {
+                                                /* eslint-disable no-console */
+                                                console.log('PNaClLoadError: ' + msg + ', ' + genericMsg);
+                                                /* eslint-enable no-console */
+                                            },
+                                            emsWorkerError: function(msg, genericMsg) {
+                                                /* eslint-disable no-console */
+                                                $('body').append('<div>EmsWorkerError: ' + msg + ', ' + genericMsg + '</div>')
+                                                console.log('EmsWorkerError: ' + msg + ', ' + genericMsg);
+                                                /* eslint-enable no-console */
+                                            }
+                                	    };
+
+																			var backend = VC.Utils.Viewers.PDFViewerSettings.pdfBackend;
+																			setParentForWorker.workerPromise = setParentForWorker.CoreControls.initPDFWorkerTransports(backend, setParentForWorker.workerHandlers, cData);
+                                    }
+
+                                }).then(function() {
+                                    initViewer();
+                                });
+                        });
+                }
+                else {
+                    initViewer();
+                }
+                    
+            });
+        });
+
+    </script>
+    <div id="trash" style="z-index: 999;"></div>
+</body>
+</html>

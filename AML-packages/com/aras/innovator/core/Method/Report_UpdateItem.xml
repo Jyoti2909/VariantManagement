@@ -1,0 +1,64 @@
+﻿<AML>
+ <Item type="Method" id="5CF21C73A791456DAD15E3E98F7013E6" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var obj = window.event ? window.event.srcElement : event.srcElement ? event.srcElement : event.target;
+var fieldComponent = getFieldComponentByName(obj.name);
+var topWnd = aras.getMostTopWindowWithAras(window);
+aras.setItemProperty(topWnd.item, obj.name, fieldComponent.getValue());
+/*
+* If the type field has changed lets set up the report_query, xsl_stylesheet, sample_item
+* proerties with templates if they are empty.
+*/
+if (obj.name == 'type' || obj.name == 'location') {
+	var itemTypeNameNd = topWnd.item.selectSingleNode('../../../../name');
+	if (aras.getItemProperty(topWnd.item, 'type') == 'itemtype') {
+		if (!aras.confirm(aras.getResource('', 'report.standard_template'))) {
+			return false;
+		}
+		if (aras.getItemProperty(topWnd.item, 'location') != 'service') {
+			var templateDOM = aras.createXMLDocument();
+			if (itemTypeNameNd) {
+				templateDOM.loadXML('<Item type=\'' + itemTypeNameNd.text + '\' action=\'get\' select=\'\'/>');
+			} else {
+				templateDOM.loadXML('<Item type=\'\' action=\'get\' select=\'\'/>');
+			}
+			if (templateDOM.parseError.errorCode) {
+				aras.AlertError(aras.getResource('', 'report.template_err', templateDOM.parseError.reason));
+				return false;
+			}
+			aras.setItemProperty(topWnd.item, 'report_query', templateDOM.xml);
+			document.getElementsByClassName('report_query')[0].value = templateDOM.xml;
+		} else {
+			var template = 'np:type=<xsl:value-of select=\'@type\'/>';
+			aras.setItemProperty(topWnd.item, 'report_query', template);
+			document.getElementsByClassName('report_query')[0].value = template;
+		}
+	}
+	if (aras.getItemProperty(topWnd.item, 'type') == 'item') {
+		if (!aras.confirm(aras.getResource('', 'report.standard_template'))) {
+			return false;
+		}
+		if (aras.getItemProperty(topWnd.item, 'location') != 'service') {
+			var templateDOM = aras.createXMLDocument();
+			templateDOM.loadXML('<Item type=\'{@type}\' id=\'{@id}\' action=\'get\' select=\'\'/>');
+			if (templateDOM.parseError.errorCode) {
+				aras.AlertError(aras.getResource('', 'report.template_err', templateDOM.parseError.reason));
+				return false;
+			}
+			aras.setItemProperty(topWnd.item, 'report_query', templateDOM.xml);
+			document.getElementsByClassName('report_query')[0].value = templateDOM.xml;
+		} else {
+			var template = 'np:id=<xsl:value-of select=\'@id\'/>';
+			aras.setItemProperty(topWnd.item, 'report_query', template);
+			document.getElementsByClassName('report_query')[0].value = template;
+		}
+		if (aras.getItemProperty(topWnd.item, 'sample_item') === '' && itemTypeNameNd) {
+			aras.setItemProperty(topWnd.item, 'sample_item', '<Item type=\'' + itemTypeNameNd.text + '\' id=\'\'/>');
+		}
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Report_UpdateItem</name>
+ </Item>
+</AML>

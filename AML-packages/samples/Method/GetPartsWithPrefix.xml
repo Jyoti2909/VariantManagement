@@ -1,0 +1,240 @@
+﻿<AML>
+ <Item type="Method" id="EDE2281EAA8A4677B17971059A7B658D" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), RequestState);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			try
+			{
+				return businessLogic.Run(this);
+			}
+			catch (InnovatorItemException ex)
+			{
+				return ex.ErrorItem;
+			}
+			catch (InnovatorException ex)
+			{
+				return dataAccessLayer.NewError(ex.AddCallStack ? ex.ToString() : ex.Message);
+			}
+}
+
+//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer dal;
+			private const string prefixString = "PRE-";
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				Item parts = GetItems(prefixString);
+
+				int count = parts.getItemCount();
+
+				return dal.NewResult(count.ToString(CultureInfo.InvariantCulture));
+			}
+
+			public Item GetItems(string prefix)
+			{
+				Item parts = dal.NewItem("Part", "get");
+				parts.setAttribute("select", "id");
+				parts.setProperty("name", prefix + "*");
+				parts.setPropertyAttribute("name", "condition", "like");
+				parts = dal.ApplyItem(parts);
+				Utils.ThrowOnError(parts);
+
+				return parts;
+			}
+		}
+
+//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+		internal interface IDataAccessLayer
+		{
+			Item NewItem(string type = null, string action = null);
+			Item ApplyItem(Item item);
+			Item ApplyAML(string aml);
+			Item ApplySQL(string sql);
+			Item NewResult(string textMessage);
+			Item NewError(string errorMessage);
+			object GetValue(object key);
+			void SetValue(object key, object value);
+			Item ApplyItemWithGrantIdentity(Item item, string identityName);
+		}
+
+//[PartialPath("DataAccessLayer/DataAccessLayer")]
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+			private Aras.Server.Core.IContextState requestState;
+
+			internal DataAccessLayer(Innovator innovator, Aras.Server.Core.IContextState requestState)
+			{
+				this.innovator = innovator;
+				this.requestState = requestState;
+			}
+
+			public Item NewItem(string type = null, string action = null)
+			{
+				if (string.IsNullOrEmpty(type))
+				{
+					return innovator.newItem();
+				}
+				if (string.IsNullOrEmpty(action))
+				{
+					return innovator.newItem(type);
+				}
+				return innovator.newItem(type, action);
+			}
+
+			public Item NewResult(string textMessage)
+			{
+				return innovator.newResult(textMessage);
+			}
+
+			public Item NewError(string errorMessage)
+			{
+				return innovator.newError(errorMessage);
+			}
+
+			public Item ApplyItem(Item item)
+			{
+				return item.apply();
+			}
+
+			public Item ApplyAML(string aml)
+			{
+				return innovator.applyAML(aml);
+			}
+
+			public Item ApplySQL(string sql)
+			{
+				return innovator.applySQL(sql);
+			}
+
+			public object GetValue(object key)
+			{
+				if (requestState.Contains(key))
+				{
+					return requestState[key];
+				}
+				return null;
+			}
+
+			public void SetValue(object key, object value)
+			{
+				requestState[key] = value;
+			}
+
+			public Item ApplyItemWithGrantIdentity(Item item, string identityName)
+			{
+				Aras.Server.Security.Identity identityForGrant = Aras.Server.Security.Identity.GetByName(identityName);
+				bool permissionWasGranted = false;
+				try
+				{
+					permissionWasGranted = Aras.Server.Security.Permissions.GrantIdentity(identityForGrant);
+					return item.apply();
+				}
+				finally
+				{
+					if (permissionWasGranted)
+					{
+						Aras.Server.Security.Permissions.RevokeIdentity(identityForGrant);
+					}
+				}
+			}
+		}
+
+//[PartialPath("Exceptions/InnovatorException")]
+		[Serializable]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1032:ImplementStandardExceptionConstructors")]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1064:ExceptionsShouldBePublic")]
+		/// <summary>
+		/// Throw this Exception in case you need to return a message
+		/// </summary>
+		internal class InnovatorException : Exception
+		{
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+			internal bool AddCallStack { get; private set; }
+
+			protected InnovatorException()
+			{
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+			internal InnovatorException(string message, bool addCallStack = false) : base(message)
+			{
+				AddCallStack = addCallStack;
+			}
+		}
+
+//[PartialPath("Exceptions/InnovatorItemException")]
+		[Serializable]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1032:ImplementStandardExceptionConstructors")]
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1064:ExceptionsShouldBePublic")]
+		/// <summary>
+		/// Throw this Exception in case you need to return an initial error item
+		/// </summary>
+		internal class InnovatorItemException : InnovatorException
+		{
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+			internal Item ErrorItem { get; private set; }
+
+			private InnovatorItemException()
+			{
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+			internal InnovatorItemException(Item errorItem)
+			{
+				ErrorItem = errorItem;
+			}
+		}
+
+//[PartialPath("Utils/Utils")]
+		internal static class Utils
+		{
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+			internal static bool IsError(Item item, bool treatEmptyAsError = false)
+			{
+				return item.isError() && (!item.isEmpty() || treatEmptyAsError);
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+			internal static void ThrowOnError(Item item, bool treatEmptyAsError = false)
+			{
+				if (item == null)
+				{
+					throw new InnovatorException(NameOf(() => item), true);
+				}
+
+				if (IsError(item, treatEmptyAsError))
+				{
+					throw new InnovatorItemException(item);
+				}
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+			internal static IEnumerable<Item> Enumerate(Item collectionItem)
+			{
+				if (collectionItem != null)
+				{
+					int itemsCount = collectionItem.getItemCount();
+					for (int i = 0; i < itemsCount; i++)
+					{
+						yield return collectionItem.getItemByIndex(i);
+					}
+				}
+			}
+
+			[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
+			internal static string NameOf<T>(System.Linq.Expressions.Expression<Func<T>> propertyExpression)
+			{
+				return (propertyExpression.Body as System.Linq.Expressions.MemberExpression).Member.Name;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetPartsWithPrefix</name>
+ </Item>
+</AML>

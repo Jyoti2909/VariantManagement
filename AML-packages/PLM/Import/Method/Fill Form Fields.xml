@@ -1,0 +1,22 @@
+﻿<AML>
+ <Item type="Method" id="6DE9F15831624BDEBAA13F2A827994BC" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// Loop through the "input" elements
+var elements = document.getElementsByTagName("input");
+for (var i=0; i<elements.length; i++){
+ // The property name to use is the input name of the field
+ var propName = elements[i].name;
+ if (propName == "major_rev" ||propName == "state" || propName == "cost") {
+  var propVal = document.thisItem.getProperty(propName);
+  // If the property has no value, show a blank field
+  if (propVal === undefined) {
+   elements[i].value = "";
+  } else {
+   elements[i].value = propVal;
+  }
+ }
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Fill Form Fields</name>
+ </Item>
+</AML>

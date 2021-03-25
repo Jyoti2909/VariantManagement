@@ -1,0 +1,577 @@
+﻿<AML>
+ <Item type="Workflow Map" id="5F194410B5F44FA5A287E7D63C7415E1" action="add">
+  <description xml:lang="en" />
+  <node_bg_color>       </node_bg_color>
+  <node_label1_color>       </node_label1_color>
+  <node_label1_font />
+  <node_label2_color>       </node_label2_color>
+  <node_label2_font />
+  <node_name_color>       </node_name_color>
+  <node_name_font />
+  <node_size />
+  <process_owner keyed_name="Creator" type="Identity">
+   <Item type="Identity" action="get" select="id">
+    <name>Creator</name>
+   </Item>
+  </process_owner>
+  <transition_line_color>       </transition_line_color>
+  <transition_name_color>       </transition_name_color>
+  <transition_name_font />
+  <name>GAG_MechanicalPartReleaseWorkflow</name>
+  <Relationships>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="End" type="Activity Template">
+     <Item type="Activity Template" id="ADBE1DD2D21A4163853960AD83073B55" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Workflow End</message>
+      <priority>1</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>1249</x>
+      <y>126</y>
+      <name>End</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="A4B932C29B034EA8B653EF417AE924F1" action="add">
+        <controlled_itemtype keyed_name="GAG_EngineeringChangeObject" type="ItemType" name="GAG_EngineeringChangeObject">5DCFF174F8144371B57B563263F31D42</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="6B73EF7A543249A3851683406EF34DDB" type="Life Cycle Transition">6B73EF7A543249A3851683406EF34DDB</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="End" type="Activity Template">ADBE1DD2D21A4163853960AD83073B55</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="GAG_MechanicalPartReleaseWorkflow" type="Workflow Map">5F194410B5F44FA5A287E7D63C7415E1</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Planning" type="Activity Template">
+     <Item type="Activity Template" id="7B2397BAADE7479C936169A1EB0A10DD" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/WorkflowStart.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>1</is_start>
+      <message xml:lang="en">Workflow Start</message>
+      <priority>2</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>43</x>
+      <y>131</y>
+      <name>Planning</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="2DC38A0CA7974968A453DF940232F18E" action="add">
+        <related_id keyed_name="Creator" type="Identity">
+         <Item type="Identity" action="get" select="id">
+          <name>Creator</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Planning" type="Activity Template">7B2397BAADE7479C936169A1EB0A10DD</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Task" id="797B9E4EDE21430C98ACA0B9A9F15551" action="add">
+        <description xml:lang="en">Add all relevant Mechanical Parts</description>
+        <is_required>1</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Planning" type="Activity Template">7B2397BAADE7479C936169A1EB0A10DD</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="C12110649BCE45E68804557AF615AE7C" action="add">
+        <description xml:lang="en">Define action on each Mechanical Part</description>
+        <is_required>1</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Planning" type="Activity Template">7B2397BAADE7479C936169A1EB0A10DD</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Workflow Map Path" id="869A45BCE31243DE99503D6C16A466EB" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Cancel GECO</name>
+        <related_id>E3BFFD62CF314341A7E5087F248A3695</related_id>
+        <segments>102,58</segments>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Planning" type="Activity Template">7B2397BAADE7479C936169A1EB0A10DD</source_id>
+        <x>-47</x>
+        <y>-71</y>
+       </Item>
+       <Item type="Workflow Map Path" id="86906D1B426C41A1B2C2C2D36A9F0AE4" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>0</is_override>
+        <name>Start Mechanical Part Task</name>
+        <related_id>AEA06E2F39094A188C0A79DEDF75D1E8</related_id>
+        <segments />
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Planning" type="Activity Template">7B2397BAADE7479C936169A1EB0A10DD</source_id>
+        <x>56</x>
+        <y>-6</y>
+        <Relationships>
+         <Item type="Workflow Map Path Post" id="FF56027D65A84522A71DA01E54E7F77D" action="add">
+          <related_id keyed_name="GAG_PromotionStartTask" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_PromotionStartTask</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="86906D1B426C41A1B2C2C2D36A9F0AE4" type="Workflow Map Path">86906D1B426C41A1B2C2C2D36A9F0AE4</source_id>
+         </Item>
+         <Item type="Workflow Map Path Pre" id="B71725C32E764782AED24EF5DA50855F" action="add">
+          <related_id keyed_name="GAG_ValidateAffectedItemsActions" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_ValidateAffectedItemsActions</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="86906D1B426C41A1B2C2C2D36A9F0AE4" type="Workflow Map Path">86906D1B426C41A1B2C2C2D36A9F0AE4</source_id>
+         </Item>
+        </Relationships>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="GAG_MechanicalPartReleaseWorkflow" type="Workflow Map">5F194410B5F44FA5A287E7D63C7415E1</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Cancel" type="Activity Template">
+     <Item type="Activity Template" id="E3BFFD62CF314341A7E5087F248A3695" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../Images/Delete.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review...</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>165</x>
+      <y>46</y>
+      <name>Cancel</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="6F66ABD4F6004C658772326B6310A9EF" action="add">
+        <controlled_itemtype keyed_name="GAG_EngineeringChangeObject" type="ItemType" name="GAG_EngineeringChangeObject">5DCFF174F8144371B57B563263F31D42</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="CFBA2362EF944A86A43A03A998CDBF0A" type="Life Cycle Transition">CFBA2362EF944A86A43A03A998CDBF0A</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Cancel" type="Activity Template">E3BFFD62CF314341A7E5087F248A3695</source_id>
+       </Item>
+       <Item type="Activity Template Transition" id="94DE490007734914A751366361916F9C" action="add">
+        <controlled_itemtype keyed_name="GAG_EngineeringChangeObject" type="ItemType" name="GAG_EngineeringChangeObject">5DCFF174F8144371B57B563263F31D42</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="05E8295CCF534FDF90A30963721B1A7C" type="Life Cycle Transition">05E8295CCF534FDF90A30963721B1A7C</related_id>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Cancel" type="Activity Template">E3BFFD62CF314341A7E5087F248A3695</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="GAG_MechanicalPartReleaseWorkflow" type="Workflow Map">5F194410B5F44FA5A287E7D63C7415E1</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Mechanical Part Task" type="Activity Template">
+     <Item type="Activity Template" id="AEA06E2F39094A188C0A79DEDF75D1E8" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../Images/Grey.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review...</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>300</x>
+      <y>130</y>
+      <name>Mechanical Part Task</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="5FBF4D8A2F7F4C4DB0A2A76D0ED97C58" action="add">
+        <related_id keyed_name="Product Engineer" type="Identity">D8190B09A2604895AB3F6F35AC7DAF4D</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Mechanical Part Task" type="Activity Template">AEA06E2F39094A188C0A79DEDF75D1E8</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Task" id="8775A5CE585D49A39C3BF150FAF82EFD" action="add">
+        <description xml:lang="en">Mechanical Part(s) changed</description>
+        <is_required>1</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Mechanical Part Task" type="Activity Template">AEA06E2F39094A188C0A79DEDF75D1E8</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="34D3965103FB45E79C79F996953D7220" action="add">
+        <controlled_itemtype keyed_name="GAG_EngineeringChangeObject" type="ItemType" name="GAG_EngineeringChangeObject">5DCFF174F8144371B57B563263F31D42</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="C920C51994C84C50AEEC9CE4334553D2" type="Life Cycle Transition">C920C51994C84C50AEEC9CE4334553D2</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Mechanical Part Task" type="Activity Template">AEA06E2F39094A188C0A79DEDF75D1E8</source_id>
+       </Item>
+       <Item type="Activity Template Transition" id="2B83585AA46D493DB3DD59FEB30B5B33" action="add">
+        <controlled_itemtype keyed_name="GAG_EngineeringChangeObject" type="ItemType" name="GAG_EngineeringChangeObject">5DCFF174F8144371B57B563263F31D42</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="FE47B19A0B394B119E98C95427E93012" type="Life Cycle Transition">FE47B19A0B394B119E98C95427E93012</related_id>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Mechanical Part Task" type="Activity Template">AEA06E2F39094A188C0A79DEDF75D1E8</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="FBF2C293EB534CCBB4F18E6382A155C0" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Cancel GECO</name>
+        <related_id>E3BFFD62CF314341A7E5087F248A3695</related_id>
+        <segments>254,60</segments>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Mechanical Part Task" type="Activity Template">AEA06E2F39094A188C0A79DEDF75D1E8</source_id>
+        <x>-31</x>
+        <y>-71</y>
+        <Relationships>
+         <Item type="Workflow Map Path Post" id="20DD65DE6F7740C8A09E1E683761C525" action="add">
+          <related_id keyed_name="GAG_PromotionGECOCancel" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_PromotionGECOCancel</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="FBF2C293EB534CCBB4F18E6382A155C0" type="Workflow Map Path">FBF2C293EB534CCBB4F18E6382A155C0</source_id>
+         </Item>
+        </Relationships>
+       </Item>
+       <Item type="Workflow Map Path" id="A95B12A037674881AB691CAAD5176E42" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Start Review</name>
+        <related_id>4AD7C492819A4458B676A9F9C7C1C6BA</related_id>
+        <segments />
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Mechanical Part Task" type="Activity Template">AEA06E2F39094A188C0A79DEDF75D1E8</source_id>
+        <x>99</x>
+        <y>-6</y>
+        <Relationships>
+         <Item type="Workflow Map Path Post" id="A22F20718AD04FA5A83CF59777B78E40" action="add">
+          <related_id keyed_name="GAG_PromotionStartReview" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_PromotionStartReview</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="A95B12A037674881AB691CAAD5176E42" type="Workflow Map Path">A95B12A037674881AB691CAAD5176E42</source_id>
+         </Item>
+        </Relationships>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="GAG_MechanicalPartReleaseWorkflow" type="Workflow Map">5F194410B5F44FA5A287E7D63C7415E1</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Master Data Review" type="Activity Template">
+     <Item type="Activity Template" id="4AD7C492819A4458B676A9F9C7C1C6BA" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../Images/Grey.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review...</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>553</x>
+      <y>131</y>
+      <name>Master Data Review</name>
+      <Relationships>
+       <Item type="Activity Template Method" id="062B6EF30E384A869C199D7F125CF2D2" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="GAG_AssignGecoManagement" type="Method">
+         <Item type="Method" action="get" select="id">
+          <name>GAG_AssignGecoManagement</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Master Data Review" type="Activity Template">4AD7C492819A4458B676A9F9C7C1C6BA</source_id>
+       </Item>
+       <Item type="Activity Template Task" id="4D88405C29794F919814006862DDA45E" action="add">
+        <description xml:lang="en">Master Data Review done</description>
+        <is_required>1</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Master Data Review" type="Activity Template">4AD7C492819A4458B676A9F9C7C1C6BA</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="1CE14564A4E74A5C9611A64F06C6531A" action="add">
+        <controlled_itemtype keyed_name="GAG_EngineeringChangeObject" type="ItemType" name="GAG_EngineeringChangeObject">5DCFF174F8144371B57B563263F31D42</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="2B44AFC0A9EF4250AA98ADB24BB4C887" type="Life Cycle Transition">2B44AFC0A9EF4250AA98ADB24BB4C887</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Master Data Review" type="Activity Template">4AD7C492819A4458B676A9F9C7C1C6BA</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="2799434B49E2447ABF686839F64855A1" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Rework required</name>
+        <related_id>AEA06E2F39094A188C0A79DEDF75D1E8</related_id>
+        <segments>520,115|357,114</segments>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Master Data Review" type="Activity Template">4AD7C492819A4458B676A9F9C7C1C6BA</source_id>
+        <x>-152</x>
+        <y>-36</y>
+        <Relationships>
+         <Item type="Workflow Map Path Post" id="30C299231386448B9D6F642AC250362E" action="add">
+          <related_id keyed_name="GAG_PromotionRollbackToCADTask" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_PromotionRollbackToCADTask</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="2799434B49E2447ABF686839F64855A1" type="Workflow Map Path">2799434B49E2447ABF686839F64855A1</source_id>
+         </Item>
+        </Relationships>
+       </Item>
+       <Item type="Workflow Map Path" id="51D0CB3826D1403A9BB9B1D403BF2067" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Master Data Review completed</name>
+        <related_id>DBC25F61D3C7479495D05F5637E44EE9</related_id>
+        <segments />
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Master Data Review" type="Activity Template">4AD7C492819A4458B676A9F9C7C1C6BA</source_id>
+        <x>30</x>
+        <y>-9</y>
+        <Relationships>
+         <Item type="Workflow Map Path Post" id="4AE2BF0490AA4FD19958A414E91127A2" action="add">
+          <related_id keyed_name="GAG_PromMasterDataReviewComplete" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_PromMasterDataReviewComplete</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="51D0CB3826D1403A9BB9B1D403BF2067" type="Workflow Map Path">51D0CB3826D1403A9BB9B1D403BF2067</source_id>
+         </Item>
+        </Relationships>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="GAG_MechanicalPartReleaseWorkflow" type="Workflow Map">5F194410B5F44FA5A287E7D63C7415E1</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Internal review" type="Activity Template">
+     <Item type="Activity Template" id="DBC25F61D3C7479495D05F5637E44EE9" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../Images/Grey.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review...</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>800</x>
+      <y>129</y>
+      <name>Internal review</name>
+      <Relationships>
+       <Item type="Activity Template Method" id="EF6571B62C1D460288AA4DCCC3F2C9A8" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="GAG_AssignGecoManagement" type="Method">
+         <Item type="Method" action="get" select="id">
+          <name>GAG_AssignGecoManagement</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Internal review" type="Activity Template">DBC25F61D3C7479495D05F5637E44EE9</source_id>
+       </Item>
+       <Item type="Activity Template Task" id="F90C2B71117D4CC886E3FD6671D0EA14" action="add">
+        <description xml:lang="en">Internal Review done</description>
+        <is_required>1</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Internal review" type="Activity Template">DBC25F61D3C7479495D05F5637E44EE9</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Workflow Map Path" id="0919964C18794FB69BFF5F3A77410C0A" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Rework required</name>
+        <related_id>AEA06E2F39094A188C0A79DEDF75D1E8</related_id>
+        <segments>763,150|711,191|393,192|371,151</segments>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Internal review" type="Activity Template">DBC25F61D3C7479495D05F5637E44EE9</source_id>
+        <x>-192</x>
+        <y>47</y>
+        <Relationships>
+         <Item type="Workflow Map Path Post" id="C3CBFB0D5CE84CEF9CE5102C85ED57B3" action="add">
+          <related_id keyed_name="GAG_PromotionRollbackToCADTask" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_PromotionRollbackToCADTask</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="0919964C18794FB69BFF5F3A77410C0A" type="Workflow Map Path">0919964C18794FB69BFF5F3A77410C0A</source_id>
+         </Item>
+        </Relationships>
+       </Item>
+       <Item type="Workflow Map Path" id="C0DA33BB96B74EA38E5948530556F305" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Internal Review completed</name>
+        <related_id>F96B374454C14822B1665360F549E1EB</related_id>
+        <segments />
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Internal review" type="Activity Template">DBC25F61D3C7479495D05F5637E44EE9</source_id>
+        <x>28</x>
+        <y>-8</y>
+        <Relationships>
+         <Item type="Workflow Map Path Post" id="2EA77EE532E646C0876F9A74D7847698" action="add">
+          <related_id keyed_name="GAG_PromInternalReviewCompleted" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_PromInternalReviewCompleted</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="C0DA33BB96B74EA38E5948530556F305" type="Workflow Map Path">C0DA33BB96B74EA38E5948530556F305</source_id>
+         </Item>
+        </Relationships>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>768</sort_order>
+    <source_id keyed_name="GAG_MechanicalPartReleaseWorkflow" type="Workflow Map">5F194410B5F44FA5A287E7D63C7415E1</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="External Review" type="Activity Template">
+     <Item type="Activity Template" id="F96B374454C14822B1665360F549E1EB" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../Images/Grey.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review...</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>1010</x>
+      <y>127</y>
+      <name>External Review</name>
+      <Relationships>
+       <Item type="Activity Template Method" id="9E89B334F72A4EFC9074896B5564E2A4" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="GAG_AssignGecoManagement" type="Method">
+         <Item type="Method" action="get" select="id">
+          <name>GAG_AssignGecoManagement</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="External Review" type="Activity Template">F96B374454C14822B1665360F549E1EB</source_id>
+       </Item>
+       <Item type="Activity Template Task" id="80FD134BBE1B4859AD4DC19B411E628D" action="add">
+        <description xml:lang="en">External Review done</description>
+        <is_required>1</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="External Review" type="Activity Template">F96B374454C14822B1665360F549E1EB</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Workflow Map Path" id="77C3DA27B4954A0EB3760D89CE31A292" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>External Review completed</name>
+        <related_id>ADBE1DD2D21A4163853960AD83073B55</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="External Review" type="Activity Template">F96B374454C14822B1665360F549E1EB</source_id>
+        <x>44</x>
+        <y>-5</y>
+        <Relationships>
+         <Item type="Workflow Map Path Post" id="5DAC5571D0FC4DE1B9C1C847B0DED6C9" action="add">
+          <related_id keyed_name="GAG_PromExternalReviewCompleted" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_PromExternalReviewCompleted</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="77C3DA27B4954A0EB3760D89CE31A292" type="Workflow Map Path">77C3DA27B4954A0EB3760D89CE31A292</source_id>
+         </Item>
+         <Item type="Workflow Map Path Post" id="C829A5B0E6F74CA092D364D18C986C83" action="add">
+          <related_id keyed_name="GAG_SetMPTReleaseInformation" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_SetMPTReleaseInformation</name>
+           </Item>
+          </related_id>
+          <sequence>2</sequence>
+          <sort_order>256</sort_order>
+          <source_id keyed_name="77C3DA27B4954A0EB3760D89CE31A292" type="Workflow Map Path">77C3DA27B4954A0EB3760D89CE31A292</source_id>
+         </Item>
+        </Relationships>
+       </Item>
+       <Item type="Workflow Map Path" id="C1B8C4872D6D47F38245F623B58562A1" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Rework required</name>
+        <related_id>AEA06E2F39094A188C0A79DEDF75D1E8</related_id>
+        <segments>959,150|955,217|231,218|230,154</segments>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="External Review" type="Activity Template">F96B374454C14822B1665360F549E1EB</source_id>
+        <x>-162</x>
+        <y>70</y>
+        <Relationships>
+         <Item type="Workflow Map Path Post" id="545AFBD06E364349A646A639882B446E" action="add">
+          <related_id keyed_name="GAG_PromotionRollbackToCADTask" type="Method">
+           <Item type="Method" action="get" select="id">
+            <name>GAG_PromotionRollbackToCADTask</name>
+           </Item>
+          </related_id>
+          <sequence>1</sequence>
+          <sort_order>128</sort_order>
+          <source_id keyed_name="C1B8C4872D6D47F38245F623B58562A1" type="Workflow Map Path">C1B8C4872D6D47F38245F623B58562A1</source_id>
+         </Item>
+        </Relationships>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>896</sort_order>
+    <source_id keyed_name="GAG_MechanicalPartReleaseWorkflow" type="Workflow Map">5F194410B5F44FA5A287E7D63C7415E1</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

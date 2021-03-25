@@ -1,0 +1,122 @@
+variables:
+- group: ContiniousIntegration (Global)
+
+pool:
+  name: $(agentPoolName)
+
+jobs:
+- job: ContinuousIntegration
+  timeoutInMinutes: 120
+  steps:
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: |
+        # Attach SMB share with baselines
+        if ( !(Get-PSDrive | Where-Object { $_.Name -like 'Z' })){
+         $connectTestResult = Test-NetConnection -ComputerName $(baselinesStorageAccountName) -Port 445
+         if ($connectTestResult.TcpTestSucceeded) {
+             # Save the password so the drive will persist on reboot
+             cmd.exe /C "cmdkey /add:`"$(baselinesStorageAccountName)`" /user:`"$env:SMB_USER`" /pass:`"$env:SMB_PASS`""
+             # Mount the drive
+             New-PSDrive -Name Z -PSProvider FileSystem -Root "\\$(baselinesStorageAccountName)\artifacts" -Persist
+         } else {
+            Write-Error -Message "Unable to reach the Azure storage account via port 445. Check to make sure your organization or ISP is not blocking port 445, or use Azure P2S VPN, Azure S2S VPN, or Express Route to tunnel SMB traffic over a different port."
+         }
+        }
+    env:
+      SMB_USER: $(smbUser)
+      SMB_PASS: $(smbPass)
+    displayName: 'Attach SMB share with baselines'
+    enabled: True
+
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: |
+        Start-Job -ScriptBlock { & "$(mssqlPath)" }
+
+        ${env:Build.Identifier} = "{0}-{1}" -f "$(Build.SourceBranchName)", "$(Build.BuildNumber)"
+        ${env:Deployment.Package.Build.Number} = "$(Build.BuildNumber)".Replace(".", [string]::Empty)
+        ${env:Feature.License.Credential.IDs} = (Get-Content -Path '.\AutomatedProcedures\JenkinsfileProperties.json' -Raw | ConvertFrom-Json).featureLicenseCredentialIDs -join ','
+
+        & .\AutomatedProcedures\tools\SetupExternalTools.ps1
+        & .\AutomatedProcedures\tools\NAnt\tools\NAnt.exe -buildfile:AutomatedProcedures\NantScript.xml ContinuousIntegration
+    env:
+      Innovator.License.String: $(Innovator.License.String)
+      ArasTestAutomationFramework12: $(ArasTestAutomationFramework12)
+      Feature.License.Credential.IDs: $(Feature.License.Credential.IDs)
+      MSSQL.SA.Password: $(MSSQL.SA.Password)
+      MSSQL.Innovator.Password: $(MSSQL.Innovator.Password)
+      MSSQL.Innovator.Regular.Password: $(MSSQL.Innovator.Regular.Password)
+      MachineSpecific.Includes.Folder.Path: $(MachineSpecific.Includes.Folder.Path)
+      Perform.Import.Of.SampleData: $(Perform.Import.Of.SampleData)
+    continueOnError: False
+    displayName: 'Run ContinuousIntegration'
+    enabled: True
+
+  - task: CopyFiles@2
+    inputs:
+      Contents: '$(Build.SourcesDirectory)/AutomatedProceduresOutput/*.zip'
+      TargetFolder: '$(Build.ArtifactStagingDirectory)/pipeline'
+      flattenFolders: true
+    displayName: 'Copy Test Result logs'
+    enabled: True
+
+  - task: CopyFiles@2
+    inputs:
+      Contents: |
+        $(Build.SourcesDirectory)/*.zip
+        !$(Build.SourcesDirectory)/Deployment-Package-Content.zip
+      TargetFolder: '$(Build.ArtifactStagingDirectory)/pipeline'
+      flattenFolders: true
+    displayName: 'Copy Deployment-Package-Content'
+    enabled: True
+
+  - task: CopyFiles@2
+    inputs:
+      Contents: |
+        $(Build.SourcesDirectory)/*.nupkg
+      TargetFolder: '$(Build.ArtifactStagingDirectory)/storage'
+      flattenFolders: true
+    displayName: 'Copy Nuget packages'
+    enabled: True   
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/pipeline'
+      artifact: 'BuildArtifact'
+      publishLocation: 'pipeline'
+    displayName: 'Publish Artifact to pipeline'
+    enabled: True
+
+  - task: PublishPipelineArtifact@1
+    inputs:
+      targetPath: '$(Build.ArtifactStagingDirectory)/storage'
+      artifact: '$(Build.SourceBranchName)-$(Build.BuildNumber)'
+      publishLocation: 'filepath'
+      fileSharePath: '\\$(baselinesStorageAccountName)\artifacts\Packages'
+    displayName: 'Publish Artifact to storage'
+    condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+    enabled: True
+  
+  - task: PowerShell@2
+    inputs:
+      targetType: 'inline'
+      script: |
+        Start-Job -ScriptBlock { & "$(mssqlPath)" }
+
+        ${env:Build.Identifier} = "{0}-{1}" -f "$(Build.SourceBranchName)", "$(Build.BuildNumber)"
+        ${env:Deployment.Package.Build.Number} = "$(Build.BuildNumber)".Replace(".", [string]::Empty)
+
+        & .\AutomatedProcedures\tools\SetupExternalTools.ps1
+        & .\AutomatedProcedures\tools\NAnt\tools\NAnt.exe -buildfile:AutomatedProcedures\NantScript.xml SetupParameters.For.Continuous.Task Clean.Up
+    env:
+      Innovator.License.String: $(Innovator.License.String)
+      MSSQL.SA.Password: $(MSSQL.SA.Password)
+      MSSQL.Innovator.Password: $(MSSQL.Innovator.Password)
+      MSSQL.Innovator.Regular.Password: $(MSSQL.Innovator.Regular.Password)
+      MachineSpecific.Includes.Folder.Path: $(MachineSpecific.Includes.Folder.Path)
+    condition: always()
+    displayName: 'Clean Up'
+    enabled: True

@@ -1,0 +1,41 @@
+﻿@{
+	Layout = "../../aras.innovator.core.ItemWindow/Views/Shared/_cuiLayout.cshtml";
+}
+@section style
+{
+	<link rel="stylesheet" href="../../styles/common.min.css"/>
+	<link rel="stylesheet" href="styles/graphView.min.css"/>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/vendors/d3.min.js")"></script>
+}
+@section header
+{
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/jsBundles/graphView.js")"></script>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/jsBundles/cui.js")"></script>
+}
+@section init_widgets
+{
+	<script type="text/javascript">
+
+		const initCuiLayout = async function() {
+			document.body.classList.replace('claro', 'graph-view');
+
+			const layoutNode = document.getElementById('top-toolbars');
+			window.layout = new CuiLayout(layoutNode, 'GraphView', {
+				itemTypeName: window.itemTypeName
+			});
+			window.addEventListener('unload', () => window.layout.destroy());
+			await window.layout.init();
+			const commandBarNode = layoutNode.querySelector('.aras-commandbar');
+			if (commandBarNode) {
+				const itemTypeColor = aras.getItemTypeColor(window.itemTypeName, 'name');
+				commandBarNode.style.borderBottom = '4px solid ' + itemTypeColor;
+			}
+		};
+		document.addEventListener('DOMContentLoaded', initCuiLayout);
+	</script>
+}
+@section center
+{
+	<div id="cuiLayout" class="cui-toolbars"></div>
+	<div id="graphView" class="graph-view__graph-container"></div>
+}

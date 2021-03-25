@@ -1,0 +1,44 @@
+﻿<AML>
+ <Item type="Method" id="32033FA4F5D1417FB1AC972B73F03F41" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[let queryDate;
+const selectedItem = target.value;
+const queryDateControl = control.data.get('searchview.commandbar.default.querydate');
+
+if (selectedItem === 'Current') {
+	queryDateControl.value = '';
+	queryDateControl.disabled = true;
+
+	queryDate = aras.getVariable(varName_queryDate);
+	if (queryDate) {
+		aras.setVariable(varName_queryDate, queryDate);
+	}
+} else {
+	const prevQueryType = aras.getPreferenceItemProperty('Core_ItemGridLayout', itemTypeID, 'query_type', null);
+	const prevDatePattern = GetDatePattern(prevQueryType);
+
+	if (!prevQueryType || prevQueryType === 'Current') {
+		queryDate = aras.getVariable(varName_queryDate, queryDate);
+	} else {
+		queryDate = queryDateControl.value;
+
+		if (queryDate) {
+			queryDate = aras.convertToNeutral(queryDate, 'date', prevDatePattern);
+		}
+	}
+
+	const localDate = aras.convertFromNeutral(queryDate, 'date', GetDatePattern(selectedItem));
+	aras.setVariable(varName_queryDate, queryDate);
+
+	queryDateControl.value = queryDate;
+	queryDateControl.disabled = false;
+	options.actions.updateQueryDate(queryDate);
+}
+options.actions.updateQueryType(selectedItem);
+control.data.set(queryDateControl.id, Object.assign({}, queryDateControl));
+control.render();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_svcb_querytype_click</name>
+ </Item>
+</AML>

@@ -1,0 +1,34 @@
+﻿<AML>
+ <Item type="Method" id="DD1C8C9144BF4DC8B0179B978BF2CDEB" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[int fileSelDepth = CheckSelectionDepth(this.getProperty("file_selection_depth"), "File", CCO);
+int itemSelDepth = CheckSelectionDepth(this.getProperty("item_selection_depth"), "Item", CCO);
+
+if (fileSelDepth > itemSelDepth && itemSelDepth > -1)
+{
+	throw new ArgumentException(CCO.ErrorLookup.Lookup("SSVC_ItemSelectionDepthShouldBeGreater"));
+}
+
+return this;
+}
+
+private int CheckSelectionDepth(string selDepthStr, string type, Aras.Server.Core.CallContext CCO)
+{
+	int selDepth;
+	if (!string.IsNullOrEmpty(selDepthStr))
+	{
+		bool result = int.TryParse(selDepthStr, out selDepth);
+		if (!result || selDepth < -1)
+		{
+			throw new ArgumentException(string.Format(CCO.ErrorLookup.Lookup("SSVC_InvalidSelectionDepth"), type));
+		}
+		return selDepth;
+	}
+	else
+	{
+		return -1;
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_SelectionDepthValidation</name>
+ </Item>
+</AML>

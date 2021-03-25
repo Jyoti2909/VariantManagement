@@ -1,0 +1,26 @@
+﻿<AML>
+ <Item type="Method" id="34A6EFABECF0440CBA91D8B15C8D01F7" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.TDF.ContentGenerator(Strict);
+	// If " " used as second param, then <emph> node will be created as first child element of new element with one space.
+	// Without this param new element will not have child 'emph' element.
+	base.GenerateContent(targetElement, executionContext);
+	foreach (TextDocumentElement child in targetElement.Childs[0].Childs)
+	{
+		switch(child.NodeName)
+		{
+			case "Requirement-Chapter":
+			case "Requirement-Title":
+				child.Text = " ";
+				break;
+			case "Requirement-Number":
+				child.Text = "Server Assigned";
+				break;
+		}
+	}
+
+	targetElement.SetAttribute("reqId", executionContext.DocumentId);]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_DefaultContentGenerator</name>
+ </Item>
+</AML>

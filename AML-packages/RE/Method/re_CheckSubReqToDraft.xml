@@ -1,0 +1,14 @@
+﻿<AML>
+ <Item type="Method" id="FBECB93C72CD435ABBEFF3701F257199" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Item itm = this.newItem("re_Requirement", "re_CheckRequirementDocument");
+	itm.setProperty("requirementId", this.getID());
+	itm.setProperty("forbidden_states", "In Review, Released, Superseded");
+	itm.setProperty("new_state", "Draft");
+	itm = itm.apply();
+
+	return itm.isError() ? itm : this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_CheckSubReqToDraft</name>
+ </Item>
+</AML>

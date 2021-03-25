@@ -1,0 +1,188 @@
+﻿<!DOCTYPE html>
+<!-- Copyright by arasObj Corporation, 2004-2013 -->
+<html>
+<head>
+	<style type="text/css">
+		@import "tool_styles.css";
+		@import "../../javascript/include.aspx?classes=common.css";
+		@import "../../styles/default.css";
+		body {
+			overflow: hidden;
+			margin: 0;
+			height: 100%;
+			width: 100%;
+		}
+	</style>
+	<script type="text/javascript" src="../../javascript/PopulateDocByLabels.js"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=XmlDocument"></script>
+</head>
+
+	<script type="text/javascript">
+		var arasObj = parent.aras;
+		var mainWindow = arasObj.getMostTopWindowWithAras(window);
+		onload = function () {
+			var codeElement = document.getElementById("code");
+			if (codeElement) {
+				codeElement.readOnly = !mainWindow.isEditMode;
+			}
+
+			var buttonBox = document.getElementById("buttonBox");
+			if (buttonBox) {
+				buttonBox.style.visibility = mainWindow.isEditMode ? "visible" : "hidden";
+			}
+
+			populateUI();
+		};
+
+		function populateUI() {
+			loadTextarea();
+			setTimeout(resizeTextarea, 0);
+		}
+
+		/***
+	 * Resize the textarea to fill the available space as the window is resized.
+	 */
+		function resizeTextarea() {
+			var textArea = document.getElementById("code");
+			var buttonArea = document.getElementById("buttonBox");
+			var stylesheetForm = document.getElementById("stylesheetForm");
+			var height = window.innerHeight;
+			var width = window.innerWidth;
+			var buttonBoxHeight = mainWindow.isEditMode ? '80' : '20';
+			stylesheetForm.style.width = width + 'px'; // for IE10
+			stylesheetForm.style.height = height + "px";
+			textArea.style.height = ((height - buttonBoxHeight) > 0) ? height - buttonBoxHeight + "px" : textArea.style.height;
+			textArea.style.width = width - 20 + 'px';
+			buttonArea.style.width = width - 20 + 'px';
+		}
+
+		function applyChange(newValue) {
+			// Write the textarea back to the xslDOM object.
+			var tmpDom = arasObj.createXMLDocument();
+			tmpDom.loadXML(newValue);
+			if (tmpDom.parseError.errorCode != 0) {
+				arasObj.AlertError(arasObj.getResource("", "stylesheet.apply_change_err", tmpDom.parseError.reason));
+				return false;
+			}
+
+			tmpDom = null;
+			parent.API.xslDOM.loadXML(newValue);
+			arasObj.setItemProperty(mainWindow.item, "xsl_stylesheet", newValue);
+			return true;
+		}
+
+		/***
+	 * Write the XSL stylesheet to the textarea.
+	 */
+		function loadTextarea() {
+			// Remove the aras funcs from the stylesheet because its a bunch of JavaScript and it will cluter up the page.
+			var node = parent.API.xslDOM.selectSingleNode('//*[@implements-prefix="aras"]');
+			if (node) {
+				node.parentNode.removeChild(node);
+			}
+
+			// Remove the tool logic code from the stylesheet because it was added as the WYSIWYG controls for the Designer page.
+			node = parent.API.xslDOM.selectSingleNode('//script[@userData="Tool Logic"]');
+			if (node) {
+				node.parentNode.removeChild(node);
+			}
+
+			var text = parent.API.xslDOM.xml;
+
+			// FF XSLT Processor namespace dropping workaround: Formatting XML to the "human format"
+			text = text.replace(/\t/g, '');
+			text = text.replace(/[\f\r\n]+/g, '\n');
+			text = formatXml(text);
+			parent.API.xslDOM.loadXML(text);
+
+			document.getElementById("code").value = parent.API.xslDOM.xml;
+			setTimeout(resizeTextarea, 0);
+		}
+
+		function setExpression4RO(elId) {
+			var el = document.getElementById(elId);
+			if (el) {
+				el.setExpression("readOnly", "!mainWindow.isEditMode");
+			}
+		}
+
+		function setExpression4V(elId) {
+			var el = document.getElementById(elId);
+			if (el) {
+				el.style.setExpression("visibility", "mainWindow.isEditMode ? 'visible':'hidden'");
+			}
+		}
+
+		/***
+	 * @param xml Input string
+	 * @returns {string} Tab-formatted xml document
+	 */
+		function formatXml(xml) {
+			var reg = /(>)(<)(\/*)/g;
+			var wsExp = / *(.*) +\n/g;
+			var contExp = /(<.+>)(.+\n)/g;
+			xml = xml.replace(reg, '$1\n$2$3').replace(wsExp, '$1\n').replace(contExp, '$1\n$2');
+			var formatted = '';
+			var lines = xml.split('\n');
+			var indent = 0;
+			var lastType = 'other';
+			// 4 types of tags - single, closing, opening, other (text, doctype, comment) - 4*4 = 16 transitions
+			var transitions = {
+				'single->single': 0,
+				'single->closing': -1,
+				'single->opening': 0,
+				'single->other': 0,
+				'closing->single': 0,
+				'closing->closing': -1,
+				'closing->opening': 0,
+				'closing->other': 0,
+				'opening->single': 1,
+				'opening->closing': 0,
+				'opening->opening': 1,
+				'opening->other': 1,
+				'other->single': 0,
+				'other->closing': -1,
+				'other->opening': 0,
+				'other->other': 0
+			};
+
+			for (var i = 0; i < lines.length; i++) {
+				var ln = lines[i];
+				var single = Boolean(ln.match(/<.+\/>/)); // is this line a single tag? ex. <br />
+				var closing = Boolean(ln.match(/<\/.+>/)); // is this a closing tag? ex. </a>
+				var opening = Boolean(ln.match(/<[^!].*>/)); // is this even a tag (that's not <!something>)
+				var type = single ? 'single' : closing ? 'closing' : opening ? 'opening' : 'other';
+				var fromTo = lastType + '->' + type;
+				lastType = type;
+				var padding = '';
+
+				indent += transitions[fromTo];
+				for (var j = 0; j < indent; j++) {
+					padding += '\t';
+				}
+				if (fromTo == 'opening->closing'){
+					formatted = formatted.substr(0, formatted.length - 1) + ln + '\n'; // substr removes line break (\n) from prev loop
+				}
+				else {
+					formatted += padding + ln + '\n';
+				}
+			}
+			return formatted;
+		}
+	</script>
+<body onresize="resizeTextarea();">
+	<div style="height:100%; width: 100%; margin: 10px; overflow: hidden;" id="stylesheetForm">
+		<div>
+			<textarea id="code" style="display: block; width:100%; height: 100%; border-color: #D4D4D4"></textarea>
+		</div>
+		<div style="border: 1px solid #D4D4D4; height:50px; width:100%; margin-top: 10px; margin-bottom: 10px;" id="buttonBox" align="center">
+			<input style="margin-top: 12px; margin-right: 5px;" type="button" class="btn" id="apply" onclick="applyChange(code.value)" aras_ui_resource_key="reporttool.apply_html_value" />
+			<input style="margin-top: 12px; margin-left: 5px;" type="button" class="btn cancel_button" id="reset" onclick="loadTextarea()" aras_ui_resource_key="reporttool.reset_html_value" />
+		</div>
+	</div>
+<script>
+	PopulateDocByLabels();
+	resizeTextarea();
+</script>
+</body>
+</html>

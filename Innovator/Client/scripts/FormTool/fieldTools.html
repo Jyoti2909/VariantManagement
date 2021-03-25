@@ -1,0 +1,358 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2012. -->
+<html>
+	<head>
+		<title></title>
+		<script type="text/javascript">
+			var aras = parent.aras;
+			var arasToolbar = null;
+			var propsArr = [];
+			var itemType = parent.itemType;
+			var formItem = parent.currFormNd;
+
+			function init() {
+				if (!parent.arasToolbar || parent.fieldGrid) {
+					setTimeout(init, 10);
+					return;
+				}
+				arasToolbar = parent.arasToolbar;
+				parent.setFlag("toolsFReady", true);
+
+				if (!itemType) {
+					return;
+				}
+				var form_classification = parent.classification_form;
+				var propNds = aras.selectPropNdsByClassPath(form_classification, itemType, false, true);
+
+				var propNd;
+				for (var i = 0; i < propNds.length; i += 1) {
+					propNd = propNds[i];
+					propsArr.push({
+						id: propNd.getAttribute("id"),
+						name: aras.getItemProperty(propNd, "name"),
+						class_path: aras.getItemProperty(propNd, "class_path"),
+						used: false
+					});
+				}
+
+				propsArr.sort(function (obj1, obj2) {
+					var a = obj1.name;
+					var b = obj2.name;
+
+					if (a < b) {
+						return -1;
+					} else if (a == b) {
+						a = obj1.class_path;
+						b = obj2.class_path;
+
+						if (a < b) {
+							return -1;
+						} else if (a == b) {
+							return 0;
+						} else if (a > b) {
+							return 1;
+						}
+					} else if (a > b) {
+						return 1;
+					}
+				});
+
+				populatePropsList();
+			}
+
+			function onload_handler() {
+				parent.loadFieldTools({ onButtonClick: onButtonClick, onPPMClick: onPPMClick });
+				init();
+			}
+			window.addEventListener("load", onload_handler, false);
+
+			/*
+			*  +++++++++++  modifyAvailDataSources()  +++++++++++++++++++++++++++++++++++++++
+			*    function is used to populate list of available and unused yet data sources in
+			*    dropdown on arasToolbar.
+			*/
+			function modifyAvailDataSources() {
+				if (!itemType) return true;
+
+				var i, prop, used;
+				var propUsedOriginal, menuToChange;
+				for (i = 0; i < propsArr.length; i++) {
+					prop = propsArr[i];
+					var used = parent.currBodyNd.selectNodes("Relationships/Item[@type='Field' and (not(@action) or (@action!='delete' and @action!='purge'))]/propertytype_id[.='" + prop.id + "']");
+					propUsedOriginal = prop.used;
+					prop.used = (used.length > 0);
+
+					if (propUsedOriginal !== prop.used) {
+						if (!menuToChange) menuToChange = arasToolbar.getItem("unused_ds");
+						menuToChange.setItemVisible(prop.id, !prop.used);
+					}
+				}
+			}
+
+			function populateMenu(obj, menuToFill) {
+				if (!menuToFill) {
+					menuToFill = arasToolbar.getItem("unused_ds");
+				}
+
+				for (var propID in obj) {
+					if (propID != "isSubMenu") {
+						var point = obj[propID];
+						if (point.isSubMenu) {
+							var newMenuToFill = menuToFill.Add(propID, aras.EscapeSpecialChars(propID));
+							populateMenu(point, newMenuToFill);
+						} else {
+							menuToFill.Add(propID, aras.EscapeSpecialChars(point.label));
+							menuToFill.setItemVisible(propID, !point.used);
+						}
+					}
+				}
+			}
+
+			function populatePropsList() {
+				var i, prop, used;
+				var mainObj = new Object();
+
+				for (i = 0; i < propsArr.length; i++) {
+					var obj = mainObj;
+					prop = propsArr[i];
+					var used = parent.currBodyNd.selectNodes("Relationships/Item[@type='Field' and (not(@action) or (@action!='delete' and @action!='purge'))]/propertytype_id[.='" + prop.id + "']");
+					prop.used = (used.length > 0);
+
+					var classPathArr = prop.class_path.split("/");
+					if (prop.class_path && classPathArr.length > 0) {
+						for (var j = 0; j < classPathArr.length; j++) {
+							var s = classPathArr[j];
+							if (obj[s])
+								obj = obj[s];
+							else {
+								obj[s] = { isSubMenu: true };
+								obj = obj[s];
+							}
+						}
+					}
+
+					obj[prop.id] = { label: prop.name, used: prop.used };
+				}
+				populateMenu(mainObj);
+			}
+
+			function onButtonClick(tbItem) {
+				var clickedBtnId = tbItem.getId();
+
+				if (clickedBtnId === "delete") {
+					deleteField();
+				} else if ("snap-to-grid" !== clickedBtnId && "unused_ds" !== clickedBtnId) {
+					insertNewField(clickedBtnId);
+				}
+			}
+
+			function onPPMClick(menuID) {
+				if (menuID.indexOf("snap-") == 0) {
+					parent.parent.snap = parseInt(menuID.substring(menuID.indexOf("-") + 1, menuID.length));
+				} else if (itemType) {
+					var propNd = itemType.selectSingleNode("Relationships/Item[@id='" + menuID + "' and @type='Property']");
+					var propNm = aras.getItemProperty(propNd, "name");
+					var fieldtype = aras.uiGetFieldType4Property(propNd);
+
+					if (fieldtype != "class structure" && fieldtype != "listbox multi select" && fieldtype != "dropdown") {
+						var stored_length = aras.getItemProperty(propNd, "stored_length") || "1";
+						if (parseInt(stored_length) > 64 && fieldtype != "listbox multi select") {
+							fieldtype = "textarea";
+						}
+					}
+					insertNewField(fieldtype, propNm, menuID);
+				}
+			}
+
+			function deleteField() {
+				var fields = parent.fieldGrid;
+				var canvas = parent.document.getElementById("canvas").contentWindow;
+				var tabs = parent.document.getElementById("tabs").contentWindow;
+				var fieldID = fields.currFldID;
+				var fieldNd = fields.currFldNode;
+
+				if (!fieldNd) {
+					aras.AlertError(aras.getResource("", "fieldtool.select_field_delete"));
+					return;
+				}
+
+				if (fieldNd.getAttribute("isTemp") == "1") {
+					fieldNd.parentNode.removeChild(fieldNd);
+				} else {
+					fieldNd.setAttribute("action", "delete");
+				}
+
+				if (aras.getItemProperty(fieldNd, "propertytype_id") != "") modifyAvailDataSources();
+				var spanElem = canvas.document.getElementById(fieldID + "span");
+				if (spanElem) spanElem.outerHTML = "";
+
+				var formNd = parent.currFormNd;
+				if (formNd.getAttribute("isDirty") != "1") {
+					if (formNd.getAttribute("action") != "add") formNd.setAttribute("action", "update");
+					formNd.setAttribute("isDirty", "1");
+				}
+
+				var prevSelRow = fields.grid.getRowIndex(fieldID);
+				fields.grid.deleteRow(fieldID);
+				var rowsInGrid = fields.grid.getRowCount();
+				if (rowsInGrid > 0) {
+					if (prevSelRow < rowsInGrid) {
+						fieldID = fields.grid.getRowId(prevSelRow);
+					} else {
+						fieldID = fields.grid.getRowId(rowsInGrid - 1);
+					}
+
+					fields.grid.setSelectedRow(fieldID, false, true);
+					fields.onSelectGridRow(fieldID, 1, false);
+				} else { //if there are no more fields there
+					fields.currFldNode = null;
+					fields.currFldID = "";
+
+					var currTabID = tabs.currTabID;
+					if (currTabID.search(/^field/) == 0) {
+						tabs.onFieldTabSelect(currTabID, currTabID != aras.getRelationshipTypeId("Field Event"));
+					}
+				}
+
+				var formNd = parent.currFormNd;
+				if (formNd.getAttribute("isDirty") != "1") {
+					if (formNd.getAttribute("action") != "add") formNd.setAttribute("action", "update");
+					formNd.setAttribute("isDirty", "1");
+				}
+			}
+
+			function RefreshToolbar() {
+				if (arasToolbar)
+					arasToolbar.refreshToolbar_Experimental();
+			}
+
+			/*
+			*  insertNewField(fieldtype, fieldName, fieldDS)
+			*/
+			function insertNewField(fieldtype, fieldName, fieldDS) {
+				var fieldNds = parent.currBodyNd.selectNodes("Relationships/Item[@type='Field' and (not(@action) or (@action!='delete' and @action!='purge'))]");
+				var yForNewField = 10;
+				var i, fieldY;
+				var newFieldIndex = 0;
+				for (i = 0; i < fieldNds.length; i++) {
+					if (aras.getItemProperty(fieldNds[i], "field_type") == fieldtype) {
+						newFieldIndex++;
+					}
+					fieldY = parseInt(aras.getItemProperty(fieldNds[i], "y"));
+					if (!isNaN(fieldY)) yForNewField = fieldY + 50;
+				}
+
+				if (fieldtype === 'xclass' && newFieldIndex > 0) {
+					aras.AlertError(aras.getResource('../Modules/aras.innovator.ExtendedClassification/', 'fieldtool.xClassesControl.already_exists'));
+					return false;
+				}
+
+				var newName = "";
+				if (fieldName) {
+					newName = fieldName;
+				} else if (fieldtype === 'xclass') {
+					newName = fieldtype.replace(/\s/g, "_");
+				} else {
+					newName = fieldtype.replace(/\s/g, "_") + (newFieldIndex);
+				}
+
+				var newFieldNd = aras.newRelationship(parent.field_id_const, parent.currBodyNd, false, top);
+				if (!newFieldNd) {
+					aras.AlertError(aras.getResource("", "fieldtool.failed_create_new_field"));
+					return false;
+				}
+
+				var propNd = null;
+				if (fieldDS && itemType) {
+					var xpath = "Relationships/Item[@id='" + fieldDS + "' and @type='Property']";
+					propNd = itemType.selectSingleNode(xpath);
+				}
+
+				aras.setItemProperty(newFieldNd, "name", newName);
+				aras.setItemProperty(newFieldNd, "field_type", fieldtype);
+
+				var newLabel = newName;
+
+				if (fieldtype === 'xclass') {
+					newLabel = aras.getResource('../Modules/aras.innovator.ExtendedClassification/',
+						'xClassesControl.default_label');
+				}
+
+				var sessionLanguageCode = aras.getSessionContextLanguageCode();
+				if (propNd) {
+					var tmpItem = aras.newIOMItem("Property", "get");
+					tmpItem.setID(fieldDS);
+					tmpItem.setAttribute("select", "label");
+					tmpItem.setAttribute("language", "*");
+					tmpItem = tmpItem.apply();
+					if (!tmpItem.isError()) {
+						var propLabelNds = tmpItem.node.selectNodes("*[local-name()='label']");
+						for (var i = 0, length = propLabelNds.length; i < length; i++) {
+							var labelNd = newFieldNd.appendChild(propLabelNds[i].cloneNode(true));
+							if (labelNd.text.length == 0) {
+								labelNd.text = newName;
+							}
+						}
+						var labelNd = newFieldNd.selectSingleNode("*[local-name()='label' and @xml:lang='" + sessionLanguageCode + "']");
+						if (labelNd) {
+							newLabel = labelNd.text;
+							newFieldNd.removeChild(labelNd);
+						}
+					}
+				}
+
+				aras.setItemProperty(newFieldNd, "label", newLabel);
+				aras.setItemPropertyAttribute(newFieldNd, "label", "xml:lang", sessionLanguageCode);
+
+				aras.setItemProperty(newFieldNd, "label_position", "top");
+				aras.setItemProperty(newFieldNd, "x", "190");
+				aras.setItemProperty(newFieldNd, "y", yForNewField);
+				aras.setItemProperty(newFieldNd, "is_visible", 1);
+				aras.setItemProperty(newFieldNd, "border_width", "0");
+				aras.setItemProperty(newFieldNd, "font_family", "arial, helvetica, sans-serif");
+				aras.setItemProperty(newFieldNd, "font_size", "8pt");
+				aras.setItemProperty(newFieldNd, "font_weight", "bold");
+				aras.setItemProperty(newFieldNd, "font_align", "right");
+				aras.setItemProperty(newFieldNd, "font_color", "#000000");
+				aras.setItemProperty(newFieldNd, "display_length_unit", "px");
+
+				if (propNd) {
+					var tab_index = aras.getItemProperty(propNd, "tab_index");
+					if (!tab_index) {
+						var sort_order = aras.getItemProperty(propNd, "sort_order");
+						aras.setItemProperty(newFieldNd, "tab_index", sort_order);
+					}
+				}
+
+				if (fieldDS) {
+					aras.setItemProperty(newFieldNd, "propertytype_id", fieldDS);
+					modifyAvailDataSources();
+				}
+
+				if (propNd) {
+					if (aras.getItemProperty(propNd, "is_required") == "1") aras.setItemProperty(newFieldNd, "bg_color", "beige");
+				}
+
+				var canvas = parent.document.getElementById("canvas").contentWindow;
+				var fields = parent.fieldGrid;
+				canvas.document.forms.MainDataForm.innerHTML += aras.uiDrawFieldEx(newFieldNd, propNd, "edit_form", itemType);
+
+				var newFieldID = newFieldNd.getAttribute("id")
+				var fldType = aras.getNodeElement(newFieldNd, "field_type");
+				fields.grid.items_Experimental.add({
+					uniqueId: newFieldID,
+					img: fields._getImgNameForFldType(fldType),
+					fields: aras.getNodeElement(newFieldNd, "name")
+				});
+				fields.grid.setSelectedRow(newFieldID, false, true);
+				fields.onSelectGridRow(newFieldID, 1, true);
+
+				var formNd = parent.currFormNd;
+				if (formNd.getAttribute("isDirty") != "1") {
+					if (formNd.getAttribute("action") != "add") formNd.setAttribute("action", "update");
+					formNd.setAttribute("isDirty", "1");
+				}
+			}
+		</script>
+	</head>
+</html>

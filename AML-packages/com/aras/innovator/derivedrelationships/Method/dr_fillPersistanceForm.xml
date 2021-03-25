@@ -1,0 +1,91 @@
+﻿<AML>
+ <Item type="Method" id="E8BE75F66A4647589D53FE8909143427" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const paramNodes = document.querySelectorAll('.persistence__param input');
+const persistenceSpinner  = document.querySelector('.persistence__param #persistence_spinner');
+const errorNode = document.querySelector('.persistence__errors div');
+const resourcePath = '../../Modules/aras.innovator.DomainAccessControl/';
+const labels = document.querySelectorAll('label');
+const pattern = aras.getDotNetDatePattern('short_date_time');
+
+const delay = 5000;
+
+document.getElementById('persistence_status_legend').textContent = aras.getResource(resourcePath, 'persistence_status');
+document.getElementById('presistence_complete').textContent = aras.getResource(resourcePath, 'persistence_complete');
+document.getElementById('number_of_items').textContent = aras.getResource(resourcePath, 'persistence_items');
+document.getElementById('start').textContent = aras.getResource(resourcePath, 'persistence_start');
+document.getElementById('end').textContent = aras.getResource(resourcePath, 'persistence_end');
+document.getElementById('errors').textContent = aras.getResource(resourcePath, 'persistence_errors');
+
+(function getData() {
+	const state = aras.getItemProperty(document.item, 'state');
+
+	if (aras.isTempEx(document.item) || state === 'Preliminary' || aras.getItemProperty(document.item, 'drs_persistent_type') === 'Non-Persistent') {
+		[].forEach.call(paramNodes, function(node) {
+			node.value = '';
+		});
+		setTimeout(getData, delay);
+
+		return Promise.resolve();
+	}
+
+	return ArasModules.soap('<Item type="dr_RelationshipFamily" id="' + document.item.getAttribute('id') + '" action="dr_GetPersistingStatus"></Item>', {
+		async: true
+	})
+	.then(function(result) {
+		const itemNode = ArasModules.xml.parseString(result).selectSingleNode('Item');
+		const percent = aras.getItemProperty(itemNode, 'percent_complete');
+		persistenceSpinner.style.display = 'block';
+		const params = [
+			percent && (percent + '%') || percent,
+			aras.getItemProperty(itemNode, 'departure_items_count'),
+			aras.convertFromNeutral(aras.getItemProperty(itemNode, 'start_date'), 'date', pattern),
+			aras.convertFromNeutral(aras.getItemProperty(itemNode, 'end_date'), 'date', pattern)
+		];
+		const failedTasksIds = aras.getItemProperty(itemNode, 'failed_conversion_task_ids');
+		const docFragment = document.createDocumentFragment();
+
+		if (percent === '100') {
+			const drFamilyItemNode = aras.getItemById('dr_RelationshipFamily', document.item.getAttribute('id'));
+
+			if (state !== aras.getItemProperty(drFamilyItemNode, 'state')) {
+				aras.uiShowItemInFrameEx(window, drFamilyItemNode, 'view');
+			}
+			persistenceSpinner.style.display = 'none';
+		}
+		while (errorNode.firstChild) {
+			errorNode.removeChild(errorNode.firstChild);
+		}
+		[].forEach.call(paramNodes, function(node, index) {
+			node.value = params[index];
+		});
+		failedTasksIds.split(',').forEach(function(id) {
+			const link = document.createElement('a');
+
+			link.textContent = id;
+			docFragment.appendChild(link);
+		});
+		errorNode.appendChild(docFragment);
+		setTimeout(getData, delay);
+	})
+	.catch(function(err) {
+		const faultObj = ArasModules.aml.faultToJSON(err.responseXML);
+
+		if (faultObj.faultcode !== '0') {
+			errorNode.textContent = err.responseText;
+		}
+	});
+}());
+errorNode.addEventListener('click', function(event) {
+	const target = event.target;
+
+	if (target.tagName === 'A') {
+		aras.uiShowItem('ConversionTask', target.textContent);
+	}
+});
+
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>dr_fillPersistanceForm</name>
+ </Item>
+</AML>

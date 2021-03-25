@@ -1,0 +1,80 @@
+﻿<AML>
+ <Item type="Method" id="3B03C54BD6CF41A390EB4D6538ECEF02" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const validateEditorValue = function(editorControl) {
+	if (editorControl) {
+		const fieldNode = editorControl.container.parentNode;
+		const messageNode = fieldNode.querySelector('.validationMessage');
+		let editorValue = editorControl.getValue();
+		const item = document.item;
+		// Field value validation
+		try {
+			if (editorValue) {
+				editorValue = editorValue.replace(/\/\*([^\*\/]|\*[^\/]|\/)*\*\//g, '');
+				JSON.parse(editorValue);
+			}
+
+			fieldNode.classList.remove('invalidValue');
+			aras.removeItemPropertyAttribute(item, 'editor_parameters', 'fieldInvalid');
+		} catch (parseException) {
+			fieldNode.classList.add('invalidValue');
+			const errorMessage = 'JSON: ' + parseException.message;
+			messageNode.title = errorMessage;
+			aras.setItemPropertyAttribute(item, 'editor_parameters', 'fieldInvalid', errorMessage);
+		}
+	}
+};
+
+if (!window.aceEditorUtilities || !window.editParametersEditor) {
+	require([
+		'TDF/Scripts/Aras/Client/Controls/TechDoc/UI/SchemaForm/AceEditorUtilities'],
+		function(AceEditorUtilities) {
+			const topWindow = aras.getMostTopWindowWithAras(window);
+
+			window.aceEditorUtilities = new AceEditorUtilities();
+			const containerNode = document.querySelector('.parametersFieldContainer .epEditorContainer');
+			const editorControl = window.editParametersEditor = window.aceEditorUtilities.createEditor({
+					containerNode: containerNode,
+					editMode: document.isEditMode,
+					mode: 'json',
+					showGutter: false,
+					value: aras.getItemProperty(document.item, 'editor_parameters')
+				});
+
+			// Map editor value changes on item property change
+			editorControl.on('change', function(eventData) {
+				if (!editorControl._isRefreshing) {
+					const documentItem = document.item;
+					const isDirty = aras.isDirtyEx(documentItem);
+					const editorValue = editorControl.getValue();
+
+					aras.setItemProperty(documentItem, 'editor_parameters', editorValue);
+					validateEditorValue(editorControl);
+
+					if (!isDirty) {
+						documentItem.setAttribute('isDirty', '1');
+						documentItem.setAttribute('action', 'update');
+
+						if (topWindow.updateItemsGrid) {
+							topWindow.updateItemsGrid(documentItem);
+						}
+					}
+				}
+			}.bind(editorControl));
+
+			validateEditorValue(editorControl);
+		}
+	);
+} else {
+	window.aceEditorUtilities.refreshEditor(window.editParametersEditor, {
+		editMode: document.isEditMode,
+		value: aras.getItemProperty(document.item, 'editor_parameters')
+	});
+
+	validateEditorValue(window.editParametersEditor);
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>tp_SetupEditorParametersField</name>
+ </Item>
+</AML>

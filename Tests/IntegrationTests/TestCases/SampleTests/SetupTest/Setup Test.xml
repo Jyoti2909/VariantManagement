@@ -1,0 +1,106 @@
+﻿<TestCase author="Noname" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description></Description>
+	<Request>
+		<Comments>
+			Create 'SampleMetadata' Item Type with full Permission for 'World' identity.
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="Permission" id="8A1FE29426C64B7EB6B51E3BD638CBFA" action="add" doGetItem="0">
+					<is_private>0</is_private>
+					<name>WorldFullPermissions</name>
+					<Relationships>
+						<Item type="Access" id="2986A4D1AE974767B08EF5A4060D7D6E" action="add">
+							<related_id keyed_name="World" type="Identity">
+								<Item type="Identity" action="get" select="id" page="1" pagesize="1">
+									<name>World</name>
+								</Item>
+							</related_id>
+							<can_update>1</can_update>
+							<can_get>1</can_get>
+							<can_change_access>1</can_change_access>
+							<source_id keyed_name="WorldFullPermissions" type="Permission">8A1FE29426C64B7EB6B51E3BD638CBFA</source_id>
+							<can_delete>1</can_delete>
+							<sort_order>128</sort_order>
+						</Item>
+					</Relationships>
+				</Item>
+				<Item type="ItemType" id="F83EE803A16843EF9C1CFB65FBE1BA7D" action="add" doGetItem="0">
+					<instance_data>SampleMetadata</instance_data>
+					<name>SampleMetadata</name>
+					<Relationships>
+						<Item type="Allowed Permission" id="F658DBCCA1C740CB945BCBF0816CEE29" action="add">
+							<is_default>1</is_default>
+							<related_id keyed_name="WorldFullPermissions" type="Permission">8A1FE29426C64B7EB6B51E3BD638CBFA</related_id>
+							<sort_order>128</sort_order>
+							<source_id keyed_name="SampleMetadata" type="ItemType" name="SampleMetadata">F83EE803A16843EF9C1CFB65FBE1BA7D</source_id>
+						</Item>
+						<Item type="Can Add" id="BCC96532A1994A83A9CD5F2A941124D7" action="add">
+							<sort_order>128</sort_order>
+							<can_add>1</can_add>
+							<source_id keyed_name="SampleMetadata" type="ItemType" name="SampleMetadata">F83EE803A16843EF9C1CFB65FBE1BA7D</source_id>
+							<related_id keyed_name="World" type="Identity">
+								<Item type="Identity" action="get" select="id" page="1" pagesize="1">
+									<name>World</name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type="Property" id="707BC65AF1CC441EA4921B2C17D11C36" action="add">
+							<range_inclusive>0</range_inclusive>
+							<data_type>string</data_type>
+							<is_hidden2>0</is_hidden2>
+							<keyed_name_order>1</keyed_name_order>
+							<column_width>200</column_width>
+							<is_hidden>0</is_hidden>
+							<readonly>0</readonly>
+							<sort_order>128</sort_order>
+							<source_id keyed_name="SampleMetadata" type="ItemType" name="SampleMetadata">F83EE803A16843EF9C1CFB65FBE1BA7D</source_id>
+							<column_alignment>left</column_alignment>
+							<stored_length>64</stored_length>
+							<label>Prop Str</label>
+							<is_multi_valued>0</is_multi_valued>
+							<is_keyed>0</is_keyed>
+							<is_indexed>0</is_indexed>
+							<is_required>0</is_required>
+							<name>prop_str</name>
+						</Item>
+						<Item type="TOC Access" id="EACC900DB7774A5D83E89C7B98B48123" action="add">
+							<sort_order>128</sort_order>
+							<related_id keyed_name="World" type="Identity">
+								<Item type="Identity" action="get" select="id" page="1" pagesize="1">
+									<name>World</name>
+								</Item>
+							</related_id>
+							<source_id keyed_name="SampleMetadata" type="ItemType" name="SampleMetadata">F83EE803A16843EF9C1CFB65FBE1BA7D</source_id>
+							<category>Quality Innovator</category>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Permission" id="8A1FE29426C64B7EB6B51E3BD638CBFA" />
+						<Item type="ItemType" id="F83EE803A16843EF9C1CFB65FBE1BA7D" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="8A1FE29426C64B7EB6B51E3BD638CBFA|F83EE803A16843EF9C1CFB65FBE1BA7D" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp>
+		<Query>
+			<AML>
+				<Item type="ItemType" id="F83EE803A16843EF9C1CFB65FBE1BA7D" action="delete" />
+				<Item type="Permission" id="8A1FE29426C64B7EB6B51E3BD638CBFA" action="delete" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

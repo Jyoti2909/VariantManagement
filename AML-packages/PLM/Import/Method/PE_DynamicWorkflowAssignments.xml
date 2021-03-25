@@ -1,0 +1,108 @@
+﻿<AML>
+ <Item type="Method" id="F16A3637C02F485E8378CFC14C0CCC89" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// Called OnActivate from activities in the Simple Change workflow. Adds assignments to
+//  the activity based on the Owner or Manager of affected items
+
+Innovator inn = this.getInnovator();
+string actId = this.getID();
+
+// Choose owner or manager based on the activity name
+string prop = (this.getProperty("name","") == "Draft Changes") ? "owned_by_id" : "managed_by_id";
+
+// Retrieve the workflow item
+Item wflItem = this.newItem("Workflow","get");
+wflItem.setAttribute("select","source_id,source_type");
+Item wflProc = wflItem.createRelatedItem("Workflow Process","get");
+wflProc.setAttribute("select","name");
+Item wflProcAct = wflProc.createRelationship("Workflow Process Activity","get");
+wflProcAct.setAttribute("select","related_id");
+wflProcAct.setProperty("related_id",this.getID());
+wflItem = wflItem.apply();
+if (wflItem.getItemCount() != 1 || 
+    wflItem.getProperty("source_id","").Length != 32 || 
+    wflItem.getPropertyAttribute("source_type","keyed_name","").Length < 1)
+{
+  return inn.newError("Error retrieving workflow: "+wflItem.getErrorDetail());
+}
+
+Item q = this.newItem();
+q.loadAML("<Item type='Activity Assignment' action='get' select='id'><source_id>"+System.Security.SecurityElement.Escape(this.getAttribute("id"))+"</source_id></Item>");
+q = q.apply();
+if (q.getItemCount()>0) return this;//The activity is reactivated.
+
+// Retrieve the item controlled by the workflow
+string contType = wflItem.getPropertyAttribute("source_type","keyed_name","");
+Item contItem = this.newItem(contType,"get");
+contItem.setID(wflItem.getProperty("source_id","NON_EXISTING_ID"));
+contItem.setAttribute("select","item_number,state");
+if (contType == "Simple MCO")
+{
+  Item rel = contItem.createRelationship("Simple MCO Part","get");
+  rel.setAttribute("select","related_id(owned_by_id,managed_by_id)");
+}
+else
+{
+  Item affItemRel = contItem.createRelationship(contType+" Affected Item","get");
+  affItemRel.setAttribute("select","related_id");
+  Item affItem = affItemRel.createRelatedItem("Affected Item","get");
+  affItem.setAttribute("select","action,affected_id(owned_by_id,managed_by_id),new_item_id(owned_by_id,managed_by_id)");
+}
+bool permissionWasSet = false;
+Aras.Server.Security.Identity transIdentity = Aras.Server.Security.Identity.GetByName("Aras PLM");
+try
+{
+  permissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(transIdentity);
+  contItem = contItem.apply();
+  if (contItem.getItemCount() != 1) return inn.newError("Error retrieving controlled item: "+contItem.getErrorDetail());
+
+  //+++++ Loop through the affected items and create assignments for each unique owner/manager
+  Item affItems = contItem.getItemsByXPath("Relationships/Item/related_id/Item");
+  ArrayList idents = new ArrayList();
+  for (int i=0; i<affItems.getItemCount(); i++)
+  {
+    string identId = "";
+    Item itm = affItems.getItemByIndex(i);
+    if (contType == "Simple MCO")
+    {
+      identId = itm.getProperty(prop,"");
+    }
+    else
+    {
+      if (itm.getPropertyItem("new_item_id") != null &&
+          itm.getPropertyItem("new_item_id").getProperty(prop,"") != "")
+      {
+        identId = itm.getPropertyItem("new_item_id").getProperty(prop,"");
+      }
+      else if (itm.getPropertyItem("affected_id") != null &&
+          itm.getPropertyItem("affected_id").getProperty(prop,"") != "")
+      {
+        identId = itm.getPropertyItem("affected_id").getProperty(prop,"");
+      }
+    }
+    if (identId !="" && !idents.Contains(identId))
+    {
+      idents.Add(identId);
+      Item assignment = this.newItem("Activity Assignment","add");
+      assignment.setProperty("source_id", actId);
+      assignment.setProperty("related_id", identId);
+      assignment.setProperty("voting_weight", "100");
+      assignment.setProperty("is_required", "1");
+      assignment = assignment.apply();
+      if (assignment.getItemCount() != 1) return inn.newError("Error creating assignment: "+assignment.getErrorDetail());
+    }
+  }
+  //----- Loop through the affected items and create assignments for each unique owner/manager
+}
+finally
+{
+    if (permissionWasSet)
+    {
+      Aras.Server.Security.Permissions.RevokeIdentity(transIdentity);
+    }
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_DynamicWorkflowAssignments</name>
+ </Item>
+</AML>

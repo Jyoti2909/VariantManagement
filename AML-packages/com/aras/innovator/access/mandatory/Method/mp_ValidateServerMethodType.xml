@@ -1,0 +1,60 @@
+﻿<AML>
+ <Item type="Method" id="886474BE881E40C28C5E3D6728CAB7C8" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	var methodItem = this.getPropertyItem("get_value_method");
+	if (methodItem != null)
+	{
+		if (string.Equals(methodItem.getAction(), "add", StringComparison.Ordinal))
+		{
+			return validateMethod(methodItem, CCO.ErrorLookup);
+		}
+	}
+	else
+	{
+		var methodItemId = this.getProperty("get_value_method");
+		if (methodItemId == null)
+		{
+			return this;
+		}
+		methodItem = this.newItem("Method");
+		methodItem.setID(methodItemId);
+	}
+	
+	methodItem.setAction("get");
+	methodItem = methodItem.apply();
+	if (methodItem.isError())
+	{
+		return methodItem;
+	}
+	return validateMethod(methodItem, CCO.ErrorLookup);
+}
+
+private Item validateMethod(Item methodItem, Aras.Server.Core.ErrorLookup errorLookup)
+{
+	var inn = this.getInnovator();
+	
+	var methodType = methodItem.getProperty("method_type");
+	if (!string.Equals(methodType, "C#", StringComparison.Ordinal))
+	{
+		string message = string.Format(
+			CultureInfo.InvariantCulture, errorLookup.Lookup("mp_WrongServerMethodType"), methodType);
+		return inn.newError(message);
+	}
+
+	var methodTemplateString = "MethodTemplateName";
+	// HACK: 'string.Format()' is cheat, otherwise MethodEvaluator determines that method as required template
+	var methodTemplate = string.Format(
+		CultureInfo.InvariantCulture, "//{0}=CSharp:Aras.Server.Core.AccessControl.EnvironmentAttributeMethod;",
+		methodTemplateString);
+	var methodCode = methodItem.getProperty("method_code", "");
+	if (methodCode.IndexOf(methodTemplate, StringComparison.Ordinal) < 0)
+	{
+		string message = string.Format(CultureInfo.InvariantCulture, errorLookup.Lookup("mp_WrongServerMethodTemplate"));
+		return inn.newError(message);
+	}
+
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>mp_ValidateServerMethodType</name>
+ </Item>
+</AML>

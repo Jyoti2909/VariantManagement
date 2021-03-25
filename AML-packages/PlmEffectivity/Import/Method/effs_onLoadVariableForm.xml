@@ -1,0 +1,38 @@
+﻿<AML>
+ <Item type="Method" id="B14A1D8D8EF841C791E2B429FDCB8E82" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const itemVariableTypePropertyName = 'variable_type';
+
+const conditionalVariableDataTypes = {
+	list: {
+		itemPropertyName: 'list_id'
+	},
+	item: {
+		itemPropertyName: 'itemtype_id'
+	}
+};
+
+const onBeforeSaveHandler = function() {
+	const item = document.thisItem;
+	//Let's ensure the outgoing item has no conditional properties (e.g., 'list_id', 'itemtype_id') before save, because it's possible
+	//an end user has been changing the type from 'List'/'Item' to another one, but the hidden field 'List'/'ItemType' still has
+	//a value impacting the item
+	const outgoingVariableItemDataType = item.getProperty(itemVariableTypePropertyName);
+	Object.keys(conditionalVariableDataTypes)
+		.filter(function(key) { return key !== outgoingVariableItemDataType; })
+		.forEach(function(key) {
+			const conditionalDataType = conditionalVariableDataTypes[key];
+			item.setProperty(conditionalDataType.itemPropertyName, null); //it's required to set is_null=1
+		});
+};
+aras.getMostTopWindowWithAras().registerCommandEventHandler(window, onBeforeSaveHandler, 'before', 'save');
+
+const currentVariableItemDataType = document.thisItem.getProperty(itemVariableTypePropertyName);
+const conditionalDataType = conditionalVariableDataTypes[currentVariableItemDataType];
+if (conditionalDataType) {
+	window.getFieldByName(conditionalDataType.itemPropertyName).style.visibility = '';
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_onLoadVariableForm</name>
+ </Item>
+</AML>

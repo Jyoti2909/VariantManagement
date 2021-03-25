@@ -1,0 +1,52 @@
+﻿<AML>
+ <Item type="Method" id="435B740250D444C1BCEE286852C8FB6A" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Innovator inn = this.getInnovator();
+	string ecoID = this.getID();
+	string type = this.getType();
+	Item query = inn.newItem(type, "get");
+	query.setID(ecoID);
+	query.setAttribute("select", "id");
+	Item tmpItem = query.createRelationship(type + " Affected Item", "get");
+	tmpItem.setAttribute("select", "related_id");
+	tmpItem = tmpItem.createRelatedItem("Affected Item", "get");
+	tmpItem.setAttribute("select", "new_item_id(config_id), affected_id(config_id)");
+	query = query.apply();
+	if (query.isError())
+	{
+		return query;
+	}
+	var affectedItemsXPath = Item.XPathResultItem + "/Relationships/Item/related_id/Item";
+	Item affectedItems = query.getItemsByXPath(affectedItemsXPath);
+	if (affectedItems.getItemCount() > 0)
+	{
+		var changeControlledItemsIDs = new ArrayList();
+		for (var i = 0; i < affectedItems.getItemCount(); i++)
+		{
+			tmpItem = affectedItems.getItemByIndex(i);
+			var newItemConfigId = string.Empty;
+			var newItem = tmpItem.getItemsByXPath("new_item_id/Item");
+			if (newItem.node != null)
+			{
+				newItemConfigId = newItem.getProperty("config_id");
+				changeControlledItemsIDs.Add(newItem.getAttribute("id"));
+			}
+
+			var affectedItem = tmpItem.getItemsByXPath("affected_id/Item");
+			if (affectedItem.node != null && newItemConfigId != affectedItem.getProperty("config_id"))
+			{
+				changeControlledItemsIDs.Add(affectedItem.getAttribute("id"));
+			}
+		}
+		if (changeControlledItemsIDs.Count > 0)
+		{
+			query = inn.newItem("Change Controlled Item", "get");
+			query.setAttribute("idlist", String.Join(",", changeControlledItemsIDs.ToArray()));
+			return query.apply();
+		}
+	}
+	return null;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_GetAffectedControlItems</name>
+ </Item>
+</AML>

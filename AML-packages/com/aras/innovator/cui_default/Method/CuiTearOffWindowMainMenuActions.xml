@@ -1,0 +1,90 @@
+﻿<AML>
+ <Item type="Method" id="F31525FEFDAB401FACABF8B927373D75" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Item menuItems = null;
+	//ItemType and Item actions
+	string itemTypeId = this.getProperty("item_type_id");
+	if (!string.IsNullOrEmpty(itemTypeId))
+	{
+		Item itemActions = this.newItem("Item Action", "get");
+		itemActions.setProperty("source_id", itemTypeId);
+		Item relActions = this.newItem("Action", "get");
+		relActions.setAttribute("select", "name,label,can_execute,location");
+		Item logicOr = relActions.newOR();
+		logicOr.setProperty("type", "itemtype");
+		logicOr.setProperty("type", "item");
+		itemActions.setRelatedItem(relActions);
+		itemActions = itemActions.apply();
+		if (!itemActions.isError())
+		{
+			Item initHandler = GetMethodByConfigId("723C33B7F24B4523A6D1118AC993CDF9");
+			Item actions = itemActions.getItemsByXPath(Item.XPathResultItem + "/related_id/Item");
+			menuItems = HandleMenuButtons(actions, "action:{0}:{1}", itemTypeId, initHandler);
+		}
+	}
+
+	return menuItems ?? this.getInnovator().newResult("");
+}
+
+internal static Item HandleMenuButtons(Item actions, string actionTemplate, string itemTypeId, Item initHandler)
+{
+	int sortOrder = 0;
+	int actionsCount = actions.getItemCount();
+	if (actionsCount > 0)
+	{
+		string initHandlerId = initHandler.getID();
+		string initHandlerName = initHandler.getProperty("name");
+		Item cuiItems = actions.newItem();
+		for (var i = 0; i < actionsCount; i++)
+		{
+			Item currentAction = actions.getItemByIndex(i);
+			Item menuButton = currentAction.newItem("CommandBarMenuButton");
+			string actionId = currentAction.getID();
+			string actionName = string.Format(CultureInfo.InvariantCulture, actionTemplate, actionId, itemTypeId);
+			menuButton.setProperty("name", actionName);
+			menuButton.setProperty("label", currentAction.getProperty("label") ?? currentAction.getProperty("name"));
+
+			string canExecuteMethodName = currentAction.getPropertyAttribute("can_execute", "keyed_name");
+			string location = currentAction.getProperty("location");
+			menuButton.setProperty("additional_data", "{\"canExecuteMethodName\": \"" + canExecuteMethodName + "\", \"location\": \"" + location + "\"}");
+			menuButton.setProperty("on_init_handler", initHandlerId);
+			menuButton.setPropertyAttribute("on_init_handler", "keyed_name", initHandlerName);
+
+			//TODO: apply the "if" statement code for all actions (not for specific list of the actions).
+			//It cannot be a general fix right now for performance reasons cause already implemented can_execute methods have poor performance
+			//for the case of "UpdateTearOffWindowState" event.
+			//E.g. ES_CanEnableConfiguration calls ES_GetConfigurationState which makes request to the server (see "indexedConfigurationItm.apply();")
+			if (actionId == "606B3E3DCAC64619B5C7630D7A53D9AA" || actionId == "CCDAD1F24D79427DA35CBCB925517DC3") {
+				menuButton.setProperty("include_events", "UpdateTearOffWindowState,SelectInGrid,SelectInToc");
+			}
+			menuButton.setPropertyAttribute("on_init_handler", "type", "Method");
+
+			// '09129412D2ED4CB19C39EBFC0C6FDAAF' - com.aras.innovator.cui_default.twmm_actions_menu
+			menuButton.setProperty("parent_menu", "09129412D2ED4CB19C39EBFC0C6FDAAF");
+			menuButton.setProperty("action", "Add");
+			sortOrder += 128;
+			menuButton.setProperty("sort_order", sortOrder.ToString(CultureInfo.InvariantCulture));
+			menuButton.setID(actionId);
+			menuButton.removeAttribute("isNew");
+			menuButton.removeAttribute("isTemp");
+			cuiItems.appendItem(menuButton);
+		}
+
+		// newItem() is creates empty node. It's should be deleted
+		cuiItems.removeItem(cuiItems.getItemByIndex(0));
+		return cuiItems;
+	}
+
+	return null;
+}
+
+private Item GetMethodByConfigId(string configId)
+{
+	Item method = this.newItem("Method", "get");
+	method.setAttribute("select", "id,name");
+	method.setProperty("config_id", configId);
+	return method.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>CuiTearOffWindowMainMenuActions</name>
+ </Item>
+</AML>

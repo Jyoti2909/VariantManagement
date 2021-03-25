@@ -1,0 +1,306 @@
+﻿<AML>
+	<Item type="Identity" id="291BB24FB4CC43DF9C2DFA71D5D3390B" action="add">
+		<description>A group of shop workers</description>
+		<is_alias>0</is_alias>
+		<name>{shopWorkersIdentity}</name>
+		<Relationships />
+	</Item>
+	<Item type="Member" id="4103F5105FE5473DBBC189844C0B4BCD" action="add">
+		<related_id type="Identity">{userAliasId}</related_id>
+		<sort_order>128</sort_order>
+		<source_id keyed_name="{shopWorkersIdentity}" type="Identity">291BB24FB4CC43DF9C2DFA71D5D3390B</source_id>
+	</Item>
+	<Item type="Permission" id="27CFE29381DB41FCA4AA21029B901B8B" action="add">
+		<is_private>0</is_private>
+		<name>{shopWorkersPermission}</name>
+		<Relationships>
+			<Item type="Access" id="92BE506603E742EC91348D8D03FFBB12" action="add">
+				<can_change_access>1</can_change_access>
+				<can_delete>1</can_delete>
+				<can_discover>1</can_discover>
+				<can_get>1</can_get>
+				<can_update>1</can_update>
+				<related_id type="Identity">291BB24FB4CC43DF9C2DFA71D5D3390B</related_id>
+				<show_permissions_warning>0</show_permissions_warning>
+				<sort_order>128</sort_order>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="Life Cycle Map" id="0F06D9D3FAF445EB90E6AE0A0356F5E8" action="add">
+		<description>Life cycle of a chair</description>
+		<start_state keyed_name="Start" type="Life Cycle State">33D5233E18A04058AEC1B7CDC39BF763</start_state>
+		<name>{chairLifeCycle}</name>
+		<Relationships>
+			<Item type="Life Cycle State" id="AEEEDCFF6C05445AA18C7AEC2F5F3A7C" action="add">
+				<image>../images/LifeCycleState.svg</image>
+				<label xml:lang="en">Completed State Label</label>
+				<set_is_released>0</set_is_released>
+				<set_not_lockable>0</set_not_lockable>
+				<sort_order>512</sort_order>
+				<state_permission_id type="Permission">39023C4C75D54FD3AD4EEA47B2194D5E</state_permission_id>
+				<x>450</x>
+				<y>20</y>
+				<name>Completed</name>
+			</Item>
+			<Item type="Life Cycle State" id="D54C52E1B8E94EF5A273F5E1680B5B64" action="add">
+				<image>../Images/Activity2.svg</image>
+				<label xml:lang="en">Confirming State Label</label>
+				<set_is_released>0</set_is_released>
+				<set_not_lockable>0</set_not_lockable>
+				<sort_order>256</sort_order>
+				<state_permission_id keyed_name="ShopWorkersForLCM" type="Permission">9F297D94F6804F26BA193036370C5EBC</state_permission_id>
+				<x>150</x>
+				<y>20</y>
+				<name>Confirming</name>
+			</Item>
+			<Item type="Life Cycle State" id="5A797A8A83234833BF37792651BB84F2" action="add">
+				<image>../images/LifeCycleState.svg</image>
+				<set_is_released>0</set_is_released>
+				<set_not_lockable>0</set_not_lockable>
+				<sort_order>384</sort_order>
+				<state_permission_id keyed_name="ShopWorkersForLCM" type="Permission">9F297D94F6804F26BA193036370C5EBC</state_permission_id>
+				<x>300</x>
+				<y>20</y>
+				<name>Creating</name>
+			</Item>
+			<Item type="Life Cycle State" id="33D5233E18A04058AEC1B7CDC39BF763" action="add">
+				<image>../images/LifeCycleState.svg</image>
+				<set_is_released>0</set_is_released>
+				<set_not_lockable>0</set_not_lockable>
+				<sort_order>128</sort_order>
+				<x>20</x>
+				<y>20</y>
+				<name>Start</name>
+			</Item>
+			<Item type="Life Cycle Transition" id="94C27A63587841A7BD6B634FE44379DB" action="add">
+				<from_state keyed_name="Start" type="Life Cycle State">33D5233E18A04058AEC1B7CDC39BF763</from_state>
+				<get_comment>0</get_comment>
+				<role type="Identity">291BB24FB4CC43DF9C2DFA71D5D3390B</role>
+				<segments />
+				<sort_order>128</sort_order>
+				<to_state keyed_name="Confirming" type="Life Cycle State">D54C52E1B8E94EF5A273F5E1680B5B64</to_state>
+				<x>0</x>
+				<y>0</y>
+			</Item>
+			<Item type="Life Cycle Transition" id="AB636AA4349540A9B81A94964E492D58" action="add">
+				<from_state keyed_name="Confirming" type="Life Cycle State">D54C52E1B8E94EF5A273F5E1680B5B64</from_state>
+				<get_comment>0</get_comment>
+				<role type="Identity">291BB24FB4CC43DF9C2DFA71D5D3390B</role>
+				<sort_order>256</sort_order>
+				<to_state keyed_name="Creating" type="Life Cycle State">5A797A8A83234833BF37792651BB84F2</to_state>
+			</Item>
+			<Item type="Life Cycle Transition" id="9C94FA55B60E4E409752F3A61B5D9BA6" action="add">
+				<from_state keyed_name="Creating" type="Life Cycle State">5A797A8A83234833BF37792651BB84F2</from_state>
+				<get_comment>0</get_comment>
+				<role type="Identity">291BB24FB4CC43DF9C2DFA71D5D3390B</role>
+				<sort_order>384</sort_order>
+				<to_state keyed_name="Completed" type="Life Cycle State">AEEEDCFF6C05445AA18C7AEC2F5F3A7C</to_state>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="Workflow Map" id="8632199B6A6E4699804C95073258F9FC" action="add">
+		<description xml:lang="en">The workflow for creating a chair.</description>
+		<label xml:lang="en">Chair Workflow Label</label>
+		<node_bg_color>       </node_bg_color>
+		<node_label1_color>       </node_label1_color>
+		<node_label1_font />
+		<node_label2_color>       </node_label2_color>
+		<node_label2_font />
+		<node_name_color>       </node_name_color>
+		<node_name_font />
+		<node_size />
+		<process_owner type="Identity">291BB24FB4CC43DF9C2DFA71D5D3390B</process_owner>
+		<transition_line_color>       </transition_line_color>
+		<transition_name_color>       </transition_name_color>
+		<transition_name_font />
+		<name>{chairWorkflow}</name>
+		<Relationships>
+			<Item type="Workflow Map Activity" action="add">
+				<related_id keyed_name="End" type="Activity Template">
+					<Item type="Activity Template" id="D1C2C66487C34312B20C22EE3DEF6C34" action="add">
+						<can_delegate>0</can_delegate>
+						<can_refuse>0</can_refuse>
+						<consolidate_ondelegate>0</consolidate_ondelegate>
+						<expected_duration>0</expected_duration>
+						<icon>../images/Delete.svg</icon>
+						<is_auto>1</is_auto>
+						<is_end>1</is_end>
+						<is_start>0</is_start>
+						<message xml:lang="en">Workflow End</message>
+						<priority>1</priority>
+						<reminder_count>0</reminder_count>
+						<reminder_interval>0</reminder_interval>
+						<timeout_duration>0</timeout_duration>
+						<wait_for_all_inputs>0</wait_for_all_inputs>
+						<wait_for_all_votes>0</wait_for_all_votes>
+						<x>504</x>
+						<y>21</y>
+						<name>End</name>
+					</Item>
+				</related_id>
+				<sort_order>128</sort_order>
+			</Item>
+			<Item type="Workflow Map Activity" action="add">
+				<related_id keyed_name="Start" type="Activity Template">
+					<Item type="Activity Template" id="6021C814B1194E84A5E6BDEA18099643" action="add">
+						<can_delegate>0</can_delegate>
+						<can_refuse>0</can_refuse>
+						<consolidate_ondelegate>0</consolidate_ondelegate>
+						<expected_duration>0</expected_duration>
+						<icon>../images/WorkflowStart.svg</icon>
+						<is_auto>1</is_auto>
+						<is_end>0</is_end>
+						<is_start>1</is_start>
+						<message xml:lang="en">Workflow Start</message>
+						<priority>2</priority>
+						<reminder_count>0</reminder_count>
+						<reminder_interval>0</reminder_interval>
+						<timeout_duration>0</timeout_duration>
+						<wait_for_all_inputs>0</wait_for_all_inputs>
+						<wait_for_all_votes>0</wait_for_all_votes>
+						<x>20</x>
+						<y>20</y>
+						<name>Start</name>
+						<Relationships>
+							<Item type="Workflow Map Path" id="D66849D590EB4D89B1606339C3194318" action="add">
+								<authentication>none</authentication>
+								<is_default>1</is_default>
+								<is_override>0</is_override>
+								<name>Go</name>
+								<related_id>0A524A1FB2A94AFF99BF47A901D04B3A</related_id>
+								<segments />
+								<sort_order>128</sort_order>
+							</Item>
+						</Relationships>
+					</Item>
+				</related_id>
+				<sort_order>256</sort_order>
+			</Item>
+			<Item type="Workflow Map Activity" action="add">
+				<related_id keyed_name="Planning" type="Activity Template">
+					<Item type="Activity Template" id="0A524A1FB2A94AFF99BF47A901D04B3A" action="add">
+						<can_delegate>1</can_delegate>
+						<can_refuse>1</can_refuse>
+						<consolidate_ondelegate>0</consolidate_ondelegate>
+						<escalate_to type="Identity">291BB24FB4CC43DF9C2DFA71D5D3390B</escalate_to>
+						<icon>../Images/Black.svg</icon>
+						<is_auto>0</is_auto>
+						<is_end>0</is_end>
+						<is_start>0</is_start>
+						<label xml:lang="en">Planning Activity Label</label>
+						<message xml:lang="en">Please Review...</message>
+						<wait_for_all_inputs>0</wait_for_all_inputs>
+						<wait_for_all_votes>0</wait_for_all_votes>
+						<x>139</x>
+						<y>20</y>
+						<name>Planning</name>
+						<Relationships>
+							<Item type="Activity Template Assignment" id="524572AB7AE940F59A9692384FD4AA9D" action="add">
+								<related_id type="Identity">291BB24FB4CC43DF9C2DFA71D5D3390B</related_id>
+								<sort_order>128</sort_order>
+								<is_required>0</is_required>
+								<for_all_members>0</for_all_members>
+								<voting_weight>100</voting_weight>
+							</Item>
+							<Item type="Workflow Map Path" id="7908379D3F69408D8B7B2FADC7896517" action="add">
+								<authentication>none</authentication>
+								<is_default>0</is_default>
+								<is_override>0</is_override>
+								<label xml:lang="en">Confirm Path Label</label>
+								<name>Confirm</name>
+								<related_id>4D9B6078F4754DC89F762051E6ABF2C6</related_id>
+								<segments />
+								<sort_order>128</sort_order>
+								<x>0</x>
+								<y>0</y>
+							</Item>
+						</Relationships>
+					</Item>
+				</related_id>
+				<sort_order>384</sort_order>
+			</Item>
+			<Item type="Workflow Map Activity" action="add">
+				<related_id keyed_name="Confirming" type="Activity Template">
+					<Item type="Activity Template" id="4D9B6078F4754DC89F762051E6ABF2C6" action="add">
+						<can_delegate>1</can_delegate>
+						<can_refuse>1</can_refuse>
+						<consolidate_ondelegate>0</consolidate_ondelegate>
+						<escalate_to type="Identity">291BB24FB4CC43DF9C2DFA71D5D3390B</escalate_to>
+						<icon>../Images/Color.svg</icon>
+						<is_auto>0</is_auto>
+						<is_end>0</is_end>
+						<is_start>0</is_start>
+						<message xml:lang="en">Please Review...</message>
+						<wait_for_all_inputs>0</wait_for_all_inputs>
+						<wait_for_all_votes>0</wait_for_all_votes>
+						<x>314</x>
+						<y>22</y>
+						<name>Confirming</name>
+						<Relationships>
+							<Item type="Workflow Map Path" id="686C37C83AE4499280209F29BE2D2DD3" action="add">
+								<authentication>none</authentication>
+								<is_default>0</is_default>
+								<is_override>0</is_override>
+								<name>Finish</name>
+								<related_id>D1C2C66487C34312B20C22EE3DEF6C34</related_id>
+								<sort_order>128</sort_order>
+							</Item>
+						</Relationships>
+					</Item>
+				</related_id>
+				<sort_order>512</sort_order>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="List" id="5D7687EC369E4A85ABB50C5132E977F2" action="add">
+		<description>Wood used in construction. ItemTypeTest</description>
+		<name>{woodTypeDataSource}</name>
+		<Relationships>
+			<Item type="Value" id="C4E96B1FC08548B689343303AA3ECDE3" action="add">
+				<label xml:lang="en">Oak</label>
+				<sort_order>128</sort_order>
+				<value>OakItemTypeTest</value>
+			</Item>
+			<Item type="Value" id="7ABF91E8BF954D31B0E858E1C526D915" action="add">
+				<label xml:lang="en">Birch</label>
+				<sort_order>256</sort_order>
+				<value>BirchItemTypeTest</value>
+			</Item>
+			<Item type="Value" id="738A8A4CE1804DBEBCEFAAD2567E0522" action="add">
+				<label xml:lang="en">Maple</label>
+				<sort_order>384</sort_order>
+				<value>MapleItemTypeTest</value>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="List" id="64DC277A3C3845F6960EB9E2A7667887" action="add">
+		<description>Paint Color ItemTypeTest for chairs. ItemTypeTest</description>
+		<name>{paintColorDataSource}</name>
+		<Relationships>
+			<Item type="Value" id="0C2AF1F76D89448E976D554BBE1C2445" action="add">
+				<label xml:lang="en">RedItemTypeTest</label>
+				<sort_order>128</sort_order>
+				<value>#EF0808</value>
+			</Item>
+			<Item type="Value" id="41B1ECE14C7D4EC08E3CC3282131FB08" action="add">
+				<label xml:lang="en">BlueItemTypeTest</label>
+				<sort_order>256</sort_order>
+				<value>#1908EF</value>
+			</Item>
+			<Item type="Value" id="A97C7EF07CA9492D8D1691758F415B3C" action="add">
+				<label xml:lang="en">GreenItemTypeTest</label>
+				<sort_order>384</sort_order>
+				<value>#1A8804</value>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="Sequence" id="1CCAF15AAFEB4597A8AB1BA25894A978" action="add">
+		<initial_value>0</initial_value>
+		<pad_to>2</pad_to>
+		<pad_with>K</pad_with>
+		<prefix>1</prefix>
+		<step>3</step>
+		<suffix>A</suffix>
+		<name>{chairNumberDataSource}</name>
+	</Item>
+</AML>

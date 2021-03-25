@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="F6FB21B3CE214CE0965B5C0D16B77A11" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const formNd = aras.getItemByName('Form', 'GAG_SAPLogin', 0);
+if (!formNd) {
+	return;
+}
+
+const params = {
+	title: 'SAP Credentials',
+	formId: formNd.getAttribute('id'),
+	aras: aras,
+};
+const options = {
+	dialogWidth: aras.getItemProperty(formNd, 'width'),
+	dialogHeight: aras.getItemProperty(formNd, 'height'),
+};
+aras.modalDialogHelper.show(
+	'DefaultPopup',
+	aras.getMainWindow(),
+	params,
+	options,
+	'ShowFormAsADialog.html'
+);
+
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_ShowSAPForm</name>
+ </Item>
+</AML>

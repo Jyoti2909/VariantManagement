@@ -1,0 +1,59 @@
+﻿<AML>
+ <Item type="Method" id="93E2820AF7954E4D99530684DDAF6816" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = this.getInnovator();
+
+	Item relevantCDS = innovator.newItem("cdv_ClassificationDefaultSet","get");
+	Item targetItemType = innovator.newItem("ItemType","get");
+	targetItemType.setProperty("name", this.getType());
+	targetItemType.setAttribute("select", "id");
+	relevantCDS.setPropertyItem("on_type", targetItemType);
+	relevantCDS.setAttribute("select","on_type");
+
+	Item cdsProps = innovator.newItem("cdv_Class Default Value","get");
+	cdsProps.setAttribute("select","cdv_classification,cdv_property,cdv_defaultvalue,cdv_alsoonupdate");
+
+	Item propItem = innovator.newItem("Property","get");
+	propItem.setAttribute("select","data_type,data_source,name");
+
+	cdsProps.setPropertyItem("cdv_property", propItem);
+
+	relevantCDS.addRelationship(cdsProps);
+	relevantCDS=relevantCDS.apply();
+
+	int relevantCDSCount = relevantCDS.getItemCount();
+	bool addCaseApplies = this.getAction() == "add";
+
+	for(int i=0;i<relevantCDSCount;i++){
+		Item propertySettings = relevantCDS.getItemByIndex(i).getRelationships("cdv_Class Default Value");
+		int propertySettingsCount = propertySettings.getItemCount();
+
+		for(int j=0;j<propertySettingsCount;j++){
+			Item propertySetting = propertySettings.getItemByIndex(j); 
+			Item prop = propertySetting.getPropertyItem("cdv_property");
+			string propName = prop.getProperty("name");
+			bool isItemProperty = prop.getProperty("data_type") == "item";
+			bool updateCaseApplies = (this.getAction() == "update" || this.getAction() == "version") && propertySetting.getProperty("cdv_alsoonupdate") == "1";
+			bool correctClassification = string.Equals(this.getProperty("classification"), propertySetting.getProperty("cdv_classification"), StringComparison.Ordinal);
+			if((addCaseApplies || updateCaseApplies) && string.IsNullOrEmpty(this.getProperty(propName)) && correctClassification){
+				if(isItemProperty){
+					Item propertyVal = innovator.newItem(prop.getPropertyAttribute("data_source","keyed_name"),"get");
+					propertyVal.setProperty("keyed_name", propertySetting.getProperty("cdv_defaultvalue"));
+					propertyVal.setAttribute("select","id");
+					propertyVal=propertyVal.apply();
+					if(propertyVal.isError()){
+						continue;
+					}
+					this.setProperty(propName, propertyVal.getID());
+				}else{
+					this.setProperty(propName, propertySetting.getProperty("cdv_defaultvalue"));  
+				}
+			}
+		}
+	}
+	return this;
+	]]></method_code>
+  <method_type>C#</method_type>
+  <name>cdv_setClassDefaultValues</name>
+ </Item>
+</AML>

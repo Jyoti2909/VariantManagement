@@ -1,0 +1,64 @@
+﻿<AML>
+ <Item type="Method" id="34B1BCEEF4334C19BA5CE73F3693AF75" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var topWnd = aras.getMostTopWindowWithAras(window);
+var inn = this.getInnovator();
+var queryItem = inn.newItem('Itemtype', 'get');
+queryItem.setAttribute('select', 'id');
+queryItem.setProperty('name', 'Activity Assignment');
+var item = queryItem.createRelationship('TOC Access', 'get');
+item.setAttribute('select', 'related_id');
+item = item.createRelatedItem('Identity', 'get');
+item.setAttribute('select', 'id');
+queryItem = queryItem.apply();
+if (queryItem.isError()) {
+	aras.AlertError(queryItem);
+	return;
+}
+
+var worldIdentityId = inn.getItemByKeyedName('Identity', 'World').getID();
+item = queryItem.dom.selectSingleNode('//Result/Item/Relationships/Item/related_id/Item/id');
+var identityId = item !== null ? item.text : '';
+
+if (identityId !== worldIdentityId) {
+	if (confirm(aras.getResource('', 'configurable_inbasket.enable_confirm'))) {
+		//Change TOC Access from Super User to World for old InBasket.
+		var tocAccessItemId = queryItem.dom.selectSingleNode('//Result/Item/Relationships/Item/id').text;
+		queryItem = inn.newItem('TOC Access', 'edit');
+		queryItem.setID(tocAccessItemId);
+		queryItem.setProperty('related_id', worldIdentityId);
+		queryItem = queryItem.apply();
+		if (queryItem.isError()) {
+			aras.AlertError(queryItem);
+			return;
+		}
+
+		//Change TOC access from World to Super User for Configurable InBasket.
+		var superUserIdentityId = inn.getItemByKeyedName('Identity', 'Super User').getID();
+		queryItem = inn.newItem('Itemtype', 'get');
+		queryItem.setAttribute('select', 'id');
+		queryItem.setProperty('name', 'InBasket Task');
+		var item = queryItem.createRelationship('TOC Access', 'get');
+		item.setAttribute('select', 'id');
+		queryItem = queryItem.apply();
+		tocAccessItemId = queryItem.dom.selectSingleNode('//Result/Item/Relationships/Item/id').text;
+		queryItem = inn.newItem('TOC Access', 'edit');
+		queryItem.setID(tocAccessItemId);
+		queryItem.setProperty('related_id', superUserIdentityId);
+		queryItem = queryItem.apply();
+		if (queryItem.isError()) {
+			aras.AlertError(queryItem);
+			return;
+		}
+
+		topWnd.updateTree();
+		aras.AlertSuccess(aras.getResource('', 'configurable_inbasket.enabled_successfully'), topWnd);
+	}
+} else {
+	aras.AlertSuccess(aras.getResource('', 'configurable_inbasket.enabled_already'), topWnd);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ConfigurableInBasket_Enable</name>
+ </Item>
+</AML>

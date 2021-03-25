@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Instance configVersion="1.0">
+  <components>
+    <database id="Database" depends="Innovator SelfServiceReporting Vault Conversion Agent OAuth">
+      <SqlServer>${MSSQL.Server}</SqlServer>
+      <DatabaseName>${MSSQL.Database.Name}</DatabaseName>
+      <SaLogin>${MSSQL.SA.User}</SaLogin>
+      <SaPassword type="EnvironmentVariable">MSSQL.SA.Password</SaPassword>
+      <InnovatorLogin>${MSSQL.Innovator.User}</InnovatorLogin>
+      <InnovatorPassword type="EnvironmentVariable">MSSQL.Innovator.Password</InnovatorPassword>
+      <InnovatorUrl>http://${Deployment.Server.Name}/${Name.Of.Innovator.Instance}</InnovatorUrl>
+    </database>
+    <innovator id="Innovator">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\Innovator</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}</VirtualDirectoryPath>
+    </innovator>
+    <ssr id="SelfServiceReporting">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\SelfServiceReporting</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/SelfServiceReporting</VirtualDirectoryPath>
+    </ssr>
+    <vault id="Vault">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\VaultServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/Vault</VirtualDirectoryPath>
+    </vault>
+    <conversion id="Conversion">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\ConversionServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/ConversionServer</VirtualDirectoryPath>
+    </conversion>
+    <agent id="Agent">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\AgentService</InstallationPath>
+      <ServiceName>${Agent.Service.Name}</ServiceName>
+    </agent>
+    <oauth id="OAuth">
+      <InstallationPath>${Path.To.Installed.Innovator}\OAuthServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/OAuthServer</VirtualDirectoryPath>
+      <InnovatorUrl>http://localhost/${Name.Of.Innovator.Instance}</InnovatorUrl>
+    </oauth>
+  </components>
+  <apply>
+    <oauth2innovator oauth="OAuth" innovator="Innovator" />
+    <package>
+      <PathToDeploymentPackage>${Path.To.Deployment.Package.Dir}</PathToDeploymentPackage>
+    </package>
+    <package>
+      <PathToDeploymentPackage>${Path.To.Deployment.Package.Dir}\Sample Data</PathToDeploymentPackage>
+    </package>
+  </apply>
+</Instance>

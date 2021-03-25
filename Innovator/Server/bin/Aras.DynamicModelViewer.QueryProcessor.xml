@@ -1,0 +1,857 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.DynamicModelViewer.QueryProcessor</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DtoDataCollectingManager">
+            <summary>
+            Helper to generate additional maps for processing result.
+            The class contains list of <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.IDataCollector"/>.
+            Each PO DTO model instance processes with each extractor. So finally it allows to collect all needed data for one loop.
+            All extracted data collects in storage under specific data type key. Finally this data collection prepares and transforms to JSON.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DtoDataCollectingManager.AddCollector(Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DataType)">
+            <summary>
+            Adds extractor of specific type to extractors list.
+            </summary>
+            <param name="dataType">Data type key.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DtoDataCollectingManager.CollectData(System.Collections.Generic.ICollection{Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto})">
+            <summary>
+            Starts data gathering loop.
+            This method should be called once just after all needed extractors are added with the <see cref="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DtoDataCollectingManager.AddCollector(Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DataType)"/> method.
+            </summary>
+            <param name="poList">PO DTO models to be processed.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DtoDataCollectingManager.GetMapJson(Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DataType)">
+            <summary>
+            Returns JSON string for specific data type key.
+            This method should be called for any needed data type after <see cref="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DtoDataCollectingManager.CollectData(System.Collections.Generic.ICollection{Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto})"/>.
+            </summary>
+            <param name="dtype">Data type key.</param>
+            <returns>JSON string if data with specific key was collected. In other way null.</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.DataType">
+            <summary>
+            Data types for maps to be additionaly extracted from DTO models.
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.IDataCollector">
+            <summary>
+            Extracts data from DTO model and format it in needed way to be attached to processing result.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.IDataCollector.ProcessDtoModel(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto)">
+            <summary>
+            Method to extract needed additional data form a single product occurrence DTO model instance.
+            This method returns data only for specific single PO DTO instance.
+            The result should be collect in special data storage.
+            </summary>
+            <param name="poDto"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.IDataCollector.GetDataType">
+            <summary>
+            Returns target data type for a current extractor implementation.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.IDataCollector.GenerateJson(System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Returns JSON string from all the data from all PO DTO models collected with current extractor.
+            </summary>
+            <param name="source"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.RenderingDataCollector">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.RenderingDataCollector.ProcessDtoModel(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.RenderingDataCollector.GetDataType">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.RenderingDataCollector.GenerateJson(System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.SourceUrlsCollector.#ctor(Aras.IOM.Innovator)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.SourceUrlsCollector.GetDataType">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.SourceUrlsCollector.ProcessDtoModel(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.SourceUrlsCollector.GenerateJson(System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.SyncPathsCollector">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.SyncPathsCollector.GetDataType">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.SyncPathsCollector.ProcessDtoModel(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.DataCollecting.SyncPathsCollector.GenerateJson(System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadInstanceItem">
+            <summary>
+            Represents structure for CAD Instance item type
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadInstanceItem.Id">
+            <summary>
+            CAD Instance ID
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadInstanceItem.Name">
+            <summary>
+            CAD Instance name
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadInstanceItem.ItemId">
+            <summary>
+            CAD Instance Item ID
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadInstanceItem.TransformationMatrix">
+            <summary>
+            CAD Instance transformation
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadInstanceItem.#ctor">
+            <summary>
+            Default constructor
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem">
+            <summary>
+            Represents structure CAD item type
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.KeyedName">
+            <summary>
+            Keyed name of CAD type
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.Id">
+            <summary>
+            CAD type ID
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.SourceFileReferenceByTypeMap">
+            <summary>
+            SCS file ID for CAD item
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.BoundingBox">
+            <summary>
+            Represents CAD item bounding box
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.IsDynamicEnabled">
+            <summary>
+            Reprecents 'dynamic_enabled' property value
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.LifeCycleState">
+            <summary>
+            Represents lifecycle state
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.HasCadStructure">
+            <summary>
+            If cad is assembly it has list of Cad Structure
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.HasScsFile">
+            <summary>
+            If cad has scs file
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.CadStructuresList">
+            <summary>
+            List of inner CAD structures
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.ExistedScsFilePaths">
+            <summary>
+            List of SCS files entries
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem.#ctor">
+            <summary>
+            CadItemType class default constructor
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadStructureItem">
+            <summary>
+            Represents structure and functionality for CAD Structure item type
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadStructureItem.RelatedCad">
+            <summary>
+            CAD item related to current CAD Structure
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadStructureItem.CadInstancesList">
+            <summary>
+            List of CAD instances related to the current CAD Structure
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadStructureItem.Children">
+            <summary>
+            String representation List of children id
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadStructureItem.#ctor">
+            <summary>
+            CadStructureItemType default constructor
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultItemBase">
+            <summary>
+            Provides base Item Type structure and functionality
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultItemBase.Alias">
+            <summary>
+            Item alias
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultItemBase.TypeName">
+            <summary>
+            Item type name
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultItemBase.PropertiesList">
+            <summary>
+            Item type properties list
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultItemBase.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurrenceConversionHelper.GetDtoModel(Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase)">
+            <summary>
+            Transforms instance of ProductOccurrence to collection of ProductOccurenceDto
+            During recursive traversal model children are handled first.
+            </summary>
+            <param name="productOccurrence"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.BoundingBoxDto">
+            <summary>
+            Represents bounding box model
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.BoundingBoxDto.Max">
+            <summary>
+            String representation of maximal box point
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.BoundingBoxDto.Min">
+            <summary>
+            String representation of minimal box point
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.BoundingBoxDto.#ctor">
+            <summary>
+            BoundingBox default constructor
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ExternalModelDto">
+            <summary>
+            External model representation
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ExternalModelDto.Name">
+            <summary>
+            Model name
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ExternalModelDto.BoundingBox">
+            <summary>
+            Model bounding box
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ExternalModelDto.#ctor">
+            <summary>
+            Default constructor
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceAssemblyDto">
+            <summary>
+            Represents flat product occurrence structure
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceAssemblyDto.ChildrenIdsList">
+            <summary>
+            List of children IDs in format '0 1 2 3'
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceAssemblyDto.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceAssemblyDto"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceAssemblyDto.#ctor(Aras.Server.Core.ErrorLookup)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceAssemblyDto"/> class.
+            </summary>
+            <param name="errorLookup">Lookup for errors processing.</param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceComponentDto">
+            <summary>
+            Represents product occurence instance for flat structure
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceComponentDto.InstanceRef">
+            <summary>
+            Reference to instance
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceComponentDto.RenderingConfigurations">
+            <summary>
+            rendering configurations list for component
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceComponentDto.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceComponentDto"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceComponentDto.#ctor(Aras.Server.Core.ErrorLookup)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceComponentDto"/> class.
+            </summary>
+            <param name="errorLookup">Lookup for errors processing.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceComponentDto.GetFromDataModel(Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase,System.Int32)">
+            <summary>
+            Fills properties from data model values
+            </summary>
+            <param name="poModel"></param>
+            <param name="id"></param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto">
+            <summary>
+            Represents product occurrence for flat structure
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto.Id">
+            <summary>
+            Product occurrence ID
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto.Name">
+            <summary>
+            Product occurrence name
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto.Attributes">
+            <summary>
+            List of attributes
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto.AdditionalProperties">
+            <summary>
+            Contains necessary additional properties.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto._errorLookup">
+            <summary>
+            Lookup for errors processing
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto.ErrorLookup">
+            <summary>
+            Returns ErrorLookup instance for error processing
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto.#ctor">
+            <summary>
+            SimplePO default constructor
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto.#ctor(Aras.Server.Core.ErrorLookup)">
+            <summary>
+            SimplePO default constructor
+            </summary>
+            <param name="errorLookup">Lookup for errors processing.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto.GetAttribute(System.String)">
+            <summary>
+            Gets occurrence attribute by name
+            </summary>
+            <param name="attributeName"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceDto.GetFromDataModel(Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase,System.Int32)">
+            <summary>
+            Fills properties from data model values
+            </summary>
+            <param name="poModel"></param>
+            <param name="id"></param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceSourceDto">
+            <summary>
+            Represents model for flat proder occurrence structure
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceSourceDto.ExternalModel">
+            <summary>
+            External model
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceSourceDto.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceSourceDto"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceSourceDto.#ctor(Aras.Server.Core.ErrorLookup)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceSourceDto"/> class.
+            </summary>
+            <param name="errorLookup">Lookup for errors processing.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceSourceDto.GetFromDataModel(Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase,System.Int32)">
+            <summary>
+            Fills properties from data model values
+            </summary>
+            <param name="poModel"></param>
+            <param name="id"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceTransformableDto">
+            <summary>
+            Represents occurrence for a transformable instance.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceTransformableDto.IsRoot">
+            <summary>
+            Indicates if the assembly is a root assembly.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceTransformableDto.Transformation">
+            <summary>
+            Transformation matrix holder
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceTransformableDto.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceTransformableDto"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceTransformableDto.#ctor(Aras.Server.Core.ErrorLookup)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceTransformableDto"/> class.
+            </summary>
+            <param name="errorLookup">Lookup for errors processing.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurenceTransformableDto.GetFromDataModel(Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase,System.Int32)">
+            <summary>
+            Fills properties from data model values
+            </summary>
+            <param name="poModel"></param>
+            <param name="id"></param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurrenceAttrDto">
+            <summary>
+            Represents product occurrence attribute
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurrenceAttrDto.Name">
+            <summary>
+            Attribute name
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurrenceAttrDto.AttrType">
+            <summary>
+            Attribute type
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurrenceAttrDto.Value">
+            <summary>
+            Attribute value
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurrenceAttrDto.#ctor(System.String,System.String)">
+            <summary>
+            POAttr default constructor
+            </summary>
+            <param name="name"></param>
+            <param name="value"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.ProductOccurrenceAttrDto.#ctor">
+            <summary>
+            Parametrless constructor
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.TransformationDto">
+            <summary>
+            Represents transformation structure
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.TransformationDto.RelativeTransfo">
+            <summary>
+            Represents transformation value
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.TransformationDto.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.TransformationDto"/> class.
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingData">
+            <summary>
+            Represents structure to store several rendering maps by key property name
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingData.RenderingMapList">
+            <summary>
+            Rendering maps storage
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingData.#ctor">
+            <summary>
+            Default constructor
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingMap">
+            <summary>
+            Represents structure to store rendering parameters against specific model ID
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingMap.ColorMap">
+            <summary>
+            Color map
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingMap.OpacityMap">
+            <summary>
+            Opacity map
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingMap.#ctor">
+            <summary>
+            Default constructor
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Processing.ProductOccurrenceIdGenerator">
+            <summary>
+            Provides functionality for identity generation
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Processing.AnalyzedAssemblyComponentResult">
+            <summary>
+            Represents result of analizing whether current CAD is assembly or component,
+            should be generated appropriate ProductOccurence or not (ignored)
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Processing.AnalyzedAssemblyComponentResult.IsIgnore">
+            <summary>
+            Component processing ignore flag
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Processing.AnalyzedAssemblyComponentResult.IsAssembly">
+            <summary>
+            Assembly flag
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Processing.ProductOccurenceConverter">
+            <summary>
+            Provides functionality to convert Query definition result to Product occurrrences
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.QueryProcessor.Processing.ProductOccurenceConverter.QueryResultDataMap">
+            <summary>
+            Maps item types to aliases
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Processing.ProductOccurenceConverter.#ctor(Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem,Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap)">
+            <summary>
+            default constructor
+            </summary>
+            <param name="qResultCadItem"></param>
+            <param name="queryResultDataMap"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Processing.ProductOccurenceConverter.Build">
+            <summary>
+            Builds collection of product occerrences
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Processing.ProductOccurenceConverter.ConvertToProductOccurences(Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadItem,System.Collections.Generic.ICollection{Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase},Aras.DynamicModelViewer.QueryProcessor.Dto.QueryResult.QResultCadInstanceItem)">
+            <summary>
+            Converts query definition result item to product occurrence
+            </summary>
+            <param name="qResultCadItem"></param>
+            <param name="allPOForModel"></param>
+            <param name="instance"></param>
+            <returns>Generated occurrence ID</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Processing.QResultCadItemConverter">
+            <summary>
+            Converts Query Definition item to appropriate models
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Processing.QResultCadItemConverter.GetOrConditionForStringList(System.Collections.Generic.ICollection{System.String})">
+            <summary>
+            Returns OR condition from passed strings
+            </summary>
+            <param name="names"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Extensions.BoundingBoxExtension">
+            <summary>
+            Provides extensions for the Bounding box model
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.BoundingBoxExtension.SetPoints(Aras.DynamicModelViewer.DataModel.BoundingBox,Aras.DynamicModelViewer.DataModel.Point,Aras.DynamicModelViewer.DataModel.Point)">
+            <summary>
+            Sets coords for point represented as string
+            </summary>
+            <param name="bBox"></param>
+            <param name="min"></param>
+            <param name="max"></param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Extensions.PointExtension">
+            <summary>
+            Provides extensions for the Point model
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.PointExtension.SetPointCoords(Aras.DynamicModelViewer.DataModel.Point,System.String,System.String,System.String)">
+            <summary>
+            Sets coords for point represented as string
+            </summary>
+            <param name="sourcePoint"></param>
+            <param name="x"></param>
+            <param name="y"></param>
+            <param name="z"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.PointExtension.CreateFromPoint(Aras.DynamicModelViewer.DataModel.Point,Aras.DynamicModelViewer.DataModel.Point)">
+            <summary>
+            Sets coords of another point
+            </summary>
+            <param name="sourcePoint"></param>
+            <param name="originPoint"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.PointExtension.GetAsString(Aras.DynamicModelViewer.DataModel.Point)">
+            <summary>
+            Returns string representation
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Extensions.ProductOccurrenceExtension">
+            <summary>
+            Provides extensions for the ProductOccurrence model
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.ProductOccurrenceExtension.GetAttribute(Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase,System.String)">
+            <summary>
+            Gets model data attribute by name.
+            </summary>
+            <param name="productOccurrenceSource"></param>
+            <param name="attributeName"></param>
+            <returns><see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceAttr"/> or null.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.QueryBuilderExtensions.GetPartDataCopy(Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance)">
+            <summary>
+            Extends the ProductOccurrenceInstance which represents part to make its copy 
+            </summary>
+            <param name="source">Part instance.</param>
+            <returns>Copy of source part instance</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Extensions.RenderingDataExtensions">
+            <summary>
+            Provides extensions for the RenderingData model
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.RenderingDataExtensions.ToJson(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingData)">
+            <summary>
+            Converts current instance to JSON string
+            </summary>
+            <param name="rdata"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.RenderingDataExtensions.AddRenderingMap(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingData,System.String,Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingMap)">
+            <summary>
+            Adds rendering map to the instance
+            </summary>
+            <param name="rdata"></param>
+            <param name="name"></param>
+            <param name="map"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.RenderingDataExtensions.MergeRenderingData(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingData,Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingData)">
+            <summary>
+            Merges current rendering data with another.
+            </summary>
+            <param name="source"></param>
+            <param name="rdata"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.RenderingDataExtensions.Merge(System.Collections.Generic.Dictionary{System.String,System.Object},System.Collections.Generic.Dictionary{System.String,System.Object})">
+            <summary>
+            Merges dictionaries type of (string, object).
+            </summary>
+            <param name="source"></param>
+            <param name="dictToBeAdded"></param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Extensions.RenderingMapExtensions">
+            <summary>
+            Provides extensions for the RenderingMap model
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.RenderingMapExtensions.AddColor(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingMap,System.Int32,System.String)">
+            <summary>
+            Adds new pair ID-Color to the map
+            </summary>
+            <param name="rmap"></param>
+            <param name="id"></param>
+            <param name="color"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.RenderingMapExtensions.AddOpacity(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingMap,System.Int32,System.Double)">
+            <summary>
+            Adds new pair ID-Opacity to the map
+            </summary>
+            <param name="rmap"></param>
+            <param name="id"></param>
+            <param name="opacity"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Extensions.RenderingMapExtensions.Merge(Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingMap,Aras.DynamicModelViewer.QueryProcessor.Dto.Serialization.RenderingMap)">
+            <summary>
+            Merges current map with given
+            </summary>
+            <param name="rmap"></param>
+            <param name="mapList"></param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.Processor">
+            <summary>
+            Provides functionality to process query definition result
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Processor.#ctor(Aras.Server.Core.ErrorLookup)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.Processor"/> class.
+            </summary>
+            <param name="errorLookup"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.Processor.ProcessQueryResult(Aras.IOM.Item,Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap)">
+            <summary>
+            Processes query result to list of product occurrences.
+            </summary>
+            <param name="queryDefinitinResult">Result of a query definition execution.</param>
+            <param name="itemTypeToAliasesMap">Item type to aliases map.</param>
+            <returns><see cref="T:Aras.DynamicModelViewer.DataModel.QueryProcesingResult"/></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.ItemBasedProcessor">
+            <summary>
+            Query definition processor which processes DOM elements from Item.
+            Uses caching. 
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.ItemBasedProcessor.#ctor(Aras.Server.Core.ErrorLookup)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.ItemBasedProcessor"/> class.
+            </summary>
+            <param name="lookup">Error lookup.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.ItemBasedProcessor.ProcessQueryResult(Aras.IOM.Item,Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap)">
+            <summary>
+            Processes query result to list of product occurrences.
+            </summary>
+            <param name="queryDefinitinResult">Result of a query definition execution.</param>
+            <param name="itemTypeToAliasesMap">Item type to aliases map.</param>
+            <returns><see cref="T:Aras.DynamicModelViewer.DataModel.QueryProcesingResult"/></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.ItemBasedProcessor.ProcessRootItem(Aras.IOM.Item,Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap,System.Boolean)">
+            <summary>
+            Processes specific node.
+            </summary>
+            <param name="rootNode">Xml node to be processed.</param>
+            <param name="isRoot">Root flag. True only for top node.</param>
+            <param name="map">Item type to aliases map.</param>
+            <returns>List of POs</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.QueryBuilderItemProcessor">
+            <summary>
+            Provides functionality to process query builder item to product occurrences.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.QueryBuilderItemProcessor.#ctor(Aras.Server.Core.ErrorLookup)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.QueryBuilderItemProcessor"/> class.
+            </summary>
+            <param name="errorLookup"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.QueryBuilderItemProcessor.ProcessQueryResult(System.Collections.Generic.IEnumerable{Aras.Server.Core.QueryBuilder.QueryBuilderNode})">
+            <summary>
+            Processes query builder item instance to a collection of product occurrences.
+            </summary>
+            <param name="qdResult"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.QueryProcessor.XmlBasedProcessor">
+            <summary>
+            Query definition processor which processes Item using Aras.IOM API.
+            Uses caching. 
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.XmlBasedProcessor.#ctor(Aras.Server.Core.ErrorLookup)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.QueryProcessor.XmlBasedProcessor"/> class.
+            </summary>
+            <param name="lookup"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.XmlBasedProcessor.ProcessQueryResult(Aras.IOM.Item,Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap)">
+            <summary>
+            Processes query result to list of product occurrences.
+            </summary>
+            <param name="queryDefinitinResult">Result of a query definition execution.</param>
+            <param name="itemTypeToAliasesMap">Item type to aliases map.</param>
+            <returns><see cref="T:Aras.DynamicModelViewer.DataModel.QueryProcesingResult"/></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.QueryProcessor.XmlBasedProcessor.ProcessRootItem(System.Xml.XmlNode,Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap,System.Boolean)">
+            <summary>
+            Processes specific node.
+            </summary>
+            <param name="rootNode">Xml node to be processed.</param>
+            <param name="isRoot">Root flag. True only for top node.</param>
+            <param name="map">Item type to aliases map.</param>
+            <returns>List of POs</returns>
+        </member>
+    </members>
+</doc>

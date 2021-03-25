@@ -1,0 +1,24 @@
+﻿<AML>
+ <Item type="Method" id="AE24D115F1EC41BCB0F7BC47A0EED418" action="add">
+  <comments>default click handler for sidebar graph view tab</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const tabContainer = dijit.byId('viewers');
+const tabId = target.id; 
+if (tabContainer.getTabById(tabId)) {
+	tabContainer.selectTab(tabId);
+	return;
+}
+
+require(['Viewers/GraphViewerLoader'], function(GraphLoader) {
+	const itemId = options.itemId;
+	const itemTypeName = options.itemTypeName;
+	const gvdId = target.gvdId || '';
+	const graphLoader = new GraphLoader({itemId, itemTypeName, gvdId});
+	tabContainer.createTab(graphLoader, tabId);
+	tabContainer.selectTab(tabId);
+});
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>sidebar_default_gv_click</name>
+ </Item>
+</AML>

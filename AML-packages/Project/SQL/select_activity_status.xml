@@ -1,0 +1,53 @@
+﻿<AML>
+ <Item type="SQL" id="8A9647C5CD1F44F5B7A712FE281D7FA3" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_activity_status</old_name>
+  <sqlserver_body><![CDATA[/* Name:    select_activity_status
+   Purpose: computes the activity status (a Color, actually) given
+            a state and a comparision value, by searching
+            the Preference and related tables.
+   Created: 1-DEC-2005 George J. Carrette
+*/
+CREATE FUNCTION innovator.Select_activity_status(@STATE VARCHAR(64),
+                                                 @VALUE INTEGER)
+RETURNS VARCHAR(64)
+AS
+  BEGIN
+      DECLARE @MAX_INTEGER INTEGER
+
+      SET @MAX_INTEGER = 2147483647
+
+      DECLARE @COLOR VARCHAR(64)
+      DECLARE @COLORMAP_ID CHAR(32)
+      DECLARE @LEAST_UPPER_BOUND INTEGER
+
+      SET @COLOR = '#000001'
+      SET @COLORMAP_ID = (SELECT value
+                          FROM   INNOVATOR.Select_pm_projectcolormap_id(@STATE))
+
+      IF @COLORMAP_ID IS NULL
+        RETURN @COLOR
+
+      SET @LEAST_UPPER_BOUND = (SELECT Min(Isnull(COMPARISON_VALUE, @MAX_INTEGER))
+                                FROM   PM_ProjectColorPeriod
+                                WHERE  SOURCE_ID = @COLORMAP_ID
+                                       AND Isnull(COMPARISON_VALUE, @MAX_INTEGER) >= Isnull(@VALUE, @MAX_INTEGER - 1))
+      SET @COLOR = '#000002'
+
+      IF @LEAST_UPPER_BOUND IS NULL
+        RETURN @COLOR
+
+      SET @COLOR = (SELECT COLOR
+                    FROM   PM_ProjectColorPeriod
+                    WHERE  SOURCE_ID = @COLORMAP_ID
+                           AND Isnull(COMPARISON_VALUE, @MAX_INTEGER) = @LEAST_UPPER_BOUND)
+
+      RETURN @COLOR
+  END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_activity_status</name>
+ </Item>
+</AML>

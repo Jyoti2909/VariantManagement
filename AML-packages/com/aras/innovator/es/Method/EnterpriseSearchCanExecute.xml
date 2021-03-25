@@ -1,0 +1,16 @@
+﻿<AML>
+ <Item type="Method" id="446F2FA6A1D944E8B12C6285C704185D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var canExecute = aras.commonProperties.isESFeatureEnabled;
+if (typeof(canExecute) === 'undefined') {
+	var consumeLicense = aras.ConsumeLicense('Aras.EnterpriseSearch');
+	canExecute = !!consumeLicense.result;
+	aras.commonProperties.isESFeatureEnabled = canExecute;
+}
+
+return canExecute;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>EnterpriseSearchCanExecute</name>
+ </Item>
+</AML>

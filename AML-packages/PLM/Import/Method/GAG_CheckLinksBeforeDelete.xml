@@ -1,0 +1,83 @@
+﻿<AML>
+ <Item type="Method" id="DB49FECEE0C24F3690D3DCB92C70132C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+
+			return businessLogic.Run(this);
+}
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dal)
+			{
+				_dal = dal;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				try
+				{
+					return Main(contextItem);
+				}
+				catch (ItemException e)
+				{
+					return e.ErrorItem;
+				}
+			}
+
+			private Item Main(Item contextItem)
+			{
+				string contextItemId = contextItem.getID();
+				string classification = GetClassification(contextItemId);
+
+				if (!classification.Contains("Mechanical Part"))
+				{
+					return contextItem;
+				}
+
+				Item partWithRelationships = GetPartWithRelationships(contextItemId);
+
+				if (partWithRelationships.getRelationships().getItemCount() > 0)
+				{
+					string generation = partWithRelationships.getProperty("generation", string.Empty);
+
+					return _dal.NewError(generation + " generation of this item cannot be deleted because it has linked relationships.");
+				}
+
+				return contextItem;
+			}
+
+			private string GetClassification(string contextItemId)
+			{
+				Item part = _dal.NewItem("Part", "get");
+				part.setID(contextItemId);
+				part.setAttribute("select", "classification");
+
+				part = part.apply();
+
+				return part.isError()
+					? throw new ItemException(part)
+					: part.getProperty("classification", string.Empty);
+			}
+
+			private Item GetPartWithRelationships(string contextItemId)
+			{
+				Item part = _dal.NewItem("Part", "get");
+				part.setID(contextItemId);
+				part.setAttribute("select", "generation");
+				part.setAttribute("levels", "1");
+				part.setAttribute("related_expand", "0");
+
+				part = part.apply();
+
+				return part.isError()
+					? throw new ItemException(part)
+					: part;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_CheckLinksBeforeDelete</name>
+ </Item>
+</AML>

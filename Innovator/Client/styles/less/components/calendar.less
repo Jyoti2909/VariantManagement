@@ -1,0 +1,103 @@
+﻿@import (reference) '../core/variables';
+@import '../core/buttons';
+@import '../core/icons';
+
+@switch-btn-size: 2rem;
+@arrow-size: 0.6rem;
+@grid-row-size: 2.67rem;
+
+:host {
+	display: block;
+
+	.aras-calendar {
+		&__switch {
+			display: flex;
+			margin-bottom: 8px;
+
+			&_mode {
+				color: @neutral-3;
+				font: @font-16-med;
+				margin-right: auto;
+				padding: 0 2px;
+				width: auto;
+			}
+
+			&_prev,
+			&_next {
+				&:before {
+					border: none;
+					border-top: 2px solid @neutral-3;
+					border-right: 2px solid @neutral-3;
+					box-sizing: border-box;
+					height: @arrow-size;
+					left: calc(50% - @arrow-size / 2);
+					top: calc(50% - @arrow-size / 2);
+					transform: rotate(45deg);
+					width: @arrow-size;
+				}
+			}
+
+			&_prev {
+				margin-right: 8px;
+
+				&:before {
+					transform: rotate(-135deg);
+				}
+			}
+		}
+
+		&__grid {
+			display: grid;
+			grid-auto-rows: @grid-row-size * 2;
+			grid-template-columns: repeat(4, @grid-row-size * 2);
+
+			&_days {
+				grid-auto-rows: @grid-row-size;
+				grid-template-columns: repeat(8, @grid-row-size);
+			}
+		}
+
+		&__grid-item {
+			align-content: center;
+			color: @neutral-5;
+			display: inline-grid;
+			font: @font-12-med;
+			text-align: center;
+			user-select: none;
+
+			&:not(.aras-calendar__grid-item_disabled) {
+				color: @neutral-3;
+				cursor: pointer;
+				font: @font-12-bold;
+
+				&:hover:not(.aras-calendar__grid-item_selected) {
+					background: none;
+					border: 2px solid @color-16;
+				}
+
+				&:focus {
+					outline: none;
+				}
+			}
+
+			&_not-in-month.aras-calendar__grid-item {
+				color: @neutral-a;
+			}
+
+			&_current.aras-calendar__grid-item {
+				color: @color-12;
+				font: @font-12-bold;
+			}
+
+			&_selected.aras-calendar__grid-item {
+				background: @color-16;
+				color: @neutral-f;
+			}
+
+			&_week {
+				background: @neutral-e;
+				font: @font-12-reg;
+			}
+		}
+	}
+}

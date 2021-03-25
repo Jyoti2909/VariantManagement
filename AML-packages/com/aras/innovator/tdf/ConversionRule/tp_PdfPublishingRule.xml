@@ -1,0 +1,44 @@
+﻿<AML>
+ <Item type="ConversionRule" id="A3F90A30E39046D28C8E42DCA8301909" action="add">
+  <converter_type keyed_name="tp_PdfPublishingConverter" type="ConverterType">A14EC0B1480B4E2793E5C3B6266BC64A</converter_type>
+  <cutoff>1</cutoff>
+  <delay>1</delay>
+  <enabled>1</enabled>
+  <timeout>2</timeout>
+  <name>tp_PdfPublishingRule</name>
+  <Relationships>
+   <Item type="ConversionRuleEventHandler" id="9DAFB61E30B54263B2F65848DAB0BD10" action="add">
+    <event_type>OnTaskAfterCreate</event_type>
+    <related_id keyed_name="SendOnCreateTaskNotification" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>SendOnCreateTaskNotification</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="tp_PdfPublishingRule" type="ConversionRule">A3F90A30E39046D28C8E42DCA8301909</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="651E4DE4484B4FA28B920C58CD282711" action="add">
+    <event_type>OnConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="InvokeStandardConverterAsCreator" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>InvokeStandardConverterAsCreator</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="tp_PdfPublishingRule" type="ConversionRule">A3F90A30E39046D28C8E42DCA8301909</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="6DD9CD6DCB1B407FA88FBC3E38EFA0C3" action="add">
+    <event_type>OnAfterConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="SetFilesToFileGroup" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>SetFilesToFileGroup</name>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="tp_PdfPublishingRule" type="ConversionRule">A3F90A30E39046D28C8E42DCA8301909</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

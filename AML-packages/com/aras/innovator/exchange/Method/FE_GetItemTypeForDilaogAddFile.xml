@@ -1,0 +1,106 @@
+﻿<AML>
+ <Item type="Method" id="5C4745E9C40C4DAE8057DD0068372847" action="add">
+  <comments>Get item types for display in special dialog for add ing files to the other instances</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string id = string.Empty;
+string name = string.Empty;
+Item node = null;
+Item nodes = null;
+int nodeCount = 0;
+
+Dictionary<string, string> itemIds = new Dictionary<string, string>();
+Item query = this.newItem();
+query.loadAML("<Item type='ItemType' action='get' select='name, id, is_relationship'>" +
+				"<Relationships>" +
+					"<Item type='Property' action='get'>" +
+						"<data_type>item</data_type>" +
+						"<data_source>" +
+							"<Item type='ItemType' action='get' select='id'>" +
+								"<name>File</name>" +
+							"</Item>" +
+						"</data_source>" +
+					"</Item>" +	
+				"</Relationships>" + 
+			"</Item>");				 
+Item result = query.apply();
+nodes = result.getItemsByXPath("//Item[is_relationship='0' and name!='File']");
+nodeCount = nodes.getItemCount();
+for(int i = 0; i < nodeCount; i++)
+{
+	node = nodes.getItemByIndex(i);
+	itemIds.Add(node.getID(), node.getProperty("name", ""));
+}
+
+nodes = result.getItemsByXPath("//Item[is_relationship='1' and name!='File']");
+nodeCount = nodes.getItemCount();
+List<string> relationshipIds = new List<string>();
+for(int i = 0; i < nodeCount; i++)
+{
+	node = nodes.getItemByIndex(i);
+	string relationshipId = node.getID();
+	relationshipId = "'" + CCO.DB.InnDatabase.QuoteValue(relationshipId) + "'";
+	relationshipIds.Add(relationshipId);
+}
+
+query = this.newItem("RelationshipType", "get");
+query.setAttribute("select", "id, name, source_id, is_null, dependencyLevel");
+query.setProperty("relationship_id", string.Join(",", relationshipIds));
+query.setPropertyCondition("relationship_id", "in");
+result = query.apply();	
+nodes = result.getItemsByXPath("//Item");
+nodeCount = nodes.getItemCount();
+
+List<string> tempIds = new List<string>();
+for (int i = 0; i < nodeCount; i++)
+{
+	node = nodes.getItemByIndex(i);
+	name = node.getProperty("name", "");
+	tempIds.Add(name);
+}
+
+for(int i = 0; i <nodeCount; i++)
+{
+	node = nodes.getItemByIndex(i);
+	id = node.getProperty("source_id", "");
+	name = node.getPropertyAttribute("source_id", "name", "");
+	
+	bool isContinue = true;
+	while (isContinue)
+	{
+		query = this.newItem();
+		query.loadAML("<Item type='RelationshipType' action='get' select='id, name, source_id'>" +
+						"<relationship_id condition='in'>" + System.Security.SecurityElement.Escape(CCO.DB.InnDatabase.QuoteValue(id)) + "</relationship_id>" +
+						"</Item>");
+		query = query.apply();
+		if (query.getItemCount() == 0)
+			isContinue = false;
+		else
+		{
+			node = query.getItemByIndex(0);
+			id = query.getProperty("source_id", "");
+			name = query.getPropertyAttribute("source_id", "name", "");
+		}	
+	}		
+	
+	if (!string.IsNullOrEmpty(name) && name != "File" && !itemIds.ContainsKey(id))	
+	{
+		if (!tempIds.Contains(name))
+			itemIds.Add(id, name);
+	}
+}
+
+string idlist = string.Empty;
+foreach(string key in itemIds.Keys)
+{
+	idlist += key + ",";	
+}
+idlist = idlist.Substring(0, idlist.Length - 1);
+
+query = this.newItem("ItemType", "get");
+query.setAttribute("select", "id, name");
+query.setAttribute("idlist", idlist);
+return query.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>FE_GetItemTypeForDilaogAddFile</name>
+ </Item>
+</AML>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = "..";
+  gCommonRootRelPath = "..";
+  gTopicId = "9.0_2";
+
+//]]></script>
+
+<script type="text/javascript" src="../template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="../template/scripts/common.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="../assets/css/default.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Changing the Default Team on Express Change Items</title>
+  <meta name="topic-status" content="Draft"/>
+  
+</head>
+<body>
+  <div>
+  <h1>Changing the Default Team on Express Change Items</h1>
+  <p>When you create an Express Change item, the <strong>Team </strong>property is prepopulated with <strong>Product Team</strong> by default.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/expeco1.jpg" style="width: 100%; max-width: 427px;"/></p>
+  <p>The <strong>Client Events </strong>accordion tab for each Express Change ItemType item view includes the <strong>PE_SetTeam</strong> method, which defines the default Team for this ItemType. The <strong>OnAfterNew </strong>event invokes the method.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/expecomethod.jpg" style="width: 100%; max-width: 750px;"/></p>
+  <p>If you remove<strong> PE_SetTeam</strong> from <strong>Client Events</strong>, the Express Change is not prepopulated with the default team. In this case, the users must assign a Team manually when creating a new item. You must set the <strong>team_id</strong> ItemType Property to <strong>Required</strong>.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/execo2.jpg" style="width: 100%; max-width: 674px;"/></p>
+  <p><strong>PE_SetTeam </strong>is a system method. It should not be deleted or modified. However, you can change the second argument of <span style="font-family:Courier New">team.setProperty()</span> to specify another Team as the default.</p>
+  <p class="Figure_indented"><img src="../assets/images/pe_setteam.jpg" style="width: 100%; max-width: 913px;"/></p>
+  <p>If different Express Change ItemTypes have different default Teams, you must create a new method using logic from <strong>PE_SetTeam</strong> and assign it to the appropriate Express Change ItemType.</p>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

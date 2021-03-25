@@ -1,0 +1,51 @@
+﻿<AML>
+ <Item type="SQL" id="F37D6A98089849FDA660CD95215B667E" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>clear_schedule</old_name>
+  <sqlserver_body><![CDATA[/* Name:    clear_schedule.sql
+   Purpose: clears computed schedule values within a project.
+   Created: 28-SEP-2005 George J. Carrette
+   Input:   the ID of a project.
+   Output:  SUCCESS or FAILURE status.
+*/
+
+create procedure clear_schedule(@PROJECT_ID CHAR(32))
+AS
+begin
+ DECLARE @WBS_ID CHAR(32)
+ DECLARE @ACTIVITIES TABLE(ID CHAR(32) COLLATE database_default primary key)
+ DECLARE @SCHEDULING_TYPE VARCHAR(64)
+ SET @WBS_ID =     (SELECT WBS_ID FROM [PROJECT] WHERE ID = @PROJECT_ID)
+ SET @SCHEDULING_TYPE = (SELECT SCHEDULING_TYPE FROM [PROJECT] 
+                         WHERE ID = @PROJECT_ID)
+ INSERT @ACTIVITIES SELECT ID FROM SELECT_ACTIVITIES(@WBS_ID)
+ UPDATE [PROJECT]
+  SET DATE_START_SCHED = NULL,
+      DATE_DUE_SCHED = NULL
+   WHERE ID = @PROJECT_ID
+ UPDATE [ACTIVITY2]
+ SET DATE_ES = NULL,
+     DATE_EF = NULL,
+     DATE_LS = NULL,
+     DATE_LF = NULL,
+     DATE_START_SCHED = NULL
+ WHERE ID IN (SELECT ID FROM @ACTIVITIES)
+ if @SCHEDULING_TYPE = 'Milestone'
+  UPDATE [ACTIVITY2]
+  SET DATE_DUE_SCHED = NULL
+  WHERE ID IN (SELECT ID FROM @ACTIVITIES) AND
+        [ACTIVITY2].IS_MILESTONE = '0'
+ ELSE
+  UPDATE [ACTIVITY2]
+  SET DATE_DUE_SCHED = NULL
+  WHERE ID IN (SELECT ID FROM @ACTIVITIES)
+ SELECT 'SUCCESS'
+end
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>clear_schedule</name>
+ </Item>
+</AML>

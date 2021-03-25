@@ -1,0 +1,619 @@
+﻿<AML>
+ <Item type="Method" id="6A04067A2EEB4E0E921FE80405A63A4C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/* 
+  
+The method assumes that input AML is something like the following:
+
+<AML>
+  <Item type="{ItemType(ex. CAD)}" idlist="{ID}[,{ID},...]" resolution="{AsSaved|Released|Current}" action="PE_GetResolvedParents">
+    <Relationships>
+      <Item type="{Relationship ItemType to traverse (ex. CAD Structure)}">
+        <or>
+          <classification condition="like">Var%</classification>
+          <classification condition="like">Ref%</classification>
+        </or>
+        <source_id>
+          <Item type="{ItemType of target item (ex CAD)}" [orderBy="..." select="..."]>
+            <or>
+              <classification condition="like">Mechanical%</classification>
+              <classification condition="like">Electronic/Design%</classification>
+            </or>
+          </Item>
+        </source_id>
+      </Item>
+    </Relationships>
+  </Item>
+</AML>
+
+NOTES:
+  - 'Relationships' under root 'Item' must be present
+  - Conditions on the parent classification (i.e. 'source_id' classification) are optional
+*/  
+
+    Item itemsWithNotAllowedActions = this.getItemsByXPath("//Item[@action and @action!='PE_GetResolvedParents' and @action!='add' and " +
+      "@action!='delete' and @action!='update' and @action!='edit' and @action!='get' and @action!='skip']");
+    if (itemsWithNotAllowedActions.getItemCount() > 0)
+    {
+      //"this" shouldn't contain Items with not allowed "actions" because such Items is applied in this server-side method.
+      //So, e.g., not admin user can call actions where "execution_allowed_to" is for administrators.
+      throw new InvalidOperationException();
+    }
+
+    Utils.InitializeForRequest(this.getInnovator(), CCO);
+
+    try
+    {
+      InputItem inputItem = new InputItem(this);
+      return inputItem.GetResolvedParents();
+    }
+    catch(ItemErrorException ex)
+    {
+      return ex.Error;
+    }
+  }
+}
+
+enum Resolution
+{
+  AsSaved, 
+  Released, 
+  Current
+}
+
+class InputItem : ItemContext
+{	
+	public InputItem(Item item)
+	 : base(item)
+	{
+	  try
+	  {
+        this.Resolution = ParseInputResolution(item);
+        this.RelationshipItem = ParseRelationshipItem(item);
+	  }
+	  catch(ArgumentException ex)
+	  {
+	  	throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_InputItemInitializationFailed", this.IDList), ex);
+	  }
+	}
+	
+	private RelationshipItem ParseRelationshipItem(Item item)
+	{
+	  Item relshipItems = item.getItemsByXPath("Relationships/Item");
+	  if(relshipItems.getItemCount() <= 0)
+	  {
+	    throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_RelationshipItemIsMissing"));
+	  }
+	  
+	  return new RelationshipItem(relshipItems.getItemByIndex(0));
+	}
+	
+	private Resolution ParseInputResolution(Item item)
+	{
+	  String resolutionAttr = item.getAttribute("resolution", "");
+      if(String.IsNullOrEmpty(resolutionAttr))
+      {
+        throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_ResolutionAttributeIsMissing"));
+      }
+    
+      Resolution resolution;
+      try
+      { 
+        if(!System.Enum.IsDefined(typeof(Resolution), resolutionAttr))
+        {
+      	  throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_ResolutionAttributeIsInvalid"));
+        }
+        resolution = (Resolution)System.Enum.Parse(typeof(Resolution), resolutionAttr, false);
+      }
+      catch(ArgumentNullException)
+      {
+        throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_ResolutionAttributeIsInvalid"));
+      }
+      catch(ArgumentException)
+      {
+        throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_ResolutionAttributeIsInvalid"));
+      }  
+      
+      return resolution;
+	}
+	
+	public String IDList
+	{
+	  get
+	  {
+	  	return this.Item.getAttribute("idlist");
+	  }
+	}
+	
+	public static string propCondition(XmlNode a_node)
+	{
+		String classification = a_node.InnerText;
+		if (String.IsNullOrEmpty(classification))
+		{
+			throw new ArgumentException("'classification' property must have a value");
+		}
+
+		string condition = "=";
+		XmlAttribute cond = a_node.Attributes["condition"];
+		if (cond != null)
+		{
+			condition = cond.Value;
+			switch (condition)
+			{
+				case "eq":
+					condition = "=";
+					break;
+				case "ne":
+					condition = "!=";
+					break;
+				case "like":
+					condition = "like";
+					break;
+				case "not like":
+					condition = "not like";
+					break;
+				case "in":
+					condition = "in";
+					break;
+				case "not in":
+					condition = "not in";
+					break;
+				case "lt":
+					condition = "<";
+					break;
+				case "le":
+					condition = "<=";
+					break;
+				case "gt":
+					condition = ">";
+					break;
+				case "ge":
+					condition = ">=";
+					break;
+				default:
+					//Not to have SQL Injections: do 'throw'
+					throw new ArgumentException();
+			}
+		}
+
+		return String.Format(System.Globalization.CultureInfo.InvariantCulture, "cadstruct.CLASSIFICATION {0} '{1}'", condition,
+			Utils.CCO.DB.InnDatabase.QuoteValue(classification));
+	}
+
+	public Resolution Resolution
+	{
+	  private set;
+	  get;
+	}
+		
+	public RelationshipItem RelationshipItem
+	{
+	  private set;
+	  get;
+	}
+	
+	public Item GetResolvedParents()
+	{
+		switch(this.Resolution)
+		{
+			case Resolution.AsSaved:
+				return ProcessAsSavedResolution();
+			case Resolution.Released:
+				return ProcessReleasedResolution();
+			case Resolution.Current:
+				return ProcessCurrentResolution();
+			default: 
+			{
+				throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("ResolutionIsOutOfRange"));
+			}
+		}
+	}
+	
+	private string getCadstructCondition()
+	{
+		// AsSaved
+		String cadstructCondition = "cadstruct.RELATED_ID in (SELECT id FROM generateTableOfIDs('{0}'))";
+
+		Item rels = this.Item.getItemsByXPath("Relationships/Item");
+		if( rels.getItemCount() > 0 )
+		{
+		  Item rel = rels.getItemByIndex(0);
+		  String cc = buildClassificationCondition(rel.node, "and");
+
+		  if( cc != null )
+		  {
+		    cadstructCondition += " AND " + cc;
+		  }
+		}
+
+		return cadstructCondition;
+	}
+	
+	private static XmlNodeList getAllowedChildren(XmlNode a_parent)
+	{
+		string xpath = "classification | or | and | not";
+
+		return a_parent.SelectNodes(xpath);
+	}
+
+	private static string buildClassificationCondition(XmlNode a_parent, string a_oper)
+	{
+		XmlNodeList nodes = getAllowedChildren(a_parent);
+		if (nodes == null || nodes.Count == 0)
+			return null;
+
+		string result = string.Empty;
+
+		if (a_oper.Trim().ToLower() == "not")
+			result += "not ";
+
+		result += "(";
+
+		for (int i = 0; i < nodes.Count; i++)
+		{
+			XmlNode n = nodes[i];
+
+			string op = (a_oper.Trim().ToLower() == "not" ? "and" : a_oper);
+			if (i > 0)
+			{
+				result += " " + op + " ";
+			}
+
+			string node_name = n.LocalName.Trim().ToLower();
+			if( node_name == "or" || node_name == "and" || node_name == "not" )
+			{
+				result += buildClassificationCondition(n, node_name);
+			}
+			else
+			{
+				result += propCondition(n);
+			}
+		}
+
+		result += ")";
+
+		return result;
+	}
+
+	
+	private Item ProcessAsSavedResolution()
+	{
+		// AsSaved
+		String cadstructCondition = getCadstructCondition();
+		
+		String sqlQuery = @"
+          SELECT distinct cadstruct.SOURCE_ID id FROM {1}/*[CAD_STRUCTURE]*/ cadstruct 
+          WHERE " + cadstructCondition;
+        sqlQuery = String.Format(CultureInfo.InvariantCulture, sqlQuery,
+          Utils.CCO.DB.InnDatabase.QuoteValue(this.IDList),
+          this.RelationshipItem.TableName);
+       
+		Item res = GetItemViaIDQuery(sqlQuery);
+		return res;
+
+	}
+	
+	private Item ProcessReleasedResolution()
+	{
+      // Released
+	  String cadstructCondition = "(" + getCadstructCondition() + ")";
+	  
+      String sqlQuery = @"
+        SELECT distinct releasedcad.id FROM {1}/*[CAD]*/ releasedcad
+	    INNER JOIN {2}/*[CAD_STRUCTURE]*/ cadstruct ON " +
+		cadstructCondition +
+		@" INNER JOIN  {1}/*[CAD]*/ assavedcad ON assavedcad.id = cadstruct.SOURCE_ID
+        WHERE 
+        releasedcad.CONFIG_ID = assavedcad.CONFIG_ID
+        AND
+        (
+	      releasedcad.GENERATION = (SELECT MAX(GENERATION) FROM  {1}/*[CAD]*/ WHERE CONFIG_ID = releasedcad.CONFIG_ID AND IS_RELEASED = 1)
+	      OR
+	      (
+		     (SELECT MAX(GENERATION) FROM  {1}/*[CAD]*/ WHERE CONFIG_ID = releasedcad.CONFIG_ID AND IS_RELEASED = 1) IS NULL
+		     AND
+		     releasedcad.ID = assavedcad.ID
+	      )
+        )";
+		
+		sqlQuery = String.Format(CultureInfo.InvariantCulture, sqlQuery,
+          Utils.CCO.DB.InnDatabase.QuoteValue(this.IDList),
+          this.TableName,
+          this.RelationshipItem.TableName);
+       
+		Item res = GetItemViaIDQuery(sqlQuery);
+		return res;
+	}
+	
+	private Item ProcessCurrentResolution()
+	{
+      // Current
+	  String cadstructCondition = "(" + getCadstructCondition() + ")";
+	  
+	  
+      String sqlQuery = @"
+        SELECT distinct currentcad.id FROM {1}/*[CAD]*/ currentcad 
+        WHERE 
+        currentcad.CONFIG_ID in (
+	      SELECT distinct assavedcad.CONFIG_ID id FROM {1}/*[CAD]*/ assavedcad
+		  INNER JOIN {2}/*[CAD_STRUCTURE]*/ cadstruct ON " +
+	      cadstructCondition +
+		  @" WHERE assavedcad.id = cadstruct.SOURCE_ID
+	    )
+        AND
+        currentcad.IS_CURRENT = '1'";
+        
+        sqlQuery = String.Format(CultureInfo.InvariantCulture, sqlQuery,
+          Utils.CCO.DB.InnDatabase.QuoteValue(this.IDList),
+          this.TableName,
+          this.RelationshipItem.TableName);
+       
+		Item res = GetItemViaIDQuery(sqlQuery);
+		return res;
+	}
+	
+	private List<string> GetFilePropertyNameList()
+	{
+		String aml = @"
+			<AML>
+				<Item type='Property' action='get' select='name'>
+					<source_id>
+						<Item type='ItemType' action='get'>
+							<name>{0}</name>
+						</Item>
+					</source_id>
+					<data_source>
+						<Item type='ItemType' action='get'>
+							<name>File</name>
+						</Item>
+					</data_source>
+				</Item>
+			</AML>
+		";
+		
+		aml = String.Format(CultureInfo.InvariantCulture, aml, System.Security.SecurityElement.Escape(this.Type));
+		
+		Item propertyItem = Utils.Innovator.applyAML(aml);
+		
+		List<String> propertyNameList = new List<String>();
+		
+		for(int propertyIndex = 0; propertyIndex < propertyItem.getItemCount(); propertyIndex++)
+		{
+			String propName = propertyItem.getItemByIndex(propertyIndex).getProperty("name");
+		  propertyNameList.Add(propName);
+		}
+		
+		return propertyNameList;
+	}
+	
+	private void UpdateQueryItemToLoadFileProperties(Item qryItem)
+	{
+		String fileItemQuery = @"
+		<AML>
+      <Item type='File' action='get'>
+        <Relationships>
+          <Item type='Located' action='get'>
+            <related_id>
+              <Item type='Vault' action='get'/>
+            </related_id>
+          </Item>
+        </Relationships>
+      </Item>
+		</AML>";
+		
+		Item fileItem = Utils.Innovator.newItem();
+		fileItem.loadAML(fileItemQuery);
+		
+		List<String> filePropertyNameList = this.GetFilePropertyNameList();
+		
+		foreach(String propName in filePropertyNameList)
+		{
+		  qryItem.setPropertyItem(propName, fileItem);
+		}
+	}
+	
+	private Item GetItemViaIDQuery(String sqlQuery)
+	{
+	  //This approach solves possible SQL injection into parameters.
+	  Item qryItem = this.RelationshipItem.SourceItemQueryTemplate;
+	  qryItem.setType(this.Type);
+	  qryItem.setAction("get");
+	  qryItem.setProperty("id", sqlQuery);
+	  qryItem.setPropertyCondition("id", "in");
+		
+		UpdateQueryItemToLoadFileProperties(qryItem);
+		
+    Item resItems = qryItem.apply();
+    Utils.AssertItem(resItems);
+      
+    return resItems;
+	}
+	
+}
+
+class RelationshipItem : ItemContext
+{
+	public RelationshipItem(Item item)
+	 : base(item)
+	{
+	  if(String.IsNullOrEmpty(this.Type))
+	  {
+	    throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_RelationshipItemTypeIsMissing"));
+	  }
+	  
+	  sourceItemQueryTemplate = item.getPropertyItem("source_id");
+	  if(sourceItemQueryTemplate == null)
+	  {
+	  	sourceItemQueryTemplate = Utils.Innovator.newItem("");
+	  	sourceItemQueryTemplate.loadAML("<AML><Item/></AML>");
+	  }
+	}  
+		
+	private Item sourceItemQueryTemplate;
+	public Item SourceItemQueryTemplate
+	{
+		get
+		{
+		  return sourceItemQueryTemplate;
+		}
+		private set
+		{
+			sourceItemQueryTemplate = value;
+		}
+	}
+}
+
+
+/// <summary>
+/// Represent base class for Item wrappers
+/// </summary>
+abstract class ItemContext
+{
+	/// <summary>
+	/// Constructor. Create empty prototype.
+	/// </summary>
+	protected ItemContext()
+	{
+	}
+
+	/// <summary>
+	/// Constructor. Wrap item and create Utils
+	/// </summary>
+	/// <param name="item"></param>
+	public ItemContext(Item item)
+	{
+		this.Item = item;
+	}
+
+	Item p_item;
+	/// <summary>
+	/// Get wrapped item
+	/// </summary>
+	public Item Item
+	{
+		get { return p_item; }
+		set { p_item = value; }
+	}
+
+	public string ID
+	{
+		get { return this.Item.getID(); }
+	}
+
+	public string Type
+	{
+		get { return this.Item.getType(); }
+	}
+	
+	private String p_tableName;
+	public string TableName
+	{
+	  get
+	  {
+	  	if(String.IsNullOrEmpty(p_tableName))
+	  	{
+	  	  String name = "name";
+	  	  String type = this.Type;
+	  	  XmlElement itTypeNode = Utils.CCO.Cache.GetItemTypeFromCache(ref type, ref name);
+	  	  p_tableName = Utils.CCO.DB.InnDatabase.GetTableName(itTypeNode.GetAttribute("instance_data")); 
+	  	}
+	  	return p_tableName;
+	  }
+	}
+
+	public bool IsLocked
+	{
+		get { return this.Item.getLockStatus() != 0; }
+	}
+
+	public string State
+	{
+		get { return this.Item.getProperty("state", ""); }
+	}
+
+	public string ConfigID
+	{
+		get { return this.Item.getProperty("config_id", ""); }
+	}
+}
+
+
+/// <summary>
+/// Create and get access to Innovator object and provide help methods.
+/// </summary>
+static class Utils
+{
+	private const String InnovatorObjectUID = "PE_GetRelatedParts_InnovatorObject";
+	private const String InnovatorCCOUID = "PE_GetRelatedParts_InnovatorCCO";
+	
+	public static void InitializeForRequest(Innovator innovator, Aras.Server.Core.CallContext CCO)
+	{
+		HttpContext.Current.Items[InnovatorObjectUID] = innovator;
+		HttpContext.Current.Items[InnovatorCCOUID] = CCO;
+	}
+	
+	public static Item LookupError(string error, params string[] parameters)
+	{
+	  return Utils.Innovator.newError(CCO.ErrorLookup.Lookup(error, parameters));
+	}
+	
+	/// <summary>
+	/// Assert passed item, throw ItemErrorException if item has error
+	/// </summary>
+	/// <param name="item"></param>
+	public static void AssertItem(Item item)
+	{
+		if (item.isError())
+		{
+			throw new ItemErrorException(item);
+		}
+	}
+
+	/// <summary>
+	/// Get instance of Innovator object
+	/// </summary>
+	public static Innovator Innovator
+	{
+		get
+		{
+			return ((Innovator)HttpContext.Current.Items[InnovatorObjectUID]);
+		}
+	}
+
+	public static Aras.Server.Core.CallContext CCO
+	{
+		get
+		{
+			return ((Aras.Server.Core.CallContext)HttpContext.Current.Items[InnovatorCCOUID]);
+		}
+	}
+}
+
+/// <summary>
+/// Exception which wrap error Item
+/// </summary>
+[Serializable]
+class ItemErrorException : Exception
+{
+	public ItemErrorException(Item error)
+		: base()
+	{
+		this.error = error;
+	}
+
+	private Item error;
+	public Item Error
+	{
+		get { return error; }
+	}
+}
+
+
+class fin
+{
+	void method()
+	{]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_GetResolvedParents</name>
+ </Item>
+</AML>

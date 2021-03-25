@@ -1,0 +1,52 @@
+﻿<AML>
+ <Item type="Method" id="CDA1933017E64527B5A41B36C3C45DB0" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Dictionary<string, string> requestState = new Dictionary<string, string>();
+Item oldValuesQuery = this.newItem("cmf_ElementType", "get");
+oldValuesQuery.setID(this.getID());
+oldValuesQuery.setAttribute("select", "parent,default_permission,source_id,sort_order");
+oldValuesQuery = oldValuesQuery.apply();
+
+string documentTypeId = oldValuesQuery.getProperty("source_id");
+if (!RequestState.Contains(documentTypeId))
+{
+    return this.getInnovator().newError("It's impossible to save certain Element Type or Property Type. Instead save entire Content Type item.");
+}
+
+if (this.node.SelectSingleNode("parent") != null)
+{
+	string oldParent = oldValuesQuery.getProperty("parent");
+	if (oldParent != this.getProperty("parent"))
+	{
+		requestState["parent"] = oldParent;
+	}
+}
+
+if (this.node.SelectSingleNode("default_permission") != null)
+{
+	string oldPermission = oldValuesQuery.getProperty("default_permission");
+	if (oldPermission != this.getProperty("default_permission"))
+	{
+		requestState["default_permission"] = oldPermission;
+	}
+}
+
+if (this.node.SelectSingleNode("sort_order") != null)
+{
+	string oldSortOrder = oldValuesQuery.getProperty("sort_order");
+	if (oldSortOrder != this.getProperty("sort_order"))
+	{
+		requestState["sort_order"] = oldSortOrder;
+	}
+}
+
+if (requestState.Count > 0)
+{
+    RequestState[this.getID()] = requestState;
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_ElementBeforeUpdate</name>
+ </Item>
+</AML>

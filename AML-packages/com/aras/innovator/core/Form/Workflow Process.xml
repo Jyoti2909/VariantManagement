@@ -1,0 +1,988 @@
+﻿<AML>
+ <Item type="Form" id="7961DE2D23514835B3C19457D0687DA0" action="add">
+  <category_form>0</category_form>
+  <description>A Workflow Process is a running instance of a Workflow</description>
+  <height>664</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>984</width>
+  <name>Workflow Process</name>
+  <Relationships>
+   <Item type="Body" id="875D0B3A072747ED9BF5290DA7F3111A" action="add">
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Workflow Process" type="Form">7961DE2D23514835B3C19457D0687DA0</source_id>
+    <Relationships>
+     <Item type="Field" id="ADDD7C4246494371A189EC5D9D896658" action="add">
+      <border_width>0</border_width>
+      <display_length>100</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>date</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Active Date</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <propertytype_id keyed_name="active_date" type="Property">B3A5E162990249DA8E392D41B202B7AE</propertytype_id>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_index>5</tab_index>
+      <tab_stop>1</tab_stop>
+      <x>350</x>
+      <y>10</y>
+      <name>active_date</name>
+     </Item>
+     <Item type="Field" id="A45DA625675048F48812A47D4AB8B860" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[
+<style type="text/css">
+	@import "../javascript/dojox/grid/resources/claroGrid.css";
+	@import "../javascript/include.aspx?classes=common.css";
+</style>
+
+<span id="activity_summary">
+	<fieldset style="border-width: 2px;">
+		<legend style="font-size: larger;" aras_ui_resource_key="imports_core.activity_summary"></legend>
+		<table cellpadding="0" cellspacing="0" border="0">
+			<tr>
+				<td style="width:395px; height: 200px;">
+					<table cellpadding="5" cellspacing="0" border="0" width="100%">
+						<tr>
+							<td aras_ui_resource_key="imports_core.name"></td>
+							<td aras_ui_resource_key="imports_core.managed_by"></td>
+							<td aras_ui_resource_key="imports_core.role"></td>
+						</tr>
+						<tr>
+							<td>
+								<div id="div_select_listOfActivities" class="sys_f_div_select">
+									<select id="listOfActivities" class="sys_f_select" onchange="mainActivityHandler.selectActivity(this.value);  aras.updateDomSelectLabel(event.target);" ></select>
+									<span id="selected_option_listOfActivities " class="sys_f_span_select"></span>
+								</div>
+							</td>
+							<td>
+								<input type="Text" id="managedById" disabled>
+							</td>
+							<td>
+								<input type="Text" id="role" disabled>
+							</td>
+						</tr>
+						<tr>
+							<td aras_ui_resource_key="imports_core.status"></td>
+							<td aras_ui_resource_key="imports_core.escalate_to"></td>
+							<td aras_ui_resource_key="imports_core.duration"></td>
+						</tr>
+						<tr>
+							<td>
+								<input type="Text" id="status" disabled>
+							</td>
+							<td>
+								<input type="Text" id="escalateTo" disabled>
+							</td>
+							<td>
+								<input type="Text" id="duration" disabled>
+							</td>
+						</tr>
+						<tr>
+							<td colspan="3" aras_ui_resource_key="imports_core.message"></td>
+						</tr>
+						<tr>
+							<td colspan="3">
+								<input type="Text" id="message" style='width: 90%' disabled>
+							</td>
+						</tr>
+					</table>
+				</td>
+				<td>
+					<fieldset style="border-width: 2px;">
+						<legend style="font-size: larger;" aras_ui_resource_key="imports_core.assignments"></legend>
+						<table cellpadding="0" cellspacing="0" border="0" style="height:100%;">
+							<tr>
+								<td>
+									<div id="toolbarContainer" style="height: 28px; width:460px;"></div>
+								</td>
+							</tr>
+							<tr>
+								<td>
+									<div id="gridTD" style="width:460px; height:172px;"/>
+								</td>
+							</tr>
+						</table>
+					</fieldset>
+				</td>
+			</tr>
+		</table>
+	</fieldset>
+</span>
+
+<script type="text/javascript" src="../javascript/include.aspx?classes=WorkflowProcess"></script>
+<script type="text/javascript">
+var mainSynchronizer = new Synchronizer();
+
+var relshipTypeNd;
+var relshipTypeId;
+function loadToolbar(){
+	toolbar.loadXml(aras.getI18NXMLResource("workflowProcessAssigments_toolbar.xml"));
+	toolbar.show();
+}
+
+function showInputHelperDialog(rowId, columnIndex){
+	var callbackFunc = function(res) {
+		if (res) afterF2PressedHandler(res, columnIndex);
+	}
+	onF2Pressed(columnIndex, callbackFunc);
+}
+
+function onClickItem(tbItem){
+	var srcActivity = mainActivityHandler.selectedActivity;
+	if (!srcActivity){
+		aras.AlertError("Source activity isn't selected. Select activity first!");
+		return;
+	}
+
+	var srcActivityNd = srcActivity.node;
+	if (!srcActivityNd || !grid) return;
+
+	var cmdID = tbItem.getId();
+	switch (cmdID){
+		case "new":
+			relshipTypeNd = aras.getItemByName("RelationshipType", "Activity Assignment");
+			relshipTypeId = (relshipTypeNd) ? aras.getItemProperty(relshipTypeNd,"id") : null;
+			if (!relshipTypeId) return;
+			var callbackFunc = function (res) {
+				if ( res && res.itemID != "" && checkIdentityInRole(res.itemID, res.keyed_name) ){
+					var relshipNd = aras.newRelationship(relshipTypeId, srcActivity.node, false, window, null);
+					srcActivity.addAssignmentAndFillGrid(relshipNd, grid);
+					afterF2PressedHandler(res, 0);
+				}
+			}
+			onF2Pressed(0, callbackFunc);
+			break;
+		case "delete":
+			var selectedIdsStr = grid.GetSelectedItemIDs(",");
+			var selectedIdsArr = selectedIdsStr.split(",");
+			for (var i=0; i<selectedIdsArr.length;i++){
+				var relId = selectedIdsArr[i]
+				var rel = srcActivityNd.selectSingleNode('Relationships/Item[@id="' + relId + '"]');
+				if (!rel) {
+					grid.deleteRow(relId);
+					return false;
+				}
+
+				var actionType = rel.getAttribute("action");
+				if (actionType == "add"){
+					srcActivity.allAssignments.removeAssignment(relId);
+					grid.deleteRow(relId);
+				}
+				else if (actionType != "delete"){
+					rel.setAttribute("action", "delete");
+					for (var i=0; i<grid.GetColumnCount(); i++){
+						var cell = grid.cells(relId, i);
+						cell.setFont(deletedRowFont);
+						cell.setTextColor(deletedRowTextColor);
+					}
+					if (!aras.isTempID(srcActivity.id)){
+						setDirtyAttribute(parent.item);
+						setDirtyAttribute(srcActivity.node);
+					}
+				}
+			}
+			break;
+	}
+}
+
+function setDirtyAttribute(item){
+	item.setAttribute("isDirty","1");
+}
+</script>
+
+<script type="text/javascript">
+var gridFieldNames = [
+	aras.getResource("", "imports_core.name")+"[...]",
+	aras.getResource("", "imports_core.required"),
+	aras.getResource("", "imports_core.for_all"),
+	aras.getResource("", "imports_core.voting_weight"),
+	aras.getResource("", "imports_core.escalate_to")+"[...]"
+];
+var initGridXML = ''+
+		'<table font="Arial-8" editable="true" draw_grid="true" multiselect="true" column_draggable="true" enableHtml="true" enterAsTab="false"> '+
+		'  <thead> '+
+		'    <th align="c">'+gridFieldNames[0]+'</th> '+
+		'    <th align="c">'+gridFieldNames[1]+'</th> '+
+		'    <th align="c">'+gridFieldNames[2]+'</th> '+
+		'    <th align="c">'+gridFieldNames[3]+'</th> '+
+		'    <th align="c">'+gridFieldNames[4]+'</th> '+
+		'  </thead> '+
+		'  <columns> '+
+		'    <column width="100" edit="FIELD" align="l" size="8" order="0"/> '+
+		'    <column width="80" edit="FIELD" align="c" size="8" order="1"/> '+
+		'    <column width="80" edit="FIELD" align="c" size="8" order="2"/> '+
+		'    <column width="100" edit="FIELD" align="r" size="8" order="3"/> '+
+		'    <column width="100" edit="FIELD" align="l" size="8" order="4"/> '+
+		'  </columns> '+
+		'  <menu /> '+
+		'</table>';
+
+//grid handling
+var grid,
+	deletedRowFont = 'Arial-italic-8',
+	deletedRowTextColor = '#b0b0b0',
+	restrictedTextColor = '#ff0000',
+	toolbar;
+
+
+function onload_handler4assignments(notShowCurrentActivity){
+	var doShowCurActivity = (notShowCurrentActivity) ? false : true;
+	mainActivityHandler = new ActivityHandler(doShowCurActivity);
+	var mainTimerID = window.setInterval("if (mainSynchronizer && mainSynchronizer.isParentItemSaved()) mainSynchronizer.synch();",500);
+	window.addEventListener('unload', function() {window.clearInterval(mainTimerID)});
+}
+onload = onload_handler4assignments;
+
+eval(aras.getFileText(aras.getBaseURL() + "/javascript/PopulateDocByLabels.js"));
+
+function onloadHandler(){
+	PopulateDocByLabels();
+
+	clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", { id: "summary_toolbar", connectId: "toolbarContainer" }, function(control) {
+		toolbar = control;
+		clientControlsFactory.on(toolbar, {
+			"onClick": onClickItem
+		});
+		loadToolbar();
+	});
+
+	clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", undefined, function(control) {
+		grid = control;
+		clientControlsFactory.on(grid, {
+			"canEdit_Experimental": canEditCell,
+			"onInputHelperShow_Experimental": showInputHelperDialog,
+			"gridClick": onCellClick,
+			"onApplyEdit_Experimental": applyCellEditAG,
+			"gridMenuInit": gridMenuInit,
+			"gridMenuClick": gridMenuClick
+		});
+		grid.InitXML(initGridXML);
+	});
+
+	clientControlsFactory.createControl("Aras.Client.Controls.Experimental.Workflow", "WflGraphic", function(control) {
+		WflGraphic = control;
+		clientControlsFactory.on(WflGraphic, {
+			"onClick": onClick,
+			"onMenuInit": onMenuShow
+		});
+		initWflMenu();
+		populateProcessViewer();
+	});
+
+	onload_handler4assignments();
+}
+window.addEventListener("load", onloadHandler);
+
+function onCellClick(rowId, columnIndex){
+	if (grid && rowId){
+		mainActivityHandler.selectedActivity.allAssignments.selectAssignment(rowId, columnIndex);
+	}
+}
+
+function applyCellEditAG(rowId, field, value){
+	var columnIndex = grid.columns_Experimental.get(field, "index");
+	var targetCell = grid.cells(rowId, parseInt(columnIndex));
+	var newValue = targetCell.getValue();
+
+	var editAssignment = mainActivityHandler.selectedActivity.allAssignments.getAssignment(rowId);
+	var propDataType = editAssignment.getPropType(columnIndex);
+	switch(propDataType){
+		case "bool" :
+			newValue = targetCell.isChecked() ? "1" : "0";
+			break;
+	}
+
+	var isSetted = editAssignment.setProperty(columnIndex, newValue);
+	if (!isSetted) 
+		targetCell.setValue("");
+}
+
+function canEditCell(row, colName){
+	var allAssignments = mainActivityHandler.selectedActivity.allAssignments;
+	var columnIndex = grid.columns_Experimental.get(colName, "index");
+
+	var curAssignment = allAssignments.getAssignment(row);
+	if (!curAssignment) return false;
+
+	allAssignments.selectAssignment(row, columnIndex)
+	if (curAssignment.node.getAttribute("action") == "delete") return false;
+	var curCell = grid.cells(row, columnIndex);
+	if (!curCell) return false;
+
+	var propDataType = curAssignment.getPropType(columnIndex);
+	if (propDataType == "item"){
+		grid.columns_Experimental.set(colName, "editType", "InputHelper");
+	}
+	return true;
+}
+
+function onF2Pressed(colNumber, callback){
+	var res;
+	if ( Assignment.prototype.getPropNameByColumn(colNumber).search(Assignment.prototype.re4ItemProps) != -1) {
+		var params = {
+				aras: aras,
+				itemtypeName: "Identity",
+				type: "SearchDialog"
+			};
+		window.ArasModules.MaximazableDialog.show("iframe", params).promise.then(callback);
+	}
+	return res;
+}
+
+function afterF2PressedHandler(res, colNumber){
+	var curAssignment;
+	try{ curAssignment = mainActivityHandler.selectedActivity.allAssignments.selectedAssignment;} catch (e){}
+	if (!curAssignment) return;
+
+	var handledColNumber = (colNumber || colNumber==0) ? colNumber : curAssignment.curColNumber;
+
+	var keyed_name = res.keyed_name;
+	if ( !checkIdentityInRole(res.itemID, keyed_name) ) return;
+
+	curAssignment.setProperty(handledColNumber, keyed_name);
+	var curCell = grid.cells(curAssignment.id, handledColNumber);
+	if (curCell) curCell.setValue(keyed_name);
+}
+
+function checkIdentityInRole(itemID, keyed_name){
+	var roleNode,
+		roleId = "",
+		roleKeyedName = "";
+	try{
+		roleNode = mainActivityHandler.selectedActivity.node.selectSingleNode("role");
+
+		if (roleNode){
+			roleId = roleNode.text;
+			roleKeyedName = roleNode.getAttribute("keyed_name");
+		}
+	} catch (e){}
+
+	if (roleKeyedName != "World" && !isIdentityInRole(itemID, roleId)){
+		aras.AlertError(aras.getResource("", "imports_core.identity_not_in_role", keyed_name, roleKeyedName));
+		return false;
+	}
+	return true;
+}
+
+var miNew = aras.getResource("", "imports_core.new"),
+	miPickReplace = aras.getResource("", "imports_core.pick_replace_identity"),
+	miDelete = aras.getResource("", "imports_core.delete");
+
+function gridMenuInit(rowId, columnIndex) {
+	var initResult = false;
+	try {
+		var popupMenu = grid.contexMenu_Experimental;
+		popupMenu.removeAll();
+		if (mainActivityHandler.selectedActivity.isGridEditable) {
+			popupMenu.add("new", miNew);
+			var isItemField = (Assignment.prototype.getPropNameByColumn(columnIndex).search(Assignment.prototype.re4ItemProps) != -1);
+			if (isItemField) {
+				popupMenu.add("pickreplace", miPickReplace);
+			}
+			popupMenu.add("delete", miDelete);
+			initResult = true;
+		}
+	}
+	catch (e) {
+		aras.AlertError("Failed to initialize ContextMenu.\n" + e);
+	}
+	return initResult;
+}
+
+function gridMenuClick( cmdId, rowId, columnIndex){
+	function tbItem(id){
+		this.id = id;
+	}
+
+	var tmpObj = new tbItem();
+	tmpObj.getId = new Function("return this.id;");
+	switch(cmdId){
+		case "new":
+		case "delete":
+			tmpObj.id = cmdId;
+			onClickItem(tmpObj);
+			break;
+		case "pickreplace":
+			var callbackFunc = function(res) {
+				if (res) afterF2PressedHandler(res, columnIndex);
+			}
+			onF2Pressed(columnIndex, callbackFunc);
+			break;
+	}
+}
+
+//local cache
+var identityInRole = new Array();
+var userInRole = new Array();
+
+function isIdentityInRole(selected_id, role_id, is_user_id_selected){
+	function getRealPropNameAndIsUser(resStr){
+		var retObj = new Object();
+		retObj.propName = "";
+		retObj.isUser = "0";
+		switch (resStr.toUpperCase()){
+			case "OWNER":
+				retObj.propName = "process_owner";
+				break;
+			case "MANAGER":
+				retObj.propName = "managed_by_id";
+				break;
+			case "CREATOR":
+				retObj.propName = "created_by_id";
+				retObj.isUser = "1";
+				break;
+		}
+		return retObj;
+	}
+
+	if (role_id == "") return true;
+
+	//check in cache
+	if (is_user_id_selected && userInRole[selected_id] && userInRole[selected_id][role_id] !== undefined){
+		return userInRole[selected_id][role_id];
+	}
+	else if (!is_user_id_selected && identityInRole[selected_id] && identityInRole[selected_id][role_id]){
+		return identityInRole[selected_id][role_id];
+	}
+
+	var methodName = "is_identity_in_role";
+	var body = "<selected_id>"+selected_id+"</selected_id><is_user_id>" + ((is_user_id_selected) ? 1 : 0) + "</is_user_id><role_id>"+role_id+"</role_id>";
+	var resNodeXPath = "//is_in_role";
+
+	var methodRes = aras.applyMethod(methodName, body);
+	var resDom = aras.createXMLDocument();
+	resDom.loadXML(methodRes);
+	var resNd = resDom.selectSingleNode(resNodeXPath);
+	var resStr = (resNd) ? resNd.text : "";
+	var res = (resStr == "1") ? true : false;
+	//++++Test: is role_id Owner or Manager or Creator
+	if (resStr!="" && resStr!="1" && resStr!="0"){
+		var tmpObj = getRealPropNameAndIsUser(resStr)
+		var propName = tmpObj.propName;
+		var isUser = tmpObj.isUser;
+		var wflItem = parent.item;
+		if (wflItem && wflItem.xml && propName){
+			var role_knNd = wflItem.selectSingleNode(propName);
+			var role_id = (role_knNd) ? role_knNd.text : "";
+			role_kn = (role_knNd) ? role_knNd.getAttribute("keyed_name") : "";
+			tmpObj = getRealPropNameAndIsUser(role_kn);
+			var propName2 = tmpObj.propName;
+			if (propName2 != ""){
+				role_id = aras.getItemProperty(wflItem, propName2);
+				isUser = tmpObj.isUser;
+			}
+			if (isUser == "1"){
+				res = (aras.getUserID() == role_id) ? true : false;
+			} else {
+				body = "<selected_id>"+aras.getUserID()+"</selected_id><is_user_id>1</is_user_id><role_id>"+role_id+"</role_id>";
+				methodRes = aras.applyMethod(methodName, body);
+				resDom.loadXML(methodRes);
+				resNd = resDom.selectSingleNode(resNodeXPath);
+				resStr = (resNd) ? resNd.text : "";
+				res = (resStr == "1") ? true : false;
+			}
+		}
+	}
+	//-----Test: is role_id Owner or Manager or Creator
+
+	//put result in cache
+	if (is_user_id_selected){
+		if (userInRole[selected_id] === undefined) userInRole[selected_id] = new Array();
+		userInRole[selected_id][role_id] = res;
+	}
+	else{
+		if (identityInRole[selected_id] === undefined) identityInRole[selected_id] = new Array();
+		identityInRole[selected_id][role_id] = res;
+	}
+	return res;
+}
+
+function setEditableGridAndToolbar(is_editable){
+	grid.setEditable(is_editable);
+
+	if (is_editable) {
+		toolbar.enable();
+	}else{
+		toolbar.disable();
+	}
+}
+
+var mainActivityHandler;
+</script>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>2176</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_stop>1</tab_stop>
+      <x>19</x>
+      <y>410</y>
+      <name>activity_fields</name>
+     </Item>
+     <Item type="Field" id="4C02105D2A794BEC878EFA73C72A4F65" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<input type="button" class="btn cancel_button" id="cancel_workflow_button" name="cancel_workflow_button" aras_ui_resource_key="imports_core.cancel_workflow_html_value" onclick="cancel_workflow_button_onClick();">
+<script>
+	var counter_setupIsCancelDisabled = 0;
+	function cancel_workflow_button_onClick() {
+		var itm = document.item;
+		var itemID = (itm && itm.xml) ? itm.getAttribute("id") : "";
+		if (itemID) {
+			isUserAgreedToCancel();
+		}
+		function isUserAgreedToCancel() {
+			var params = new Object();
+			params.buttons = new Object();
+			with (params) {
+				buttons.btnYes = aras.getResource("", "common.yes");
+				buttons.btnNo = aras.getResource("", "common.no");
+				defaultButton = 'btnNo';
+			}
+			var msg = aras.getResource("", "imports_core.canceling_cannot_be_undone_warning");
+			params.message = msg;
+			params.aras = aras;
+
+			params.dialogWidth = 300;
+			params.dialogHeight = 130;
+			params.center = true;
+
+			params.content = "groupChgsDialog.html";
+			window.ArasModules.Dialog.show("iframe", params).promise.then(function (res) {
+				if (res == "btnYes") {
+					var statusId = aras.showStatusMessage(0, aras.getResource("", "imports_core.cancelling"), '../images/Progress.gif');
+					var res = aras.soapSend("cancelWorkflow", "<Item type='Workflow Process' id='" + itm.getAttribute("id") + "'/>");
+					aras.clearStatusMessage(statusId);
+					if (res.getFaultCode() != 0) {
+						aras.AlertError(res.getFaultString(), res.getFaultDetails(), res.getFaultActor());
+						return;
+					}
+					aras.removeFromCache(itemID);
+					res = aras.getItem("Workflow Process", "@id='" + itemID + "'", "", 0);
+					if (res) {
+						aras.uiReShowItemEx(itemID, res, "tab view");
+					}
+				}
+			});
+		}
+	}
+	function computeIsCancelDisabled() {
+		var isDisabled = false;
+		try {
+			var isLocked = observersHash.getElementById("locked_by_id_system").value;
+			var curState = observersHash.getElementById("state_system").value;
+			var isCurUserInOwner = isIdentityInRole(aras.getUserID(), aras.getItemProperty(document.item, "process_owner"), true);
+			isDisabled = Boolean(!isCurUserInOwner || isLocked || curState != "Active");
+		} catch (e) { }
+		document.isCancelDisabled = isDisabled;
+		expression_WorkflowProcess_setExpression();
+	}
+
+	function setupIsCancelDisabled() {
+		computeIsCancelDisabled();
+		if (counter_setupIsCancelDisabled > 5) {
+			return;
+		}
+		try {
+			expression_WorkflowProcess_setExpression();
+			var lockedByIdSystem = observersHash.getElementById("locked_by_id_system");
+			var stateSystem = observersHash.getElementById("state_system");
+			lockedByIdSystem.addEventListener("change", computeIsCancelDisabled);
+			stateSystem.addEventListener("change", computeIsCancelDisabled);
+		} 
+		catch (ex) {
+			counter_setupIsCancelDisabled++;
+			setTimeout(setupIsCancelDisabled, 100);
+		}
+	}
+	setupIsCancelDisabled();
+
+	function expression_WorkflowProcess_setExpression() {
+		var field = document.getElementById("cancel_workflow_button");
+		field.disabled = document.isCancelDisabled;
+	}
+
+</script>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>2432</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_stop>1</tab_stop>
+      <x>650</x>
+      <y>60</y>
+      <name>cancel_workflow</name>
+     </Item>
+     <Item type="Field" id="76D040074A7846C382DE18CE64A906E8" action="add">
+      <border_width>0</border_width>
+      <display_length>100</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>date</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Closed Date</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <propertytype_id keyed_name="closed_date" type="Property">BABF4390043E45BE92D8051D6C607CA1</propertytype_id>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_index>6</tab_index>
+      <tab_stop>1</tab_stop>
+      <x>350</x>
+      <y>50</y>
+      <name>closed_date</name>
+     </Item>
+     <Item type="Field" id="8BD1987F2E9F4646B847218949119984" action="add">
+      <border_width>0</border_width>
+      <display_length>114</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>item</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Started By</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_index>3</tab_index>
+      <tab_stop>1</tab_stop>
+      <text_align>left</text_align>
+      <x>200</x>
+      <y>10</y>
+      <name>created_by_id</name>
+     </Item>
+     <Item type="Field" id="EEA9470C382C4EB8A1ADA1A1A152DA9B" action="add">
+      <border_width>0</border_width>
+      <display_length>171</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>ml_string</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Description</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <propertytype_id keyed_name="description" type="Property">9418A8D5BFC64E34984AECA5225CE5FE</propertytype_id>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_index>2</tab_index>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>50</y>
+      <name>description</name>
+     </Item>
+     <Item type="Field" id="D06250F844724F2CA0CC19A23628FCD6" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<script type="text/javascript">
+// Hides some WP form fields (Activity Summary, WF Map, buttons) 
+// for form in Search mode
+function HideFields(){
+	var hiddenFields = 0;
+	var fieldList = new Array("activity_summary", "MapInsert", "view_signoffs", "cancel_workflow_button");
+	for (var i=0; i<fieldList.length; i++){
+		var field = getFieldByName(fieldList[i]);
+		if (field){
+			field.style.display = "none";
+		}
+	}
+
+	window.removeEventListener("load", HideFields);
+}
+
+// Checks that WFP item has activities
+var hasActivities = true;
+if (parent.item && parent.item.xml){
+	var aml = "<Item type='Workflow Process Activity' action='get' select='id' doGetItem='0' serverEvents='0'>" +
+		"<source_id>" + parent.item.getAttribute("id") + "</source_id>" +
+		"</Item>";
+
+	var q = new aras.getMostTopWindowWithAras(window).Item();
+	q.loadAML(aml);
+	var res = q.apply();
+	hasActivities = !res.isError();
+}
+
+var isSearchFormMode = (parent.formSearchItem && parent.formSearchItem.xml);
+if ( isSearchFormMode || !hasActivities ){
+	window.addEventListener("load", HideFields);
+}
+</script>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>0</is_visible>
+      <label xml:lang="en">Html0</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>2560</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_stop>0</tab_stop>
+      <x>871</x>
+      <y>124</y>
+      <name>initFormField</name>
+     </Item>
+     <Item type="Field" id="C015132AAD754F67B51AD515C2D96203" action="add">
+      <border_width>0</border_width>
+      <display_length>114</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>ml_string</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Label</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <propertytype_id keyed_name="label" type="Property">7D33BDCC60C147B7BCEEF6814BD06294</propertytype_id>
+      <sort_order>2688</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_index>4608</tab_index>
+      <tab_stop>1</tab_stop>
+      <x>500</x>
+      <y>10</y>
+      <name>label</name>
+     </Item>
+     <Item type="Field" id="0ED3F679CD6E4664891515994034B6CC" action="add">
+      <border_width>0</border_width>
+      <css>{$this field rule}
+{
+    display:block;
+    height:100%;
+    width: 100%;
+}
+
+{$this field rule} .sys_f_border
+{
+    display:block;
+    height:100%;
+    width: 100%;
+}
+
+{$this field rule} .sys_f_table
+{
+    height:100%;
+    width: 100%;
+}</css>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <height>300</height>
+      <html_code><![CDATA[
+<script type="text/javascript">
+function populateProcessViewer(){
+	var WflXml = aras.loadProcessInstance(document.itemID, "");
+	if ( !WflXml ) {
+		alert("Load Process Instance failed !");
+		return;
+	}
+
+	var xml = WflXml.xml;
+	WflGraphic.load(xml);
+}
+
+function onClick(actId) {
+	if (WflGraphic.nodes.is(actId) && mainActivityHandler) {
+		mainActivityHandler.handleActivity(actId);
+	}
+}
+
+//pop_up menu for WFP graphic
+var Open_Item_menuitm = aras.getResource("", "imports_core.open_item");
+function initWflMenu() {
+	var contextMenu = [{ id: Open_Item_menuitm, name: Open_Item_menuitm, onClick: onMenuClick }];
+	WflGraphic.contextMenu.addRange(contextMenu);
+}
+
+function onMenuShow(actId) {
+	var isAct = WflGraphic.nodes.is(actId);
+	WflGraphic.contextMenu.setHide(Open_Item_menuitm, !parent.isEditMode || !isAct);
+}
+
+function onMenuClick(actObj) {
+	var actID = actObj.id;
+	if (actID){
+		var actNd = aras.getItemById("Activity", actID);
+		if (actNd && actNd.xml) aras.uiShowItemEx(actNd);
+	}
+}
+</script>
+<div id="WflGraphic" style="width:900px; height:300px; overflow:auto;"></div>
+]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_stop>1</tab_stop>
+      <width>900</width>
+      <x>0</x>
+      <y>106</y>
+      <z_index>1</z_index>
+      <name>MapInsert</name>
+     </Item>
+     <Item type="Field" id="EB8DB43984844545A7D7801DB9834AA3" action="add">
+      <border_width>0</border_width>
+      <display_length>171</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>text</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Name</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <propertytype_id keyed_name="name" type="Property">9C14AE32AF084ECDB97DFD810EF37D08</propertytype_id>
+      <sort_order>0</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_index>1</tab_index>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>10</y>
+      <name>name</name>
+     </Item>
+     <Item type="Field" id="E67B5546B0BC428C916E95BECFFBF4C4" action="add">
+      <bg_color>       </bg_color>
+      <border_width>0</border_width>
+      <display_length>114</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>item</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Process Owner</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <propertytype_id keyed_name="process_owner" type="Property">C1E08A256A6C408693B8A34EBE9499A8</propertytype_id>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_stop>1</tab_stop>
+      <x>650</x>
+      <y>10</y>
+      <name>process_owner</name>
+     </Item>
+     <Item type="Field" id="F763ED5910A74DE688B07228F660C4FF" action="add">
+      <border_width>0</border_width>
+      <display_length>114</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>text</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Current Status</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_index>4</tab_index>
+      <tab_stop>1</tab_stop>
+      <text_align>left</text_align>
+      <x>200</x>
+      <y>50</y>
+      <name>state</name>
+     </Item>
+     <Item type="Field" id="C18D2920E5B04E758F05FFBB997AC381" action="add">
+      <bg_color>       </bg_color>
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>button</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">   View Signoffs   </label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>2304</sort_order>
+      <source_id keyed_name="875D0B3A072747ED9BF5290DA7F3111A" type="Body">875D0B3A072747ED9BF5290DA7F3111A</source_id>
+      <tab_stop>1</tab_stop>
+      <x>500</x>
+      <y>60</y>
+      <name>view_signoffs</name>
+      <Relationships>
+       <Item type="Field Event" id="B498DEEE5CC54F0588A615FDAEF4AB43" action="add">
+        <field_event>onclick</field_event>
+        <related_id keyed_name="wfl_view_signoffs" type="Method">
+         <Item type="Method" action="get" select="id">
+          <name>wfl_view_signoffs</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="view_signoffs" type="Field">C18D2920E5B04E758F05FFBB997AC381</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </Relationships>
+   </Item>
+  </Relationships>
+ </Item>
+ <Item type="Field" id="8BD1987F2E9F4646B847218949119984" action="edit">
+  <!-- Please note: this AML depends on the "Workflow Process" ItemType. Please make sure it exists before running this. -->
+  <propertytype_id>
+   <Item type="Property" action="get" select="id">
+    <name>created_by_id</name>
+    <source_id type="ItemType" keyed_name="Workflow Process">261EAC08AE9144FC95C49182ACE0D3FE</source_id>
+   </Item>
+  </propertytype_id>
+ </Item>
+ <Item type="Field" id="F763ED5910A74DE688B07228F660C4FF" action="edit">
+  <!-- Please note: this AML depends on the "Workflow Process" ItemType. Please make sure it exists before running this. -->
+  <propertytype_id>
+   <Item type="Property" action="get" select="id">
+    <name>state</name>
+    <source_id type="ItemType" keyed_name="Workflow Process">261EAC08AE9144FC95C49182ACE0D3FE</source_id>
+   </Item>
+  </propertytype_id>
+ </Item>
+</AML>

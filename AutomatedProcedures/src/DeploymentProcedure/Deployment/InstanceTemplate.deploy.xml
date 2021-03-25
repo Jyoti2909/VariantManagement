@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Instance configVersion="1.0">
+  <components>
+    <database id="Database" depends="Innovator SelfServiceReporting Vault Conversion Agent OAuth">
+      <SqlServer>(local)</SqlServer>
+      <DatabaseName>InnovatorSolutions</DatabaseName>
+      <InnovatorLogin>innovator</InnovatorLogin>
+      <InnovatorPassword>innovator</InnovatorPassword>
+      <InnovatorUrl>http://localhost/InnovatorServer</InnovatorUrl>
+      <PasswordOfRootInnovatorUser>innovator</PasswordOfRootInnovatorUser>
+    </database>
+    <innovator id="Innovator">
+      <ServerName>localhost</ServerName>
+      <InstallationPath>C:\Program Files (x86)\Aras\Innovator\Innovator</InstallationPath>
+      <VirtualDirectoryPath>/InnovatorServer</VirtualDirectoryPath>
+    </innovator>
+    <ssr id="SelfServiceReporting">
+      <ServerName>localhost</ServerName>
+      <InstallationPath>C:\Program Files (x86)\Aras\Innovator\SelfServiceReporting</InstallationPath>
+      <VirtualDirectoryPath>/InnovatorServer/SelfServiceReporting</VirtualDirectoryPath>
+    </ssr>
+    <vault id="Vault">
+      <ServerName>localhost</ServerName>
+      <InstallationPath>C:\Program Files (x86)\Aras\Innovator\VaultServer</InstallationPath>
+      <VirtualDirectoryPath>/InnovatorServer/Vault</VirtualDirectoryPath>
+    </vault>
+    <conversion id="Conversion">
+      <ServerName>localhost</ServerName>
+      <InstallationPath>C:\Program Files (x86)\Aras\Innovator\ConversionServer</InstallationPath>
+      <VirtualDirectoryPath>/InnovatorServer/ConversionServer</VirtualDirectoryPath>
+    </conversion>
+    <agent id="Agent">
+      <ServerName>localhost</ServerName>
+      <InstallationPath>C:\Program Files (x86)\Aras\Innovator\AgentService</InstallationPath>
+      <ServiceName>ArasInnovatorAgent_AgentService_InnovatorServer</ServiceName>
+    </agent>
+    <oauth id="OAuth">
+      <ServerName>localhost</ServerName>
+      <InstallationPath>C:\Program Files (x86)\Aras\Innovator\OAuthServer</InstallationPath>
+      <VirtualDirectoryPath>/InnovatorServer/OAuthServer</VirtualDirectoryPath>
+      <InnovatorUrl>http://localhost/InnovatorServer</InnovatorUrl>
+    </oauth>
+  </components>
+  <apply>
+    <package>
+      <PathToDeploymentPackage>.\Deployment-Package-Content</PathToDeploymentPackage>
+    </package>
+  </apply>
+</Instance>

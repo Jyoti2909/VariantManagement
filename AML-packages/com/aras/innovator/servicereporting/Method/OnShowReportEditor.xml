@@ -1,0 +1,42 @@
+﻿<AML>
+ <Item type="Method" id="C845F0921E994C3EBD6C114B5E03C8A1" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[return ModulesManager.using(['aras.innovator.Izenda/ReportEditorWindowView',
+	'aras.innovator.core.ItemWindow/DefaultItemWindowCreator'], function(View, Creator) {
+		var reportId = aras.getItemProperty(inDom, 'id');
+		if (reportId) {
+			var isreportSetValid = aras.newIOMItem('Method', 'IsOldReportSet');
+			isreportSetValid.setID(reportId);
+			isreportSetValid = isreportSetValid.apply();
+
+			if (isreportSetValid.isError() && isreportSetValid.getErrorCode() != '0') {
+				aras.AlertError(isreportSetValid.getErrorString());
+				return;
+			}
+
+			if (isreportSetValid.getResult() == '0') {
+				aras.AlertWarning(aras.getResource('../Modules/aras.innovator.Izenda/', 'servicereporting.report_definitions_inconsistencies'));
+				return;
+			}
+		}
+
+		if (inDom.getAttribute('use_custom_form') !== '1') {
+			return aras.evalMethod('OnShowItemDefault', inDom, inArgs);
+		}
+
+		var existingWnd = aras.uiFindAndSetFocusWindowEx(aras.SsrEditorWindowId);
+		if (existingWnd && existingWnd.itemID) {
+			reportId = existingWnd.itemID;
+			aras.AlertError(aras.getResource('', 'ui_methods_ex.create_only_one_report_at_a_time').replace('{0}', reportId));
+			return;
+		}
+
+		var view = new View(inDom, inArgs);
+		var creator = new Creator(view);
+		return creator.ShowView();
+	});
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>OnShowReportEditor</name>
+ </Item>
+</AML>

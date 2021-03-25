@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = "..";
+  gCommonRootRelPath = "..";
+  gTopicId = "11.0_8";
+
+//]]></script>
+
+<script type="text/javascript" src="../template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="../template/scripts/common.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="../assets/css/default.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Custom Effectivity String Notation Examples</title>
+  <meta name="topic-status" content="Draft"/>
+  
+</head>
+<body>
+  <div>
+  <h1>Custom Effectivity String Notation Examples</h1>
+  <p>The following examples show ways to customize the Effectivity String Notation.</p>
+  <h2>Custom Effectivity String Notation on an Effectivity Expression</h2>
+  <p>The default Effectivity String Notations Converter uses a conjunction word for each logical operator:</p>
+  <ul class="Disc">
+    <li><strong>AND </strong>for logical conjunction.</li>
+    <li><strong>OR </strong>for logical disjunction.</li>
+    <li><strong>NOT </strong>for logical complement.</li>
+  </ul>
+  <p>For example:</p>
+  <p>           ((Factory=Munich AND Production Date&gt;= 01/01/2019) <strong>OR</strong><br/>
+                (Factory=Detroit AND Production Date &gt;= 06/01/2019 <strong>AND</strong><br/>
+                       <strong>NOT </strong>(Body Type = Hatch back)</p>
+  <p>The customized String Notation uses the following characters instead of the conjunction words:</p>
+  <ul class="Disc">
+    <li><strong>&amp;&amp;</strong> for logical conjunction</li>
+    <li><strong>|| </strong>for logical disjunction</li>
+    <li><strong>!</strong> for logical complement</li>
+  </ul>
+  <p>For example:</p>
+  <p>         ((Factory=Munich <strong>&amp;&amp;</strong> Production Date &gt;= 01/01/2019) <strong>||</strong><br/>
+          (Factory=Detroit <strong>&amp;&amp; </strong>Production Date &gt;= 06/01/2019)) <strong>&amp;&amp;</strong><br/>
+                                <strong> !</strong>(Body Type = HatchBack)</p>
+  <h2>ExpressionToShortStringNotationConverter Class Definition</h2>
+  <p>To achieve this customization goal, a new <span style="font-family: Courier New">ExpressionToShortStringNotationConverter</span> class is defined using the new Converter:</p>
+  <p class="Code_Sample">internal class ExpressionToShortStringNotationConverter : Aras.Server.Core.Configurator.IStringNotationConverter<br/>
+    {<br/>
+        private readonly IEnumerable&lt;Aras.Server.Core.Configurator.Variable&gt; _variablesContainer;</p>
+  <p class="Code_Sample">    private static readonly Dictionary&lt;Type, Aras.Server.Core.Configurator.DataType&gt; typeTranslator = new Dictionary&lt;Type, Aras.Server.Core.Configurator.DataType&gt;<br/>
+        {<br/>
+            { typeof(string), Aras.Server.Core.Configurator.DataType.String },<br/>
+            { typeof(int), Aras.Server.Core.Configurator.DataType.Int },<br/>
+            { typeof(DateTime), Aras.Server.Core.Configurator.DataType.DateTime }<br/>
+        };</p>
+  <p class="Code_Sample">    /// &lt;summary&gt;<br/>
+        /// Initializes a new instance of the ExpressionToShortStringNotationConverter class with the defined variables container<br/>
+        /// &lt;/summary&gt;<br/>
+        /// &lt;param name=&quot;variablesContainer&quot;&gt;Represents a list of &quot;Aras.Server.Core.Configurator.Variable&quot; objects, which will be used to get human-readable identifiers of Variables and/or Named-constants&lt;/param&gt;<br/>
+        public CustomExpressionToStringNotationConverter(IEnumerable&lt;Aras.Server.Core.Configurator.Variable&gt; variablesContainer)<br/>
+        {<br/>
+            if (variablesContainer == null)<br/>
+            {<br/>
+                throw new ArgumentNullException(&quot;variablesContainer&quot;);<br/>
+            }</p>
+  <p class="Code_Sample">        this._variablesContainer = variablesContainer;<br/>
+        }</p>
+  <p class="Code_Sample">    /// &lt;summary&gt;<br/>
+        /// Converts an incoming &quot;Aras.Server.Core.Configurator.ExpressionBase&quot; Effectivity Expression object representation to a string notation and returns it.<br/>
+        /// &lt;/summary&gt;<br/>
+        /// &lt;param name=&quot;expression&quot;&gt;An Effectivity Expression object representation&lt;/param&gt;<br/>
+        /// &lt;returns&gt;A effectivity string notation value&lt;/returns&gt;<br/>
+        public string ConvertExpressionToStringNotation(Aras.Server.Core.Configurator.ExpressionBase expression)<br/>
+        {<br/>
+            if (expression == null)<br/>
+            {<br/>
+                throw new ArgumentNullException(&quot;expression&quot;);<br/>
+            }</p>
+  <p class="Code_Sample">        return TranslateToStringNotationImplementation(expression, null);<br/>
+        }</p>
+  <p class="Code_Sample">    private string TranslateToStringNotationImplementation(Aras.Server.Core.Configurator.ExpressionBase expression, Aras.Server.Core.Configurator.ExpressionBase parentExpression)<br/>
+        {<br/>
+            if (expression.ExpressionType == Aras.Server.Core.Configurator.ExpressionType.Term)<br/>
+            {<br/>
+                Aras.Server.Core.Configurator.ExpressionTerm expressionTerm = expression as Aras.Server.Core.Configurator.ExpressionTerm;</p>
+  <p class="Code_Sample">            string variableId = expressionTerm.OperandLeft.GetId();<br/>
+                Aras.Server.Core.Configurator.Variable variable = _variablesContainer.FirstOrDefault(var =&gt; var.Id == variableId);<br/>
+                string variableName = variable?.Name ?? variableId;</p>
+  <p class="Code_Sample">            string assignedVariableValue;<br/>
+                Aras.Server.Core.Configurator.ITermOperand expressionTermOperandRight = expressionTerm.OperandRight;<br/>
+                if (expressionTermOperandRight.OperandType == Aras.Server.Core.Configurator.TermOperandType.NamedConstant)<br/>
+                {<br/>
+                    string namedConstantId = expressionTermOperandRight.GetId();<br/>
+                    assignedVariableValue = variable?.Enum?.FindNamedConstantById(namedConstantId)?.Name ?? namedConstantId;<br/>
+                }<br/>
+                else if (expressionTermOperandRight.OperandType == Aras.Server.Core.Configurator.TermOperandType.Constant)<br/>
+                {<br/>
+                    object constantValue = expressionTermOperandRight.GetValue();<br/>
+                    Type constantType = constantValue.GetType();</p>
+  <p class="Code_Sample">                Aras.Server.Core.Configurator.DataType constantDataType;<br/>
+                    if (!typeTranslator.TryGetValue(constantType, out constantDataType))<br/>
+                    {<br/>
+                        throw new NotSupportedException(FormattableString.Invariant($&quot;&#39;{constantType.FullName}&#39; constant data type is not supported as the right operand type for string notation conversion&quot;));<br/>
+                    }<br/>
+                    //&#39;null&#39; as the first parameter of the &#39;ToLocalString()&#39; method call indicates the incoming DateTime object shouldn&#39;t be adjusted to any time zone, because it&#39;s assumed &#39;datetime&#39; always is returned in neutral format with UTC time zone<br/>
+                    assignedVariableValue = constantDataType != Aras.Server.Core.Configurator.DataType.DateTime ? Convert.ToString(constantValue, CultureInfo.InvariantCulture) : Aras.I18NUtils.DateTimeConverter.ToLocalString(null, (DateTime)constantValue);<br/>
+                }<br/>
+                else<br/>
+                {<br/>
+                    throw new NotSupportedException(FormattableString.Invariant($&quot;{expressionTerm.OperandRight.OperandType} is not supported as the right operand type for string notation conversion&quot;));<br/>
+                }</p>
+  <p class="Code_Sample">            return string.Format(CultureInfo.InvariantCulture, &quot;{0} {1} {2}&quot;, AddSquareBracketsIfNeed(variableName), GetAlgebraicTermOperatorNotation(expressionTerm.Operator), AddSquareBracketsIfNeed(assignedVariableValue));<br/>
+            }</p>
+  <p class="Code_Sample">        string expressionStringNotation = string.Empty;<br/>
+            string expressionOperatorStrNotation = GetAlgebraicNotationByOperator(expression.ExpressionType);<br/>
+            //we assume at-least-one, at-most-one, exactly-one expressions consists of terms(&lt;EQ&gt;&lt;variable id=&quot;&quot; /&gt;&lt;named-constant id=&quot;&quot; /&gt;&lt;/EQ&gt;) only here<br/>
+            if (expression.ExpressionType == Aras.Server.Core.Configurator.ExpressionType.AtLeastOne ||<br/>
+                expression.ExpressionType == Aras.Server.Core.Configurator.ExpressionType.AtMostOne ||<br/>
+                expression.ExpressionType == Aras.Server.Core.Configurator.ExpressionType.ExactlyOne)<br/>
+            {<br/>
+                IEnumerable&lt;string&gt; innerTermsStringNotation = expression.InnerExpressions.Select(expr =&gt; TranslateToStringNotationImplementation(expr, expression));<br/>
+                return string.Format(CultureInfo.InvariantCulture, expressionOperatorStrNotation, string.Join(&quot; | &quot;, innerTermsStringNotation));<br/>
+            }</p>
+  <p class="Code_Sample">        foreach (Aras.Server.Core.Configurator.ExpressionBase innerExpression in expression.InnerExpressions)<br/>
+            {<br/>
+                string innerExpressionStrNotation = TranslateToStringNotationImplementation(innerExpression, expression);<br/>
+                if (!string.IsNullOrEmpty(innerExpressionStrNotation))<br/>
+                {<br/>
+                    if (expression.ExpressionType == Aras.Server.Core.Configurator.ExpressionType.NOT)<br/>
+                    {<br/>
+                        expressionStringNotation += string.Format(CultureInfo.InvariantCulture, expressionOperatorStrNotation, innerExpressionStrNotation);<br/>
+                    }<br/>
+                    else if (expression.ExpressionType == Aras.Server.Core.Configurator.ExpressionType.IMPLICATION)<br/>
+                    {<br/>
+                        string[] ifThen = expressionOperatorStrNotation.Split(&#39; &#39;);<br/>
+                        bool isStringNotationEmpty = string.IsNullOrEmpty(expressionStringNotation);</p>
+  <p class="Code_Sample">                    // implicationTemplate describes &quot;IF {expr}&quot; or &quot;THEN {expr}&quot;. In case &quot;IF&quot;, whitespace after &quot;{expr}&quot; is required -&quot;IF {expr} &quot;<br/>
+                        string implicationTemplate = isStringNotationEmpty ? &quot;{0} {1} &quot; : &quot;{0} {1}&quot;;<br/>
+                        expressionStringNotation += string.Format(CultureInfo.InvariantCulture, implicationTemplate, ifThen[isStringNotationEmpty ? 0 : 1], innerExpressionStrNotation);<br/>
+                    }<br/>
+                    else<br/>
+                    {<br/>
+                        expressionStringNotation += !string.IsNullOrEmpty(expressionStringNotation) ? expressionOperatorStrNotation + innerExpressionStrNotation : innerExpressionStrNotation;<br/>
+                    }<br/>
+                }<br/>
+            }</p>
+  <p class="Code_Sample">        return parentExpression != null &amp;&amp; parentExpression.InnerExpressions.Count &gt; 1 &amp;&amp;<br/>
+                parentExpression.ExpressionType != Aras.Server.Core.Configurator.ExpressionType.IMPLICATION &amp;&amp; expression.ExpressionType != Aras.Server.Core.Configurator.ExpressionType.NOT ?<br/>
+                &quot;(&quot; + expressionStringNotation + &quot;)&quot; : expressionStringNotation;<br/>
+        }</p>
+  <p class="Code_Sample">    private static string AddSquareBracketsIfNeed(string name)<br/>
+        {<br/>
+            return !string.IsNullOrEmpty(name) &amp;&amp; !System.Text.RegularExpressions.Regex.IsMatch(name, @&quot;^[a-zA-Z0-9]+$&quot;) ?<br/>
+                    string.Format(CultureInfo.InvariantCulture, &quot;[{0}]&quot;, name) : name;<br/>
+        }</p>
+  <p class="Code_Sample">    private static string GetAlgebraicNotationByOperator(Aras.Server.Core.Configurator.ExpressionType boolOperator)<br/>
+        {<br/>
+            string notation = string.Empty;<br/>
+            switch (boolOperator)<br/>
+            {<br/>
+                case Aras.Server.Core.Configurator.ExpressionType.AND:<br/>
+                    notation = &quot; &amp;&amp; &quot;;<br/>
+                    break;<br/>
+                case Aras.Server.Core.Configurator.ExpressionType.OR:<br/>
+                    notation = &quot; || &quot;;<br/>
+                    break;<br/>
+                case Aras.Server.Core.Configurator.ExpressionType.NOT:<br/>
+                    notation = &quot;!({0})&quot;;<br/>
+                    break;<br/>
+                case Aras.Server.Core.Configurator.ExpressionType.IMPLICATION:<br/>
+                    notation = &quot;IF THEN&quot;;<br/>
+                    break;<br/>
+                case Aras.Server.Core.Configurator.ExpressionType.AtLeastOne:<br/>
+                    notation = &quot;AT-LEAST-ONE({0})&quot;;<br/>
+                    break;<br/>
+                case Aras.Server.Core.Configurator.ExpressionType.AtMostOne:<br/>
+                    notation = &quot;AT-MOST-ONE({0})&quot;;<br/>
+                    break;<br/>
+                case Aras.Server.Core.Configurator.ExpressionType.ExactlyOne:<br/>
+                    notation = &quot;EXACTLY-ONE({0})&quot;;<br/>
+                    break;<br/>
+                default:<br/>
+                    throw new NotSupportedException(boolOperator + &quot; type is not supported for string notation conversion&quot;);<br/>
+            }</p>
+  <p class="Code_Sample">        return notation;<br/>
+        }</p>
+  <p class="Code_Sample">    private static string GetAlgebraicTermOperatorNotation(Aras.Server.Core.Configurator.TermOperator termOperator)<br/>
+        {<br/>
+            string algebraicTermOperatorNotation;<br/>
+            switch (termOperator)<br/>
+            {<br/>
+                case Aras.Server.Core.Configurator.TermOperator.Equal:<br/>
+                    algebraicTermOperatorNotation = &quot;=&quot;;<br/>
+                    break;<br/>
+                case Aras.Server.Core.Configurator.TermOperator.GreaterThanOrEqual:<br/>
+                    algebraicTermOperatorNotation = &quot;&gt;=&quot;;<br/>
+                    break;<br/>
+                case Aras.Server.Core.Configurator.TermOperator.LessThanOrEqual:<br/>
+                    algebraicTermOperatorNotation = &quot;&lt;=&quot;;<br/>
+                    break;<br/>
+                default:<br/>
+                    throw new NotSupportedException(FormattableString.Invariant($&quot;&#39;{termOperator}&#39; term operator is not supported for string notation conversion&quot;));<br/>
+            }</p>
+  <p class="Code_Sample">        return algebraicTermOperatorNotation;<br/>
+        }<br/>
+    }<br/>
+     </p>
+  <h2>Custom Unified Effectivity String Notation</h2>
+  <p>By default, a comma (,) is used to combine multiple Effectivities on a single Relationship. A customized String Notation uses the OR conjunction word instead of the comma.</p>
+  <p>         </p>
+  <table border="1" cellpadding="1" cellspacing="1" style="border-collapse:collapse; width:100%">
+    <colgroup>
+      <col style="width:25.00%"/>
+      <col style="width:25.00%"/>
+      <col style="width:25.00%"/>
+      <col style="width:25.00%"/>
+    </colgroup>
+    <tbody>
+      <tr>
+        <td background-color="gray;" colspan="1" rowspan="2">
+          <center><strong>Effective Item</strong></center>
+        </td>
+        <td colspan="1" rowspan="2">
+          <center><strong>Single Effectivity String Notations</strong></center>
+        </td>
+        <td colspan="2" rowspan="1">
+          <center><strong>Unified Effectivity String Notation</strong></center>
+        </td>
+      </tr>
+      <tr>
+        <td><strong>Default</strong></td>
+        <td><strong>Customized</strong></td>
+      </tr>
+      <tr>
+        <td colspan="1" rowspan="2">Engine</td>
+        <td>Factory = Detroit</td>
+        <td rowspan="2">(Factory = Detroit), (Factory = Munich)</td>
+        <td rowspan="2">(Factory = Detroit) OR (Factory = Munich)</td>
+      </tr>
+      <tr>
+        <td>Factory = Munich</td>
+      </tr>
+    </tbody>
+  </table>
+  <h3>JoinExpressionStringNotation Method Definition</h3>
+  <p>To achieve this customization goal, change the definition of the JoinExpressionStringNotation internal method of the effs_getExpressionStringNotation method as follows:</p>
+  <p class="Code_Sample">internal virtual string JoinExpressionStringNotation(IEnumerable&lt;string&gt; expressionStringNotations)<br/>
+    {<br/>
+        if (!string.IsNullOrEmpty(expressionStringNotations.ElementAtOrDefault(1)))<br/>
+        {<br/>
+            expressionStringNotations = expressionStringNotations.Select(<br/>
+            expressionStringNotation =&gt; &quot;(&quot; + expressionStringNotation + &quot;)&quot;);<br/>
+        }<br/>
+        return string.Join(&quot; OR &quot;, expressionStringNotations);<br/>
+    }</p>
+  <h2> </h2>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

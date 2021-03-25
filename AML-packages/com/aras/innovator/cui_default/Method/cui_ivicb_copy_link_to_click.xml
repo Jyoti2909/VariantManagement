@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="0E9458BC9AC54CBDA5A5CDE93F7C4112" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!aras.utils.isClipboardSupported()) {
+	return aras.AlertError(aras.getResource('', 'clipboardmanager.use_ctrl_c'));
+}
+
+const version = target.name.endsWith('latest_version') ? 'current' : 'released';
+const itemTypeName = options.itemTypeName;
+const itemType = aras.getItemTypeForClient(itemTypeName, 'name');
+const isVersionable = itemType.getProperty('is_versionable') === '1';
+
+let itemId;
+if (isVersionable) {
+	itemId = aras.getItemProperty(window.item, 'config_id');
+} else {
+	itemId = options.itemId;
+}
+
+const text = aras.getInnovatorUrl() + '?StartItem=' + itemTypeName + ':' + itemId + ':' + version;
+ArasModules.copyTextToBuffer(text);
+const notify = aras.getNotifyByContext(window);
+notify(aras.getResource('', 'common.copy_notification_link'));
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivicb_copy_link_to_click</name>
+ </Item>
+</AML>

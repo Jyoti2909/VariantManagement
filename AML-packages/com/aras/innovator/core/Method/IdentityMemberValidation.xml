@@ -1,0 +1,107 @@
+﻿<AML>
+ <Item type="Method" id="89FE956C45BE4687BC9FC7647E97B5CE" action="add">
+  <comments>Check if related Identity is not a Team/System Identity and source identity is not a Team/System Identity</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	//check if source_id isn't System(subclass) identity
+	//check if source_id isn't Team(subclass) identity and related_id isn't Team
+	System.Globalization.CultureInfo ci = System.Globalization.CultureInfo.InvariantCulture;
+	Innovator inn = this.getInnovator();
+	string relatedIdName = "related_id";
+	string relatedId = this.getProperty(relatedIdName);
+	Item sourceItem = GetSourceItem(this);
+	if (sourceItem.isError())
+	{
+		return sourceItem;
+	}
+	if (IsIdentitySystem(sourceItem))
+	{
+		return inn.newError(string.Format(ci, "Identities ('{0}') cannot be set as Members of Identities with classification 'System'.", this.getPropertyAttribute("id", "keyed_name")));
+	}
+	else if (IsIdentityTeam(sourceItem))
+	{
+		return inn.newError(string.Format(ci, "Identities ('{0}') cannot be set as Members of Identities with classification 'Team'.", this.getPropertyAttribute("id", "keyed_name")));
+	}
+	
+	if (!string.IsNullOrEmpty(relatedId))
+	{
+		Item relatedItem = GetRelatedItem(this);
+		if (!relatedItem.isError())
+		{
+			if (IsIdentityTeam(relatedItem))
+			{
+				return inn.newError(string.Format(ci, "Identities with classification 'Team' ('{0}') cannot be set as Members of Identities.", this.getPropertyAttribute("id", "keyed_name")));
+			}
+		}
+	}
+	return this;
+}
+
+private Item GetSourceItem(Item item)
+{
+	string sourceId = item.getProperty("source_id");
+	Innovator inn = item.getInnovator();
+	if (string.IsNullOrEmpty(sourceId))
+	{
+		Item currentItem = inn.newItem("Member", "get");
+		currentItem.setID(item.getAttribute("id"));
+		currentItem.setAttribute("select", "source_id");
+		item = currentItem.apply();
+		sourceId = item.getProperty("source_id");
+	}
+	Item result = inn.newItem("Identity", "get");
+	result.setProperty("select", "classification, id");
+	result.setID(sourceId);
+	return result.apply();
+}
+
+private Item GetRelatedItem(Item item)
+{
+	string relatedId = item.getProperty("related_id");
+	Innovator inn = item.getInnovator();
+	Item result = inn.newItem("Identity", "get");
+	result.setAttribute("select", "classification");
+	result.setID(relatedId);
+	return result.apply();
+}
+
+private bool IsIdentitySystem(Item item)
+{
+	string classification = item.getProperty("classification");
+	Innovator inn = item.getInnovator();
+	if (string.IsNullOrEmpty(classification))
+	{
+		Item currentItem = inn.newItem("Identity", "get");
+		currentItem.setID(item.getAttribute("id"));
+		currentItem.setAttribute("select", "classification");
+		item = currentItem.apply();
+		classification = item.getProperty("classification");
+	}
+	if (classification == "System")
+	{
+		return true;
+	}
+	else return false;
+}
+
+private bool IsIdentityTeam(Item item)
+{
+	string classification = item.getProperty("classification");
+	Innovator inn = item.getInnovator();
+	if (string.IsNullOrEmpty(classification))
+	{
+		Item currentItem = inn.newItem("Identity", "get");
+		currentItem.setID(item.getAttribute("id"));
+		currentItem.setAttribute("select", "classification");
+		item = currentItem.apply();
+		classification = item.getProperty("classification");
+	}
+	if (classification == "Team")
+	{
+		return true;
+	}
+	else return false;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>IdentityMemberValidation</name>
+ </Item>
+</AML>

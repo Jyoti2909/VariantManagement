@@ -1,0 +1,433 @@
+﻿<AML>
+ <Item type="Method" id="96447F6278F94D25B6056A99A4CF74C1" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/* 
+input format:
+<AML>
+  <Item type="{ItemType(ex. CAD)}" id="{ID}" resolution="{Standard|Version}" action="PE_GetRelatedParts">
+    <Relationships>
+      <Item type="{Relationship ItemType to traverse (ex. Part CAD)}" [select=""]>
+        <source_id>
+          <Item type="{ItemType of target item (ex. Part)}" [orderBy="" select="", etc..]>
+            [<item_number condition="like">P%</item_number>]
+            [...etc...]
+          </Item>
+        </source_id>
+      </Item>
+    </Relationships>
+  </Item>
+</AML>
+*/  
+    Utils.InitializeForRequest(this.getInnovator(), CCO);
+
+    try
+    {
+      InputItem inputItem = new InputItem(this);
+      return inputItem.GetRelatedParts();
+    }
+    catch(ItemErrorException ex)
+    {
+      return ex.Error;
+    }
+  }
+}
+
+enum Resolution
+{
+  Standard,
+  Version
+}
+
+class InputItem : ItemContext
+{	
+	public InputItem(Item item)
+	 : base(item)
+	{
+	  try
+	  {
+        this.Resolution = ParseInputResolution(item);
+        this.RelationshipItem =ParseRelationshipItem(item);
+	  }
+	  catch(ArgumentException ex)
+	  {
+	  	throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_InputItemInitializationFailed", this.ID), ex);
+	  }
+	}
+	
+	private RelationshipItem ParseRelationshipItem(Item item)
+	{
+	  Item relshipItems = item.getItemsByXPath("Relationships/Item");
+	  if(relshipItems.getItemCount() <= 0)
+	  {
+	    throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_RelationshipItemIsMissing"));
+	  }
+	  
+	  return new RelationshipItem(relshipItems.getItemByIndex(0));
+	}
+	
+	private Resolution ParseInputResolution(Item item)
+	{
+	  String resolutionAttr = item.getAttribute("resolution", "");
+	  
+	  if(String.IsNullOrEmpty(resolutionAttr))
+	  {
+	  	throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_ResolutionAttributeIsMissing"));
+	  }
+    
+      Resolution resolution;
+      try
+      { 
+        if(!System.Enum.IsDefined(typeof(Resolution), resolutionAttr))
+        {
+      	  throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_ResolutionAttributeIsInvalid"));
+        }
+        resolution = (Resolution)System.Enum.Parse(typeof(Resolution), resolutionAttr, false);
+      }
+      catch(ArgumentNullException)
+      {
+        throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_ResolutionAttributeIsInvalid"));
+      }
+      catch(ArgumentException)
+      {
+        throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_ResolutionAttributeIsInvalid"));
+      }  
+      
+      return resolution;
+	}
+	
+	public Resolution Resolution
+	{
+	  private set;
+	  get;
+	}
+		
+	public RelationshipItem RelationshipItem
+	{
+	  private set;
+	  get;
+	}
+	
+	public Item GetRelatedParts()
+	{
+		switch(this.Resolution)
+		{
+			case Resolution.Standard:
+				return ProcessStandardResolution();
+			case Resolution.Version:
+				return ProcessVersionResolution();
+			default: 
+			{
+				throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("ResolutionIsOutOfRange"));
+			}
+		}
+	}
+	
+	private Item ProcessStandardResolution()
+	{
+		String sqlQuery = @"SELECT part_finish.id
+			FROM
+				(
+				SELECT MAX(part_cad.gen) OVER(PARTITION BY part_cad.config_id) AS Max_GENERATION_part,part_cad.id,part_cad.gen generation_part
+				FROM (
+					SELECT MAX(related_version_set.GENERATION) OVER(PARTITION BY source_item.config_id) AS Max_GENERATION,
+					related_version_set.GENERATION GENERATION_CAD,source_item.generation gen,source_item.id,source_item.config_id config_id
+					FROM {2}/*innovator.CAD*/ related_config
+					INNER JOIN {2}/*innovator.CAD*/ current_related ON current_related.id = '{0}'
+					INNER JOIN {2}/*innovator.CAD*/ related_version_set ON related_version_set.CONFIG_ID = current_related.CONFIG_ID
+					AND related_version_set.GENERATION <= current_related.GENERATION
+					INNER JOIN {3}/*innovator.PART_CAD*/ item_relship ON item_relship.RELATED_ID = related_version_set.ID					
+					INNER JOIN {1}/*innovator.PART*/ source_item ON source_item.id = item_relship.SOURCE_ID
+					WHERE
+					related_config.id = item_relship.RELATED_ID
+					) as part_cad
+				WHERE part_cad.GENERATION_CAD = part_cad.Max_GENERATION
+				)as part_finish
+			WHERE part_finish.generation_part = part_finish.Max_GENERATION_part";
+		
+		sqlQuery = String.Format(CultureInfo.InvariantCulture, sqlQuery, 
+		  Utils.CCO.Variables.InnDatabase.QuoteValue(this.ID), 
+		  this.RelationshipItem.SourceItem.TableName,
+		  this.TableName,
+		  this.RelationshipItem.TableName
+		);
+
+		Item res = GetItemViaIDQuery(sqlQuery);
+		AddIsLinkedToItem(res);
+		return res;
+	}
+	
+	private Item ProcessVersionResolution()
+	{      
+		String sqlQuery = @"
+			SELECT item.id FROM {1}/*[PART]*/ item
+			INNER JOIN
+			(
+				SELECT item.CONFIG_ID, MAX(item.GENERATION) GENERATION FROM {1}/*[PART]*/ item 
+				INNER JOIN {2}/*[PART_CAD]*/ relationshipItem ON item.ID = relationshipItem.SOURCE_ID AND relationshipItem.RELATED_ID = '{0}'
+				GROUP BY item.CONFIG_ID
+			) groupeditem ON groupeditem.CONFIG_ID = item.CONFIG_ID AND groupeditem.GENERATION = item.GENERATION
+		";
+		
+		sqlQuery = String.Format(CultureInfo.InvariantCulture, sqlQuery,
+			Utils.CCO.Variables.InnDatabase.QuoteValue(this.ID),
+			this.RelationshipItem.SourceItem.TableName,
+			this.RelationshipItem.TableName
+		);
+
+		Item res = GetItemViaIDQuery(sqlQuery);
+		AddIsLinkedToItem(res);
+		return res;
+	}
+	
+	private void AddIsLinkedToItem(Item items)
+	{
+		int itemsCount = items.getItemCount();
+		for(int itemIndex = 0; itemIndex < itemsCount; itemIndex++)
+		{
+		  Item item = items.getItemByIndex(itemIndex);
+		  if(item.node.SelectSingleNode("Relationships/Item[@type='" + this.RelationshipItem.Type + "']/related_id/Item[@type='" + this.Type + "' and @id='" + this.ID + "']") != null)
+		  {
+		  	item.setProperty("is_linked", "1");
+		  }
+		  else
+		  {
+		  	item.setProperty("is_linked", "0");
+		  }
+		}
+	}
+	
+	private Item GetItemViaIDQuery(String sqlQuery)
+	{		
+		//This approach solves possible SQL injection into parameters.
+      String relationshipXml = @"
+            <Relationships>
+              <Item type=""{0}"" action=""get"" {1}/>
+            </Relationships>";
+	  String select = this.RelationshipItem.Select;
+	  select = select != null ? "select=\"" + System.Security.SecurityElement.Escape(select) + "\"" : "";
+      relationshipXml = String.Format(CultureInfo.InvariantCulture, relationshipXml, System.Security.SecurityElement.Escape(this.RelationshipItem.Type), select);
+      
+      XmlDocument relshipDom = new XmlDocument();
+      relshipDom.LoadXml(relationshipXml);
+      
+      
+      XmlDocument itemDom = this.RelationshipItem.SourceItem.Item.dom;
+      XmlElement itemElement = this.RelationshipItem.SourceItem.Item.node;
+      Item sourceItem = this.RelationshipItem.SourceItem.Item;
+      
+      itemElement.AppendChild(itemDom.ImportNode(relshipDom.DocumentElement, true));
+      
+      sourceItem.setProperty("id", sqlQuery);
+      sourceItem.setPropertyAttribute("id", "condition", "in");
+      
+      Item parts = sourceItem.apply("get");
+      Utils.AssertItem(parts);
+      
+      return parts;
+	}
+	
+}
+
+class RelationshipItem : ItemContext
+{
+	public RelationshipItem(Item item)
+	 : base(item)
+	{
+	  if(String.IsNullOrEmpty(this.Type))
+	  {
+	    throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_RelationshipItemTypeIsMissing"));
+	  }
+  	  this.SourceItem = ParseSourceItem(item);
+	}
+  
+	private SourceItem ParseSourceItem(Item item)
+	{
+	  Item sourceItem = item.getPropertyItem("source_id");
+	  if(sourceItem == null)
+	  {
+	    throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_SourceItemIsMissing"));
+	  }
+	  
+	  return new SourceItem(sourceItem);
+	}
+  
+	public SourceItem SourceItem
+	{
+	  private set;
+	  get;
+	}
+		
+	public string Select
+	{
+	    get
+		{
+			return this.Item.getAttribute("select");
+		}
+	}
+}
+
+class SourceItem : ItemContext
+{
+	public SourceItem(Item item)
+	 : base(item)
+	{
+	  if(String.IsNullOrEmpty(this.Type))
+	  {
+	    throw new ArgumentException(Utils.CCO.ErrorLookup.Lookup("PE_SourceItemTypeIsMissing"));
+	  }
+	}
+}
+
+/// <summary>
+/// Represent base class for Item wrappers
+/// </summary>
+abstract class ItemContext
+{
+	/// <summary>
+	/// Constructor. Create empty prototype.
+	/// </summary>
+	protected ItemContext()
+	{
+	}
+
+	/// <summary>
+	/// Constructor. Wrap item and create Utils
+	/// </summary>
+	/// <param name="item"></param>
+	public ItemContext(Item item)
+	{
+		this.Item = item;
+	}
+
+	Item p_item;
+	/// <summary>
+	/// Get wrapped item
+	/// </summary>
+	public Item Item
+	{
+		get { return p_item; }
+		set { p_item = value; }
+	}
+
+	public string ID
+	{
+		get { return this.Item.getID(); }
+	}
+
+	public string Type
+	{
+		get { return this.Item.getType(); }
+	}
+	
+	private String p_tableName;
+	public string TableName
+	{
+	  get
+	  {
+	  	if(String.IsNullOrEmpty(p_tableName))
+	  	{
+	  	  String name = "name";
+	  	  String type = this.Type;
+	  	  XmlElement itTypeNode = Utils.CCO.Cache.GetItemTypeFromCache(ref type, ref name);
+	  	  p_tableName = Utils.CCO.DB.InnDatabase.GetTableName(itTypeNode.GetAttribute("instance_data")); 
+	  	}
+	  	return p_tableName;
+	  }
+	}
+
+	public bool IsLocked
+	{
+		get { return this.Item.getLockStatus() != 0; }
+	}
+
+	public string State
+	{
+		get { return this.Item.getProperty("state", ""); }
+	}
+
+	public string ConfigID
+	{
+		get { return this.Item.getProperty("config_id", ""); }
+	}
+}
+
+
+/// <summary>
+/// Create and get access to Innovator object and provide help methods.
+/// </summary>
+static class Utils
+{
+	private const String InnovatorObjectUID = "PE_GetRelatedParts_InnovatorObject";
+	private const String InnovatorCCOUID = "PE_GetRelatedParts_InnovatorCCO";
+	
+	public static void InitializeForRequest(Innovator innovator, Aras.Server.Core.CallContext CCO)
+	{
+		HttpContext.Current.Items[InnovatorObjectUID] = innovator;
+		HttpContext.Current.Items[InnovatorCCOUID] = CCO;
+	}
+	
+	public static Item LookupError(string error, params string[] parameters)
+	{
+	  return Utils.Innovator.newError(CCO.ErrorLookup.Lookup(error, parameters));
+	}
+	
+	/// <summary>
+	/// Assert passed item, throw ItemErrorException if item has error
+	/// </summary>
+	/// <param name="item"></param>
+	public static void AssertItem(Item item)
+	{
+		if (item.isError())
+		{
+			throw new ItemErrorException(item);
+		}
+	}
+
+	/// <summary>
+	/// Get instance of Innovator object
+	/// </summary>
+	public static Innovator Innovator
+	{
+		get
+		{
+			return ((Innovator)HttpContext.Current.Items[InnovatorObjectUID]);
+		}
+	}
+
+	public static Aras.Server.Core.CallContext CCO
+	{
+		get
+		{
+			return ((Aras.Server.Core.CallContext)HttpContext.Current.Items[InnovatorCCOUID]);
+		}
+	}
+}
+
+/// <summary>
+/// Exception which wrap error Item
+/// </summary>
+[Serializable]
+class ItemErrorException : Exception
+{
+	public ItemErrorException(Item error)
+		: base()
+	{
+		this.error = error;
+	}
+
+	private Item error;
+	public Item Error
+	{
+		get { return error; }
+	}
+}
+
+
+class fin
+{
+	void method()
+	{]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_GetRelatedParts</name>
+ </Item>
+</AML>

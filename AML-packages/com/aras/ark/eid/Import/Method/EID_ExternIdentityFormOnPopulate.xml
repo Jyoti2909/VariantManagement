@@ -1,0 +1,51 @@
+﻿<AML>
+ <Item type="Method" id="9DCF27D1805C4CE9B57F2D859E52DEFD" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+const ButtonManager = (function(){
+	return {
+		disableConditionally:
+		function fDisableConditionally(){
+			const button = getTheButton();
+			if (!button){
+				return;
+			}
+			const isToDisable = isDisablingConditionMet(document.thisItem);
+			if (isToDisable){
+				button.disabled = true;
+			} else {
+				button.disabled = false;
+			}
+		}
+	}
+
+	function getTheButton(){
+		const foundButtons = document.querySelectorAll("input[type='button'][name='EID_TestConnectionBtn']");
+		if (foundButtons.length === 1){
+			return foundButtons[0];
+		} else {
+			return undefined;
+		}
+	}
+
+	function isDisablingConditionMet(theItem){
+		const propsToCheck = ["eid_connection_string", "eid_user_name", "eid_password_key"];
+		let propVal, isToDisable = false;
+		for (let pN = 0; pN < propsToCheck.length; pN++){
+			propVal = theItem.getProperty(propsToCheck[pN]);
+			if (typeof(propVal) !== "string" || propVal.trim().length === 0){
+				isToDisable = true;
+				break;
+			}
+		}
+		return isToDisable;
+	}
+}());
+
+ButtonManager.disableConditionally();
+
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>EID_ExternIdentityFormOnPopulate</name>
+ </Item>
+</AML>

@@ -1,0 +1,461 @@
+﻿@{
+	Layout = null;
+}
+<!DOCTYPE html>
+<html>
+<head>
+	<link rel='stylesheet' href='../../javascript/dojo/../dijit/themes/claro/claro.css'>
+	<link rel='stylesheet' href='../../javascript/include.aspx?classes=common.css'>
+	<link rel='stylesheet' href='../../styles/default.css'>
+	<link rel='stylesheet' href='../../styles/common.css'>
+	<link rel='stylesheet' href='../RE/Styles/ChapterTree.css'>
+	<link rel='stylesheet' href='../RE/Styles/ContentTree.css'>
+	<link rel='stylesheet' href='../../Modules/aras.innovator.TDF/Styles/SearchComponent.css'>
+	<style type='text/css'>
+		html, body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			overflow: hidden;
+
+			font-family: Tahoma;
+			color: #444444;
+			font-size: 12px;
+		}
+
+		#borderContainer {
+			width: 100%;
+			height: 100%;
+		}
+
+		#toolbarContainer {
+			height: 30px;
+		}
+
+		.dijitBorderContainer-dijitContentPane {
+			padding: 0px !important;
+		}
+
+		.dijitEditorIFrameContainer {
+			padding: 0px !important;
+		}
+
+		.dijitTreeContainer {
+			width: 100% !important;
+		}
+
+		.dijitTreeRow {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			width: inherit !important;
+		}
+
+		.claro .dijitEditor {
+			border: none;
+		}
+
+		.tooltip_dialog_overlay {
+			position: fixed;
+			top: 0; right: 0; bottom: 0; left: 0;
+			z-index: 999;
+		}
+
+		.aras-grid-header {
+			border-top: none;
+		}
+
+		.aras-grid-header-boundary {
+			border-bottom: 1px solid #cccccc;
+		}
+
+		.dijitToolbar.ArasToolbar {
+			white-space: normal !important;
+		}
+
+		.SearchComponent {
+			float: right;
+			margin: 4px 5px 0px 0px;
+		}
+	</style>
+	<script type='text/javascript' src='../../javascript/include.aspx?classes=ArasModules,XmlDocument,QueryString'></script>
+	<script type='text/javascript' src='../../javascript/include.aspx?classes=/dojo.js' data-dojo-config='packages: [{ name: "RE", location: "../../Solutions/RE" }, { name: "TechDoc", location: "../../Modules/aras.innovator.TDF/Scripts" }], isDebug: false, parseOnLoad: false, async: true, baseUrl:"../../javascript/dojo"'></script>
+	<script>
+	var aras = parent.aras;
+	var topWnd = aras.getMostTopWindowWithAras(window);
+	var reqDocChapterTree;
+	var toolbar;
+	var structuredDocument;
+	var searchControl;
+	var toolbarHelper;
+	var contentManager;
+
+	const contentTabId = aras.getRelationshipTypeId('re_Req_Doc_Content');
+
+	require(['dojo/ready', 'dojo/parser',
+		'RE/Scripts/Classes/ChapterTree',
+		'RE/Scripts/Classes/Toolbar',
+		'RE/Scripts/Classes/Helper/ToolbarHelper',
+		'RE/Scripts/Classes/Helper/LazyContentManager',
+		'RE/Scripts/Model/RequirementDocumentStructuredDocument',
+		'RE/Scripts/Classes/Conflict/MultipleConflictsResolution',
+		'TechDoc/Aras/Client/Controls/TechDoc/ViewModel/DocumentationEnums',
+		'TechDoc/Aras/Client/Controls/TechDoc/UI/Search/SearchComponent',
+		'TechDoc/Aras/Client/Controls/TechDoc/UI/Search/TextSchemaElementsSearchEngine',
+		'dojox/html/entities', 'dojo/aspect', 'dojo/domReady!'],
+		function (ready, parser, ChapterTree, REToolbar, ToolbarHelper, LazyContentManager, ReqDocStructuredDocument, MultipleConflictsResolution,
+			Enums, SearchComponent, TextSearchEngine, entities, aspect) {
+			ready(function() {
+					// In previous implementation Editor was populated by requirements from Content Grid.
+					// User is able to specify page_size for Content Grid
+					// As result Editor were populated only partially
+					// Function is need for loading full data.
+					const updateRequirementDocumentItemInWindow = function(forceReload) {
+						const isReloadRequired = forceReload && !aras.getItemTranslation(topWnd.item, 'document_xml', languageCode);
+						const requestedDocItem = isReloadRequired && getRequirementDocument();
+
+						if (requestedDocItem) {
+							if (aras.Browser.isIe()) {
+								requestedDocItem.dom.setProperty('SelectionNamespaces', 'xmlns:i18n="' + aras.translationXMLNsURI + '"');
+							} else {
+								requestedDocItem.dom.documentElement.setAttribute('xmlns:i18n', aras.translationXMLNsURI);
+							}
+
+							const relationshipsNodeFromRequestedItem = requestedDocItem.node.selectSingleNode('Relationships');
+							if (relationshipsNodeFromRequestedItem) {
+								const oldRelationshipsNode = topWnd.item.selectSingleNode('Relationships');
+								if (oldRelationshipsNode) {
+									topWnd.item.replaceChild(relationshipsNodeFromRequestedItem, oldRelationshipsNode);
+								} else {
+									topWnd.item.appendChild(relationshipsNodeFromRequestedItem);
+								}
+							}
+						}
+					};
+
+					const getRequirementDocument = function() {
+						let reqDocItem = aras.newIOMItem('re_Requirement_Document', 'get');
+						reqDocItem.setID(topWnd.item.getAttribute('id'));
+						const reqContent = aras.newIOMItem('re_Req_Doc_Content', 'get');
+						reqContent.setAttribute('select', aras.getSelectCriteria(aras.getItemTypeId('re_Req_Doc_Content'), true));
+						reqDocItem.addRelationship(reqContent);
+
+						reqDocItem = reqDocItem.apply();
+						if (reqDocItem.isError()) {
+							aras.AlertError(reqDocItem);
+							return;
+						}
+						return reqDocItem;
+					}
+
+					const isReqsCountLimitedOnClient = function() {
+						let itemQuery = aras.newIOMItem('re_Req_Doc_Content', 'get');
+						itemQuery.setAttribute('returnMode', 'countOnly');
+						itemQuery.setProperty('source_id', topWnd.item.getAttribute('id'));
+						itemQuery = itemQuery.apply();
+
+						// at symbol '@@' cannot be used directly because Razor tries to interpret the word after it as variable
+						// combination of two '@@' makes xPath invalid
+						const atSymbol = String.fromCharCode(64);
+						const eventsInfo = aras.getMessageNode(itemQuery.dom);
+						const itemmaxEvent = eventsInfo.selectSingleNode('event[' + atSymbol + 'name="itemmax"]');
+						const servelItemsCount = parseInt(itemmaxEvent.getAttribute('value'));
+						const clientItemsCount = topWnd.item.selectNodes('Relationships/Item[' + atSymbol + 'type="re_Req_Doc_Content" and (not(' + atSymbol + 'action) or ' + atSymbol + 'action!="add")]').length;
+
+						return clientItemsCount !== servelItemsCount;
+					};
+
+					const languageCode = topWnd.getDefaultLanguage();
+
+					updateRequirementDocumentItemInWindow(isReqsCountLimitedOnClient());
+
+					var reqItem = topWnd.item;
+
+					structuredDocument = new ReqDocStructuredDocument({
+						aras: aras,
+						item: reqItem,
+						defaultLanguageCode: languageCode,
+						defaultSchemaId: '8DF7037346A64816B8BBD8700AFCFE15',
+						customEditModeCheck: topWnd.isItemEditable,
+						showItem: topWnd.showRequirementItem
+					});
+					contentManager = new LazyContentManager({viewmodel: structuredDocument, aras: aras});
+
+					toolbar = new REToolbar({
+						id: 'toolbar',
+						connectId: 'toolbarContainer',
+						structuredDocument: structuredDocument,
+						styleSheet: '../../Modules/aras.innovator.TDF/Scripts/Aras/Client/Controls/TechDoc/themes/Toolbar.css'});
+					topWnd.cui.initToolbarEvents(toolbar, reqItem, {viewmodel: structuredDocument});
+
+					parser.parse().then(function() {
+						const treeContainer = dijit.byId('treeContainer');
+						aspect.after(treeContainer, 'resize', function(resultSize) {
+							const newWidth = resultSize.w;
+							if (newWidth) {
+								const oldWidth = treeContainer.w;
+								reqDocChapterTree.resizeHead(1, newWidth - oldWidth);
+							}
+						}, true);
+
+						var contextParams = {
+							toolbarApplet: toolbar,
+							locationName: 'RE_Toolbar',
+							item_classification: 'ReqDocTextEditor'
+						};
+						return topWnd.cui.loadToolbarFromCommandBarsAsync(contextParams);
+					}).then(function() {
+						toolbar.showToolbar('$EmptyClassification');
+						toolbar.initToolbar();
+
+						// Created after toolbar initialization to inject into toolbar DOM
+						searchControl = initSearchControl({
+							searchControl: SearchComponent,
+							searchEngine: TextSearchEngine,
+							containerNode: toolbar.getCurrentToolBarDomNode_Experimental()
+						});
+
+						// Register search control for editor
+						const editorControl = dijit.byId('requiremenDoctHtmlEditor');
+						editorControl.setSearchControl(searchControl);
+					});
+					var chapterTreeNode = document.getElementById('chapterTree');
+					reqDocChapterTree = new ChapterTree({
+						domNode: chapterTreeNode,
+						requirementDocumentId: parent.itemID,
+						label: aras.getItemProperty(parent.item, 'reqdoc_title'),
+						viewmodel: structuredDocument,
+						aras: aras
+					});
+
+					var conflictResolution = new MultipleConflictsResolution({aras: aras, control: reqDocChapterTree, item: reqItem, viewmodel: structuredDocument});
+					conflictResolution.initConflictResolver();
+
+					topWnd.registerCommandEventHandler(topWnd, function() {
+						const reqDoc = getRequirementDocument();
+						const oldRelship = topWnd.item.selectSingleNode('Relationships');
+						const newRelship = reqDoc.node.selectSingleNode('Relationships');
+						topWnd.item.replaceChild(newRelship, oldRelship);
+					}, 'before', 'refresh');
+
+					toolbarHelper = new ToolbarHelper({reqDocChapterTree: reqDocChapterTree, toolbar: toolbar});
+
+					const actionStateController = structuredDocument.getActionStateController();
+					aspect.after(structuredDocument, 'OnRequirementDocumentContentChange', actionStateController.updateState.bind(actionStateController), true);
+					aspect.after(reqDocChapterTree, '_addRequirement', actionStateController.updateStateAfterAddAction.bind(actionStateController), true);
+
+					topWnd.document.addEventListener('RequirementDocumentContentChanged', function(evnt) {
+						structuredDocument.OnRequirementDocumentContentChange(evnt);
+					});
+
+					topWnd.document.addEventListener('LoadEditorTab', function(evnt) {
+						reqDocChapterTree.refresh();
+					});
+
+					let reloadEventHandler = function(evnt) {
+						topWnd.document.removeEventListener('setItemWithRelationships', reloadEventHandler, false);
+						updateRequirementDocumentItemInWindow(isReqsCountLimitedOnClient());
+						structuredDocument.SuspendInvalidation();
+						structuredDocument.Reload(topWnd.item, {forceReload: true});
+						structuredDocument.ResumeInvalidation();
+						setTimeout( function() {
+							aras.browserHelper.toggleSpinner(topWnd.document, false);
+						},0);
+					};
+
+					aspect.after(topWnd, 'setItem', function(method, args) {
+						const isContentTabActive = aras.getRelationshipTypeId('re_Req_Doc_Content') === topWnd.relationships.currTabID;
+						if (isContentTabActive) {
+							topWnd.document.addEventListener('setItemWithRelationships', reloadEventHandler, false);
+						} else {
+							reloadEventHandler();
+						}
+					});
+
+					topWnd.registerCommandEventHandler(topWnd, function() {
+						if (aras.isLockedByUser(topWnd.item)) {
+							const afterEditEventKey = topWnd.registerCommandEventHandler(topWnd, function() {
+								reloadEventHandler();
+								topWnd.unregisterCommandEventHandler(afterEditEventKey);
+							}, 'after', 'edit');
+						}
+					}, 'before', 'edit');
+
+					topWnd.document.addEventListener('RelationshipsUpdateRow', function(evnt) {
+						if (structuredDocument.isRequirementUpdateAllowed()) {
+							structuredDocument.OnRequirementDocumentContentChange(evnt);
+						}
+					}, false);
+
+					aspect.after(structuredDocument, 'onSelectionChanged', function() {
+						if (searchControl) {
+							searchControl.adjustControlPlacement();
+						}
+					}, true);
+
+					topWnd.registerCommandEventHandler(window, structuredDocument.setContentToItem.bind(structuredDocument), 'before', 'save');
+
+					aspect.after(structuredDocument, 'OnInvalidate', function (sender, earg) {
+						var isItemChange = (earg.invalidationList.length != 0);
+
+						window.setTimeout(function () {
+							if (isItemChange) {
+								var currentLanguage = structuredDocument.CurrentLanguageCode(),
+								currentDomXml = structuredDocument.origin.ownerDocument.xml;
+
+								var savedDomXml = structuredDocument.getSavedDocumentXml(currentLanguage),
+									oldContent = GetContentPartFromXml(savedDomXml),
+									newContent = GetContentPartFromXml(currentDomXml);
+
+								// comparing only old and new content nodes, this will prevent from setting 'isDirty' attribute if
+								// only refences were updated during reload event
+								if (oldContent.length != newContent.length || oldContent != newContent) {
+									var structureDocumentItem = structuredDocument.getDocumentItem();
+									structuredDocument.saveDocumentXml(currentDomXml, currentLanguage);
+									searchControl.cleanupResults();
+
+									if (!structureDocumentItem.getAttribute('isDirty')) {
+										structureDocumentItem.setAttribute('isDirty', '1');
+										structureDocumentItem.setAttribute('action', 'update');
+
+										if (topWnd.updateItemsGrid) {
+											// removing of relationships allows to improve perfomance of updateItemsFrid method
+											const relationshipsNode = structureDocumentItem.selectSingleNode('Relationships');
+											structureDocumentItem.removeChild(relationshipsNode);
+
+											topWnd.updateItemsGrid(structureDocumentItem);
+
+											structureDocumentItem.appendChild(relationshipsNode);
+										}
+									}
+								}
+
+								var customEvent = document.createEvent('Event');
+								customEvent.initEvent('change:item', true, true);
+								window.dispatchEvent(customEvent);
+							}
+						}, 0);
+					}, true);
+
+					registerViewShortcuts();
+				});
+			});
+
+		function initSearchControl(initParameters) {
+			initParameters = initParameters || {};
+
+			const SearchControl = initParameters.searchControl;
+			const SearchEngine = initParameters.searchEngine;
+			const containerNode = initParameters.containerNode || document.getElementById(initParameters.containerId);
+
+			if (SearchControl && SearchEngine && containerNode) {
+				const createdControl = new SearchControl({
+					containerNode: containerNode,
+					searchSource: structuredDocument,
+					searchEngine: new SearchEngine(),
+					collapseOnSpaceLack: true,
+					resourceStrings: {
+						placeholderText: aras.getResource('../Modules/aras.innovator.TDF', 'search.placeholderText'),
+						prevButtonTitle: aras.getResource('../Modules/aras.innovator.TDF', 'search.prevButtonTitle'),
+						nextButtonTitle: aras.getResource('../Modules/aras.innovator.TDF', 'search.nextButtonTitle'),
+						toggleButtonTitle: aras.getResource('../Modules/aras.innovator.TDF', 'search.toggleButtonTitle'),
+						toggleButtonActiveTitle: aras.getResource('../Modules/aras.innovator.TDF', 'search.toggleButtonActiveTitle'),
+						noMatchesLabel: aras.getResource('../Modules/aras.innovator.TDF', 'search.noMatchesLabel'),
+						notEnoughSpaceAlert: aras.getResource('../Modules/aras.innovator.TDF', 'search.notEnoughSpaceAlert')
+					}
+				});
+
+				attachSearchControlEventListeners(createdControl);
+
+				return createdControl;
+			}
+		}
+
+		function registerViewShortcuts() {
+			// ctrl+f shortcut registration
+			aras.shortcutsHelperFactory.getInstance(window).subscribe({shortcut: 'ctrl+f', preventBlur: true, handler: function() {
+				if (!searchControl.isActive()) {
+					searchControl.setActiveState(true);
+
+					setTimeout(function() {
+						searchControl.focus();
+					}, 200);
+				} else {
+					searchControl.focus();
+				}
+			}, context: window}, true);
+		}
+
+		function attachSearchControlEventListeners(targetControl) {
+			if (targetControl) {
+				let searchInProgress = false;
+
+				// Add view search events listeners
+				targetControl.addEventListener(window, window, 'onBeforeSearch', function(searchValue, sourceNodes) {
+					searchInProgress = structuredDocument.skipItemsUpdate = true;
+				}.bind(this));
+
+				targetControl.addEventListener(window, window, 'onAfterSearch', function(searchValue, sourceNodes) {
+					searchInProgress = structuredDocument.skipItemsUpdate = false;
+				}.bind(this), -10);
+
+				targetControl.addEventListener(window, window, 'onSearchCleared', function() {
+					structuredDocument.skipItemsUpdate = true;
+				}.bind(this), 10);
+
+				targetControl.addEventListener(window, window, 'onSearchCleared', function() {
+					structuredDocument.skipItemsUpdate = searchInProgress;
+				}.bind(this), -10);
+			}
+		}
+
+		GetContentPartFromXml = function (documentXml) {
+			var contentNodeXPath = 'aras:document/aras:content',
+				contentNode;
+
+			if (typeof documentXml == 'string') {
+				var tempDocument = new XmlDocument(),
+					contentNode;
+
+				tempDocument.preserveWhiteSpace = true;
+				tempDocument.loadXML(documentXml);
+
+				if (dojo.isIE || aras.Browser.isIe()) {
+					tempDocument.setProperty('SelectionNamespaces', 'xmlns:aras="http://aras.com/ArasTechDoc"');
+				}
+				else {
+					tempDocument.documentElement.setAttribute('xmlns:aras', 'http://aras.com/ArasTechDoc');
+				}
+				contentNode = tempDocument.selectSingleNode(contentNodeXPath);
+			}
+			else if (typeof documentXml == 'object') {
+				contentNode = documentXml.selectSingleNode(contentNodeXPath)
+			}
+
+			return contentNode.xml || '';
+		};
+
+		GetMoveButtonsState = function(reqId) {
+			return reqDocChapterTree._getMoveMenuState(reqId);
+		}
+
+		ExecuteActionFromToolbar = function(toolbarElement) {
+			var controlId = toolbarElement.GetId();
+			toolbarHelper.GetControl(controlId).ExecuteToolbarAction(controlId, {
+				relatedDropDownValue: toolbar.getRelatedDropDownValue()
+			});
+		}
+	</script>
+</head>
+<body class='claro techDocEditor'>
+	<div data-dojo-type='dijit/layout/BorderContainer' data-dojo-props='design:"headline", gutters:false, liveSplitters:false' id='borderContainer'>
+		<div data-dojo-type='dijit/layout/ContentPane' baseClass='dijitContentPaneNoPadding' data-dojo-props='region:"top"' id='toolbarContainer'></div>
+		<div data-dojo-type='RE/Scripts/Classes/RequirementDocumentEditor' data-dojo-props='region:"center", splitter:true, structuredDocument: structuredDocument, contentManager: contentManager,
+			styleSheet: "../../Modules/aras.innovator.TDF/Scripts/Aras/Client/Controls/TechDoc/themes/Editor.css"' id='requiremenDoctHtmlEditor'></div>
+		<div data-dojo-type='dijit/layout/ContentPane' style='padding: 0px; width:300px; height:100%;' data-dojo-props='region:"left", splitter:true, minSize: 50' baseClass='dijitContentPaneNoPadding' id='treeContainer'>
+			<div id='chapterTree' style='height:60%;'></div>
+			<div data-dojo-type='RE/Scripts/Classes/ContentTree' data-dojo-props='structuredDocument: structuredDocument,
+				styleSheet: "../RE/Styles/Tree.css"' id='contentTree' style='height:40%;'></div>
+		</div>
+	</div>
+</body>
+</html>

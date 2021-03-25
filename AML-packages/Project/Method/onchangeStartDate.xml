@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="466EDACB707E4F9CA4C8F3D9502400B7" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if(document.item)
+{
+  var isMilestone = top.aras.getItemProperty(document.item, 'is_milestone') == '1' ? true : false;
+  if(isMilestone)
+  {
+    var start = srcElement.value;
+    var finish = top.aras.getItemProperty(document.item,'date_due_sched');
+    if(start!=finish)
+    {
+      handleItemChange("date_due_sched",start);
+
+      var inputs = document.getElementsByTagName('INPUT');
+      for(var i=0;i<inputs.length;i++)
+      {
+        var inp = inputs[i];
+        if(inp.name=='date_due_sched')
+        {
+          inp.value = start;
+          break;
+        }
+      }
+    }
+  }
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>onchangeStartDate</name>
+ </Item>
+</AML>

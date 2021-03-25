@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<title></title>
+	<meta charset="UTF-8" />
+	<link rel="stylesheet" type="text/css" href="../styles/common.min.css" />
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../javascript/dojox/form/resources/CheckedMultiSelect.css";
+		@import "../javascript/include.aspx?classes=common.css";
+	</style>
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules,ScriptSet1,ScriptSet6&files=TopWindowHelper,xPropertiesUtils,searchDialog"></script>
+	<script type="text/javascript">
+		var topWnd = TopWindowHelper.getMostTopWindowWithAras(window);
+		var searchArguments = {};
+		const dialogArguments = window.frameElement.dialogArguments;
+
+		if (typeof dialogArguments === 'object') {
+			//make a copy of the original arguments because of nested popup can modify dialogArguments
+			Object.assign(searchArguments, dialogArguments);
+		}
+
+		//note, that aras is used in search_container.js and SearchGridObject.js. Do not rename it.
+		var aras = topWnd.aras ? topWnd.aras : new Aras(searchArguments.aras);
+		ArasModules.soap(null, {async: true, url: aras.getServerURL(), headers: aras.getHttpHeadersForSoapMessage('ApplyItem')});
+	</script>
+	<script type="text/javascript" src="../jsBundles/cui.js"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="async: true, baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript">
+		window.initializeSearchDialogFunctions(window);
+		window.initializeSearchGridCommandsFuntions(window);
+		require(["Aras/Client/Controls/Public/GridContainer"]);
+
+		clientControlsFactory.createControl('Aras.Client.Controls.Public.GridContainerWrapper', { onStartSearch_Experimental: doSearch }, function(control) {
+			grid = control;
+			clientControlsFactory.on(grid, {
+				gridXmlLoaded: searchDialogOnGridXmlLoaded,
+				onInputHelperShow_Experimental: showInputHelperDialog,
+				gridLinkClick: onSearchGridLinkClick
+			});
+			grid._grid.on('contextmenu', function(e) {
+				e.preventDefault();
+			});
+		});
+
+		window.ArasModules.intl.locale = aras.getSessionContextLocale();
+		window.setupSearchDialog(searchArguments);
+		window.initializeSearchGridCommand();
+	</script>
+</head>
+<body class="claro">
+	<div class="aras-search-dialog">
+		<div id='searchToolbar'></div>
+		<div id="searchPlaceholder" class="aras-search-placeholder aras-search-placeholder_hidden"></div>
+		<div id="gridTD" class="aras-search-dialog__grid"></div>
+		<aras-pagination class='aras-search-dialog__pagination'></aras-pagination>
+		<div class="aras-buttons-bar aras-buttons-bar_right aras-search-dialog__buttons-bar" id="buttonsContainer"></div>
+	</div>
+</body>
+</html>

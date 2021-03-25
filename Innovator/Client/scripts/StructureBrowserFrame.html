@@ -1,0 +1,96 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2011. -->
+<html>
+<head>
+	<title>Structure Browser</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<script>
+		var aras = parent.aras;
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules,ScriptSet2"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: true, baseUrl:'../javascript/dojo'"></script>
+	<link rel="stylesheet" type="text/css" href="../javascript/dijit/themes/claro/claro.css" />
+	<link rel="stylesheet" type="text/css" href="../javascript/dojo/resources/dojo.css" />
+	<link rel="stylesheet" type="text/css" href="../javascript/dojox/grid/resources/claroGrid.css" />
+	<link rel="stylesheet" type="text/css" href="../javascript/dojox/form/resources/CheckedMultiSelect.css" />
+	<link rel="stylesheet" type="text/css" href="../javascript/include.aspx?classes=common.css" />
+	<style type="text/css">
+		@import "../styles/controls/treeGrid.css";
+		@import "../styles/controls/structureSpecificStyles.css";
+		html, body {
+			margin: 0px;
+			padding: 0px;
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+	<script type="text/javascript" src="../javascript/include.aspx?files=jQuery"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ResourceManager,StructureBrowser"></script>
+</head>
+	<body class="claro"> 
+	<script type="text/javascript">
+		var levelsToSelect = 2,
+			controlReady = false,
+			itemId = QueryString("id").toString(),
+			itemTypeName = QueryString("type_name").toString(),
+			structureController = new StructureObject("structure", "../"),
+			allItemsExpanded = false,
+			currentFrame = this,
+			structure = null;
+
+		// build some data strcutures to hold the itemtype info
+		// that is: id, name, open_icon, and list of relationships (should accept pipe seperated)
+		var lastOpenedNode = null;
+		// TOD: replace method; replace with call of WhereUsedStructureEventHandlerProvider.prototype.OnOpenItem
+		function collapseAll() {
+			structure.collapseAll();
+		}
+
+		function expandAll() {
+			if (allItemsExpanded) {
+				structure.expandAll();
+				return true;
+			} else {
+				return expandAllFirstTime();
+			}
+		}
+
+		function expandAllFirstTime() {
+			var statusId = aras.showStatusMessage("status", aras.getResource("", "statusbar.expanding_all"), "../images/Progress.gif"),
+				rootItem = structure.getRootItem(),
+				rootItemId = rootItem.getId(),
+				rootItemTypeName = rootItem.getUserData("itemTypeName"),
+				rootItemXmlText = parent.loadChildItems(rootItemTypeName, rootItemId, null, -1, true);
+
+			if (!rootItemXmlText) {
+				return false;
+			}
+
+			structure.isExpanded = true;
+			structure.initXML(rootItemXmlText);
+			structure.expandAll();
+
+			allItemsExpanded = true;
+			aras.clearStatusMessage(statusId);
+			return true;
+		}
+
+		function changeActiveStructureFrame() {
+			window.parent.activeStructureFrame = window;
+		}
+
+		onload = function f() {
+			structure = dijit.byId("structure");
+			clientControlsFactory.on(structure, "_onClick", changeActiveStructureFrame);
+			document.addEventListener("click", changeActiveStructureFrame, false);
+			changeActiveStructureFrame();
+		}
+	</script>
+		<script type="text/javascript">
+			structureController.WriteEventHandlers("StructureBrowserEventHandlerProvider");
+		</script>
+		<script type="text/javascript">
+			structureController.WriteObject();
+		</script>
+</body>
+</html>

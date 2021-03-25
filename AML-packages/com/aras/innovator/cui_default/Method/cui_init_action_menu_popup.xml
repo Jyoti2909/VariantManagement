@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="FB1939D0E9F2402C95A427F7641750C0" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const additionalData = target.additional_data || {};
+
+if (options.selectedRowsIds.length === 0) {
+	const disabled = additionalData.actionType !== 'item' && aras.canInvokeActionImpl(additionalData.canExecuteMethodName, additionalData.location);
+	return { disabled: !disabled, hidden: additionalData.actionType === 'item' };
+}
+
+const areAllItemsNew = options.selectedRowsIds.every(rowId =>
+	options.rows.get(rowId, '@aras.action') === 'add'
+);
+if (areAllItemsNew) {
+	return { disabled: true, hidden: false };
+}
+
+const currentItemType = options.itemTypes[options.itemTypeName];
+const isPolymorphic = currentItemType.implementation_type === 'polymorphic';
+
+const hidden =
+	isPolymorphic &&
+	(options.selectedRowsIds.length > 1 ||
+	options.rows.get(options.rowId, 'itemtype') !== additionalData.itemTypeId);
+
+const canExecute = aras.canInvokeActionImpl(additionalData.canExecuteMethodName, additionalData.location);
+return { disabled: !canExecute, hidden };
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_init_action_menu_popup</name>
+ </Item>
+</AML>

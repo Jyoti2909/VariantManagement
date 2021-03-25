@@ -1,0 +1,83 @@
+﻿<AML>
+ <Item type="Method" id="7DC85B0668134E949B9212D7CE199265" action="add">
+  <comments>Calls the SQL code for updating a schedule on the server</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA['inDom format:
+'<Item type='Method' action='server_update_schedule'><body project_id='project_id_value'/></Item>
+
+Dim inn As Innovator = Me.getInnovator()
+
+Dim body As XmlElement = CType(Me.dom.selectSingleNode("//Item[@type='Method']/body"), XmlElement)
+Dim id As String = ""
+If Not IsNothing(body) Then id = body.getAttribute("project_id")
+If id = "" Then Return inn.newError("No project id is specified.")
+
+'+++ permissions check +++
+Dim typeID As String = ""
+Dim q As Item = Me.newItem("ItemType", "get")
+q.setAttribute("select", "id")
+q.setProperty("name", "Project")
+Dim r As Item = q.apply()
+If r.getItemCount() < 1 Then
+	Return inn.newError("Cannot find Project Item Type.")
+Else
+	typeID = r.getItemByIndex(0).getID()
+End If
+
+Dim tmpResponseDom As New XmlDocument()
+If Not CCO.Permissions.GetPermissions(id, typeID, "can_update", tmpResponseDom) Then _
+	Return inn.newError("Insufficient permissions to update Project item.")
+'--- permissions check ---
+
+Dim tzName As String = CCO.Utilities.GetVarValue("CorporateTimeZone", "")
+If tzName = "" Then _
+	Return inn.newError("CorporateTimeZone Variable is not set.")
+
+Dim callframe As Item = Me.newItem("SQL", "SQL PROCESS")
+
+Dim spName As String
+spName = "update_schedule"
+
+Dim logFileName as String, toLog as String
+Dim currTime as Date
+Dim isLogging as Boolean = false
+Dim isForSqlDebug as Boolean = false
+If isLogging Then
+  currTime = Date.Now
+  logFileName = spName
+  logFileName = logFileName  + "_" + CStr(currTime.Year) + "-" +  CStr(currTime.Month).PadLeft(2, "0"c)
+  logFileName = logFileName + "-" + CStr(currTime.Day).PadLeft(2, "0"c) + "_" +  CStr(currTime.Hour).PadLeft(2, "0"c)
+  logFileName = logFileName + "-" + CStr(currTime.Minute).PadLeft(2, "0"c) + "-" +  CStr(currTime.Second).PadLeft(2, "0"c)
+End If
+
+callframe.setproperty("name", spName)
+callframe.setproperty("PROCESS","CALL")
+callframe.setproperty("ARG1", id)
+callframe.setproperty("ARG2", tzName)
+callframe.setproperty("ARG3", CStr(IIf(isForSqlDebug, "1", "0")) )
+
+Dim spStartTicks As Long, spEndTicks As Long, spDurationTicks as Long
+spStartTicks = Date.Now.Ticks
+
+Dim resultframe As Item = callframe.apply()
+If resultframe.isError() Then Return(resultframe)
+
+If isLogging Then
+  spEndTicks = Date.Now.Ticks
+  spDurationTicks = spEndTicks - spStartTicks
+  Dim spDurationDbl as Double = 1.0E-07 * Cdbl(spDurationTicks)
+  toLog = "project_id=" + CStr(id) + " StoredProcedure '" + spName + "' exec time=" + spDurationDbl.ToString() + " sec"
+  Dim ccoUtilities as Aras.Server.Core.Utilities
+  ccoUtilities = CCO.Utilities
+  ccoUtilities.WriteDebug(logFileName, toLog)
+End If
+
+Dim result_text As String = resultframe.getproperty("result_text")
+If result_text <> "SUCCESS" Then _
+	Return inn.newError("Method server_update_schedule failed: " + result_text)
+
+Return inn.newResult("SUCCESS")]]></method_code>
+  <method_type>VB</method_type>
+  <name>server_update_schedule</name>
+ </Item>
+</AML>

@@ -1,0 +1,56 @@
+﻿<AML>
+ <Item type="Method" id="4755964ED4DB4589AA27DFFFF499E49B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const relationships = {
+	'GAG_GECO ChangeControlled': 'F9A7218614034CF6A716DD0824A8ACB9',
+	'GAG_GECO CADDesigner': 'FF33AE01FC9948378AB434EF335BF791',
+	'GAG_GECO DevReleaseApprover': 'B5D2F3DA66AC4EBDB6685840E738D2DA',
+	'GAG_GECO IntReviewApprover': '63BDAD1A6DBC4CA3A414E9884AF18DCB',
+	'GAG_GECO ExtReviewApprover': 'C7B37A81386F4427A32354769933DC07',
+	'GAG_GECO TechReviewApprover': '2A623E0829304D35A3BBF73EA027ACEE'
+};
+
+const tabsForClassification = getTabsForClassification();
+const selectedClassification = document.thisItem.getProperty("classification");
+const tabsToShow = tabsForClassification[selectedClassification];
+aras.evalMethod('GAG_SetTabsVisibility', '', { tabsVisibility: tabsToShow });
+return this;
+
+function getTabsForClassification() {
+	return {
+		undefined: getTabsIdsByNames([ 'GAG_GECO ChangeControlled' ]),
+		'Pre-Release & Change/CAD Document': getTabsIdsByNames([
+			'GAG_GECO ChangeControlled',
+			'GAG_GECO CADDesigner',
+			'GAG_GECO DevReleaseApprover'
+		]),
+		'Release & Change/CAD Document': getTabsIdsByNames([
+			'GAG_GECO ChangeControlled',
+			'GAG_GECO CADDesigner',
+			'GAG_GECO DevReleaseApprover',
+			'GAG_GECO TechReviewApprover'
+		]),
+		'Pre-Release & Change/Mechanical Part': getTabsIdsByNames([
+			'GAG_GECO ChangeControlled'
+		]),
+		'Release & Change/Mechanical Part': getTabsIdsByNames([
+			'GAG_GECO ChangeControlled',
+			'GAG_GECO ExtReviewApprover',
+			'GAG_GECO IntReviewApprover'
+		])
+	};
+}
+
+function getTabsIdsByNames(relationshipNames) {
+	return Object.keys(relationships)
+		.map(function (relationshipName) {
+			return {
+				id: relationships[relationshipName],
+				isVisible: relationshipNames.indexOf(relationshipName) !== -1
+			};
+		});
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_ChangeGECOTabVisibility</name>
+ </Item>
+</AML>

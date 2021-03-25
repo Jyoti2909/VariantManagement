@@ -1,0 +1,98 @@
+﻿<AML>
+ <Item type="Method" id="729B98C6EEFA42E78ABA81D7E722B839" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string templateID = this.getAttribute("id");
+if (String.IsNullOrEmpty(templateID))
+{
+  return this.getInnovator().newError("id attribute is empty.");
+}
+Item q = this.newItem();
+Item r, r2, r3;
+int i;
+string s = "<Item type='ItemType' action='get' select='name'><history_template>{0}</history_template></Item>";
+q.loadAML(String.Format(CultureInfo.InvariantCulture, s, System.Security.SecurityElement.Escape(templateID)));
+r = q.apply();
+s = ""+
+"<Item type='ItemType' action='get' select='name'>"+
+  "<Relationships>"+
+    "<Item type='ItemType Life Cycle' action='get' select='related_id'>"+
+      "<related_id>"+
+        "<Item type='Life Cycle Map' action='get' select='name'>"+
+          "<Relationships>"+
+            "<Item type='Life Cycle State' action='get' select='name'>"+
+              "<history_template>{0}</history_template>"+
+            "</Item>"+
+          "</Relationships>"+
+        "</Item>"+
+      "</related_id>"+
+    "</Item>"+
+  "</Relationships>"+
+"</Item>";
+q = this.newItem();
+q.loadAML(String.Format(CultureInfo.InvariantCulture, s, System.Security.SecurityElement.Escape(templateID)));
+r2 = q.apply();
+XmlElement pNd = null;
+if (r.getItemCount()<1)
+{
+  r = r2;
+}
+else
+{
+  for (i=0; i<r.getItemCount(); i++)
+  {
+    q = r.getItemByIndex(i);
+    q.setProperty("name", q.getProperty("name")+" (as default template)");
+    q.setAttribute("id", this.getInnovator().getNewID());//just cos Conf. Grid feature (it does not display one of two items with the same ID).
+  }  
+  pNd = (XmlElement) r.getItemByIndex(0).node.ParentNode;
+  for (i=0; i<r2.getItemCount(); i++)
+  {
+    pNd.AppendChild(pNd.OwnerDocument.ImportNode(r2.getItemByIndex(i).node, true));
+  }
+}
+s = ""+
+"<Item type='Life Cycle Map' action='get' select='name'>"+
+  "<id condition='not in'>SELECT related_id FROM [ItemType_Life_Cycle]</id>"+
+  "<Relationships>"+
+    "<Item type='Life Cycle State' action='get' select='name'>"+
+      "<history_template>{0}</history_template>"+
+    "</Item>"+
+  "</Relationships>"+
+"</Item>";
+q = this.newItem();
+q.loadAML(String.Format(CultureInfo.InvariantCulture, s, System.Security.SecurityElement.Escape(templateID)));
+r3 = q.apply();
+if (r3.getItemCount()>0)
+{
+  if (pNd == null)
+  {
+    if (r.getItemCount()<1)
+    {
+      s = r3.dom.OuterXml;
+      s = s.Substring(0, s.IndexOf("<Item"))+s.Substring(s.LastIndexOf("</Item>")+7);
+      r.loadAML(s);
+      pNd = (XmlElement) r.dom.DocumentElement.SelectSingleNode("//*[not(*)]");
+    }
+    else
+    {
+      pNd = (XmlElement) r.getItemByIndex(0).node.ParentNode;
+    }
+  }
+  for (i=0; i<r3.getItemCount(); i++)
+  {
+    q = this.newItem();
+    q.setType("ItemType");
+    q.setNewID();
+    Item lifeCycleItem = this.newItem();
+    lifeCycleItem.setType("ItemType Life Cycle");
+    lifeCycleItem.setNewID();
+    lifeCycleItem.setRelatedItem(r3.getItemByIndex(i));
+    q.addRelationship(lifeCycleItem);
+    pNd.AppendChild(pNd.OwnerDocument.ImportNode(q.node, true));
+  }
+}
+return r;]]></method_code>
+  <method_type>C#</method_type>
+  <name>History_whereTemplateUsed</name>
+ </Item>
+</AML>

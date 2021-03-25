@@ -1,0 +1,127 @@
+﻿<AML>
+ <Item type="Method" id="3BC981F5A8C944AD8521A50D39CB7B99" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	Dictionary<string, ConditionalDataTypeValidationContext> conditionalDataTypes = new Dictionary<string, ConditionalDataTypeValidationContext>
+	{
+		{"list", new ConditionalDataTypeValidationContext("list_id", "effs_variableListReferenceIsAbsent", "effs_variableListReferenceMustAbsent") },
+		{"item", new ConditionalDataTypeValidationContext("itemtype_id", "effs_variableItemReferenceIsAbsent", "effs_variableItemReferenceMustAbsent") }
+	};
+
+	Item validationResult = ValidateConditionalDataTypes(CCO.ErrorLookup, this, conditionalDataTypes);
+	if (validationResult.isError())
+	{
+		return validationResult;
+	}
+
+	//This method could be called from the another one, that is set on the 'beforeUpdate' event to validate prior data type of an item
+	string priorVariableItemDataType = Convert.ToString(RequestState["before_update$prior_variable_type"], CultureInfo.InvariantCulture);
+	validationResult = ValidateOnBeforeUpdatePriorDataType(CCO.ErrorLookup, this, conditionalDataTypes, priorVariableItemDataType);
+
+	return validationResult;
+}
+
+/// <summary>
+/// The item, that is being added, may have one of the conditional data types (e.g., 'list', 'item' etc.). If so, then it's required that
+/// the corresponding conditional item property (e.g., 'list_id', 'itemtype_id' etc.) to be provided with a value, while the rest possible
+/// conditional item properties must not have value. This method performs such validations
+/// </summary>
+/// <param name="errorLookup"></param>
+/// <param name="item"></param>
+/// <param name="conditionalDataTypes"></param>
+/// <returns></returns>
+private static Item ValidateConditionalDataTypes(
+	Aras.Server.Core.ErrorLookup errorLookup,
+	Item item,
+	Dictionary<string, ConditionalDataTypeValidationContext> conditionalDataTypes)
+{
+	//By the definition, the property "variable_type" is required and so it's expected here
+	string variableItemDataType = item.getProperty("variable_type");
+
+	ConditionalDataTypeValidationContext variableDataTypeValidationContext;
+	if (conditionalDataTypes.TryGetValue(variableItemDataType, out variableDataTypeValidationContext))
+	{
+		string conditionalPropertyValue = item.getProperty(variableDataTypeValidationContext.ItemPropertyName);
+		if (string.IsNullOrEmpty(conditionalPropertyValue))
+		{
+			return item.getInnovator().newError(errorLookup.Lookup(variableDataTypeValidationContext.ItemPropertyRequiredValueIsAbsentUserMessageName));
+		}
+	}
+
+	IEnumerable<KeyValuePair<string, ConditionalDataTypeValidationContext>> restConditionalDataTypes =
+															conditionalDataTypes.Where(dt => !dt.Key.Equals(variableItemDataType, StringComparison.Ordinal));
+
+	foreach (KeyValuePair<string, ConditionalDataTypeValidationContext> kvp in restConditionalDataTypes)
+	{
+		ConditionalDataTypeValidationContext conditionalDataTypeValidationContext = kvp.Value;
+		string conditionalPropertyValue = item.getProperty(conditionalDataTypeValidationContext.ItemPropertyName);
+		if (!string.IsNullOrEmpty(conditionalPropertyValue))
+		{
+			return item.getInnovator().newError(errorLookup.Lookup(conditionalDataTypeValidationContext.ItemPropertyValueMustBeAbsentUserMessageName));
+		}
+	}
+
+	return item;
+}
+
+/// <summary>
+/// When an item is being updated, then there is a possible case that conditional data type (e.g., 'list', 'item') could be changed
+/// to either non-conditional one (e.g., 'date', 'string', 'integer' etc.) or another conditional one. When such happens, it's needed to
+/// set the value 'null' into the item property of the prior conditional data type ('list_id' / 'itemtype_id') in order to keep the item
+/// in consistent state with the new data type. This method performs validation, that a conditional item property gets the needed value
+/// 'null', when it's required
+/// </summary>
+/// <param name="errorLookup"></param>
+/// <param name="item"></param>
+/// <param name="conditionalDataTypes"></param>
+/// <param name="priorVariableItemDataType"></param>
+/// <returns></returns>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Performance", "CA1820:TestForEmptyStringsUsingStringLength",
+Justification = "It's required to check exactly against an empty string, excluding a possible null value. That's because" +
+"it's possible to reset value in a DB by either an empty property value or use of the attribute is_null='1'. The intention" +
+"is to check an empty property value here")]
+private static Item ValidateOnBeforeUpdatePriorDataType(
+	Aras.Server.Core.ErrorLookup errorLookup,
+	Item item,
+	Dictionary<string, ConditionalDataTypeValidationContext> conditionalDataTypes,
+	string priorVariableItemDataType)
+{
+	if (string.IsNullOrEmpty(priorVariableItemDataType))
+	{
+		return item;
+	}
+
+	ConditionalDataTypeValidationContext priorVariableDataTypeValidationContext;
+	if (conditionalDataTypes.TryGetValue(priorVariableItemDataType, out priorVariableDataTypeValidationContext))
+	{
+		string conditionalItemPropertyName = priorVariableDataTypeValidationContext.ItemPropertyName;
+
+		string conditionalPropertyValue = item.getProperty(conditionalItemPropertyName);
+		string conditionalPropertyIsNullAttributeValue = item.getPropertyAttribute(conditionalItemPropertyName, "is_null");
+		if (!string.Empty.Equals(conditionalPropertyValue, StringComparison.Ordinal) && !"1".Equals(conditionalPropertyIsNullAttributeValue, StringComparison.Ordinal))
+		{
+			return item.getInnovator().newError(errorLookup.Lookup(priorVariableDataTypeValidationContext.ItemPropertyValueMustBeAbsentUserMessageName));
+		}
+	}
+
+	return item;
+}
+
+private class ConditionalDataTypeValidationContext
+{
+	internal string ItemPropertyName { get; private set; }
+	internal string ItemPropertyRequiredValueIsAbsentUserMessageName { get; private set; }
+	internal string ItemPropertyValueMustBeAbsentUserMessageName { get; private set; }
+
+	internal ConditionalDataTypeValidationContext(
+		string itemPropertyName,
+		string itemPropertyRequiredValueIsAbsentUserMessageName,
+		string itemPropertyValueMustBeAbsentUserMessageName)
+	{
+		this.ItemPropertyName = itemPropertyName;
+		this.ItemPropertyRequiredValueIsAbsentUserMessageName = itemPropertyRequiredValueIsAbsentUserMessageName;
+		this.ItemPropertyValueMustBeAbsentUserMessageName = itemPropertyValueMustBeAbsentUserMessageName;
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>effs_beforeAddVariableTypeChecks</name>
+ </Item>
+</AML>

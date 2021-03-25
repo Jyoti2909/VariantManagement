@@ -1,0 +1,337 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.OAuth.Model</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.OAuth.Model.TokenValidationInfo">
+            <summary>
+            Information about token validation.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.BearerToken">
+            <summary>
+            Used to bulid authorization header value with token
+            and to parse token from the header value.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Model.BearerToken.Parse(System.String)">
+            <summary>Parse token from authorization header value.</summary>
+            <param name="value">Authorization header value.</param>
+            <returns>Token.</returns>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="value" /> is null or empty, does not start from "Bearer " or parsed token is empty.
+            </exception>
+        </member>
+        <member name="M:Aras.OAuth.Model.BearerToken.TryParse(System.String,System.String@)">
+            <summary>Parse token from authorization header value. A return value indicates whether the parsing succeeded.</summary>
+            <param name="value">Authorization header value.</param>
+            <param name="token">Contains token parsed from <paramref name="value" />, if the parsing succeeded, or empty string if the parsing failed.</param>
+            <returns>True if <paramref name="value" /> was parsed successfully; otherwise, false.</returns>
+        </member>
+        <member name="M:Aras.OAuth.Model.BearerToken.Build(System.String)">
+            <summary>Bulid authorization header value with token.</summary>
+            <param name="token">Bearer token.</param>
+            <returns>Authorization header value.</returns>
+            <exception cref="T:System.ArgumentException">
+            <paramref name="token" /> is null or empty.
+            </exception>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants">
+            <summary>
+            Constants
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants.GrantTypes">
+            <summary>
+            Grant types
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.GrantTypes.Impersonate">
+            <summary>
+            Impersonate
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants.Request">
+            <summary>
+            Request constants
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.Request.Database">
+            <summary>
+            Database
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.Request.AuthenticationType">
+            <summary>
+            Authentication type
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants.Claims">
+            <summary>
+            Claims
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.Claims.UserName">
+            <summary>
+            User claim
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.Claims.Database">
+            <summary>
+            Database claim
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants.Scopes">
+            <summary>
+            Scopes
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.Scopes.Innovator">
+            <summary>
+            Standard `Innovator` scope
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants.Scopes.InnovatorServer">
+            <summary>
+            `Innovator/Server` scopes
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.Scopes.InnovatorServer.Authenticate">
+            <summary>
+            Used to protect requests of `OAuthServer` to the `Innovator/Authenticate` endpoind
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.Scopes.OfflineAccess">
+            <summary>
+            Used to getting refresh token
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties">
+            <summary>
+            Discovery document properties
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.Issuer">
+            <summary>
+            Issuer
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.JwksUri">
+            <summary>
+            Jwks uri
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.AuthorizationEndpoint">
+            <summary>
+            Authorization endpoint
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.TokenEndpoint">
+            <summary>
+            Token endpoint
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.EndSessionEndpoint">
+            <summary>
+            End session endpoint
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.ProtocolVersion">
+            <summary>
+            Protocol version
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.ProtocolInfo">
+            <summary>
+            Protocol info
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.ProtocolInfoProperties">
+            <summary>
+            Protocol info properties
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.ProtocolInfoProperties.ProtocolType">
+            <summary>
+            ProtocolType is used to distinguish between standard and custom headers
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.ProtocolInfoProperties.AuthorizationHeader">
+            <summary>
+            Authorization header name
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.ProtocolInfoProperties.WwwAuthenticateHeader">
+            <summary>
+            WWW-Authenticate header name
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.DiscoveryDocumentProperties.ProtocolInfoProperties.UnauthorizedStatusCode">
+            <summary>
+            Unauthorized status code
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants.ProtocolRoutePaths">
+            <summary>
+            Protocol route paths
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.ProtocolRoutePaths.DiscoveryConfiguration">
+            <summary>
+            Discovery configuration
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.ProtocolRoutePaths.Jwks">
+            <summary>
+            Jwks
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.ProtocolRoutePaths.Authorize">
+            <summary>
+            Authorize
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.ProtocolRoutePaths.Token">
+            <summary>
+            Token
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.ProtocolRoutePaths.EndSession">
+            <summary>
+            End session
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Constants.AudiencePath">
+            <summary>
+            Intended recipient of the token
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.AudiencePath.Resources">
+            <summary>
+            Used to protect requests from `OAuthServer` to the `Innovator/Authenticate` endpoint
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.AudiencePath.TokenConnect">
+            <summary>
+            Used to provide assertion of jwt-bearer type for `OAuthServer`
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.Constants.PromptModes.Silent">
+            <summary>
+            Silent prompt mode.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Model.Exceptions.OAuthServerException">
+            <summary>
+            Represents errors that occur when OAuthServer has exception.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Model.Exceptions.OAuthServerException.ErrorCode">
+            <summary>
+            Gets error code.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Model.Exceptions.OAuthServerException.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.OAuth.Model.Exceptions.OAuthServerException"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Model.Exceptions.OAuthServerException.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.OAuth.Model.Exceptions.OAuthServerException"/> class
+            with <paramref name="message"/> .
+            </summary>
+            <param name="message">The error message that explains the exception description.</param>
+        </member>
+        <member name="M:Aras.OAuth.Model.Exceptions.OAuthServerException.#ctor(System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.OAuth.Model.Exceptions.OAuthServerException"/> class
+            with <paramref name="message"/> and <paramref name="exception"/>.
+            </summary>
+            <param name="message">The error message that explains the exception description.</param>
+            <param name="exception">The exception that is the cause of the current exception.</param>
+        </member>
+        <member name="M:Aras.OAuth.Model.Exceptions.OAuthServerException.#ctor(System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.OAuth.Model.Exceptions.OAuthServerException"/> class
+            with <paramref name="errorCode"/> and <paramref name="message"/>.
+            </summary>
+            <param name="errorCode">The error code that explains the reason for the exception.</param>
+            <param name="message">The error message that explains the exception description.</param>
+        </member>
+        <member name="M:Aras.OAuth.Model.Exceptions.OAuthServerException.#ctor(System.String,System.String,System.Exception)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.OAuth.Model.Exceptions.OAuthServerException"/> class
+            with <paramref name="errorCode"/>, <paramref name="message"/> and <paramref name="exception"/>.
+            </summary>
+            <param name="errorCode">The error code that explains the reason for the exception.</param>
+            <param name="message">The error message that explains the exception description.</param>
+            <param name="exception">The exception that is the cause of the current exception.</param>
+        </member>
+        <member name="T:Aras.OAuth.Model.ProtocolInfo">
+            <summary>
+            Used to store information about authentication protocol.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Model.ProtocolInfo.ProtocolType">
+            <summary>
+            Get protocol type information.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Model.ProtocolInfo.AuthorizationHeader">
+            <summary>
+            Gets Authorization header name.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Model.ProtocolInfo.WwwAuthenticateHeader">
+            <summary>
+            Gets WWW-Authenticate header name.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Model.ProtocolInfo.UnauthorizedStatusCode">
+            <summary>
+            Gets Unauthorized status code.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Model.ProtocolInfo.Standard">
+            <summary>
+            Gets standard protocol information.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Model.ProtocolInfo.Custom">
+            <summary>
+            Gets custom protocol information.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Model.ProtocolInfo.CreateStandard">
+            <summary>
+            Creates standard protocol info.
+            </summary>
+            <returns>Standard protocol info.</returns>
+        </member>
+        <member name="M:Aras.OAuth.Model.ProtocolInfo.CreateCustom">
+            <summary>
+            Creates custom protocol info.
+            </summary>
+            <returns>Custom protocol info.</returns>
+        </member>
+        <member name="M:Aras.OAuth.Model.ProtocolInfo.Get(Aras.OAuth.Model.ProtocolType)">
+            <summary>
+            Creates specified protocol info.
+            </summary>
+            <param name="type">Protocol type.</param>
+            <returns>Specifed protocol info.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Model.ProtocolType">
+            <summary>
+            ProtocolType is used to distinguish between standard and custom headers.
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Model.ProtocolType.Custom">
+            <summary>
+            Custom headers are necessary to support Windows authentification.
+            </summary>
+        </member>
+    </members>
+</doc>

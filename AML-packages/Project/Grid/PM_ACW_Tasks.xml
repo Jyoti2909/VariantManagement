@@ -1,0 +1,108 @@
+﻿<AML>
+ <Item type="Grid" id="32D3BF03B8FE426CBE8DCBE9BA667F58" action="add">
+  <merge_path>Relationships</merge_path>
+  <method keyed_name="PM_ACW_cfgTasksGridOnLoad" type="Method">54E27AB24F954F80AED67D3EB23B0649</method>
+  <query><![CDATA[<Item type="Activity2 Task" action="get" select="sort_order,is_required,description,percent_compl,due_date,comments">
+  <source_id>{id}</source_id>
+</Item>]]></query>
+  <name>PM_ACW_Tasks</name>
+  <Relationships>
+   <Item type="Grid Column" id="B413F8023B274A3BBC921C36F7EC4159" action="add">
+    <align>center</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Verified</label>
+    <property>fake_verified</property>
+    <sort_order>100</sort_order>
+    <source_id keyed_name="PM_ACW_Tasks" type="Grid">32D3BF03B8FE426CBE8DCBE9BA667F58</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>60</width>
+    <xpath>self::Item[@type="Activity2 Task"]</xpath>
+    <Relationships>
+     <Item type="Column Event" id="70887E1D2F8C4395A91E9434FCB66C34" action="add">
+      <grid_event>onchangecell</grid_event>
+      <related_id keyed_name="PM_ACW_cfgTasksGridSyncPCandVrfd" type="Method">
+       <Item type="Method" action="get" select="id">
+        <name>PM_ACW_cfgTasksGridSyncPCandVrfd</name>
+       </Item>
+      </related_id>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="B413F8023B274A3BBC921C36F7EC4159" type="Grid Column">B413F8023B274A3BBC921C36F7EC4159</source_id>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="Grid Column" id="96092A5767FF4EF2BEB8CEB2BDD74A1C" action="add">
+    <align>center</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Rqd</label>
+    <property>is_required</property>
+    <sort_order>200</sort_order>
+    <source_id keyed_name="PM_ACW_Tasks" type="Grid">32D3BF03B8FE426CBE8DCBE9BA667F58</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>40</width>
+    <xpath>self::Item[@type="Activity2 Task"]</xpath>
+   </Item>
+   <Item type="Grid Column" id="83812ABA60284C1C9ECE0A1CE7398EAC" action="add">
+    <align>left</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Description</label>
+    <property>description</property>
+    <sort_order>300</sort_order>
+    <source_id keyed_name="PM_ACW_Tasks" type="Grid">32D3BF03B8FE426CBE8DCBE9BA667F58</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>270</width>
+    <xpath>self::Item[@type="Activity2 Task"]</xpath>
+   </Item>
+   <Item type="Grid Column" id="43C15EF590184283B02F409B358892F8" action="add">
+    <align>left</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">% Compl</label>
+    <property>percent_compl</property>
+    <sort_order>400</sort_order>
+    <source_id keyed_name="PM_ACW_Tasks" type="Grid">32D3BF03B8FE426CBE8DCBE9BA667F58</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>100</width>
+    <xpath>self::Item[@type="Activity2 Task"]</xpath>
+    <Relationships>
+     <Item type="Column Event" id="2F08D83596724F438EB6A18138A9EF48" action="add">
+      <grid_event>onchangecell</grid_event>
+      <related_id keyed_name="PM_ACW_cfgTasksGridSyncPCandVrfd" type="Method">
+       <Item type="Method" action="get" select="id">
+        <name>PM_ACW_cfgTasksGridSyncPCandVrfd</name>
+       </Item>
+      </related_id>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="43C15EF590184283B02F409B358892F8" type="Grid Column">43C15EF590184283B02F409B358892F8</source_id>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="Grid Column" id="7829F927F2CA4CE3956033243E7922C6" action="add">
+    <align>left</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Due Date</label>
+    <property>due_date</property>
+    <sort_order>500</sort_order>
+    <source_id keyed_name="PM_ACW_Tasks" type="Grid">32D3BF03B8FE426CBE8DCBE9BA667F58</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>100</width>
+    <xpath>self::Item[@type="Activity2 Task"]</xpath>
+   </Item>
+   <Item type="Grid Column" id="BD852F3A7ABA44DBA3270FDAF150EBC3" action="add">
+    <align>left</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Comments</label>
+    <property>comments</property>
+    <sort_order>600</sort_order>
+    <source_id keyed_name="PM_ACW_Tasks" type="Grid">32D3BF03B8FE426CBE8DCBE9BA667F58</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>250</width>
+    <xpath>self::Item[@type="Activity2 Task"]</xpath>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

@@ -1,0 +1,17 @@
+﻿<AML>
+ <Item type="Method" id="4E827B74630D4DFC95E6BAA6B7224686" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var item = this.newItem();
+string name = this.getProperty("name");
+if (name.StartsWith("Copy of", StringComparison.Ordinal)) {
+	this.setAction("edit");
+	this.setProperty("name", name.Replace(" ", "_"));
+	item = this.apply();
+} else {
+	return this;
+}
+return item;]]></method_code>
+  <method_type>C#</method_type>
+  <name>mp_OnAfterCopyEnvAttribute</name>
+ </Item>
+</AML>

@@ -1,0 +1,111 @@
+﻿<AML>
+ <Item type="Form" id="BCE97B63978B45E485C296ABD3D53EE6" action="add">
+  <category_form>0</category_form>
+  <description>Used as pop-up in Inactive Accounts report</description>
+  <height>150</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>200</width>
+  <name>Core_GetPeriodOfInactivity</name>
+  <Relationships>
+   <Item type="Body" id="BD1CBEBFB81D49B4802249BFB09C33CC" action="add">
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Core_GetPeriodOfInactivity" type="Form">BCE97B63978B45E485C296ABD3D53EE6</source_id>
+    <Relationships>
+     <Item type="Field" id="192BF679370C412AA21A2DAA18EC5B86" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<script>
+var inputId = "inactivity_duration";
+
+function onInputKeyPress()
+{
+  var kCd = window.event ? window.event.keyCode : event.keyCode;
+  if (kCd==13) exitThisModalDialog(true);
+}
+
+function exitThisModalDialog(doReturnDuration)
+{
+  var doClose = true;
+  if (doReturnDuration)
+  {
+    var ipt = document.getElementById(inputId);
+    var v = ipt.value;
+    v = parseInt(v);
+    if (!v || v<1)
+    {
+      alert(aras.getResource("", "imports_core.input_int_as_duration_warning"));
+      ipt.focus();
+      doClose = false;
+    }
+    else
+    {
+      returnValue = v;
+    }
+  }
+  else
+  {
+    returnValue = false;
+  }
+  
+  if (doClose) window.parent.close();
+}
+</script>
+<table height="100%" cellspacing="0" cellpadding="0" border="0" style="width:expression(document.body.clientWidth);">
+  <tr>
+    <td align="center">
+      <span id="imports_core.inactivity_duration_days_lbl"></span>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <input id="inactivity_duration" onkeyup="onInputKeyPress();"><BR><BR>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+    <input type="button" id="common.ok" class="btn" onclick="exitThisModalDialog(true);">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+<input type="button" id="common.cancel" class="btn cancel_button" onclick="exitThisModalDialog(false);">
+      </td>
+  </tr>
+</table>
+<script>var arr = new Array("imports_core.inactivity_duration_days_lbl", "common.cancel", "common.ok");
+for (var i = 0; i < arr.length; i++)
+{
+  var s = aras.getResource("", arr[i]);
+  var obj = document.getElementById(arr[i]);
+  if (i == 0 ) obj.innerHTML = s;
+  else obj.value = s;
+}
+</script>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>256</sort_order>
+      <source_id keyed_name="BD1CBEBFB81D49B4802249BFB09C33CC" type="Body">BD1CBEBFB81D49B4802249BFB09C33CC</source_id>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>0</y>
+      <name>html3</name>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="Form Event" id="6E633ED78C1C4D7C91CF8C060F699C32" action="add">
+    <form_event>onload</form_event>
+    <related_id keyed_name="Core_GetPerionOfInactivityOnload" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>Core_GetPerionOfInactivityOnload</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Core_GetPeriodOfInactivity" type="Form">BCE97B63978B45E485C296ABD3D53EE6</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

@@ -1,0 +1,70 @@
+﻿<AML>
+ <Item type="Method" id="00D333EEFAF545CB801F587FFA580B45" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//The filterConfig below can be modified to add custom logic for filtering.
+//For example, adding code line below
+//    {"Project Managers", new []{"Engeneers","QA Engeneers"}}
+//will allow "Project Managers" users to see the tasks assigned to the users both from "Engeneers" and "QA Engeneers" identities.
+Dictionary<string, string[]> filterConfig = new Dictionary<string, string[]>(){
+{"Administrators", new []{"World"}}
+//{"who identity", new []{"whom","whom2" ...}},	
+// ...
+};
+
+Aras.Server.Core.InnovatorDatabase conn = CCO.Variables.InnDatabase;
+string identityList = Aras.Server.Security.Permissions.Current.IdentitiesList;
+Aras.Server.Security.Identity world = Aras.Server.Security.Identity.GetByName("World");
+Dictionary<string, string[]> filterConfigIds = new Dictionary<string, string[]>();
+
+foreach (var whoIdentity in filterConfig)
+{
+	Aras.Server.Security.Identity who = Aras.Server.Security.Identity.GetByName(whoIdentity.Key);
+	if (who == null)
+	{
+		throw new ArgumentOutOfRangeException("Identity not found, name=" + whoIdentity.Key);
+	}
+
+	if (whoIdentity.Value.FirstOrDefault(tmpName => tmpName.ToLowerInvariant() == "world") != null)
+	{
+		filterConfigIds.Add(who.Id, new[] { world.Id });
+		continue;
+	}
+
+	var whomidentityIds = whoIdentity.Value.Select(nameIdentity => Aras.Server.Security.Identity.GetByName(nameIdentity).Id).ToArray();
+	string[] listChildIdentityForWhomIdentityList = Enumerable.Union(whomidentityIds, Aras.Server.Security.Permissions.GetDescendantIdentityIds(conn, whomidentityIds)).ToArray();
+
+	filterConfigIds.Add(who.Id, listChildIdentityForWhomIdentityList);
+}
+
+var newConditions = new List<string>();
+foreach (var whoIdentity in filterConfigIds)
+{
+	if (identityList.IndexOf(whoIdentity.Key, System.StringComparison.Ordinal) < 0) continue;
+	string tmpList = string.Join(",", whoIdentity.Value);
+	if (tmpList.IndexOf(world.Id, System.StringComparison.Ordinal) != -1)
+	{
+		newConditions = null;
+		break;
+	}
+	newConditions.Add(tmpList);
+}
+
+//if world not allowed
+if (newConditions != null)
+{
+	XmlNode filterOr = this.newOR().node;
+	newConditions.Add(identityList);//condition to see only own tasks
+	foreach (string condition in newConditions)
+	{
+		XmlElement nd = this.dom.DocumentElement.OwnerDocument.CreateElement("assigned_to");
+		nd.SetAttribute("condition", "in");
+		nd.InnerText = condition;
+		filterOr.AppendChild(nd);
+	}
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Task BeforeGet FilterByAssigned</name>
+ </Item>
+</AML>

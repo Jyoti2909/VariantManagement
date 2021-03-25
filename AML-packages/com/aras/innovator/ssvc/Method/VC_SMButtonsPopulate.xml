@@ -1,0 +1,49 @@
+﻿<AML>
+ <Item type="Method" id="016E364449704E09956DAA968D1C3DDB" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var isRelship = aras.getItemProperty(document.item, 'is_relationship') == '1';
+var implementationType = aras.getItemProperty(document.item, 'implementation_type');
+var isPolymorphicOrFederated = implementationType == 'polymorphic' || implementationType == 'federated';
+var isFileIT = aras.getItemProperty(document.item, 'name') == 'File';
+var isNew = window.aras.isNew(document.item);
+var isLicenseOk = aras.commonProperties.IsSSVCLicenseOk;
+
+if (!isRelship && !isPolymorphicOrFederated && !isFileIT && !isNew && isLicenseOk) {
+	var itemTypeId = document.item ? document.item.getAttribute('id') : inArgs.itemTypeId;
+	var itm = aras.newIOMItem('DiscussionTemplate', 'get');
+	itm.setAttribute('select', 'id');
+	itm.setProperty('source_id', itemTypeId);
+	itm = itm.apply();
+}
+
+var isDisable = !document.isEditMode || isRelship || isNew || isPolymorphicOrFederated || isFileIT;
+setButtonStyle('enable_secure_social', itm ? itm.getItemCount() === 0 : true, isDisable);
+setButtonStyle('already_ssvc_enabled', itm ? itm.getItemCount() !== 0 : false, true);
+
+function setButtonStyle(name, isDisplay, isDisable) {
+	var btn = document.getElementsByTagName('input')[name];
+	if (btn) {
+		btn.style.display = isDisplay ? '' : 'none';
+		btn.disabled = isDisable;
+		btn.style.cursor = isDisable ? 'default' : 'pointer';
+		btn.title = (isDisplay && isRelship) ? '"Is Relationship" itemtypes cannot be enabled for Secure Social' : '';
+	}
+	if (isDisplay && !isDisable) {
+		setIsRelationshipCheckboxEnabled(name != 'enable_secure_social');
+	}
+}
+
+function setIsRelationshipCheckboxEnabled(isSSEnabled) {
+	var relCheckboxId = document.fieldsTab['is_relationship'].replace('span', '');
+	var relCheckboxNode = document.getElementById(relCheckboxId);
+	if (isSSEnabled) {
+		relCheckboxNode.setAttribute('disabled', true);
+	} else {
+		relCheckboxNode.removeAttribute('disabled');
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VC_SMButtonsPopulate</name>
+ </Item>
+</AML>

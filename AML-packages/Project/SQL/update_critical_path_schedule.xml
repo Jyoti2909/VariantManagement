@@ -1,0 +1,296 @@
+﻿<AML>
+ <Item type="SQL" id="A443CADD591C4D4AB3985851D7262250" action="add">
+  <execution_count>3</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>update_critical_path_schedule</old_name>
+  <sqlserver_body><![CDATA[/*Purpose: computes project schedules using the Critical Path Method.*/
+CREATE PROCEDURE [update_critical_path_schedule](
+     @PROJECT_ID CHAR(32),
+     @TZ_NAME    NVARCHAR(50) = NULL,
+     @isForDebugFlag bit = 0
+)
+AS
+  BEGIN
+      DECLARE @WBS_ID CHAR(32)
+      DECLARE @PROJECT_START_DAY INT
+      DECLARE @PROJECT_DURATION INT
+      DECLARE @SCHEDULING_TYPE VARCHAR(64)
+
+      create table #ACTIVITIES
+        (
+           ID  CHAR(32) COLLATE database_default PRIMARY KEY,
+           E_S INT,
+           E_F INT,
+           L_S INT,
+           L_F INT
+        )
+      DECLARE @FORWARDP AS INT
+      DECLARE @PROJECT_START_SCHED DATETIME
+      DECLARE @PROJECT_DUE_SCHED DATETIME
+
+      SELECT @WBS_ID = WBS_ID,
+             @SCHEDULING_TYPE = scheduling_type
+      FROM   [PROJECT]
+      WHERE  id = @PROJECT_ID
+
+      IF @SCHEDULING_TYPE = 'Forward'
+        SET @FORWARDP = 1
+      ELSE IF @SCHEDULING_TYPE = 'Backward'
+        SET @FORWARDP = 0
+      ELSE
+        BEGIN
+            RAISERROR ( 'project.id=%s scheduling_type=%s must be Forward or Backward',16,1,@PROJECT_ID,@SCHEDULING_TYPE )
+
+            RETURN @@ERROR
+        END
+
+      INSERT #ACTIVITIES
+      SELECT *
+      FROM   Select_critical_path_schedule(@WBS_ID)
+
+      SELECT @PROJECT_START_DAY = Min(E_S),
+             @PROJECT_DURATION = ( Max(E_F) - Min(E_S) )
+      FROM   #ACTIVITIES
+
+      IF @FORWARDP = 1
+        BEGIN
+            UPDATE [PROJECT]
+            SET    DATE_START_SCHED = DATE_START_TARGET,
+                   DATE_DUE_SCHED = [innovator].Select_sched_date (DATE_DUE_TARGET, (SELECT value
+                                                                                     FROM   [innovator].[Business_dateadd](DATE_START_TARGET, @PROJECT_DURATION - 1, @TZ_NAME)), (SELECT value
+                                                                                                                                                                                  FROM   [innovator].[Business_dateadd](DATE_START_TARGET, @PROJECT_DURATION - 1, @TZ_NAME)), 1)
+            WHERE  ID = @PROJECT_ID
+        END
+      ELSE
+        BEGIN
+            UPDATE [PROJECT]
+            SET    DATE_START_SCHED = INNOVATOR.Select_sched_date ((SELECT value
+                                                                    FROM   [innovator].[Business_dateadd](DATE_DUE_TARGET, -@PROJECT_DURATION + 1, @TZ_NAME)), (SELECT value
+                                                                                                                                                                FROM   [innovator].[Business_dateadd](DATE_DUE_TARGET, -@PROJECT_DURATION + 1, @TZ_NAME)), DATE_START_TARGET, 1),
+                   DATE_DUE_SCHED = DATE_DUE_TARGET
+            WHERE  ID = @PROJECT_ID
+        END
+
+      SELECT @PROJECT_START_SCHED = DATE_START_SCHED,
+             @PROJECT_DUE_SCHED = DATE_DUE_SCHED
+      FROM   [PROJECT]
+      WHERE  ID = @PROJECT_ID
+
+      UPDATE [ACTIVITY2]
+      SET
+      -- update 'start' early/late dates
+      DATE_ES = (SELECT value
+                 FROM   [innovator].[Business_dateadd] (@PROJECT_START_SCHED, CP.E_S - @PROJECT_START_DAY - ( CASE
+                                                                                                                WHEN ACTIVITY2.EXPECTED_DURATION = 0 THEN 1
+                                                                                                                ELSE 0
+                                                                                                              END ), @TZ_NAME)),
+      DATE_LS = (SELECT value
+                 FROM   [innovator].[Business_dateadd] (@PROJECT_DUE_SCHED, CP.L_S - @PROJECT_DURATION + 1 - ( CASE
+                                                                                                                 WHEN ACTIVITY2.EXPECTED_DURATION = 0 THEN 1
+                                                                                                                 ELSE 0
+                                                                                                               END ), @TZ_NAME)),
+      -- update 'finish' early/late dates based on rule: finish=start+duration
+      DATE_EF = (SELECT value
+                 FROM   [innovator].[Business_dateadd] ((SELECT value
+                                                         FROM   [innovator].[Business_dateadd] (@PROJECT_START_SCHED, CP.E_S - @PROJECT_START_DAY - ( CASE
+                                                                                                                                                        WHEN ACTIVITY2.EXPECTED_DURATION = 0 THEN 1
+                                                                                                                                                        ELSE 0
+                                                                                                                                                      END ), @TZ_NAME)), ( CASE
+                                                                                                                                                                             WHEN ACTIVITY2.EXPECTED_DURATION = 0 THEN 0
+                                                                                                                                                                             ELSE ACTIVITY2.EXPECTED_DURATION - 1
+                                                                                                                                                                           END ), @TZ_NAME)),
+      DATE_LF = (SELECT value
+                 FROM   [innovator].[Business_dateadd] ((SELECT value
+                                                         FROM   [innovator].[Business_dateadd] (@PROJECT_DUE_SCHED, CP.L_S - @PROJECT_DURATION + 1 - ( CASE
+                                                                                                                                                         WHEN ACTIVITY2.EXPECTED_DURATION = 0 THEN 1
+                                                                                                                                                         ELSE 0
+                                                                                                                                                       END ), @TZ_NAME)), ( CASE
+                                                                                                                                                                              WHEN ACTIVITY2.EXPECTED_DURATION = 0 THEN 0
+                                                                                                                                                                              ELSE ACTIVITY2.EXPECTED_DURATION - 1
+                                                                                                                                                                            END ), @TZ_NAME)),
+      IS_CRITICAL = CASE
+                      WHEN CP.E_S = CP.L_S THEN '1'
+                      ELSE '0'
+                    END
+      FROM   #ACTIVITIES CP
+      WHERE  [ACTIVITY2].ID = CP.ID
+
+      /*==================== Update for Constraint Date ------------------------*/
+      create table #ACTIVITIES_P
+        (
+           ID CHAR(32) COLLATE database_default PRIMARY KEY,
+           S  DATETIME,
+           F  DATETIME
+        )
+      DECLARE @FLAG INT
+
+      IF @SCHEDULING_TYPE = 'Forward' -- Forward scheduling
+        SET @FLAG = 0
+      ELSE
+        SET @FLAG = 1 -- Backward scheduling
+      -- +++ need to set @@rowcount > 0
+      DECLARE @tmp TABLE
+        (
+           tmp INT
+        )
+      -- --- need to set @@rowcount > 0
+
+      create table #PREDECESSORS
+        (
+           ID         CHAR(32) COLLATE database_default PRIMARY KEY,
+           RELATED_ID CHAR(32) COLLATE database_default,
+           SOURCE_ID  CHAR(32) COLLATE database_default,
+           precedence_type_int int,
+           lead_lag   int,
+           UNIQUE (source_id, related_id),
+           UNIQUE (related_id, source_id)
+        )
+
+      create table #ACTIVITIES_IN_WORK
+        (
+           ID   CHAR(32) COLLATE database_default,
+           FLAG BIT,
+           UNIQUE (ID, FLAG)
+        )
+
+      INSERT INTO #PREDECESSORS
+      SELECT id,
+             RELATED_ID,
+             SOURCE_ID,
+             CASE 
+               WHEN precedence_type = 'Finish to Start'
+                 THEN 0
+               WHEN precedence_type = 'Start to Start'
+                 THEN 1
+               WHEN precedence_type = 'Finish to Finish'
+                 THEN 2
+               WHEN precedence_type = 'Start to Finish'
+                 THEN 3
+             END AS precedence_type_int,
+             lead_lag
+      FROM   innovator.PREDECESSOR
+      WHERE  RELATED_ID IN (SELECT ID
+                            FROM   #ACTIVITIES)
+              OR SOURCE_ID IN (SELECT ID
+                               FROM   #ACTIVITIES)
+
+      --
+      declare @existingIdQuant int
+      --
+      IF @FLAG = 0
+        BEGIN --  Forward scheduling, set planned dates ASAP ( As Soon As Possible )
+            INSERT @tmp SELECT @FLAG; -- to set @@ROWCOUNT > 0
+            INSERT INTO #ACTIVITIES_IN_WORK
+            SELECT id,
+                   1
+            FROM   innovator.ACTIVITY2
+            WHERE  id IN (SELECT id
+                          FROM   #ACTIVITIES)
+                   AND id NOT IN (SELECT source_id
+                                  FROM   #PREDECESSORS)
+            WHILE @@ROWCOUNT > 0
+              BEGIN
+                  --
+                  select @existingIdQuant = count(AW.ID) from #ACTIVITIES_IN_WORK AW
+                    INNER JOIN #ACTIVITIES_P AP ON (AW.ID = AP.ID) 
+                    WHERE AW.FLAG = 1
+                  --Logging starts
+                  declare @subRN int = 0
+                  if (1=@isForDebugFlag and exists (select * from [sys].[objects] where [name] = 'schedulingLogSp' and type='P'))
+                  begin
+                    declare @thisCallerName varchar(64),  @thisDbName varchar(64),
+                      @thisInCallPars varchar(512), @thisOutCallPars varchar(512), @thisAdditionalInfo NVARCHAR(MAX)
+                    declare @rowNum int = 0
+                    select @thisCallerName = convert(varchar(64), OBJECT_NAME(@@PROCID))
+                    select @thisDbName = convert(varchar(64), DB_NAME())
+
+                    set @rowNum = @rowNum + 1
+
+                    set @thisAdditionalInfo = '@rowN=' + convert(varchar(16), @rowNum) +
+                      ', @existingIdQuant=' + convert(varchar(16), @existingIdQuant);
+                    
+                    DECLARE actsInWorkCurs CURSOR FORWARD_ONLY for
+                      SELECT id, keyed_name, expected_duration, prev_item, proj_num
+                        FROM   innovator.ACTIVITY2
+                        WHERE  id IN (SELECT id FROM   #ACTIVITIES)
+                          AND id NOT IN (SELECT source_id FROM   #PREDECESSORS)
+                    declare @a2Id char(32), @a2Name nvarchar(64), @a2Duration int, @a2Prev char(32), @a2Proj nvarchar(32)
+                    OPEN actsInWorkCurs
+                    FETCH NEXT FROM actsInWorkCurs INTO @a2Id, @a2Name, @a2Duration, @a2Prev, @a2Proj
+
+                    while @@FETCH_STATUS = 0 begin
+                      set @subRN = @subRN + 1
+                      set @thisAdditionalInfo = @thisAdditionalInfo + ', @subRN=' + convert(varchar(16), @subRN) +
+                        ', @a2Id=' + @a2Id + ', @a2Name=' + @a2Name +
+                        ', @a2Duration=' + convert(varchar(16), @a2Duration) +
+                        ', @a2Prev=' + ISNULL(@a2Prev, '') + ', @a2Proj=' + ISNULL(@a2Proj, '') + ';; '
+                      FETCH NEXT FROM actsInWorkCurs INTO @a2Id, @a2Name, @a2Duration, @a2Prev, @a2Proj
+                    end
+                    CLOSE actsInWorkCurs;  
+                    DEALLOCATE actsInWorkCurs;
+
+                    exec [innovator].[schedulingLogSp] @callerSpName=@thisCallerName, @dbName=@thisDbName,
+                      @inParams=@thisInCallPars, @additionalInfo=@thisAdditionalInfo
+                  end
+                  --Logging ends.
+
+                  --this is the path that existed
+                  exec [innovator].[insertInto_ACTIVITIES_P_ASAP]
+                    @flag = @FLAG,
+                    @TZ_NAME = @TZ_NAME;
+
+                  if (@existingIdQuant > 0)
+                  begin 
+                    /*this is the only new logic, should fix the issue with multiple predecessors*/
+                    declare @insertRes int = 0
+                    exec [innovator].[update_ACTIVITIES_P_ASAP]
+                      @flag = 0,
+                      @TZ_NAME = @TZ_NAME,
+                      @isForDebug = @isForDebugFlag,
+                      @insertedQ = @insertRes OUTPUT;
+                  end
+                  --
+                  DELETE FROM #ACTIVITIES_IN_WORK
+                  WHERE  FLAG = 1
+
+                  UPDATE #ACTIVITIES_IN_WORK
+                  SET    FLAG = 1
+              END /* WHILE @@ROWCOUNT > 0 */
+        END /*if @FLAG=0*/
+      ELSE
+        BEGIN --  Backward scheduling, set planned dates ALAP ( As Late As Possible )
+            INSERT @tmp SELECT @FLAG; -- to set @@ROWCOUNT > 0
+            WHILE @@ROWCOUNT > 0
+              BEGIN
+                   --this is the path that existed
+                    exec [innovator].[insertInto_ACTIVITIES_P_ALAP]
+                      @flag = @FLAG,
+                      @TZ_NAME = @TZ_NAME;
+              END /* WHILE @@ROWCOUNT > 0 */
+        END /*if @FLAG !=0 */
+
+      UPDATE [ACTIVITY2]
+      SET    DATE_START_SCHED = PL.S,
+             DATE_DUE_SCHED = PL.F
+      FROM   #ACTIVITIES_P PL
+      WHERE  [ACTIVITY2].ID = PL.ID
+
+      if OBJECT_ID('tempdb..#ACTIVITIES_P') is not null
+          drop table #ACTIVITIES_P
+      if OBJECT_ID('tempdb..#PREDECESSORS') is not null
+          drop table #PREDECESSORS
+      if OBJECT_ID('tempdb..#ACTIVITIES_IN_WORK') is not null
+          drop table #ACTIVITIES_IN_WORK
+      if OBJECT_ID('tempdb..#ACTIVITIES') is not null
+          drop table #ACTIVITIES
+
+      SELECT 'SUCCESS' AS result_text
+  END
+
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>update_critical_path_schedule</name>
+ </Item>
+</AML>

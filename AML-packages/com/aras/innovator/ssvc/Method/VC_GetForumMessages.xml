@@ -1,0 +1,249 @@
+﻿<AML>
+ <Item type="Method" id="972C015B46D54D63A9776A04E6FABEB1" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string id = this.getID();
+if (String.IsNullOrEmpty(id))
+{
+	throw new Exception(CCO.ErrorLookup.Lookup("SSVC_GetForumMessagesIdNotSet"));
+}
+Item forum = GetItem("Forum", id);
+if (forum.isError())
+{
+	throw new Exception(String.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_GetForumMessages"), forum.getErrorString()));
+}
+this.filter = this.getPropertyItem("filter");
+List<Item> messages = new List<Item>();
+Item itemAggregation = GetItemAggregation(forum);
+if (!itemAggregation.isError())
+{
+	messages.AddRange(GetMessagesForItems(forum.getType(), itemAggregation));
+}
+
+Item ForumItems = forum.getItemsByXPath("/*/*/Result/Item[@type='Forum']/Relationships/Item[@type='ForumItem']");
+if (ForumItems.getItemCount() > 0)
+{
+	messages.AddRange(GetForumItemsMessages(ForumItems));
+}
+
+Item ForumMessageGroups = forum.getItemsByXPath("/*/*/Result/Item[@type='Forum']/Relationships/Item[@type='ForumMessageGroup']");
+if (ForumMessageGroups.getItemCount() > 0)
+{
+	messages.AddRange(GetForumMessageGroupsMessages(ForumMessageGroups));
+}
+
+Item ForumSearches = forum.getItemsByXPath("/*/*/Result/Item[@type='Forum']/Relationships/Item[@type='ForumSearch']");
+if (ForumSearches.getItemCount() > 0)
+{
+	messages.AddRange(GetForumSearchesMessages(ForumSearches));
+}
+
+return CreateResult(messages);
+}
+
+Item filter = null;
+
+private Item CreateResult(List<Item> items)
+{
+	items.Sort(delegate(Item p1, Item p2)
+    {
+		decimal d1 = Convert.ToDecimal(p1.getProperty("created_on_tick"));
+		decimal d2 = Convert.ToDecimal(p2.getProperty("created_on_tick"));
+        return Decimal.Compare(d2, d1);
+    });
+	
+	Hashtable added = new Hashtable();
+	Item result = this.getInnovator().newResult("");
+	XmlNode resultNode = result.dom.SelectSingleNode("/*/*/Result");
+	for (int i = 0, count = items.Count; i < count; i++)
+	{
+		Item message = items[i];
+		string id = message.getID();
+		if (!added.ContainsKey(id))
+		{
+			XmlNode newNode = result.dom.ImportNode(items[i].node, true);
+			resultNode.AppendChild(newNode);
+			added.Add(id, true);
+		}
+	}
+	return result;
+}
+
+private List<Item> GetForumItemsMessages(Item items)
+{
+	List<Item> messages = new List<Item>();
+	for (int i = 0, count = items.getItemCount(); i < count; i++)
+	{
+		Item current = items.getItemByIndex(i);
+		string type = current.getProperty("item_type");
+		string configId = current.getProperty("item_config_id");
+		Item item = GetItemByConfigId(type, configId);
+		if (!item.isError())
+		{
+			Item itemAggregation = GetItemAggregation(item);
+			if (!itemAggregation.isError())
+			{
+				messages.AddRange(GetMessagesForItems(type, itemAggregation));
+			}
+		}
+	}
+	return messages;
+}
+
+private List<Item> GetMessagesForItems(string type, Item items)
+{
+	Item result = this.newItem(type, "VC_GetMessagesForItems");
+	if (this.filter != null)
+	{
+		result.setPropertyItem("filter", this.filter);
+	}
+	for (int i = 0, count = items.getItemCount(); i < count; i++)
+	{
+		result.addRelationship(items.getItemByIndex(i));
+	}
+	result = result.apply();
+	List<Item> messages;
+	if (!result.isError())
+	{
+		messages = GetMessagesList(result);
+	}
+	else
+	{
+		messages = new List<Item>();
+	}
+	return messages;
+}
+
+private Item GetItemAggregation(Item item)
+{
+	Item result = null;
+	Item messagesItm = this.newItem("Method", "VC_GetItemsForAggregation");
+	Item relItem = this.newItem(item.getType());
+	relItem.setID(item.getID());
+	messagesItm.addRelationship(relItem);
+	try
+	{
+		result = messagesItm.apply();
+	}
+	catch(Exception e)
+	{
+		result = this.getInnovator().newError(e.Message);
+	}
+	return result;
+}
+
+private Item GetItemByConfigId(string type, string configId)
+{
+	Item itm = this.newItem(type, "get");
+	itm.setProperty("is_current", "1");
+	itm.setProperty("config_id",configId);
+	itm = itm.apply();
+	if (itm.isError() || itm.getAttribute("discover_only") == "1")
+	{
+		itm = GetLatestNotCurrent(type, configId);
+	}
+	return itm;
+}
+
+private Item GetLatestNotCurrent(string type, string configId)
+{
+	Item items = this.newItem(type, "get");
+	items.setAttribute("orderBy", "generation");
+	items.setProperty("config_id",configId);
+	items.setProperty("generation", "0");
+	items.setPropertyCondition("generation", "ge");
+	items = items.apply();
+	if (items.isError())
+	{
+		return items;
+	}
+	else
+	{
+		Item item = null;
+		for (int i = 0; i < items.getItemCount(); i++)
+		{
+			item = items.getItemByIndex(i);
+			if (item.getAttribute("discover_only") != "1") {
+				break;
+			}
+		}
+		return item;
+	}
+}
+
+private Item GetItem(string type, string id)
+{
+	Item item = this.newItem(type, "get");
+	item.setAttribute("levels", "3");
+	item.setID(id);
+	return item.apply();
+}
+
+private List<Item> GetForumSearchesMessages(Item searches)
+{
+	List<Item> messages = new List<Item>();
+	for (int i = 0, count = searches.getItemCount(); i < count; i++)
+	{
+		Item current = searches.getItemByIndex(i);
+		try
+		{
+			Item items = GetForumSearchItems(current);
+			string type = items.getItemByIndex(0).getType();
+			messages.AddRange(GetMessagesForItems(type, items));
+		}
+		catch
+		{
+			continue;
+		}
+	}
+	return messages;
+}
+
+private Item GetForumSearchItems(Item search)
+{
+	Item items = this.newItem(search.getType(), "VC_GetForumSearchItems");
+	items.setID(search.getID());
+	return items.apply();
+}
+
+private List<Item> GetMessagesList(Item messages)
+{
+	List<Item> result = new List<Item>();
+	for (int i = 0, count = messages.getItemCount(); i < count; i ++)
+	{
+		result.Add(messages.getItemByIndex(i));
+	}
+	return result;
+}
+
+private List<Item> GetForumMessageGroupsMessages(Item groups)
+{
+	List<Item> messages = new List<Item>();
+	for (int i = 0, count = groups.getItemCount(); i < count; i++)
+	{
+		Item current = groups.getItemByIndex(i);
+		try
+		{
+			messages.AddRange(GetMessagesList(GetFMGMessages(current)));
+		}
+		catch
+		{
+			continue;
+		}
+	}
+	return messages;
+}
+
+private Item GetFMGMessages(Item fmg)
+{
+	Item item = this.newItem(fmg.getType(), "VC_GetFMGMessages");
+	item.setID(fmg.getID());
+	if (this.filter != null)
+	{
+		item.setPropertyItem("filter", this.filter);
+	}
+	return item.apply();
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_GetForumMessages</name>
+ </Item>
+</AML>

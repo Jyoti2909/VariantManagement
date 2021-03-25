@@ -1,0 +1,47 @@
+﻿<AML>
+ <Item type="Method" id="647AD25E7F114A079CA7BFF2574C8510" action="add">
+  <comments>Assign team to file exchange package</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (this.getProperty('locked_by_id') !== undefined) {
+	aras.AlertError(aras.getResource('', 'fe.assign_package_error'));
+	return;
+}
+
+var params = {};
+params.aras = aras;
+params.itemtypeName = 'Team';
+params.multiselect = false;
+params.packageId = this.getID();
+params.type = 'SearchDialog';
+var aWindow = aras.getMainWindow() == window.top ? aras.getMainWindow() : window;
+
+aWindow.ArasModules.MaximazableDialog.show('iframe', params).promise.then(function(dlgRes) {
+	if (!dlgRes) {
+		return;
+	}
+	assignTeam(dlgRes, this);
+	window.res = dlgRes;
+});
+
+function assignTeam(res, params) {
+	var doc = aras.createXMLDocument();
+	doc.loadXML('<body />');
+	doc.documentElement.setAttribute('teamId', res.itemID);
+	doc.documentElement.setAttribute('packageId', params.packageId);
+
+	var innovator = aras.newIOMInnovator();
+	var response = innovator.applyMethod('FE_UpdatePackageAfterAssignTeam', doc.xml);
+	if (response.isError()) {
+		aras.AlertError(response);
+		return;
+	}
+
+	if (aras.uiFindWindowEx(params.packageId)) {
+		aras.uiReShowItemEx(params.packageId, response.node, 'tab view');
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>FE_AssignTeamToPackage</name>
+ </Item>
+</AML>

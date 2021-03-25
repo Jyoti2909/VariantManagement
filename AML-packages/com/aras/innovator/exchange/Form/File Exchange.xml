@@ -1,0 +1,100 @@
+﻿<AML>
+ <Item type="Form" id="63814F72B5AD4713A3AD860AC8698397" action="add">
+  <category_form>1</category_form>
+  <description>Form for display all file exchanges cloud services</description>
+  <height>250</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>800</width>
+  <name>File Exchange</name>
+  <Relationships>
+   <Item type="Body" id="3FA97AD1EAC54664919E9A8499652ABF" action="add">
+    <sort_order>128</sort_order>
+    <source_id keyed_name="File Exchange" type="Form">63814F72B5AD4713A3AD860AC8698397</source_id>
+    <Relationships>
+     <Item type="Field" id="ED4F66FA1E2D476585D69DF3813F8674" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<script type="text/jscript">
+	var services = getFileExchangeServices();
+	var width = document.documentElement.clientWidth + "px";
+
+	onload = function onload_handler() {
+		loadFileExchangeServices();
+	}
+
+	onresize = function oresize_handler() {
+		resizeFrame();
+	}
+
+	function resizeFrame() {
+		if (services.isError()) {
+			return;
+		}
+		width = document.documentElement.clientWidth + "px";
+		for (var i = 0; i < services.getItemCount(); i++) {
+			var name = services.getItemByIndex(i).getProperty("name");
+			var iframe = document.getElementById(name);
+			if (iframe) {
+				iframe.style.width = width;
+			}
+		}
+		var div = document.getElementById("main_div");
+		div.style.width = width;
+	}
+
+	function loadFileExchangeServices() {
+		if (services.isError())
+			return;
+
+		for (var i = 0; i < services.getItemCount(); i++) {
+			var service = services.getItemByIndex(i);
+			var name = service.getProperty("name");
+			var src = service.getProperty("url");
+			src = (src == undefined || src == "") ? aras.getBaseURL() + "/CloudServices/" + escape(name) + "/default.aspx" : src;
+
+			var iframe = document.createElement("iframe");
+			iframe.setAttribute("id", name);
+			iframe.setAttribute("name", name);
+			iframe.setAttribute("src", src);
+
+			iframe.style.width = width;
+			iframe.style.height = "300px";
+			iframe.setAttribute("frameborder", "0");
+			document.getElementById("main_div").appendChild(iframe);
+		}
+		var div = document.getElementById("main_div");
+		div.style.width = width;
+	}
+
+	function getFileExchangeServices() {
+		var query = new aras.getMostTopWindowWithAras(window).Item("ServiceProvider", "get");
+		query.setProperty("service_type", "FileExchange");
+		query.setAttribute("select", "name, url");
+		query.setProperty("active", "1");
+		return query.apply();
+	}
+</script>
+<div id="main_div" style="position: fixed; top: 0px; left: 0px; width: 100%; overflow: hidden; background-color: white;">
+</div>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <positioning>absolute</positioning>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="3FA97AD1EAC54664919E9A8499652ABF" type="Body">3FA97AD1EAC54664919E9A8499652ABF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>0</y>
+      <name>html0</name>
+     </Item>
+    </Relationships>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

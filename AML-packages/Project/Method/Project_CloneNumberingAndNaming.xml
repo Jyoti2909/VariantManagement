@@ -1,0 +1,45 @@
+﻿<AML>
+	<Item type="Method" id="D5D321588C2C4568A3D9BA1DC36F953E" action="add">
+		<execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+		<method_code><![CDATA[Item project = this.getPropertyItem("project");//clone of the project (not the original project)
+string projectNumber = project.getProperty("project_number");
+string newDeliverablePrefix = projectNumber + "-"; // you can set it, e.g., to ""
+string newDeliverableSuffix = ""; // you can set it, e.g., to "-" + projectNumber
+
+string newFilePrefix = projectNumber + "-"; //you can set it, e.g., to ""
+string newFileSuffix = ""; // you can set it, e.g., to "-" + projectNumber
+
+int indexDeliverables = 0;
+while (true)
+{
+	//setting projectDeliverableName
+	Item deliverable = this.getPropertyItem("deliverable" + indexDeliverables);
+	if (deliverable == null)
+	{
+		break;
+	}
+
+	string deliverableNameOld = deliverable.getProperty("deliverable_name");
+	deliverable.setProperty("deliverable_name", newDeliverablePrefix + deliverableNameOld + newDeliverableSuffix);	
+	indexDeliverables++;
+			
+	//setting file names of project Deliverable		
+	int indexFiles = 0;
+	while (true)
+	{	
+		string fileNameOld = deliverable.getProperty("file_name" + indexFiles);
+		if (string.IsNullOrEmpty(fileNameOld))
+		{
+			break;
+		}
+			
+		deliverable.setProperty("file_name" + indexFiles, newFilePrefix + fileNameOld + newFileSuffix);
+		indexFiles++;
+	}
+}
+		
+return this;]]></method_code>
+		<method_type>C#</method_type>
+		<name>Project_CloneNumberingAndNaming</name>
+	</Item>
+</AML>

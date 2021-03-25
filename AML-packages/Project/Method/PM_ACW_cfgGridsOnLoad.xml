@@ -1,0 +1,59 @@
+﻿<AML>
+ <Item type="Method" id="D48BCA1EC7D5474E8400DD6C5CCFD904" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//For following relationship types:
+//Activity2 Assignment
+grid.setNewItemCreationEnabled(false);
+grid.overrideMethod("lockItemBeforeEditStart", "return true;");
+
+var a = top.aras;
+if (!a) return;
+var nds = this.dom.documentElement.selectNodes("Item[@type='Activity2 Assignment']");
+var idenList = a.getIdentityList();
+var fed_css = "fed_css";
+var bgColor = "#FFCCCC";
+var propsWithBgColor = new Array("date_start_act", "is_complete", "percent_compl")
+var fed_cssVal = "."+propsWithBgColor.join("{background-color:"+bgColor+"}\n .")+"{background-color:"+bgColor+"}";
+
+for (var i=0; i<nds.length; i++)
+{
+  var nd = nds[i];
+  var state = getItmProp(nd, "state");
+  setItmProp(nd, "is_complete", ((state=="Complete") ? "1" : "0"));
+  var idenNd = nd.selectSingleNode("related_id/Item");
+  if (idenNd && idenList.indexOf(idenNd.getAttribute("id"))>-1)
+  {
+    setItmProp(nd, fed_css, fed_cssVal);//set fed_css value to have highlighting
+    for (var j=0; j<propsWithBgColor.length; j++)
+    {
+      var pNm = propsWithBgColor[j]
+      var nd2 = nd.selectSingleNode(pNm);
+      if (!nd2) setItmProp(nd, pNm, "");//highlighting is not applied if node does not exist
+    }
+  }
+}
+
+function setItmProp(itm, propNm, propVal)
+{
+  var nd = itm.selectSingleNode(propNm);
+  if (!nd)
+  {
+    nd = itm.appendChild(itm.ownerDocument.createElement(propNm));
+  }
+  nd.text = propVal;
+}
+
+function getItmProp(itm, propNm, defaultVal)
+{
+  var retVal = defaultVal;
+  var nd = itm.selectSingleNode(propNm);
+  if (nd)
+  {
+    retVal = nd.text;
+  }
+  return retVal;
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PM_ACW_cfgGridsOnLoad</name>
+ </Item>
+</AML>

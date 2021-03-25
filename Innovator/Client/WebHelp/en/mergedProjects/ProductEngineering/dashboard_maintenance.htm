@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = ".";
+  gCommonRootRelPath = ".";
+  gTopicId = "1.0_6";
+
+//]]></script>
+
+<script type="text/javascript" src="./template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="./template/scripts/common.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="./template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="assets/css/default.css"/>
+  <meta name="template" content="assets/masterpages/JAI_masterpage.htt"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="topic-check-list" content="Ran Smart Index"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Dashboard Maintenance</title>
+  
+</head>
+<body>
+  <div>
+  <h1>Dashboard Maintenance</h1>
+  <p>The system administrator is responsible for updating the data used to calculate points on the dashboard charts. Let&#39;s look at the <span class="MenuChoice">Engineering Efficiency</span> dashboard as an example.</p>
+  <p>Each dashboard consists of charts. The <span class="MenuChoice">Engineering Efficiency</span> dashboard contains the  <span class="MenuChoice">ECR Cycle Time</span> and <span class="MenuChoice">Standard vs. Fast Track</span> charts.</p>
+  <h2>Accessing specific data metrics</h2>
+  <ol class="Decimal">
+    <li>From the Navigation pane, click <strong>Administration Dashboards</strong>. The following menu appears:
+      <p class="Figure_indented"><img alt="" src="assets/images/dashmenu.jpg" style="width: 100%; max-width: 208px;"/></p>
+    </li>
+    <li>
+      <p>Click <strong>Search Dashboard</strong>.</p>
+    </li>
+    <li class="Numbered">Select the <span class="MenuChoice">Engineering Efficiency</span> dashboard, and open it for editing. Notice that there are two charts associated with this dashboard.</li>
+  </ol>
+  <p class="Figure_indented"><img alt="" src="assets/images/eedash.jpg" style="width: 100%; max-width: 722px;"/></p>
+  <ol class="Decimal" start="4">
+    <li style="Numbered">Right click on the <strong>Standard vs. Fast Track</strong> chart in the table, and  select <strong>View Charts</strong> from the popup menu. The Chart form should display.
+      <p>Each chart contains the meta data about the chart itself, such as the axes set up, labels, legend, borders, etc., as well as the chart series, or the metrics that are used to plot the data.</p>
+    </li>
+  </ol>
+  <p class="Figure_indented"><img alt="" src="assets/images/standardchart.jpg" style="width: 100%; max-width: 846px;"/></p>
+  <ol class="Decimal" start="5">
+    <li style="Numbered">Select the <strong>Fast Track ECRs</strong> chart series in the table, right click, and select View Metrics from the popup menu. You will see the metrics form. This is the form that you will be updating.</li>
+    <br/>
+    <li style="Numbered">Take a careful look at this form. Notice that the current quarter is the only one that has the  Calculate box checked. This is because the values are calculated quarterly, i.e. how many fast track ECRs were created this quarter? Once the quarter is over, the final value is kept, and does not have to be recalculated again. Also, checking the Calculate box will refresh the data based on the Query each time a user views the dashboard.</li>
+  </ol>
+  <p class="Figure_indented"><img alt="" src="assets/images/fastrack.jpg" style="width: 100%; max-width: 631px;"/></p>
+  <p>So, at the end of each quarter, the system administrator has to update any metrics which are date driven.  In this example, the query is updated to calculate for the next quarter, and keep the current quarter&#39;s value unchanged. Here is how to do this.</p>
+  <p>To update the metrics to calculate for the next quarter:</p>
+  <ol class="Decimal">
+    <li style="counter-reset: item1 0;">
+      <p>Choose the Current metric value, and select Copy from the right-click popup menu.</p>
+    </li>
+    <li>
+      <p>Create a new line, and Paste. Your metric now looks like this:</p>
+    </li>
+  </ol>
+  <p class="Figure_indented"><img src="assets/images/metricval.jpg" style="width: 100%; max-width: 690px;"/></p>
+  <ol class="Decimal" start="3">
+    <li>
+      <p>Go back to the line labeled <strong>Current</strong>. Change the label to the quarter that it refers to, in our case - Q5 &#39;05.</p>
+    </li>
+    <li>
+      <p>Uncheck the Calculated box. The final value that was calculated for that quarter will be retained in the Value column.</p>
+    </li>
+    <li>
+      <p>Edit the newly created line.</p>
+    </li>
+    <li>
+      <p>Change the Sequence number of the new entry to 9 (or the next increment).</p>
+    </li>
+    <li>
+      <p>Change the Label of the new entry to te next quarter, in this case Q2 &#39;05.</p>
+    </li>
+    <li>
+      <p>Select a new color.</p>
+    </li>
+    <li>
+      <p>Click on the Query item to bring up the text editor dialog. Notice that the query basically has two dates in it. IT will collect all fast track ECRs in the system that have a creation date greater than a particular date and less then another date. It is these t wo dates that we will change to reflect the new quarter. In our case, or Q2 &#39;05, the first date will be 04/01/2005. The second date will be 07/01/2005. So, the query looks like this&quot;</p>
+    </li>
+  </ol>
+  <p class="Figure_indented"><img alt="" src="assets/images/ecrquery.jpg" style="width: 100%; max-width: 317px;"/></p>
+  <p> </p>
+  <ol class="Decimal" start="10">
+    <li>Save everything, and repeat this process for all other chart metrics.</li>
+  </ol>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

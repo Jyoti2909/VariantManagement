@@ -1,0 +1,20 @@
+﻿<AML>
+ <Item type="Method" id="84A84181B4F84C7CB831D13A61043CF6" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var item = this.newItem();
+item.loadAML('<AML>' + inDom.xml + '</AML>');
+if (item.getAttribute('isTemp') === '1') {
+	aras.AlertError(CCO.ErrorLookup.Lookup('SSVC_DDUnsavedItem'));
+	return;
+}
+item = item.apply('VC_GetDiscussionDefinition');
+if (item.isError()) {
+	aras.AlertError(item);
+	return;
+}
+aras.uiShowItemEx(item.node, undefined);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VC_ChangeDiscussionDefinition</name>
+ </Item>
+</AML>

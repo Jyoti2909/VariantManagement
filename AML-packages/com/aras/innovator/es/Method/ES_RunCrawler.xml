@@ -1,0 +1,39 @@
+﻿<AML>
+ <Item type="Method" id="BCE1DBEAB36F41B6A36DDF38CA0852E4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (this.getProperty('crawler_state', '') === 'Active') {
+
+	var crawlerState = this.newItem('ES_CrawlerState', 'get');
+	crawlerState.setAttribute('select', 'current_action, next_action, is_iteration_finished');
+	crawlerState.setProperty('source_id', this.getID());
+	crawlerState = crawlerState.apply();
+
+	if (!crawlerState.isError() && crawlerState.getItemCount() === 1) {
+
+		if (crawlerState.getProperty('current_action', '') === 'Stop current iteration' ||
+		(crawlerState.getProperty('current_action', '') === 'Run' && crawlerState.getProperty('is_iteration_finished', '') === '1')) {
+			crawlerState.setProperty('next_action', 'Restart');
+
+			var iLockStatus = crawlerState.getLockStatus();
+
+			if (iLockStatus === 0) {
+				crawlerState.apply('edit');
+			}
+
+			if (iLockStatus === 1) {
+				crawlerState.apply('update');
+			}
+		} else {
+			aras.AlertError('The crawler is already running.');
+		}
+	} else {
+		aras.AlertError(crawlerState.getErrorString());
+	}
+} else {
+	aras.AlertError('A crawler should be in \'Active\' state to perform any operations.');
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_RunCrawler</name>
+ </Item>
+</AML>

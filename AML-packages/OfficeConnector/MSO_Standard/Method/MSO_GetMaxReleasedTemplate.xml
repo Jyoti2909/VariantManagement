@@ -1,0 +1,36 @@
+﻿<AML>
+ <Item type="Method" id="94C762E2C8FC48D4B7E20BE6EAE56F79" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = this.getInnovator();
+
+Item responseItems = innovator.newItem();
+
+Item requestItems = this.getRelationships();
+int count = requestItems.getItemCount();
+for (int i = 0; i < count; i++)
+{
+	Item requestItem = requestItems.getItemByIndex(i);
+	string configId = requestItem.getProperty("config_id");
+	string itemTypeName = requestItem.getType();
+	string instanceData = itemTypeName.Replace(' ', '_');
+
+	Item releasedItem = innovator.newItem(itemTypeName, "GetReleasedMaxGenerationRelGrid");
+	releasedItem.setProperty("config_id", configId);
+	releasedItem.setProperty("instance_data", instanceData);
+	releasedItem = releasedItem.apply();
+	
+	if (releasedItem.isEmpty() || releasedItem.isError())
+	{
+		responseItems.addRelationship(requestItem);
+	}
+	else
+	{
+		responseItems.addRelationship(releasedItem);
+	}
+}
+
+return responseItems;]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_GetMaxReleasedTemplate</name>
+ </Item>
+</AML>

@@ -1,0 +1,96 @@
+﻿<TestCase author="apetrovsky@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>
+		<![CDATA[
+	Create a CAD with 'Mechanical/Component' classification.
+	Should set the value "3D" in the gag_classification_filter property ]]>
+	</Description>
+	<Request runAs="cadUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser3
+			When:
+				Create CAD
+			Then:
+				Should create CAD
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][1]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="add" doGetItem="0">
+					<name>CAD.Id</name>
+					<classification>Mechanical/Component</classification>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadUser3:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser3
+			When:
+				Get CAD
+			Then:
+				Should return CAD with '3D' value in the gag_classification_filter property
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CAD.Id" action="apply" xpath="Query/AML/Item[@type='CAD']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="get" id="{CAD.Id}" select="gag_classification_filter" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" typeId="CCF205347C814DD1AF056875E0A880AC" id="8B91B780759D4FB8AA72F922771449EC">
+							<gag_classification_filter>3D</gag_classification_filter>
+							<id keyed_name="D000000033" type="CAD">8B91B780759D4FB8AA72F922771449EC</id>
+							<itemtype>CCF205347C814DD1AF056875E0A880AC</itemtype>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Variables>
+			<Variable id='CAD.Id' action='apply' xpath='Query/AML/Item/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="delete" id="{CAD.Id}" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

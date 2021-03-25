@@ -1,0 +1,624 @@
+﻿/*
+	GrammarInputGroup grammar (Rule expressions parsing)
+	Should export two start rules: LexemAnalysis amd ExpressionAnalysis
+
+	Limitations:
+		1. Whitespace lexem rule should return 'whitespace' type.
+		2. Unknown lexem rule should return 'unknown' type.
+*/
+
+{
+	const ENUM_VARIABLE_TYPE = '';
+	const INT_VARIABLE_TYPE = 'Int';
+	const DATETIME_VARIABLE_TYPE = 'DateTime';
+	const STRING_VARIABLE_TYPE = 'String';
+	const INT32_MIN_VALUE = -2147483648;
+	const INT32_MAX_VALUE = 2147483647;
+	const latinCharactersAndNumbersPattern = /^[0-9A-Za-z]+$/;
+
+	const parserInstance = this;
+	const ruleNameValueCollectionMap = {
+		VariableName: '_VariableNames',
+		LogicOperator: ['OR', 'AND'],
+		MacroOperator: ['EXACTLY-ONE', 'AT-MOST-ONE', 'AT-LEAST-ONE'],
+		MacroLogicOperator: ['|'],
+		OpenBracket: ['('],
+		CloseBracket: [')'],
+		OpenSquareBracket: ['['],
+		CloseSquareBracket: [']'],
+		NotLiteral: ['NOT'],
+		IfLiteral: ['IF'],
+		ThenLiteral: ['THEN'],
+		BooleanOperator: ['='],
+		MoreLessOperator: ['>=', '<='],
+		ValidValueName: '_ValidValueNames'
+	};
+
+	function isElementExistInCollection(ruleName, element) {
+		let valueCollection = parserInstance.getValueCollectionByRuleName(ruleName);
+		let lowerCaseValue;
+		let i;
+
+		element = element.toLowerCase();
+		valueCollection = Array.isArray(valueCollection) ? valueCollection : Object.keys(valueCollection);
+
+		for (i = 0; i < valueCollection.length; i++) {
+			lowerCaseValue = valueCollection[i].toLowerCase();
+
+			if (element === lowerCaseValue) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	function isVariableValueValid(variableValue) {
+		let isVariableValueValid = false;
+
+		switch (parserInstance.currentParseVariableType) {
+			case INT_VARIABLE_TYPE:
+				const intValueOrNaN = parseInt(variableValue, 10);
+				isVariableValueValid = Number.isInteger(intValueOrNaN) && intValueOrNaN.toString() === variableValue &&
+					intValueOrNaN >= INT32_MIN_VALUE && intValueOrNaN <= INT32_MAX_VALUE;
+				break;
+			case DATETIME_VARIABLE_TYPE:
+				const propertyDefinition = {data_type: 'date', pattern: 'short_date'};
+				isVariableValueValid = parserInstance._arasObj.isPropertyValueValid(propertyDefinition, variableValue);
+				break;
+			case STRING_VARIABLE_TYPE:
+				isVariableValueValid = latinCharactersAndNumbersPattern.test(variableValue);
+				break;
+		}
+
+		return isVariableValueValid;
+	}
+
+	function setupValidValueNames(variableName) {
+		const variableNameInLowerCase = variableName.toLowerCase();
+		const variablesHash = parserInstance.getValueCollectionByRuleName('VariableName');
+		const variableNames = Object.keys(variablesHash);
+		const variableCount = variableNames.length;
+		const validNames = {};
+
+		for (let i = 0; i < variableCount; i++) {
+			const currentIterationVariableName = variableNames[i];
+
+			if (currentIterationVariableName.toLowerCase() === variableNameInLowerCase) {
+				variablesHash[currentIterationVariableName].namedConstants.forEach(function(namedConstant) {
+					validNames[namedConstant] = true;
+				});
+			}
+		}
+
+		parserInstance._ValidValueNames = validNames;
+	}
+
+	function foldLogicOperationList(operator, head, tail) {
+		if (tail.length) {
+			let logicOperation;
+			let i;
+
+			for (i = 0; i < tail.length; i++) {
+				logicOperation = tail[i][3];
+
+				if (head.type === 'LogicExpression' && head.op === operator) {
+					head.children.push(logicOperation);
+				} else {
+					head = {
+						type: 'LogicExpression',
+						op: operator,
+						children: [head].concat(logicOperation)
+					};
+				}
+			}
+		}
+
+		return head;
+	}
+
+	function getVariableTypeByVariableNameCaseInsensitive(variableName) {
+		const variableNameInLowerCase = variableName.toLowerCase();
+		const variablesHash = parserInstance._VariableNames;
+		const variableNames = Object.keys(variablesHash);
+		const variableCount = variableNames.length;
+
+		for (let i = 0; i < variableCount; i++) {
+			const currentIterationVariableName = variableNames[i];
+
+			if (currentIterationVariableName.toLowerCase() === variableNameInLowerCase) {
+				return variablesHash[currentIterationVariableName].type;
+			}
+		}
+	}
+
+	function isVariableTypeOneOf(variableName, variableTypes) {
+		const variableType = getVariableTypeByVariableNameCaseInsensitive(variableName);
+		return variableTypes.indexOf(variableType) !== -1;
+	}
+
+	function setCurrentParseVariableType(variableName) {
+		parserInstance.currentParseVariableType = getVariableTypeByVariableNameCaseInsensitive(variableName);
+	}
+
+	function resetCurrentParseVariableType() {
+		parserInstance.currentParseVariableType = null;
+	}
+
+	parserInstance.getValueCollectionByRuleName = function(ruleName) {
+		const mappedCollection = ruleNameValueCollectionMap[ruleName];
+		return (typeof mappedCollection === 'string' ? this[mappedCollection] : mappedCollection) || [];
+	};
+
+	resetCurrentParseVariableType();
+}
+
+// Lexem Analysis rules section
+LexemAnalysis
+	= Lexem*
+
+Lexem
+	= _ / OpenBracket / CloseBracket / LexemIfLiteral / LexemThenLiteral / LexemLogicOperatorLiteral / LexemMacroOperatorLiteral / LexemNotLiteral / MoreLessOperator / BooleanOperator / LexemTypedVariableName / LexemVariableName / LexemValueName
+	/ MacroOperandOrLiteral / LexemInt / LexemDate / LexemString / OpenSquareBracket / CloseSquareBracket / LexemUnknown
+
+LexemIfLiteral 'IfLiteral'
+	= lexem:'IF'i ws:_ & {
+		return parserInstance.currentParseVariableType === null;
+	} {
+		return [{type: 'IfLiteral', text: lexem}, ws];
+	}
+
+LexemThenLiteral 'ThenLiteral'
+	= lexem:'THEN'i ws:_ & {
+		return parserInstance.currentParseVariableType === null;
+	} {
+		return [{type: 'ThenLiteral', text: lexem}, ws];
+	}
+
+LexemLogicOperatorLiteral 'LogicOperatorLiteral'
+	= lexem:('OR'i / 'AND'i) ws:_ & {
+		return parserInstance.currentParseVariableType === null;
+	} {
+		return [{type: 'LogicOperator', text: lexem}, ws];
+	}
+
+LexemNotLiteral 'NotLiteral'
+	= lexem:'NOT'i ws:_ & {
+		return parserInstance.currentParseVariableType === null;
+	} {
+		return [{type: 'NotLiteral', text: lexem}, ws];
+	}
+
+LexemMacroOperatorLiteral 'MacroOperator'
+	= lexem:('EXACTLY-ONE'i / 'AT-MOST-ONE'i / 'AT-LEAST-ONE'i) ws:_ & {
+		return parserInstance.currentParseVariableType === null;
+	} {
+		return [{type: 'MacroOperator', text: lexem}, ws];
+	}
+	/ lexem:('EXACTLY-ONE'i / 'AT-MOST-ONE'i / 'AT-LEAST-ONE'i) bracket:OpenBracket & {
+		return parserInstance.currentParseVariableType === null;
+	} {
+		return [{type: 'MacroOperator', text: lexem}, bracket];
+	}
+
+LexemMacroOperandOrLiteral 'MacroOperandOrLiteral'
+	= '|'i
+
+LexemVariableName 'VariableName'
+	= variable:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === null && getVariableTypeByVariableNameCaseInsensitive(variable) === ENUM_VARIABLE_TYPE;
+	} {
+		parserInstance.currentParseVariableType = ENUM_VARIABLE_TYPE;
+		setupValidValueNames(variable);
+		return {type: 'VariableName', text: variable}
+	}
+	/ open:OpenSquareBracket variable:$noSquareBracketString close:CloseSquareBracket & {
+		return parserInstance.currentParseVariableType === null && getVariableTypeByVariableNameCaseInsensitive(variable) === ENUM_VARIABLE_TYPE;
+	} {
+		parserInstance.currentParseVariableType = ENUM_VARIABLE_TYPE;
+		setupValidValueNames(variable);
+		return [{type: 'itembracket', text: open.text}, {type: 'VariableName', text: variable}, {type: 'itembracket', text: close.text}];
+	}
+
+LexemValueName 'ValueName'
+	= value:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === ENUM_VARIABLE_TYPE && isElementExistInCollection('ValidValueName', value);
+	} {
+		resetCurrentParseVariableType();
+		return {type: 'ValidValueName', text: value}
+	}
+	/ open:OpenSquareBracket value:$noSquareBracketString close:CloseSquareBracket & {
+		return parserInstance.currentParseVariableType === ENUM_VARIABLE_TYPE && isElementExistInCollection('ValidValueName', value);
+	} {
+		resetCurrentParseVariableType();
+		return [{type: 'itembracket', text: open.text}, {type: 'ValidValueName', text: value}, {type: 'itembracket', text: close.text}];
+	}
+
+LexemTypedVariableName 'VariableName'
+	= variable:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === null && isVariableTypeOneOf(variable, [STRING_VARIABLE_TYPE, INT_VARIABLE_TYPE, DATETIME_VARIABLE_TYPE]);
+	} {
+		setCurrentParseVariableType(variable);
+		return {type: 'VariableName', text: variable}
+	}
+	/ open:OpenSquareBracket variable:$noSquareBracketString close:CloseSquareBracket & {
+		return parserInstance.currentParseVariableType === null && isVariableTypeOneOf(variable, [STRING_VARIABLE_TYPE, INT_VARIABLE_TYPE, DATETIME_VARIABLE_TYPE]);
+	} {
+		setCurrentParseVariableType(variable);
+		return [{type: 'itembracket', text: open.text}, {type: 'VariableName', text: variable}, {type: 'itembracket', text: close.text}];
+	}
+
+LexemInt 'Integer'
+	= value:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === INT_VARIABLE_TYPE && isVariableValueValid(value);
+	} {
+		resetCurrentParseVariableType();
+		return {type: 'ValidTypedValue', text: value}
+	}
+	/ open:OpenSquareBracket value:$noSquareBracketString close:CloseSquareBracket & {
+		return parserInstance.currentParseVariableType === INT_VARIABLE_TYPE && isVariableValueValid(value);
+	} {
+		resetCurrentParseVariableType();
+		return [{type: 'itembracket', text: open.text}, {type: 'ValidTypedValue', text: value}, {type: 'itembracket', text: close.text}];
+	}
+
+LexemDate 'DateTime'
+	= open:OpenSquareBracket value:$noSquareBracketString close:CloseSquareBracket & {
+		return parserInstance.currentParseVariableType === DATETIME_VARIABLE_TYPE && isVariableValueValid(value);
+	} {
+		resetCurrentParseVariableType();
+		return [{type: 'itembracket', text: open.text}, {type: 'ValidTypedValue', text: value}, {type: 'itembracket', text: close.text}];
+	}
+
+LexemString 'String'
+	= value:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === STRING_VARIABLE_TYPE && isVariableValueValid(value);
+	} {
+		resetCurrentParseVariableType();
+		return {type: 'ValidTypedValue', text: value}
+	}
+	/ open:OpenSquareBracket value:$noSquareBracketString close:CloseSquareBracket & {
+		return parserInstance.currentParseVariableType === STRING_VARIABLE_TYPE && isVariableValueValid(value);
+	} {
+		resetCurrentParseVariableType();
+		return [{type: 'itembracket', text: open.text}, {type: 'ValidTypedValue', text: value}, {type: 'itembracket', text: close.text}];
+	}
+
+// all unknown lexems should have 'unknown' type
+LexemUnknown
+	= lexem:$.+ {return {type: 'unknown', text: lexem}}
+
+// Expression Analysis rules section
+ExpressionAnalysis
+	= ImplicationExpression / SimpleExpression
+
+ImplicationExpression
+	= __ ExpressionIfLiteral _ LogicOrExpression _ ExpressionThenLiteral _ LogicOrExpression
+
+SimpleExpression
+	= __ expression:LogicOrExpression {
+		return expression;
+	}
+
+LogicOrExpression
+	= head:LogicAndExpression tail:(_ ExpressionLogicOrOperatorLiteral _ LogicAndExpression)* {
+		return foldLogicOperationList('OR', head, tail);
+	}
+
+LogicAndExpression
+	= head:NotExpression tail:(_ ExpressionLogicAndOperatorLiteral _ NotExpression)* {
+		return foldLogicOperationList('AND', head, tail);
+	}
+
+NotExpression
+	= head:(ExpressionNotOperatorLiteral _)? expr:ParenthesisExpression {
+		return head ? {type: 'LogicExpression', op: 'NOT', children: [expr]} : expr;
+	} / head:(ExpressionNotOperatorLiteral _)? expr:BinaryExpression {
+		return head ? {type: 'LogicExpression', op: 'NOT', children: [expr]} : expr;
+	} / head:(ExpressionNotOperatorLiteral _)? expr:MoreLessIntExpression {
+		return head ? {type: 'LogicExpression', op: 'NOT', children: [expr]} : expr;
+	} / head:(ExpressionNotOperatorLiteral _)? expr:MoreLessDateTimeExpression {
+		return head ? {type: 'LogicExpression', op: 'NOT', children: [expr]} : expr;
+	} / head:(ExpressionNotOperatorLiteral _)? expr:StringExpression {
+		return head ? {type: 'LogicExpression', op: 'NOT', children: [expr]} : expr;
+	}  / head:(ExpressionNotOperatorLiteral _)? expr:MacroExpression {
+		return head ? {type: 'MacroExpression', op: 'NOT', children: [expr]} : expr;
+	}
+
+ParenthesisExpression
+	= OpenBracket __ expr:SimpleExpression __ CloseBracket {
+		return expr;
+	}
+
+MacroExpression
+	= operator:MacroExpressionLiteral __ expr:MacroParenthesisOperandsExpression {
+		return {type: 'MacroExpression', op: operator, children: expr};
+	}
+
+MacroParenthesisOperandsExpression
+	= OpenBracket __ expr:MacroOperandsExpression __ CloseBracket {
+		return expr;
+	}
+
+MacroOperandsExpression
+	= head:BinaryExpression tail:(__ MacroOperandOrLiteral __ tail:BinaryExpression)* {
+		const resultData = [head];
+
+		if (tail) {
+			for (let i = 0; i < tail.length; i++) {
+				resultData.push(tail[i][3]);
+			}
+		}
+
+		return resultData;
+	} / head:MoreLessIntExpression tail:(__ MacroOperandOrLiteral __ tail:MoreLessIntExpression)* {
+		const resultData = [head];
+
+		if (tail) {
+			for (let i = 0; i < tail.length; i++) {
+				resultData.push(tail[i][3]);
+			}
+		}
+
+		return resultData;
+	} / head:MoreLessDateTimeExpression tail:(__ MacroOperandOrLiteral __ tail:MoreLessDateTimeExpression)* {
+		const resultData = [head];
+
+		if (tail) {
+			for (let i = 0; i < tail.length; i++) {
+				resultData.push(tail[i][3]);
+			}
+		}
+
+		return resultData;
+	} / head:StringExpression tail:(__ MacroOperandOrLiteral __ tail:StringExpression)* {
+		const resultData = [head];
+
+		if (tail) {
+			for (let i = 0; i < tail.length; i++) {
+				resultData.push(tail[i][3]);
+			}
+		}
+
+		return resultData;
+	}
+
+BinaryExpression
+	= left:ExpressionValidVariableName __ operator:BooleanOperator __ right:ExpressionValidValueName {
+		return {type: 'BinaryExpression', op: operator.text, leftOperand: left, rightOperand: right};
+	}
+
+MoreLessIntExpression
+	= left:ExpressionValidIntVariableName __ operator:IntDateAllowedOperators __ right:ExpressionValidIntValue {
+		return {type: 'MoreLessExpression', op: operator.text, leftOperand: left, rightOperand: right};
+	}
+
+MoreLessDateTimeExpression
+	= left:ExpressionValidDateTimeVariableName __ operator:IntDateAllowedOperators __ right:ExpressionValidDateTimeValue {
+		return {type: 'MoreLessExpression', op: operator.text, leftOperand: left, rightOperand: right};
+	}
+
+StringExpression
+	= left:ExpressionValidStringVariableName __ operator:BooleanOperator __ right:ExpressionValidStringValue {
+		return {type: 'StringExpression', op: operator.text, leftOperand: left, rightOperand: right};
+	}
+
+
+IntDateAllowedOperators
+	= MoreLessOperator / BooleanOperator
+
+ExpressionIfLiteral 'IfLiteral'
+	= 'IF'i
+
+ExpressionThenLiteral 'ThenLiteral'
+	= 'THEN'i
+
+ExpressionLogicOrOperatorLiteral 'LogicOperator'
+	= 'OR'i
+
+ExpressionLogicAndOperatorLiteral 'LogicOperator'
+	= 'AND'i
+
+ExpressionNotOperatorLiteral 'NotLiteral'
+	= 'NOT'i
+
+MacroExpressionLiteral 'MacroOperator'
+	= 'EXACTLY-ONE'i / 'AT\-MOST\-ONE'i / 'AT\-LEAST\-ONE'i
+
+MacroOperandOrLiteral 'MacroLogicOperator'
+	= '|' {return {type: 'MacroLogicOperator', text: text()}}
+
+OpenBracket 'OpenBracket'
+	= '(' {return {type: 'bracket', text: text()}}
+
+OpenSquareBracket 'OpenSquareBracket'
+	= '[' {return {type: 'squarebracket', text: text()}}
+
+CloseBracket 'CloseBracket'
+	= ')' {return {type: 'bracket', text: text()}}
+
+CloseSquareBracket 'CloseSquareBracket'
+	= ']' {return {type: 'squarebracket', text: text()}}
+
+BooleanOperator 'BooleanOperator'
+	= ('=') {return {type: 'BooleanOperator', text: text()}}
+
+MoreLessOperator 'MoreLessOperator'
+	= '>=' {return {type: 'MoreLessOperator', text: text()}}
+	/ '<=' {return {type: 'MoreLessOperator', text: text()}}
+
+ExpressionValidIntVariableName
+	= ExpressionIntVariableName / OpenSquareBracket variable:BracketIntVariableName CloseSquareBracket {
+		parserInstance.currentParseVariableType = INT_VARIABLE_TYPE;
+		return variable;
+	}
+
+ExpressionIntVariableName 'VariableName'
+	= variable:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === null && isVariableTypeOneOf(variable, [INT_VARIABLE_TYPE]);
+	} {
+		parserInstance.currentParseVariableType = INT_VARIABLE_TYPE;
+		return {type: 'variable', text: variable};
+	}
+
+BracketIntVariableName 'VariableName'
+	= variable:$noSquareBracketString  & {
+		return parserInstance.currentParseVariableType === null && isVariableTypeOneOf(variable, [INT_VARIABLE_TYPE]);
+	} {
+		return {type: 'variable', text: variable};
+	}
+
+ExpressionValidDateTimeVariableName
+	= ExpressionDateTimeVariableName / OpenSquareBracket variable:BracketDateTimeVariableName CloseSquareBracket {
+		parserInstance.currentParseVariableType = DATETIME_VARIABLE_TYPE;
+		return variable;
+	}
+
+ExpressionDateTimeVariableName 'VariableName'
+	= variable:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === null && isVariableTypeOneOf(variable, [DATETIME_VARIABLE_TYPE]);
+	} {
+		parserInstance.currentParseVariableType = DATETIME_VARIABLE_TYPE;
+		return {type: 'variable', text: variable};
+	}
+
+BracketDateTimeVariableName 'VariableName'
+	= variable:$noSquareBracketString  & {
+		return parserInstance.currentParseVariableType === null && isVariableTypeOneOf(variable, [DATETIME_VARIABLE_TYPE]);
+	} {
+		return {type: 'variable', text: variable};
+	}
+
+ExpressionValidStringVariableName
+	= ExpressionStringVariableName / OpenSquareBracket variable:BracketStringVariableName CloseSquareBracket {
+		parserInstance.currentParseVariableType = STRING_VARIABLE_TYPE;
+		return variable;
+	}
+
+ExpressionStringVariableName 'VariableName'
+	= variable:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === null && isVariableTypeOneOf(variable, [STRING_VARIABLE_TYPE]);
+	} {
+		parserInstance.currentParseVariableType = STRING_VARIABLE_TYPE;
+		return {type: 'variable', text: variable};
+	}
+
+BracketStringVariableName 'VariableName'
+	= variable:$noSquareBracketString  & {
+		return parserInstance.currentParseVariableType === null && isVariableTypeOneOf(variable, [STRING_VARIABLE_TYPE]);
+	} {
+		return {type: 'variable', text: variable};
+	}
+
+ExpressionValidVariableName
+	= ExpressionVariableName / OpenSquareBracket variable:BracketVariableName CloseSquareBracket {
+		parserInstance.currentParseVariableType = ENUM_VARIABLE_TYPE;
+		setupValidValueNames(variable.text);
+		return variable;
+	}
+
+BracketVariableName 'VariableName'
+	= variable:$noSquareBracketString  & {
+		return parserInstance.currentParseVariableType === null && getVariableTypeByVariableNameCaseInsensitive(variable) === ENUM_VARIABLE_TYPE;
+	} {
+		return {type: 'variable', text: variable};
+	}
+
+ExpressionVariableName 'VariableName'
+	= variable:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === null && getVariableTypeByVariableNameCaseInsensitive(variable) === ENUM_VARIABLE_TYPE;
+	} {
+		parserInstance.currentParseVariableType = ENUM_VARIABLE_TYPE;
+		setupValidValueNames(variable);
+		return {type: 'variable', text: variable}
+	}
+
+ExpressionValidValueName
+	= ExpressionValueName / OpenSquareBracket value:ExpressionBracketValueName CloseSquareBracket {
+		resetCurrentParseVariableType();
+		return value;
+	}
+
+ExpressionValueName 'ValidValueName'
+	= value:$noSpecialCharactersString & {
+		return parserInstance.currentParseVariableType === ENUM_VARIABLE_TYPE && isElementExistInCollection('ValidValueName', value);
+	} {
+		resetCurrentParseVariableType();
+		return {type: 'value', text: value};
+	}
+
+ExpressionBracketValueName 'ValidValueName'
+= value:$noSquareBracketString & {
+	return parserInstance.currentParseVariableType === ENUM_VARIABLE_TYPE && isElementExistInCollection('ValidValueName', value);
+} {
+	return {type: 'value', text: value};
+}
+
+noSquareBracketString 'noSquareBracketString'
+	= [^\[\]]+
+
+noSpecialCharactersString 'noSpecialCharactersString'
+	= [a-zA-Z0-9]+
+
+_ 'whitespace'
+	= [ \t\n\r]+ {return {type: 'whitespace', text: text()}}
+
+__ 'softWhitespace'
+	= ws:$[ \t\n\r]* {
+		return ws ? {type: 'whitespace', text: ws} : null;
+	}
+
+ExpressionValidIntValue
+	= ExpressionIntValue / OpenSquareBracket value:ExpressionBracketIntValue CloseSquareBracket {
+		resetCurrentParseVariableType();
+		return value;
+	}
+
+ExpressionValidDateTimeValue
+	= OpenSquareBracket value:ExpressionBracketDateTimeValue CloseSquareBracket {
+		resetCurrentParseVariableType();
+		return value;
+	}
+
+ExpressionIntValue 'ValidIntValue'
+	= value:$noSpecialCharactersString & {
+		return isVariableValueValid(value);
+	} {
+		resetCurrentParseVariableType();
+		return {type: 'value', text: value};
+	}
+
+ExpressionBracketIntValue 'ValidIntValue'
+= value:$noSquareBracketString & {
+	return isVariableValueValid(value);
+} {
+	return {type: 'value', text: value};
+}
+
+ExpressionBracketDateTimeValue 'ValidDateTimeValue'
+= value:$noSquareBracketString & {
+	return isVariableValueValid(value);
+} {
+	return {type: 'value', text: value};
+}
+
+ExpressionValidStringValue
+	= ExpressionStringValue / OpenSquareBracket value:ExpressionBracketStringValue CloseSquareBracket {
+		resetCurrentParseVariableType();
+		return value;
+	}
+
+ExpressionStringValue 'ValidStringValue'
+	= value:$noSpecialCharactersString & {
+		return isVariableValueValid(value);
+	} {
+		resetCurrentParseVariableType();
+		return {type: 'value', text: value};
+	}
+
+ExpressionBracketStringValue 'ValidStringValue'
+= value:$noSquareBracketString & {
+	return isVariableValueValid(value);
+} {
+	return {type: 'value', text: value};
+}

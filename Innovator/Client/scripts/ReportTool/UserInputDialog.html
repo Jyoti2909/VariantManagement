@@ -1,0 +1,93 @@
+﻿<html>
+  <head>
+    <style type="text/css">
+    @import url(tool_styles.css);
+    body {
+      background-color:buttonface;
+    }
+    </style>
+    <script type="text/javascript" src="../../javascript/PopulateDocByLabels.js"></script>
+  </head>
+
+  <script>
+    var aras  = dialogArguments[0];
+    var xml   = dialogArguments[1];
+    var title = dialogArguments[2];
+
+    document.title = title;
+
+    function Submit()
+    {
+      returnValue = UserInputFields.XMLDocument.xml;
+      close();
+    }
+
+    function Cancel()
+    {
+      returnValue = "";
+      close();
+    }
+  </script>
+
+  <body topmargin="0" leftmargin="0">
+		<object id="UserInputFields" width="0" height="0" classid="clsid:550dda30-0541-11d2-9ca9-0060b0ec3d39"></object>
+    <script>
+      UserInputFields.XMLDocument.loadXML(xml);
+    </script>
+
+    <form id="UserInputDialog">
+      <table border="0" cellspacing="0" cellpadding="0" width="100%" style="position:absolute; top:0;">
+        <tr height="60">
+          <td class="header" nowrap>
+            <img src="images/32x32_cellValue.gif" hspace="20">
+            <span id="title">
+              <script>
+                document.write(title);
+              </script>
+            </span>
+          </td>
+        </tr>
+
+        <tr valign="top">
+          <td>
+            <table border="0" cellspacing="0" cellpadding="0" width="100%" id="UserInput">
+              <tr><td height="10"></td></tr>
+              <script>
+                var table = document.getElementById('UserInput');
+                var nodes = UserInputFields.XMLDocument.selectNodes('Item/*');
+                for (i=0; i<nodes.length; ++i)
+                {
+                  var node = nodes[i];
+                  var name = node.nodeName;
+
+                  var tr = table.insertRow();
+
+                  var td = tr.insertCell();
+                  td.setAttribute('nowrap','');
+                  td.appendChild(document.createTextNode(name.replace('_',' ') + ":"));
+                  td.style.cssText = "text-align:right; padding-left:10px; width:80px;";
+                  td.style.textTransform = 'capitalize';
+
+                  td = tr.insertCell();
+                  td.innerHTML = "<input style='width:expression(body.clientWidth - 110);' datasrc='#UserInputFields' datafld='" + name + "'>";
+                  td.style.cssText = "padding-left:8px;";
+                }
+              </script>
+              <tr><td style="height:expression(body.clientHeight - 190)"></td></tr>
+            </table>
+          </td>
+        </tr>
+
+        <tr>
+          <td align="center" class="buttons">
+            <button onclick="Submit()" aras_ui_resource_key="reporttool.submit"></button>
+            <button onclick="Cancel()" aras_ui_resource_key="reporttool.cancel"></button>
+          </td>
+        </tr>
+      </table>
+    </form>
+    <script>
+      PopulateDocByLabels();
+    </script>
+  </body>
+</html>

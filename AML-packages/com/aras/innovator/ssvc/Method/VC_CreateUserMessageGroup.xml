@@ -1,0 +1,102 @@
+﻿<AML>
+ <Item type="Method" id="B6BC426995774B5CA85171FB00F5BD2F" action="add">
+  <comments>Creates Forum Message group of type UserMessages or UserPrivateMessages</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string groupType = this.getProperty("group_type");
+if (String.IsNullOrEmpty(groupType))
+{
+	throw new Exception(CCO.ErrorLookup.Lookup("SSVC_FMGGroupTypeNotSet"));
+}
+string sourceId = this.getProperty("source_id");
+if (String.IsNullOrEmpty(sourceId))
+{
+	throw new Exception(CCO.ErrorLookup.Lookup("SSVC_FMGSourceIdNotSet"));
+}
+string userId = this.getProperty("user_id");
+if (String.IsNullOrEmpty(userId))
+{
+	throw new Exception(CCO.ErrorLookup.Lookup("SSVC_FMGUserIdNotSet"));
+}
+Item userItem = GetUserById(userId);
+if (userItem.isError())
+{
+	throw new Exception(String.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_FailedToCreateFMGOneParam"), userItem.getErrorString()));
+}
+string aliasIdentity = this.getProperty("alias_identity");
+
+string fmgLabel =GetFMGLabel(userItem);
+this.context = CCO;
+Item result = CreateForumMessageGroup(groupType, sourceId, userId, fmgLabel, aliasIdentity);
+if (result.isError())
+{
+	throw new Exception(String.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_FailedToCreateFMGOneParam"), result.getErrorString()));
+}
+return result;
+}
+
+Aras.Server.Core.CallContext context;
+private string[] _secureMessageProps = new[] { "id", "thread_id", "disabled_on", "disabled_by_id", "created_on", "created_on_tick", "created_by_id(login_name)", "comments", "classification", "item_major_rev", "item_version", "item_state", "item_keyed_name", "item_type_id", "item_type_name", "item_id", "item_config_id", "modified_on" };
+
+private string GetFMGLabel(Item user)
+{
+	string result = "";
+	string name = user.getProperty("first_name");
+	string surname = user.getProperty("last_name");
+	if (String.IsNullOrEmpty(name) && String.IsNullOrEmpty(surname))
+	{
+		result = user.getProperty("login_name");
+	}
+	else
+	{
+		result = user.getProperty("keyed_name");
+	}
+	return result;
+}
+
+private Item GetUserById(string userId)
+{
+	Item user = this.newItem("User", "get");
+	user.setID(userId);
+	return user.apply();
+}
+
+private string GetAmlForUserMessageGroup(string userId)
+{
+	const string amlForCreatedAndFlaggedMessagesByUser = "<Item type=\"SecureMessage\" select='{1}' action=\"get\" where=\"([SECUREMESSAGE].created_by_id = '{0}' and [SECUREMESSAGE].classification != 'History') or [SECUREMESSAGE].id in (select source_id from [SECUREMESSAGEFLAGGEDBY] as f where f.flagged_by_id = '{0}')\"><disabled_by_id condition=\"is null\"/></Item>";
+	string escapedUserId = System.Security.SecurityElement.Escape(context.DB.InnDatabase.QuoteValue(userId));
+	return String.Format(CultureInfo.InvariantCulture, amlForCreatedAndFlaggedMessagesByUser, escapedUserId, String.Join(",", _secureMessageProps));
+}
+
+private string GetAmlForUserPrivateMessages(string aliasIdentity)
+{
+	string amlEscapedAliasIdentity = System.Security.SecurityElement.Escape(aliasIdentity);
+	return String.Format(CultureInfo.InvariantCulture, "<Item type='SecureMessage' select='{1}' action='get'><Relationships><Item type='SecureMessageVisibilityFilter' action='get' related_expand='0'><related_id>{0}</related_id><is_creator>0</is_creator></Item></Relationships></Item>", amlEscapedAliasIdentity, String.Join(",", _secureMessageProps));
+}
+
+private Item CreateForumMessageGroup(string type, string forumId, string userId,  string fmgLabel, string aliasIdentity)
+{
+	string fmgId = this.getInnovator().getNewID();
+	Item fmg = this.newItem("ForumMessageGroup", "add");
+	fmg.setID(fmgId);
+	fmg.setProperty("group_type", type);
+	fmg.setProperty("source_id", forumId);
+	fmg.setProperty("label", fmgLabel);
+	fmg.setProperty("user_criteria_id", userId);
+	if (string.Equals("UserMessages", type, StringComparison.OrdinalIgnoreCase))
+	{
+		fmg.setProperty("aml", GetAmlForUserMessageGroup(userId));
+	}
+	else if (string.Equals("UserPrivateMessages", type, StringComparison.OrdinalIgnoreCase)) 
+	{
+		fmg.setProperty("aml", GetAmlForUserPrivateMessages(aliasIdentity));
+	}
+	else
+	{
+		throw new Exception(String.Format(CultureInfo.InvariantCulture, context.ErrorLookup.Lookup("SSVC_FMGInvalidUserMessageGroupType"), type));
+	}
+	return fmg.apply();
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_CreateUserMessageGroup</name>
+ </Item>
+</AML>

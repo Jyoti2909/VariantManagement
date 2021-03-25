@@ -1,0 +1,37 @@
+﻿<AML>
+ <Item type="Method" id="61E9C9925D40422793973B4CCA93A789" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var dateFromValue = getRelationshipProperty(relationshipID, "date_from"),
+	dateToValue = getRelationshipProperty(relationshipID, "date_to");
+
+if (dateFromValue && dateToValue) {
+	dateFrom = Date.parse(dateFromValue);
+	dateTo = Date.parse(dateToValue);
+
+	if (dateFrom > dateTo) {
+		switch (propertyName) {
+			case "date_to":
+				if (top.aras.confirm(top.aras.getResource("project", "project_tree.can_not_change_to_negative_duration"))) {
+					setTimeout(function () {
+						setRelationshipProperty(relationshipID, "date_to", "");
+						gridApplet.edit_Experimental.set(relationshipID, colNumber);
+					}, 0);
+					return true;
+				}
+				else {
+					setRelationshipProperty(relationshipID, "date_to", "");
+					return false;
+				}
+				break;
+			case "date_from":
+				setRelationshipProperty(relationshipID, "date_to", dateFromValue);
+				break;
+		}
+	}
+}
+
+return true;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>TimeRecord onDateChange</name>
+ </Item>
+</AML>

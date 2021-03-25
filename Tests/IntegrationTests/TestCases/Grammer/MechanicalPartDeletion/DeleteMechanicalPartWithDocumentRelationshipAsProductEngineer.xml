@@ -1,0 +1,130 @@
+﻿<TestCase author='apetrovsky@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>
+		Create Parent item as product engineer.
+		Add Document into Parent part item as relationship as product engineer.
+		Delete Parent item and get error as product engineer.
+	</Description>
+	<Request runAs='petestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer identity
+			When:
+				The user tries to create a part with Mechanical Part/Component classification.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='AEC4B8128AC94702BECB38A5194B1573' doGetItem='0'>
+					<classification>Mechanical Part/Component</classification>
+					<name>Parent Item</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='AEC4B8128AC94702BECB38A5194B1573' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='petestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer identity
+			When:
+				The user tries to add Document into Parent Item.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part Document' action='add' id='AFCA11A6C426489D8B81939EC0D3AE3B' doGetItem='0'>
+					<related_id>A7E3CF56C4D14811912C6AACBE7FE862</related_id>
+					<source_id>AEC4B8128AC94702BECB38A5194B1573</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part Document' id='AFCA11A6C426489D8B81939EC0D3AE3B'>
+							<related_id>A7E3CF56C4D14811912C6AACBE7FE862</related_id>
+						</Item>
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='petestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer identity
+			When:
+				The user tries to delete item with the Document relationship.
+			Then:
+				The request should return error.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='delete' id='AEC4B8128AC94702BECB38A5194B1573' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/' xmlns:i18n='http://www.aras.com/I18N'>
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault>
+						<faultcode>1</faultcode>
+						<faultactor />
+						<faultstring>1 generation of this item cannot be deleted because it has linked relationships.</faultstring>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='Part Document' action='delete' id='AFCA11A6C426489D8B81939EC0D3AE3B' />
+				<Item type='Part' action='delete' id='AEC4B8128AC94702BECB38A5194B1573' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

@@ -1,0 +1,133 @@
+﻿<AML>
+ <Item type="SQL" id="CF307082F2084DAA8184D3BFF424FB98" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_wbs_elements</old_name>
+  <sqlserver_body><![CDATA[/*
+Name:    select_wbs_elements
+Created: 1-DEC-2005 George J. Carrette
+Input:   a WBS_ID.
+Output:  a table of wbs_elements {id,level,ord} allowing the caller
+         to enumerate the wbs structure as desired. Where:
+         id - WBS_Element id.
+         level - integer which describes how deep WBS is inside project tree
+         (0 - root WBS, 1 - direct sub WBS, 2 - child WBSes of 1st level WBSes, ...).
+         ord - integer. Does matter and defined only for level 1 WBSes.
+*/
+CREATE FUNCTION innovator.select_wbs_elements(@WBS_ID CHAR(32))
+ RETURNS @WBS_ELEMENTS TABLE(ID CHAR(32) COLLATE database_default PRIMARY KEY,
+                             LEVEL INTEGER,
+                             ORD INTEGER)
+AS
+BEGIN
+  DECLARE @WBS_ELEMENTS_LEVELS TABLE(
+     ID CHAR(32) COLLATE database_default PRIMARY KEY,
+     LEVEL INTEGER,
+     PREV_ITEM VARCHAR(32) COLLATE database_default)
+  
+  DECLARE @LEVEL INTEGER
+  DECLARE @LEVEL_COUNT INTEGER
+  DECLARE @NULL_ITEM VARCHAR(32)
+  
+  -- This must be '' because some PREV_ITEM pointers in database are blank
+  -- instead of being NULL.
+  SET @NULL_ITEM = ''
+  SET @LEVEL = 0
+  
+  -- define a set of WBS on each level in a loop:
+  INSERT @WBS_ELEMENTS_LEVELS VALUES (@WBS_ID, @LEVEL, @NULL_ITEM) --root WBS is on level 0
+  WHILE @@ROWCOUNT > 0 BEGIN
+    SET @LEVEL = @LEVEL + 1
+    INSERT @WBS_ELEMENTS_LEVELS
+      SELECT r.RELATED_ID, @LEVEL, ISNULL(e.PREV_ITEM, @NULL_ITEM)
+      FROM [SUB_WBS] r, [WBS_ELEMENT] e
+      WHERE r.SOURCE_ID IN (SELECT ID FROM @WBS_ELEMENTS_LEVELS WHERE LEVEL=(@LEVEL-1)) AND
+            r.RELATED_ID NOT IN (SELECT ID FROM @WBS_ELEMENTS_LEVELS WHERE LEVEL=(@LEVEL-1)) AND
+            r.RELATED_ID = e.ID
+  END
+  
+  SET @LEVEL_COUNT = @LEVEL
+  SET @LEVEL = 0
+ 
+  WHILE @level < @level_count BEGIN
+    IF @level = 1 BEGIN
+      DECLARE @ORD_COUNT INTEGER
+      DECLARE @ORD INTEGER
+      DECLARE @PREV_WBS_ID VARCHAR(32) -- is used where WBS id is expected
+      
+      SET @ORD_COUNT = (SELECT COUNT(*) FROM @WBS_ELEMENTS_LEVELS WHERE LEVEL = @LEVEL)
+      SET @ORD = 0
+      SET @PREV_WBS_ID = @NULL_ITEM
+      WHILE @ORD < @ORD_COUNT BEGIN
+        DECLARE @PREV_ITEM AS VARCHAR(32) -- may contain 
+        
+        --define previous WBS id. In most cases it is equal to @PREV_WBS_ID.
+        --but it is possible that PREV_ITEM is an Activity2 id
+        IF NOT EXISTS (SELECT ID
+                       FROM @WBS_ELEMENTS_LEVELS
+                       WHERE LEVEL = @LEVEL AND PREV_ITEM = @PREV_WBS_ID)
+          BEGIN -- prev_item is activity2
+            DECLARE @ACTIVITIES TABLE(
+              ID CHAR(32) COLLATE database_default PRIMARY KEY,
+              PREV_ITEM VARCHAR(32) COLLATE database_default)
+
+            INSERT INTO @ACTIVITIES
+              SELECT ID, PREV_ITEM
+              FROM [ACTIVITY2]
+              WHERE ID IN (SELECT RELATED_ID
+                           FROM [WBS_ACTIVITY2]
+                           WHERE SOURCE_ID=@WBS_ID) -- we need parent wbs id here. since this is only for level = 1 will use WBS_ID
+
+            DECLARE @PREV_ACTIVITY2_ID AS VARCHAR(32)
+            DECLARE @TMP_ID AS VARCHAR(32)
+
+            SET @PREV_ACTIVITY2_ID = NULL
+            SET @TMP_ID = @PREV_WBS_ID
+
+            WHILE @TMP_ID IS NOT NULL BEGIN
+              SET @PREV_ACTIVITY2_ID = @TMP_ID
+              SET @TMP_ID = (SELECT ID FROM @ACTIVITIES WHERE PREV_ITEM=@TMP_ID)
+            END
+
+            DELETE FROM @ACTIVITIES
+
+            SET @PREV_ITEM = @PREV_ACTIVITY2_ID
+          END
+        ELSE
+          BEGIN -- prev_item is wbs
+            SET @PREV_ITEM = @PREV_WBS_ID
+          END
+        
+        SET @PREV_WBS_ID = (SELECT ID
+                          FROM @WBS_ELEMENTS_LEVELS
+                          WHERE LEVEL = @LEVEL AND PREV_ITEM = @PREV_ITEM)
+        IF ISNULL(@PREV_WBS_ID, @NULL_ITEM) != @NULL_ITEM BEGIN
+          INSERT @WBS_ELEMENTS VALUES(@PREV_WBS_ID, @LEVEL, @ORD)
+        END
+        
+        SET @ORD = @ORD + 1
+      END --WHILE @ord < @ord_count
+    END --IF @level = 1
+    ELSE BEGIN
+      -- For level 0 there is only 1 Wbs Element. We need just copy that.
+      -- after level 1 things are more complicated. An entirely different
+      -- way of walking the tree is needed. But since we only use the ORD
+      -- value on the phases, which are @level = 1 we can punt.
+      INSERT @WBS_ELEMENTS
+        SELECT ID, @LEVEL, 0
+        FROM @WBS_ELEMENTS_LEVELS
+        WHERE LEVEL = @LEVEL
+    END
+    
+    SET @level = @level + 1
+  END --WHILE @level < @level_count
+  
+  RETURN
+END
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_wbs_elements</name>
+ </Item>
+</AML>

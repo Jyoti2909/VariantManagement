@@ -1,0 +1,56 @@
+﻿<AML>
+ <Item type="ConversionRule" id="43C6AC18D7D048728AA73EC68FC086E4" action="add">
+  <converter_type keyed_name="SSVC.Email.Digest.Notification" type="ConverterType">85CB524FAE644CBB9D83839DAD67E4D5</converter_type>
+  <cutoff>48</cutoff>
+  <delay>360</delay>
+  <enabled>1</enabled>
+  <timeout>20</timeout>
+  <name>SSVC.Email.Digest.Notification.Rule</name>
+  <Relationships>
+   <Item type="ConversionRuleEventTemplate" id="3582B93629714BCF9F98E7FA385F0F86" action="add">
+    <event_type>OnBeforeConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="VCN_CheckSendSchedule" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>VCN_CheckSendSchedule</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="SSVC.Email.Digest.Notification.Rule" type="ConversionRule">43C6AC18D7D048728AA73EC68FC086E4</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="5EF86BD115D141FEBC3354723D7D3116" action="add">
+    <event_type>OnAfterConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="VCN_CreateEmailDigestTask" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>VCN_CreateEmailDigestTask</name>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="SSVC.Email.Digest.Notification.Rule" type="ConversionRule">43C6AC18D7D048728AA73EC68FC086E4</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="BC409A9CEF8344E5A71EF8EAD39713C8" action="add">
+    <event_type>OnTaskDiscarding</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="VCN_CreateEmailDigestTask" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>VCN_CreateEmailDigestTask</name>
+     </Item>
+    </related_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="SSVC.Email.Digest.Notification.Rule" type="ConversionRule">43C6AC18D7D048728AA73EC68FC086E4</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="2C24606E257B4C28BD64BBC7C6403268" action="add">
+    <event_type>OnConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="InvokeMethodOnConvert" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>InvokeMethodOnConvert</name>
+     </Item>
+    </related_id>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="SSVC.Email.Digest.Notification.Rule" type="ConversionRule">43C6AC18D7D048728AA73EC68FC086E4</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

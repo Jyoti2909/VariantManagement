@@ -1,0 +1,539 @@
+﻿<AML>
+ <Item type="Method" id="A34D557831094ED091C7E39B16CCE790" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	string effExpressionItemTypeId;
+	string template = "effs_{0}_expression";
+	string name = this.getProperty("name");
+	string itemTypeId = this.getProperty("related_id");
+	Item effExpressionItemType = GetEffectivityExpressionItemType(itemTypeId);
+	if (effExpressionItemType != null)
+	{
+		effExpressionItemTypeId = effExpressionItemType.getID();
+		if (!string.IsNullOrEmpty(name) && !effExpressionItemType.getProperty("name")
+			.Equals(string.Format(CultureInfo.InvariantCulture, template, name.Replace(" ", "_")), StringComparison.OrdinalIgnoreCase))
+		{
+			Item itemType = GetItemTypeById(itemTypeId);
+			if (itemType.isError())
+			{
+				return itemType;
+			}
+			return this.getInnovator().newError(CCO.ErrorLookup.Lookup("effs_ItemTypeWithOtherName", name, effExpressionItemType.getProperty("name"), itemType.getProperty("name")));
+		}
+	}
+	else
+	{
+		Item itemType = GetItemTypeById(itemTypeId);
+		if (itemType.isError())
+		{
+			return itemType;
+		}
+
+		string itemTypeName = itemType.getProperty("name");
+		string itemTypeLabel = itemType.getProperty("label");
+
+		if (string.IsNullOrWhiteSpace(itemTypeLabel))
+		{
+			itemTypeLabel = itemTypeName;
+		}
+
+		itemTypeLabel = itemTypeLabel.Trim();
+
+		if (string.IsNullOrEmpty(name))
+		{
+			name = itemTypeName;
+		}
+
+		int maxNameLength = GetMaxNameLength();
+		name = string.Format(CultureInfo.InvariantCulture, template, name.Replace(" ", "_"));
+		if (name.Length > maxNameLength)
+		{
+			return this.getInnovator().newError(CCO.ErrorLookup.Lookup("effs_VeryLongName", maxNameLength.ToString(CultureInfo.InvariantCulture)));
+		}
+
+		CreateExpressionStringNotationFederatedPropertyIfNotExists(itemTypeId);
+		CreateServerEventIfNotExistLookingBySourceIdAndMethodName(itemTypeId, "effs_expStringNotationBeforeGet", "onBeforeGet");
+		CreateServerEventIfNotExistLookingBySourceIdAndMethodName(itemTypeId, "effs_getExpressionStringNotation", "onAfterGet");
+
+		Item existingRelType = GetExistingEffectivityRelationshipType(itemTypeId, name);
+		// effs_{name}_expression relationship type should be created only if it does not exist.
+		if (!existingRelType.isError())
+		{
+			effExpressionItemTypeId = existingRelType.getProperty("relationship_id");
+		}
+		else if (!string.Equals(existingRelType.getErrorCode(), "0", StringComparison.Ordinal))
+		{
+			return existingRelType;
+		}
+		else
+		{
+			Item effsExpressionPolyItemType = this.newItem("ItemType", "get");
+			effsExpressionPolyItemType.setProperty("name", "effs_expression");
+			effsExpressionPolyItemType.setAttribute("select", "large_icon,open_icon");
+			effsExpressionPolyItemType = effsExpressionPolyItemType.apply();
+			if (effsExpressionPolyItemType.isError())
+			{
+				return effsExpressionPolyItemType;
+			}
+
+			effExpressionItemTypeId = this.getNewID();
+
+			Item effRelType = CreateEffectivityRelationshipType(itemTypeId, effExpressionItemTypeId, name, itemTypeLabel, effsExpressionPolyItemType.getProperty("large_icon"), effsExpressionPolyItemType.getProperty("open_icon"));
+			if (effRelType.isError())
+			{
+				return effRelType;
+			}
+
+			// replace default form by other from effs_expression polymorphic
+			Item error = ReplaceDefaultFormByUniversal(effExpressionItemTypeId, name);
+			if (error != null)
+			{
+				return error;
+			}
+
+			// add new itemtype to effs_expression polymorphic
+			Item effExpression = AddNewItemTypeToEffectivityExpression(effExpressionItemTypeId, effsExpressionPolyItemType.getID());
+			if (effExpression.isError())
+			{
+				return effExpression;
+			}
+		}
+	}
+
+	this.setProperty("effs_expression_itemtype_id", effExpressionItemTypeId);
+
+	return this;
+}
+
+private int GetMaxNameLength()
+{
+	Item nameProperty = this.newItem("Property", "get");
+	nameProperty.setProperty("name", "name");
+	nameProperty.setAttribute("select", "stored_length");
+	Item itemtype = this.newItem("ItemType", "get");
+	itemtype.setAttribute("select", "id");
+	itemtype.setProperty("name", "ItemType");
+	nameProperty.setPropertyItem("source_id", itemtype);
+	nameProperty = nameProperty.apply();
+
+	// 30 - max name length that is setup for ItemType name property
+	return int.Parse(nameProperty.getProperty("stored_length"), CultureInfo.InvariantCulture);
+}
+
+private Item GetItemTypeById(string itemTypeId)
+{
+	Item itemType = this.newItem("ItemType", "get");
+	itemType.setID(itemTypeId);
+	itemType.setAttribute("select", "name,label");
+	return itemType.apply();
+}
+
+private Item GetEffectivityExpressionItemType(string itemTypeId)
+{
+	Item checkItemType = this.newItem("effs_scope_itemtype", "get");
+	checkItemType.setAttribute("select", "effs_expression_itemtype_id(name)");
+	checkItemType.setAttribute("maxRecords", "1");
+	checkItemType.setProperty("related_id", itemTypeId);
+	checkItemType = checkItemType.apply();
+
+	return checkItemType.isError() ? null : checkItemType.getPropertyItem("effs_expression_itemtype_id");
+}
+
+private Item GetExistingEffectivityRelationshipType(string itemTypeId, string name)
+{
+	// RelationshipType and associated relationship ItemType always have the same name (even if one of them was edited).
+	Item effsRelationshipType = this.newItem("RelationshipType", "get");
+	effsRelationshipType.setAttribute("select", "relationship_id");
+	effsRelationshipType.setProperty("source_id", itemTypeId);
+	effsRelationshipType.setProperty("name", name);
+
+	Item effsItemType = effsRelationshipType.createPropertyItem("relationship_id", "ItemType", "get");
+	effsItemType.setProperty("name", name);
+
+	return effsRelationshipType.apply();
+}
+
+private Item CreateEffectivityRelationshipType(string itemTypeId, string effItemTypeId, string name, string itemTypeLabel, string largeIcon, string openIcon)
+{
+	string effsItemTypeLabel = itemTypeLabel + " Effectivity";
+
+	// "effs_itemtype_name_expression" - create relationship
+	Item effRelType = this.newItem("RelationshipType", "add");
+	effRelType.setProperty("name", name);
+	effRelType.setProperty("label", "Effectivity");
+	effRelType.setProperty("source_id", itemTypeId);
+	effRelType.setProperty("new_show_related", "0");
+	effRelType.setProperty("related_notnull", "0");
+	effRelType.setProperty("create_related", "0");
+	effRelType.setProperty("related_option", "2");
+
+	// "effs_itemtype_name_expression" - specify itemtype with needed properties
+	Item effItemType = GetRelationshipItemType(effItemTypeId, name, effsItemTypeLabel, largeIcon, openIcon);
+	effRelType.setPropertyItem("relationship_id", effItemType);
+	return effRelType.apply();
+}
+
+private Item GetRelationshipItemType(string itemTypeId, string name, string label, string largeIcon, string openIcon)
+{
+	Item effItemType = this.newItem("ItemType", "add");
+	effItemType.setID(itemTypeId);
+	effItemType.setProperty("name", name);
+	effItemType.setProperty("label", label);
+	effItemType.setProperty("label_plural", label);
+	effItemType.setProperty("is_relationship", "1");
+	effItemType.setProperty("large_icon", largeIcon);
+	effItemType.setProperty("open_icon", openIcon);
+	effItemType.setProperty("use_src_access", "0");
+
+	Item scopeDataSourceItem = effItemType.newItem("ItemType", "get");
+	scopeDataSourceItem.setProperty("name", "effs_scope");
+	Item effScopePropertyItem = BuildPropertyItem(new ItemPropertyInfo(
+		name: "effs_scope_id",
+		label: "Scope",
+		dataSource: scopeDataSourceItem,
+		isRequired: true,
+		columnWidth: 200));
+	Item definitionPropertyItem = BuildPropertyItem(new TextPropertyInfo(
+		name: "definition",
+		label: "Definition",
+		isHidden: true,
+		isHidden2: true,
+		isRequired: true));
+	Item stringNotationPropertyItem = BuildPropertyItem(new TextPropertyInfo(
+		name: "string_notation",
+		label: "Expression",
+		isReadonly: true,
+		columnWidth: 700));
+	effItemType.addRelationship(effScopePropertyItem);
+	effItemType.addRelationship(definitionPropertyItem);
+	effItemType.addRelationship(stringNotationPropertyItem);
+
+	Item clientEvent = CreateClientEvent();
+	effItemType.addRelationship(clientEvent);
+
+	Item canAddItem = BuildEffectivityManagementIdentityCanAddItem();
+	effItemType.addRelationship(canAddItem);
+
+	Item allowedPermissionItem = BuildEffectivityManagementAllowedPermissionItem();
+	effItemType.addRelationship(allowedPermissionItem);
+
+	return effItemType;
+}
+
+private Item BuildPropertyItem(PropertyInfo propertyInfo)
+{
+	Item propertyItem = this.newItem("Property", "add");
+	propertyItem.setProperty("name", propertyInfo.Name);
+	propertyItem.setProperty("label", propertyInfo.Label);
+	propertyItem.setProperty("data_type", propertyInfo.DataType);
+	propertyItem.setProperty("is_required", propertyInfo.IsRequired ? "1" : "0");
+	propertyItem.setProperty("readonly", propertyInfo.IsReadonly ? "1" : "0");
+	propertyItem.setProperty("is_hidden", propertyInfo.IsHidden ? "1" : "0");
+	propertyItem.setProperty("is_hidden2", propertyInfo.IsHidden2 ? "1" : "0");
+
+	ItemPropertyInfo itemPropertyInfo = propertyInfo as ItemPropertyInfo;
+	if (itemPropertyInfo != null)
+	{
+		propertyItem.setPropertyItem("data_source", itemPropertyInfo.DataSource);
+	}
+
+	if (propertyInfo.ColumnWidth.HasValue)
+	{
+		propertyItem.setProperty("column_width", propertyInfo.ColumnWidth.Value.ToString(CultureInfo.InvariantCulture));
+	}
+
+	if (!string.IsNullOrEmpty(propertyInfo.SourceId))
+	{
+		propertyItem.setProperty("source_id", propertyInfo.SourceId);
+	}
+
+	return propertyItem;
+}
+
+private Item CreateClientEvent()
+{
+	Item clientEvent = this.newItem("Client Event", "add");
+	clientEvent.setProperty("client_event", "OnShowItem");
+
+	Item relatedMethod = this.newItem("Method", "get");
+	relatedMethod.setAttribute("select", "id");
+	relatedMethod.setProperty("name", "effs_ExpressionOnShowItem");
+
+	clientEvent.setRelatedItem(relatedMethod);
+
+	return clientEvent;
+}
+
+private Item BuildEffectivityManagementIdentityCanAddItem()
+{
+	Item canAddItem = this.newItem("Can Add", "add");
+	canAddItem.setProperty("can_add", "1");
+	//"1050D71126614218B6CF41F80AD95F34" is an id of "Effectivity Management" item of Identity item type.
+	canAddItem.setProperty("related_id", "1050D71126614218B6CF41F80AD95F34");
+
+	return canAddItem;
+}
+
+private Item BuildEffectivityManagementAllowedPermissionItem()
+{
+	Item allowedPermissionItem = this.newItem("Allowed Permission", "add");
+	allowedPermissionItem.setProperty("is_default", "1");
+	//"0954643F506842A09F9AA4AB51FBBE71" is an id of "Effectivity Management" item of Permission item type.
+	allowedPermissionItem.setProperty("related_id", "0954643F506842A09F9AA4AB51FBBE71");
+
+	return allowedPermissionItem;
+}
+
+private Item ReplaceDefaultFormByUniversal(string itemTypeId, string name)
+{
+	Item replaceDefaultView = this.newItem("View", "edit");
+	replaceDefaultView.setAttribute("where", "[VIEW].[SOURCE_ID]='" + itemTypeId + "'");
+
+	// use form from effs_expression polymorphic
+	Item relatedForm = replaceDefaultView.newItem("Form", "get");
+	relatedForm.setProperty("name", "effs_expression");
+	replaceDefaultView.setRelatedItem(relatedForm);
+
+	replaceDefaultView = replaceDefaultView.apply();
+	if (replaceDefaultView.isError())
+	{
+		return replaceDefaultView;
+	}
+
+	Item deleteDefaultForm = this.newItem("Form", "delete");
+	deleteDefaultForm.setAttribute("where", "[FORM].[NAME]='" + name + "'");
+	deleteDefaultForm = deleteDefaultForm.apply();
+	if (deleteDefaultForm.isError())
+	{
+		return deleteDefaultForm;
+	}
+
+	return null;
+}
+
+private Item AddNewItemTypeToEffectivityExpression(string itemTypeId, string effsExpressionPolyItemTypeId)
+{
+	Item effExpression = this.newItem("ItemType", "edit");
+	effExpression.setID(effsExpressionPolyItemTypeId);
+	Item morphae = effExpression.newItem("Morphae", "add");
+	morphae.setProperty("related_id", itemTypeId);
+	effExpression.addRelationship(morphae);
+	return effExpression.apply();
+}
+
+private void CreateExpressionStringNotationFederatedPropertyIfNotExists(string sourceId)
+{
+	PropertyInfo stringNotationPropertyInfo = new FederatedPropertyInfo(
+		name: "eff_expression_string_notation",
+		label: "Effectivity",
+		isReadonly: true,
+		isHidden: true,
+		isHidden2: true,
+		columnWidth: 250,
+		sourceId: sourceId);
+
+	CreatePropertyIfNotExistsByNameAndSourceId(stringNotationPropertyInfo);
+}
+
+private void CreatePropertyIfNotExistsByNameAndSourceId(PropertyInfo propertyInfo)
+{
+	Item lookupPropertyItem = this.newItem("Property", "get");
+	lookupPropertyItem.setProperty("name", propertyInfo.Name);
+	lookupPropertyItem.setAttribute("select", "id");
+	lookupPropertyItem.setProperty("source_id", propertyInfo.SourceId);
+	lookupPropertyItem = lookupPropertyItem.apply();
+
+	if (lookupPropertyItem.isError())
+	{
+		Item resultPropertyItem = lookupPropertyItem;
+
+		if (lookupPropertyItem.isEmpty())
+		{
+			Item propertyItem = BuildPropertyItem(propertyInfo);
+			resultPropertyItem = propertyItem.apply();
+		}
+
+		if (resultPropertyItem.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(resultPropertyItem.dom);
+		}
+	}
+}
+
+internal virtual void CreateServerEventIfNotExistLookingBySourceIdAndMethodName(string serverEventSourceId, string methodName, string eventTypeName)
+{
+	Item relatedMethod = this.newItem("Method", "get");
+	relatedMethod.setAttribute("select", "id");
+	relatedMethod.setProperty("name", methodName);
+
+	Item lookupServerEventItem = this.newItem("Server Event", "get");
+	lookupServerEventItem.setAttribute("select", "id");
+	lookupServerEventItem.setProperty("source_id", serverEventSourceId);
+	lookupServerEventItem.setProperty("server_event", eventTypeName);
+	lookupServerEventItem.setRelatedItem(relatedMethod);
+	lookupServerEventItem = lookupServerEventItem.apply();
+
+	if (lookupServerEventItem.isError())
+	{
+		Item resultServerEventItem = lookupServerEventItem;
+
+		if (lookupServerEventItem.isEmpty())
+		{
+			resultServerEventItem = this.newItem("Server Event", "add");
+			resultServerEventItem.setProperty("source_id", serverEventSourceId);
+			resultServerEventItem.setProperty("server_event", eventTypeName);
+			resultServerEventItem.setRelatedItem(relatedMethod);
+			resultServerEventItem.setAttribute("doGetItem", "0");
+			resultServerEventItem = resultServerEventItem.apply();
+		}
+
+		if (resultServerEventItem.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(resultServerEventItem.dom);
+		}
+	}
+}
+
+/// <summary>
+/// Represents basic ItemType property metadata
+/// </summary>
+internal class PropertyInfo
+{
+	internal string Name { get; private set; }
+	internal string DataType { get; private set; }
+	internal string Label { get; private set; }
+	internal bool IsRequired { get; private set; }
+	internal bool IsReadonly { get; private set; }
+	internal int? ColumnWidth { get; private set; }
+	internal bool IsHidden { get; private set; }
+	internal bool IsHidden2 { get; private set; }
+	internal string SourceId { get; private set; }
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="PropertyInfo"/> class with the defined property definition
+	/// </summary>
+	/// <param name="name"></param>
+	/// <param name="datatype"></param>
+	/// <param name="label"></param>
+	/// <param name="isRequired"></param>
+	/// <param name="isReadonly"></param>
+	/// <param name="columnWidth"></param>
+	/// <param name="isHidden"></param>
+	/// <param name="isHidden2"></param>
+	/// <param name="sourceId"></param>
+	internal PropertyInfo(
+		string name = null,
+		string datatype = null,
+		string label = null,
+		bool isRequired = false,
+		bool isReadonly = false,
+		int? columnWidth = null,
+		bool isHidden = false,
+		bool isHidden2 = false,
+		string sourceId = null)
+	{
+		this.Name = name;
+		this.DataType = datatype;
+		this.Label = label;
+		this.IsRequired = isRequired;
+		this.IsReadonly = isReadonly;
+		this.ColumnWidth = columnWidth;
+		this.IsHidden = isHidden;
+		this.IsHidden2 = isHidden2;
+		this.SourceId = sourceId;
+	}
+}
+
+/// <summary>
+/// Represents ItemType property metadata of the "Text" data type
+/// </summary>
+internal class TextPropertyInfo : PropertyInfo
+{
+	/// <summary>
+	/// Initializes a new instance of the <see cref="TextPropertyInfo"/> class with the defined property definition
+	/// </summary>
+	/// <param name="name"></param>
+	/// <param name="label"></param>
+	/// <param name="isRequired"></param>
+	/// <param name="isReadonly"></param>
+	/// <param name="columnWidth"></param>
+	/// <param name="isHidden"></param>
+	/// <param name="isHidden2"></param>
+	/// <param name="sourceId"></param>
+	internal TextPropertyInfo(
+		string name = null,
+		string label = null,
+		bool isRequired = false,
+		bool isReadonly = false,
+		int? columnWidth = null,
+		bool isHidden = false,
+		bool isHidden2 = false,
+		string sourceId = null) : base(name, "text", label, isRequired, isReadonly, columnWidth, isHidden, isHidden2, sourceId)
+	{
+	}
+}
+
+/// <summary>
+/// Represents ItemType property metadata of the "Federated" data type
+/// </summary>
+internal class FederatedPropertyInfo : PropertyInfo
+{
+	/// <summary>
+	/// Initializes a new instance of the <see cref="FederatedPropertyInfo"/> class with the defined property definition
+	/// </summary>
+	/// <param name="name"></param>
+	/// <param name="label"></param>
+	/// <param name="isRequired"></param>
+	/// <param name="isReadonly"></param>
+	/// <param name="columnWidth"></param>
+	/// <param name="isHidden"></param>
+	/// <param name="isHidden2"></param>
+	/// <param name="sourceId"></param>
+	internal FederatedPropertyInfo(
+		string name = null,
+		string label = null,
+		bool isRequired = false,
+		bool isReadonly = false,
+		int? columnWidth = null,
+		bool isHidden = false,
+		bool isHidden2 = false,
+		string sourceId = null) : base(name, "federated", label, isRequired, isReadonly, columnWidth, isHidden, isHidden2, sourceId)
+	{
+	}
+}
+
+/// <summary>
+/// Represents ItemType property metadata of the "Item" data type
+/// </summary>
+internal class ItemPropertyInfo : PropertyInfo
+{
+	internal Item DataSource { get; private set; }
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="ItemPropertyInfo"/> class with the defined property definition
+	/// </summary>
+	/// <param name="name"></param>
+	/// <param name="label"></param>
+	/// <param name="dataSource"></param>
+	/// <param name="isRequired"></param>
+	/// <param name="isReadonly"></param>
+	/// <param name="columnWidth"></param>
+	/// <param name="isHidden"></param>
+	/// <param name="isHidden2"></param>
+	/// <param name="sourceId"></param>
+	internal ItemPropertyInfo(
+		string name = null,
+		string label = null,
+		Item dataSource = null,
+		bool isRequired = false,
+		bool isReadonly = false,
+		int? columnWidth = null,
+		bool isHidden = false,
+		bool isHidden2 = false,
+		string sourceId = null) : base(name, "item", label, isRequired, isReadonly, columnWidth, isHidden, isHidden2, sourceId)
+	{
+		this.DataSource = dataSource;
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>effs_ScopeItemTypeOnBeforeAdd</name>
+ </Item>
+</AML>

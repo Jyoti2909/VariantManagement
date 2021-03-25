@@ -1,0 +1,40 @@
+﻿<AML>
+ <Item type="Method" id="8E8571903173402FA98A005CEF0E32CD" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var canDelegateFieldName = 'can_delegate';
+var consolidateFieldName = 'consolidate_ondelegate';
+
+var canDelegateField;
+if (this.tagName && this.tagName.toUpperCase == 'INPUT') {
+	canDelegateField = this;
+} else {
+	var canDelegateField = getInputByName(canDelegateFieldName);
+}
+if (!canDelegateFieldName) {
+	return true;
+}
+
+var consolidateField = getInputByName(consolidateFieldName);
+if (!consolidateField) {
+	return true;
+}
+
+if (consolidateField.checked && !canDelegateField.checked) {consolidateField.checked = false;}
+consolidateField.disabled = !canDelegateField.checked;
+return true;
+
+function getInputByName(inputName) {
+	var allFields = document.getElementsByName(inputName);
+	var requiredField;
+	for (var i = 0; i < allFields.length; i++) {
+		if (allFields[i].tagName.toUpperCase() == 'INPUT') {
+			requiredField = allFields[i];
+		}
+	}
+	return requiredField;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Can Delegate onClick</name>
+ </Item>
+</AML>

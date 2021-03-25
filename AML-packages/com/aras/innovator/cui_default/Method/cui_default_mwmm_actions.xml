@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="90BB344C388D431BB692CBA3C2DB7443" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const actionId = target.actionId;
+const itemTypeId = target.itemTypeId || '';
+const cmdHandlerName = 'onAction:' + actionId + ':' + itemTypeId + 'Command';
+const cmdHandler = window[cmdHandlerName];
+if (cmdHandler) {
+	const commandId = 'action:' + actionId + ':' + itemTypeId;
+	cmdHandler(commandId);
+	return;
+}
+
+const selectProp = 'name,method(name,method_type,method_code),type,target,location,body,on_complete(name,method_type,method_code),item_query';
+const action = aras.getItemFromServer('Action', actionId, selectProp);
+if (action) {
+	const actionType = action.getProperty('type');
+	if (actionType === 'itemtype') {
+		aras.invokeAction(action.node, itemTypeId, '');
+	} else {
+		options.selectedRowsIds
+			.filter((rowId) => options.rows.get(rowId, '@aras.action') !== 'add')
+			.forEach((rowId) => aras.invokeAction(action.node, itemTypeId, rowId));
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_svicm_actions_click</name>
+ </Item>
+</AML>

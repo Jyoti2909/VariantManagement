@@ -1,0 +1,30 @@
+﻿@{
+	Layout = "../../aras.innovator.core.ItemWindow/Views/Shared/_cuiTabItemViewLayout.cshtml";
+}
+@section extra_header
+{
+	<script>
+		require(['MacPolicy/Scripts/Configurator/main']);
+	</script>
+	<link rel="stylesheet" type="text/css" href="@Url.ContentWithSalt("~/javascript/dojox/grid/resources/claroGrid.css")" />
+	<link rel="stylesheet" type="text/css" href="@Url.ContentWithSalt("~/Modules/aras.innovator.MacPolicy/Styles/ConditionEditorStyle.css")" />
+	<link rel="stylesheet" type="text/css" href="@Url.ContentWithSalt("~/javascript/include.aspx?classes=common.css")" />
+}
+@section editor
+{
+	<div id="mp-editor" data-dojo-type="Controls/Tab">
+		<div class="mp-editor__container" id="MacPolicyEditorContainer">
+			<div class="mp-editor__content-pane">
+				<div id="gridToolbar"></div>
+				<div id="conditionsPane" style="height:calc(100% - 30px)">
+					<div id="conditionsGrid" style="height:100%"></div>
+				</div>
+			</div>
+			<aras-splitter class='aras-splitter aras-splitter_horizontal'></aras-splitter>
+			<div class="mp-editor__condition-form">
+				<div id="formToolbar"></div>
+				<iframe id="conditionFormFrame" src="blank.html" style="width: 100%; height: calc(100%  - 30px); display: block; min-width: 900px;" frameborder="0"></iframe>
+			</div>
+		</div>
+	</div>
+}

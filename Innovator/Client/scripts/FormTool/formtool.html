@@ -1,0 +1,193 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="../../styles/common.min.css">
+		<style>
+			@import "../../javascript/dojo/resources/dojo.css";
+			@import "../../javascript/dijit/themes/claro/claro.css";
+			@import "../../javascript/dojox/grid/resources/claroGrid.css";
+			@import "../../javascript/include.aspx?classes=common.css";
+			@import "../../styles/default.css";
+
+			html,body{
+				overflow: hidden;
+				width: 100%;
+				height: 100%;
+				margin: 0px;
+				padding: 0px;
+			}
+
+			iframe{
+				margin: 0px;
+				padding: 0px;
+				border-width: 0px;
+			}
+
+			#gridTD {
+				height: 345px;
+				width: 180px;
+				float: left;
+				border-right: 1px solid #d4d4d4;
+			}
+
+			.claro .dijitTabPaneWrapper {
+				display: none;
+			}
+			#workarea{
+				border-bottom: 1px solid #d4d4d4;
+				height: 345px;
+				width: 100%;
+			}
+			#fieldbar {
+				border-top: 0px;
+			}
+		</style>
+		<title></title>
+		<script>
+			var aras = parent.aras;
+		</script>
+		<script type="text/javascript" src="../../javascript/include.aspx?classes=ArasModules,XmlDocument&files=formtool"></script>
+		<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../javascript/dojo'"></script>
+		<script type="text/javascript" src="../../javascript/QueryString.js"></script>
+		<script type="text/javascript" src="../../javascript/formtool_window.js"></script>
+	</head>
+	<script type="text/javascript">
+		initializeFormWindowFunctions(window);
+		initializeFormToolFunctions(window);
+		var menuFrame = parent.isTearOff ? parent.tearOffMenuController : parent.menu,
+			arasToolbar;
+
+		var LocationSearches = new Object(); //required by QueryString.js
+		parent.snap = 1;
+
+		if (!parent.isTearOff) {
+			var FormIT = aras.getItemTypeForClient("Form", "name").node;
+			var itId = FormIT.getAttribute("id");
+			var menuApplet = parent.menu.menuApplet;
+			var actMenu = menuApplet.findMenu("actions_menu");
+
+			if (actMenu && FormIT) {
+				var actions = FormIT.selectNodes("Relationships/Item[@type='Item Action']/related_id/Item[@type='Action' and (type='item' or type='itemtype') and method!='']");
+				var act, actName;
+				for (var i = 0; i < actions.length; i++) {
+					act = actions[i];
+					actName = aras.getItemProperty(act, "name");
+					actMenu.addItem(-1, actName, "action:" + act.getAttribute("id") + ":" + itId, true);
+				}
+			}
+		}
+
+		var tabbarApplet;
+		var isFormTool = true;
+		var isEditMode = false;
+		var currFormId = QueryString("formID").toString();
+		var currFormNd = null; //these nodes are used to implement
+		var currBodyNd = null; //"fast" access to some properties
+		var currView = null; //access to Function, Classification and Identity properties
+		var isNew = false;
+
+		var itemType = aras.getItemTypeByFormID(currFormId, true);
+
+		window.updateFormItem();
+
+		if ((currBodyNd.getAttribute("action") == "add") && (currBodyNd.getAttribute("isTemp") == "1")) {
+			isNew = true;
+			if ((currFormNd.getAttribute("action") == "add") && (currFormNd.getAttribute("isTemp") == "1"))
+				isEditMode = true;
+		}
+
+		if (!isNew) {
+			currView = aras.getItem("View", "related_id[Item[@id='" + currFormId + "']]", "<related_id>" + currFormId + "</related_id>", 0, "", "type,form_classification,role,related_id(id)");
+		}
+
+		if (aras.isTempID(currFormId) || parent.isEditMode) {
+			isEditMode = true;
+		}
+
+		window.refreshMenuState();
+
+		var fieldevent_id_const = aras.getRelationshipTypeId("Field Event");
+		var formevent_id_const = aras.getRelationshipTypeId("Form Event");
+		var field_id_const = aras.getRelationshipTypeId("Field");
+		var access_id_const = aras.getRelationshipTypeId("Access");
+		var formfield_id_const = aras.getFormId("Field");
+
+		var function_form = "";
+		var classification_form = "";
+		var identity_form = "";
+
+		var statusId = "";
+
+		if (currView) {
+			var prop = aras.getItem("Property", "source_id='" + aras.getItemTypeId("View") + "'", "<name>type</name>", 0, "", "source_id, data_source");
+			var propIdList = aras.getItemProperty(prop, "data_source");
+			var listValues = aras.getListValues(propIdList);
+			//getting Function, Classification and Identity properties
+			function_form = aras.getItemProperty(currView, "type");
+			classification_form = aras.getItemProperty(currView, "form_classification");
+			identity_form = aras.getItemPropertyAttribute(currView, "role", "keyed_name");
+			for (var i = 0; i < listValues.length; i++) if (aras.getItemProperty(listValues[i], "value") == function_form) function_form = aras.getItemProperty(listValues[i], "label");
+		}
+
+		var bodyfield_id_const = "";
+		if (formfield_id_const) {
+			statusId = aras.showStatusMessage("status", aras.getResource("", "formtool.stage_n", "6"), "../images/Progress.gif");
+			var bodyFieldNd = aras.getItem("Body", "source_id='" + formfield_id_const + "'", "<source_id>" + formfield_id_const + "</source_id>", 0, "", "id, source_id");
+			if (bodyFieldNd)
+				bodyfield_id_const = bodyFieldNd.getAttribute("id");
+			aras.clearStatusMessage(statusId);
+		}
+
+		var fieldpropertytype_id_id_const = "";
+		if (bodyfield_id_const) {
+			statusId = aras.showStatusMessage("status", aras.getResource("", "formtool.stage_n", "7"), "../images/Progress.gif");
+			var fieldPropTypeNd = aras.getItem("Field", "source_id='" + bodyfield_id_const + "'", "<name>propertytype_id</name><source_id>" + bodyfield_id_const + "</source_id>", 0, "", "id, source_id");
+			if (fieldPropTypeNd)
+				fieldpropertytype_id_id_const = fieldPropTypeNd.getAttribute("id");
+			aras.clearStatusMessage(statusId);
+		}
+
+		aras.clearStatusMessage(statusId);
+
+		var updateToolStatusId;
+		var isBusy = true;
+		var fieldGrid;
+
+		//ready state flags
+		var tabsFReady = false;
+		var propsFReady = false;
+		var toolsFReady = false;
+		var canvasFReady = false;
+		//^^^^^ ready state flags
+
+		var buffer = 2; //scroll bar buffer
+
+		window.addEventListener("resize", window.resizeCanvasIframe);
+
+		var emptyPage = "javascript:'<html><body style=\"background-color:#FFFFFF;\"></body></html>'";
+
+		if (currFormNd && currBodyNd) {
+			onload = window.setupToolOnLoad;
+		}
+		else {
+			aras.AlertError(aras.getResource("", "formtool.internal_err_formtool_failed_init"), aras.getResource("", "formtool.check_form"), aras.getResource("", "common.client_side_err"));
+		}
+	</script>
+	<body class="claro">
+		<div id="workarea">
+			<div id="gridTD"></div>
+			<div style="overflow:hidden; height:100%;" id="workarea1">
+				<aras-tabs movable id="tabs-container" class="aras-flex-grow"></aras-tabs>
+				<iframe id="tabs" name="tabs" src="formTabs.html" style="display: none;"></iframe>
+				<iframe id="properties" name="properties" src="../blank.html" frameborder="no" scrolling="no" marginwidth="0" marginheight="0" height="315" width="100%" onload="setFlag('propsFReady',true);" ></iframe>
+			</div>
+		</div>
+		<div id="workarea2">
+			<div id="toolbarContainer" style="height: 31px;">
+			</div>
+			<iframe id="canvas" name="canvas" src="canvas.html"  marginheight="0" marginwidth="0" scrolling="auto" width="100%" onload="setFlag('canvasFReady',true); resizeCanvasIframe();" ></iframe>
+		</div>
+		<iframe id="tools" name="tools" src="fieldTools.html" style="display: none;" ></iframe>
+	</body>
+</html>

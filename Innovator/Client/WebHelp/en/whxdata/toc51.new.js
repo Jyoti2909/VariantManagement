@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"SharePoint Integration","type":"item","url":"SharePoint/SharePointIntegration/sharepoint.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

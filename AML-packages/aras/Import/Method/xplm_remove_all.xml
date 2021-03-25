@@ -1,0 +1,80 @@
+﻿<AML>
+ <Item type="Method" id="204A58FDAE194741943B7BCD158FFB97" action="add">
+  <classification>/*</classification>
+  <method_code><![CDATA[Dim myInnovator = Me.newInnovator()
+Dim SQL As String
+
+SQL = "delete from PART_BOM"
+Dim result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from PART_CAD"
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from CAD_PART"
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from CAD_FILE"
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from CAD_STRUCTURE"
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from CAD_CHANGES"
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from CAD_PARENT"
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from LOCATED"
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from [file] where id not in (select related_id from databaseupgradelogfile) "
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from PART"
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+SQL = "delete from CAD"
+result = myInnovator.applySql(SQL)
+If result.isError() Then
+   Return result
+End If
+
+Return myInnovator.newResult("OK")
+
+
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>xplm_remove_all</name>
+ </Item>
+</AML>

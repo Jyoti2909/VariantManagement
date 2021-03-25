@@ -1,0 +1,139 @@
+﻿<TestCase author='pponkrashov@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>Grant access for update and create Mechanical Part with Mechanical Part/M-Phantom classification as Product Engineer, and delete relationship as CAD-Designer</Description>
+	<Request runAs='root:innovator'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with root identity
+			When:
+				Grant Update Access for CAD-Designer in Life Cycle
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item action='edit' type='Access' id='CC824EF63BFE49A194D1AD6150CA9B31' doGetItem='0'>
+					<can_update>1</can_update>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Access' id='CC824EF63BFE49A194D1AD6150CA9B31'/>
+					</Result>
+					<Message>
+						<event name='ids_modified' value=''/>
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+
+	<Request runAs='petestuser1:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer identity
+			When:
+				The user tries to create part with Mechanical Part/M-Phantom classification and related document.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='C3B28099B09D494A9E18228AB16247A9' doGetItem='0'>
+					<classification>Mechanical Part/M-Phantom</classification>
+					<name>MP Material type</name>
+					<Relationships>
+						<Item type='Part Document' action='add' id='DCD9B9FDA6794A60A48505F5F6CBE52C'>
+							<related_id>
+								<Item type='Document' action='get' id='05B2CC634952431EB8C3C76C5804B15E'></Item>
+							</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='C3B28099B09D494A9E18228AB16247A9'/>
+					</Result>
+					<Message>
+						<event name='ids_modified' value=''/>
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+
+
+	<Request runAs='testuser5:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with CAD-Designer identity
+			When:
+				The user tries to remove document relationship from part with Mechanical Part/M-Phantom classification.
+			Then:
+				The user should get error.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part Document' action='delete' id='DCD9B9FDA6794A60A48505F5F6CBE52C' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af='http://www.aras.com/InnovatorFault'>
+						<faultcode>SOAP-ENV:Server.InsufficientPermissionsException</faultcode>
+						<faultstring><![CDATA[You have insufficient permissions to perform 'delete' operation.]]></faultstring>
+						<detail>
+							<af:legacy_detail><![CDATA[You have insufficient permissions to perform 'delete' operation.]]></af:legacy_detail>
+							<af:exception message="You have insufficient permissions to perform 'delete' operation." type='Aras.Server.Core.InsufficientPermissionsException' />
+							<af:permission type='can_delete' itemtype='Part Document' id='DCD9B9FDA6794A60A48505F5F6CBE52C' />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='Part Document' action='delete' id='DCD9B9FDA6794A60A48505F5F6CBE52C' />
+				<Item type='Part' id='C3B28099B09D494A9E18228AB16247A9' action='delete' />
+
+				<Item action='edit' type='Access' id='CC824EF63BFE49A194D1AD6150CA9B31' doGetItem='0'>
+					<can_update>0</can_update>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</TestCaseCleanUp>
+</TestCase>

@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="9BD70A454530444FAEDA44D4D27265AB" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Item itemTypeQuery = this.newItem("cmf_PropertyType", "get");
+itemTypeQuery.setID(this.getID());
+itemTypeQuery.setAttribute("select", "generated_type, source_id");
+itemTypeQuery = itemTypeQuery.apply();
+string itemTypeId = itemTypeQuery.getProperty("generated_type");
+string documentElementTypeId = itemTypeQuery.getProperty("source_id");
+
+if (string.IsNullOrEmpty(itemTypeId)) return this;
+
+Item documentTypeQuery = this.newItem("cmf_ElementType", "get");
+documentTypeQuery.setID(documentElementTypeId);
+documentTypeQuery.setAttribute("select", "source_id");
+documentTypeQuery = documentTypeQuery.apply();
+string documentTypeId = documentTypeQuery.getProperty("source_id");
+
+if (RequestState.Contains(documentTypeId))
+{
+    ((List<string>) RequestState[documentTypeId]).Add(itemTypeId);
+    return this;
+}
+else
+{
+    return this.getInnovator().newError("It's impossible to save certain Element Type or Property Type. Instead save entire Content Type item.");
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_PropertyDelete</name>
+ </Item>
+</AML>

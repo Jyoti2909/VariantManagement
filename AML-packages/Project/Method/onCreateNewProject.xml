@@ -1,0 +1,140 @@
+﻿<AML>
+ <Item type="Method" id="DE2503F5DA6B410B8B4DA62468842E89" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// MethodTemplateName=VBScriptMainUpgrade;
+
+var ctz = aras.getItemFromServerByName("Variable", "CorporateTimeZone", "value,default_value");
+if (!ctz)
+{
+	aras.AlertError(aras.getResource("project", "common.ctz_is_not_set"));
+	return;
+}
+
+if (!aras.commonProperties.PE_newProjectItem) {
+	var qryItem = aras.newQryItem('Project Template');
+	qryItem.setCriteria('state', 'Approved');
+	qryItem.setCriteria('locked_by_id', '', 'is null');
+	qryItem.setSelect('name, wbs_id');
+	qryItem.setOrderBy('name');
+	results = qryItem.execute();
+
+	templNames = results.selectNodes('Item/name');
+	var names = new Array;
+	for (var i = 0; i<templNames.length;i++) {
+		names.push(templNames[i].text);
+	}
+
+	this.setProperty('scheduling_type', 'Forward');
+
+	var dialogArguments = new Array();
+	dialogArguments['names'] = names;
+	dialogArguments['aras'] = aras;
+	dialogArguments['item'] = this.node;
+	dialogArguments['title'] = aras.getResource("project", "add_project_dialog.title");
+	var options = {
+		dialogWidth: 550,
+		dialogHeight: 250
+	};
+	var self = this;
+	var callbacks = {
+		oncancel: function(dialog) {
+			var res = dialog.result;
+			if (!res) {
+				aras.removeFromCache(self.node);
+				return;
+			}
+
+			var statusId = aras.showStatusMessage(0, aras.getResource("project", "pr_methods.creating_new_project"), '../images/Progress.gif');
+
+			if (res['useTemplate'] == "Yes") {
+				// PROJECT PLAN FROM TEMPLATE
+				var template = self.newItem();
+				template.loadAML("<AML>" + results.selectSingleNode("Item[name='" + res['projectTemplate'] + "']").xml + "</AML>");
+
+				self.setProperty("from_template", template.getID());
+
+				var wbs_id = template.getProperty("wbs_id");
+				if (!wbs_id) {
+					aras.AlertError("'Project Template not found"); return;
+				}
+
+				template.setAttribute("projectCloneMode", "CreateProjectFromTemplate");
+				var newProj = template.apply("Project_CloneProjectOrTemplate"),
+					deliverables = newProj.getRelationships("Project Docs"),
+					deliverablesCount = deliverables.getItemCount(),
+					index = 0;
+
+				for (index; index < deliverablesCount; index++) {
+					self.addRelationship(deliverables.getItemByIndex(index));
+				}
+
+				self.setPropertyItem("wbs_id", newProj.getPropertyItem("wbs_id"));
+				var newProjectNumber = newProj.getProperty("project_number");
+				self.setProperty("project_number", newProjectNumber);
+				self.setProperty("keyed_name", newProjectNumber + " " + self.getProperty('name'));
+				self.setProperty("owned_by_id", newProj.getProperty("owned_by_id"));
+				self.setAttribute("newProject", newProj.getAttribute("newProject"));
+				self.setAttribute("isNeedFixDeliverables", newProj.getAttribute("isNeedFixDeliverables"));
+			}
+			else
+			{
+				var newProjNum = aras.getNextSequence("", "Project Number"),
+					userNode = aras.getLoggedUserItem(),
+					identityNd = userNode.selectSingleNode("Relationships/Item[@type='Alias']/related_id/Item[@type='Identity']"),
+					curAlias = identityNd.getAttribute("id"),
+					owned_by_keyed_name = aras.getItemProperty(identityNd, 'keyed_name');
+
+				self.setProperty("project_number", newProjNum);
+				self.setProperty("keyed_name", newProjNum + " " + self.getProperty('name'));
+
+				self.setProperty("owned_by_id", curAlias);
+				self.setPropertyAttribute("owned_by_id", "keyed_name", owned_by_keyed_name);
+				var project = self.node,
+					rootWbs = project.selectSingleNode("wbs_id");
+
+				// PROJECT PLAN FROM SCRATCH
+				var nwItem = aras.newItem("WBS Element");
+				aras.itemsCache.addItem(nwItem);
+
+				aras.setItemProperty(nwItem, "name", newProjNum); // set wbs name
+				aras.setItemProperty(nwItem, "is_top", "1");
+				aras.setItemProperty(nwItem, "keyed_name", newProjNum);
+				aras.setItemProperty(nwItem, "proj_num", newProjNum);
+				nwItem.setAttribute("doGetItem", "0"); // Added to improve performance
+
+				self.setAttribute("newProject", "true");
+
+				rootWbs = project.appendChild(self.dom.createElement("wbs_id"));
+				rootWbs.text = "";
+				rootWbs.appendChild(nwItem);
+			}
+			self.node = aras.updateInCache(self.node).item;
+			aras.clearStatusMessage(statusId);
+
+			aras.commonProperties.PE_newProjectItem = self;
+			setTimeout(function () {
+				const workerFrame = aras.getMainWindow().main.work;
+				if (workerFrame.onNewCommand && workerFrame.itemTypeName === "Project") {
+					workerFrame.onNewCommand();
+				} else if (parent && parent.findCurrentRelationshipsTab) {
+					delete aras.commonProperties.PE_newProjectItem;
+					parent.findCurrentRelationshipsTab().addRelationship(self.node);
+					aras.uiShowItemEx(self.node);
+				} else {
+					aras.uiNewItemEx("Project");
+				}
+			}, 0);
+		}
+	}
+	var mainWindow = aras.getMostTopWindowWithAras(window);
+	aras.modalDialogHelper.show('DefaultPopup', mainWindow, dialogArguments, options, '../Solutions/Project/scripts/addProjectDialog.html', callbacks);
+	return;
+} else {
+	var resItem = aras.commonProperties.PE_newProjectItem;
+	delete aras.commonProperties.PE_newProjectItem;
+	return resItem;
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>onCreateNewProject</name>
+ </Item>
+</AML>

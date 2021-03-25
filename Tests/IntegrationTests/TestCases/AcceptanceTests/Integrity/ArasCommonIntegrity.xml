@@ -1,0 +1,73 @@
+﻿<TestCase author="Noname" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>
+		Create Item of Item Type SomeTestType in TestMethodUsingArasCommon which using Aras.Common.dll.
+		We expect that this method will be executed without error.
+	</Description>
+	<Request>
+		<Comments>Add TestMethodUsingArasCommon method.</Comments>
+		<Query>
+			<AML>
+				<Item type="Method" id="4B7B6E17656941A396AAB38CA7B916C7" action="add" doGetItem="0">
+					<method_type>C#</method_type>
+					<name>TestMethodUsingArasCommon</name>
+					<method_code>
+						<![CDATA[
+									var dataAccessLayer = new DataAccessLayer(this.getInnovator(), null);
+									BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+									return businessLogic.Run(this);
+								}
+
+								internal class BusinessLogic
+								{
+									private readonly IDataAccessLayer dal;
+									public BusinessLogic(IDataAccessLayer dataAccessLayer)
+									{
+										dal = dataAccessLayer;
+									}
+									public Item Run(Item contextItem)
+									{
+										return dal.NewItemWithoutAttribute("SomeTestType");
+									}
+						]]>
+					</method_code>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Method" id="4B7B6E17656941A396AAB38CA7B916C7" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="4B7B6E17656941A396AAB38CA7B916C7" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<Request>
+		<Comments>Invoke TestMethodUsingArasCommon method and check response message.</Comments>
+		<Query>
+			<AML>
+				<Item type="Method" action="TestMethodUsingArasCommon" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="SomeTestType" />
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+	<TestCaseCleanUp>
+		<Query>
+			<AML>
+				<Item type="Method" id="4B7B6E17656941A396AAB38CA7B916C7" action="delete" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

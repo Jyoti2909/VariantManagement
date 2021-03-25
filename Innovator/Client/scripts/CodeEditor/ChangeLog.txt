@@ -1,0 +1,37 @@
+2016.03.10
+	IR-039691 "Method Editor cannot complete syntax check on large JS methods"
+
+	globalstrict option may cause errors in last versions of JSHint.
+	This option has been deprecated and will be removed in the next major release of JSHint.
+	In this case JSHint generate many 'Missing "use strict" statement' errors whose number is greater than the maxerr option value that brakes JSHint check with "Too many errors" error.
+	In this commit globalstrict was set to false to prevent unnecessary errors wich crashes editor syntax check.
+	Also was enabled warnings about creating global variables in "for-in" statements.
+
+
+	Client\scripts\CodeEditor\javascript\src-min-noconflict\worker-javascript.js changes:
+
+	var disabledWarningsRe = startRegex([
+	--	"Bad for in variable '(.+)'.",
+		'Missing "use strict"'
+	]);
+
+	this.setOptions = function(options) {
+		this.options = options || {
+			esnext: true,
+			moz: true,
+			devel: true,
+			browser: true,
+			node: true,
+			laxcomma: true,
+			laxbreak: true,
+			lastsemic: true,
+			onevar: false,
+			passfail: false,
+			maxerr: 100,
+			expr: true,
+			multistr: true,
+	--		globalstrict: true
+	++		globalstrict: false
+		};
+		this.doc.getValue() && this.deferredUpdate.schedule(100);
+	};

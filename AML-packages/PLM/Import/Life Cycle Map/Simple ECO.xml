@@ -1,0 +1,195 @@
+﻿<AML>
+ <Item type="Life Cycle Map" id="643854055D7746E299B401A863577C88" action="add">
+  <description>Lifecycle for Simple ECOs</description>
+  <start_state keyed_name="New" type="Life Cycle State">E6E3F735F07C4BD7A7FB20911F2F94CB</start_state>
+  <name>Simple ECO</name>
+  <Relationships>
+   <Item type="Life Cycle State" id="CFEE98B3907742D19E90BE581D618AB4" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <state_permission_id keyed_name="Completed Change" type="Permission">3C4E91485BA04190ADBE7895209DA75C</state_permission_id>
+    <x>172</x>
+    <y>148</y>
+    <name>Cancelled</name>
+   </Item>
+   <Item type="Life Cycle State" id="879D7B1A416C480394F70B4706FB2A8D" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <state_permission_id keyed_name="In Review Change" type="Permission">F741D0B823F442F1947787A8F742F516</state_permission_id>
+    <x>294</x>
+    <y>52</y>
+    <name>In Review</name>
+   </Item>
+   <Item type="Life Cycle State" id="C4DA4F26E2E946B7B4D3DF4AB8CCF8AA" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <state_permission_id keyed_name="In Work Change" type="Permission">AEBC0BC7518F4CF58936EACDAAD2AB8E</state_permission_id>
+    <x>172</x>
+    <y>52</y>
+    <name>In Work</name>
+   </Item>
+   <Item type="Life Cycle State" id="E6E3F735F07C4BD7A7FB20911F2F94CB" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <x>46</x>
+    <y>52</y>
+    <name>New</name>
+   </Item>
+   <Item type="Life Cycle State" id="94140318A3FB42BABBC4457D463948A0" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <state_permission_id keyed_name="Completed Change" type="Permission">3C4E91485BA04190ADBE7895209DA75C</state_permission_id>
+    <x>420</x>
+    <y>52</y>
+    <name>Released</name>
+   </Item>
+   <Item type="Life Cycle Transition" id="4EB08B4F87764C05A71CF769912F4951" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">879D7B1A416C480394F70B4706FB2A8D</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_OnChangeItemReleased" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_OnChangeItemReleased</name>
+     </Item>
+    </post_action>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>512</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <to_state keyed_name="Released" type="Life Cycle State">94140318A3FB42BABBC4457D463948A0</to_state>
+    <x>34</x>
+    <y>16</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="5C5EAF0CA0664170878CA575D8A3AA03" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">879D7B1A416C480394F70B4706FB2A8D</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_OnChangeItemCancelled" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_OnChangeItemCancelled</name>
+     </Item>
+    </post_action>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>896</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <to_state keyed_name="Cancelled" type="Life Cycle State">CFEE98B3907742D19E90BE581D618AB4</to_state>
+    <x>-64</x>
+    <y>63</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="629940511600461DA35569E82202B2F5" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">879D7B1A416C480394F70B4706FB2A8D</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments>306,29|183,29</segments>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <to_state keyed_name="In Work" type="Life Cycle State">C4DA4F26E2E946B7B4D3DF4AB8CCF8AA</to_state>
+    <x>-89</x>
+    <y>-39</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="12BAD494F6AF418486115E2AF8DFE85B" action="add">
+    <from_state keyed_name="In Work" type="Life Cycle State">C4DA4F26E2E946B7B4D3DF4AB8CCF8AA</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_OnChangeItemCancelled" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_OnChangeItemCancelled</name>
+     </Item>
+    </post_action>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>768</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <to_state keyed_name="Cancelled" type="Life Cycle State">CFEE98B3907742D19E90BE581D618AB4</to_state>
+    <x>-56</x>
+    <y>47</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="7B8FF92513334DD7993313E251830E2C" action="add">
+    <from_state keyed_name="In Work" type="Life Cycle State">C4DA4F26E2E946B7B4D3DF4AB8CCF8AA</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>384</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <to_state keyed_name="In Review" type="Life Cycle State">879D7B1A416C480394F70B4706FB2A8D</to_state>
+    <x>29</x>
+    <y>15</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="2EF5BFF8E2F942429A00D86B36628D72" action="add">
+    <from_state keyed_name="New" type="Life Cycle State">E6E3F735F07C4BD7A7FB20911F2F94CB</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>640</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <to_state keyed_name="In Work" type="Life Cycle State">C4DA4F26E2E946B7B4D3DF4AB8CCF8AA</to_state>
+    <x>38</x>
+    <y>15</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="7DF0BD6D0A8B492ABBB3121A066A2F7C" action="add">
+    <from_state keyed_name="New" type="Life Cycle State">E6E3F735F07C4BD7A7FB20911F2F94CB</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_OnChangeItemCancelled" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_OnChangeItemCancelled</name>
+     </Item>
+    </post_action>
+    <pre_action keyed_name="PE_ChangeItemTransition" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_ChangeItemTransition</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Simple ECO" type="Life Cycle Map">643854055D7746E299B401A863577C88</source_id>
+    <to_state keyed_name="Cancelled" type="Life Cycle State">CFEE98B3907742D19E90BE581D618AB4</to_state>
+    <x>20</x>
+    <y>71</y>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

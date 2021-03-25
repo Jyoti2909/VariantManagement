@@ -1,0 +1,11 @@
+﻿@using Models.Helpers
+@model Models.FieldRenderModel
+@{
+	var fieldId = Model.FieldNode.Id;
+	var fieldNm = Model.FieldNode.Name;	
+	var btnClass = Model.Mode != "edit_form" && Model.Mode != "view_form" ? " btn" : " form_btn";
+	var label = Model.FieldNode.Label.IsNull ? "" : Model.FieldNode.Label.Value;
+	var tabIndex = Model.FieldNode.TabStop ? Model.FieldNode.TabIndex.Value : "-1";
+	var events = Model.Mode != "edit_form" && Model.Mode != "view_form" && Model.Mode != "search" ? MethodsExUtils.AssignFieldEventEx(Model.FieldNode, "", null) : null;
+}
+<input type="button" id="@(fieldId)" aria-label="@(label)" name="@(fieldNm)" class="@(fieldNm) @(btnClass)" value="@(label)" tabindex="@(tabIndex)" @Html.Raw(events ?? "") />

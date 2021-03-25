@@ -1,0 +1,16 @@
+﻿<AML>
+ <Item type="Method" id="C69112EF611740EEB00E0DEFD57A8A68" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var templateViews = this.newItem("DiscussionTemplateView", "get");
+templateViews.setProperty("client", this.getProperty("client"));
+templateViews.setProperty("source_id", this.getProperty("source_id"));
+templateViews = templateViews.apply();
+if (templateViews.getItemCount() > 1) {
+	return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_DTViewIsUnunique"));
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_IsDTViewUnique</name>
+ </Item>
+</AML>

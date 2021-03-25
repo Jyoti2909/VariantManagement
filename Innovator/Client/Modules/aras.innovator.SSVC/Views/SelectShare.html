@@ -1,0 +1,203 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<script type="text/javascript" src="../../../javascript/dialog.js"></script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,ScriptSet1"></script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js, ModulesHelper" data-dojo-config="baseUrl:'../../../javascript/dojo'"></script>
+		<link rel="stylesheet" type="text/css" href="../../../styles/default.css" />
+		<link rel="stylesheet" type="text/css" href="../styles/tagInput.css" />
+		<link rel="stylesheet" type="text/css" href="../styles/UserSelect.css" />
+		<style type="text/css">
+			@import "../../../javascript/dojo/resources/dojo.css";
+			@import "../../../javascript/dijit/themes/claro/claro.css";
+			@import "../../../javascript/include.aspx?classes=common.css";
+			@import "../styles/Forum.css";
+		</style>
+		<script type="text/javascript">
+		var argsWindow = window.frameElement.dialogArguments;
+		var onCancelClick = argsWindow.dialog.close.bind(argsWindow.dialog);
+		var identityItemTypeName = "Identity";
+		var aras = argsWindow.aras;
+		var result = argsWindow.prevResult || {};
+		var mostTopWindow = aras.getMostTopWindowWithAras();
+		var shareForumsList;
+
+		ArasModules.soap(null, {
+			headers: aras.getHttpHeadersForSoapMessage(),
+			url: aras.getServerURL(),
+			method: "ApplyItem"
+		});
+
+		function onOkClick() {
+			var aliasIdentityForUser = aras.getIsAliasIdentityIDForLoggedUser();
+			if (result.shareType === "identities") {
+				result.identityIds = shareForumsList.tagInput.getSelectedIds();
+				if (result.identityIds.indexOf(aliasIdentityForUser) === -1) {
+					result.identityIds.push(aliasIdentityForUser);
+				}
+			}
+			if (result.shareType === "identities" && (!result.identityIds || result.identityIds.length < 1 || (result.identityIds.length === 1 && result.identityIds.indexOf(aliasIdentityForUser !== -1)))) {
+				var dialog = (mostTopWindow.main || mostTopWindow).ArasModules.Dialog.show('iframe', {
+					buttons: {
+						btnYes: aras.getResource('', 'common.ok'),
+						btnCancel: aras.getResource('', 'common.cancel')
+					},
+					defaultButton: 'btnCancel',
+					aras: aras,
+					center: true,
+					dialogHeight: 180,
+					message: aras.getResource("", "ssvc.forum.dialog.no_identities"),
+					content: 'groupChgsDialog.html'
+				});
+
+				dialog.promise.then(function(confirmResult) {
+					if (confirmResult === 'btnYes') {
+						result.shareType = "myself";
+						setIdentitiesValue(false);
+						argsWindow.dialog.close(result);
+					}
+				});
+			} else {
+				argsWindow.dialog.close(result);
+			}
+		}
+
+		function normalizeDialogSize() {
+			var dialogWidth = 330;
+			argsWindow.dialog.resizeContent(dialogWidth, document.getElementById('container').offsetHeight);
+		}
+
+		window.onload = function onLoadHandler() {
+			document.getElementById("okBtn").value = aras.getResource("", "common.ok");
+			document.getElementById("cancelBtn").value = aras.getResource("", "common.cancel");
+			document.getElementById("worldInptLabel").textContent = aras.getResource("", "ssvc.forum.dialog.public");
+			document.getElementById("sMyselfLabel").textContent = aras.getResource("", "ssvc.forum.dialog.private");
+			document.getElementById("sIdsLabel").textContent = aras.getResource("", "ssvc.forum.dialog.shared_with_identities");
+			document.getElementById("mainLabel").textContent = aras.getResource("", "ssvc.forum.set_availability_to")+":";
+			require(['dojox/dtl', 'dojox/dtl/Context', 'dojo/aspect']);
+			require(['../Scripts/ShareForumsList.js', '../Scripts/tagInput.js', 'dojo/aspect', 'dojox/dtl', 'dojox/dtl/Context'], function (userSelect, tagInput, aspect, dtl, Context) {
+				dojo.setObject('SSVC.UI.ShareForumsList', userSelect);
+				dojo.setObject('SSVC.UI.TagInput', tagInput);
+				shareForumsList = new SSVC.UI.ShareForumsList({ params: {} });
+				shareForumsList.placeAt(document.getElementById('identitiesList'));
+				aspect.after(shareForumsList, 'processItem', normalizeDialogSize);
+				aspect.after(shareForumsList, 'showUsersList', normalizeDialogSize);
+			});
+			normalizeDialogSize();
+			var selectedElement = getPreviousSelectedElement(result);
+			selectedElement.checked = true;
+			onRadioClick(selectedElement, true);
+			
+			function getPreviousSelectedElement(result)
+			{
+				var selectedElement;
+				result.isCancelled = true;
+				switch (result.shareType)
+				{
+					case "myself": 
+						selectedElement = document.getElementById("sMyself");
+						setIdentitiesValue(false);
+						break;
+					case "identities": 
+						selectedElement = document.getElementById("sIds");
+						setIdentitiesValue(result.identityIds);
+						var needIds = [];
+						var aliasIdentityForUser = aras.getIsAliasIdentityIDForLoggedUser();
+						for (var i = 0; i < result.identityIds.length; i++) {
+							if (aliasIdentityForUser !== result.identityIds[i]) {
+								needIds.push(result.identityIds[i]);
+							}
+						}
+						if (needIds.length) {
+							var reqTemplate = {
+								Item : {
+									id: {
+										'@attrs' : {
+											'condition' : 'in'
+										},
+										'@value' : needIds.join(',')
+									},
+									'@attrs' : {
+										type : 'Identity',
+										action : 'get'
+									}
+								}
+							};
+							ArasModules.soap(ArasModules.jsonToXml(reqTemplate), {async: true}).then(function(data) {
+								var identities = data.selectNodes('//Result/Item');
+								for (var i = 0; i < identities.length; i++ ) {
+									shareForumsList.tagInput.addTag({
+										id: aras.getItemProperty(identities[i], 'id', ''),
+										name: aras.getItemProperty(identities[i], 'keyed_name', '')
+									});
+								}
+								normalizeDialogSize();
+							});
+						}
+						break;
+					case "world":
+					default:
+						selectedElement = document.getElementById("sWorld");
+						setIdentitiesValue(false);
+						break;
+				}
+				return selectedElement;
+			}
+		}
+
+		function setIdentitiesValue(/*array*/ identitiesIds)
+		{
+			switch (result.shareType) {
+				case "myself":
+					var userId = aras.getIsAliasIdentityIDForLoggedUser();
+					result.identityIds = [userId];
+					break;
+				case "identities":
+					var isIdsNotEmpty = identitiesIds && identitiesIds.length > 0;
+					result.identityIds = isIdsNotEmpty ? identitiesIds : [];
+					break;
+				case "world":
+				default:
+					var worldIdentityId = "A73B655731924CD0B027E4F4D5FCC0A9";
+					result.identityIds = [worldIdentityId];
+					break;
+			}
+		}
+
+		function onRadioClick(button)
+		{
+			setBehaviorClass(button);
+			result.shareType = button.value;
+			if (result.shareType != "identities") {
+				setIdentitiesValue(false);
+			}
+		}
+
+		function setBehaviorClass(button) {
+			if (button.id === "sIds") {
+				shareForumsList.toggleEnabledState(true);
+				shareForumsList.nameField.focus();
+			} else {
+				shareForumsList.toggleEnabledState(false);
+			}
+		}
+		</script>
+	</head>
+	<body>
+		<div id="container">
+			<div id="selectionRow" class="sys_f_value_container">
+				<label id="mainLabel"></label>
+				<input type="radio" class="arasCheckboxOrRadio" name="selection" id="sWorld" value="world" onclick="onRadioClick(this)"><label id="worldInptLabel" for="sWorld">Public</label><br>
+				<input type="radio" class="arasCheckboxOrRadio" name="selection" id="sMyself" value="myself" onclick="onRadioClick(this)"><label id="sMyselfLabel" for="sMyself">Private</label><br>
+				<input type="radio" class="arasCheckboxOrRadio" name="selection" id="sIds" onclick="onRadioClick(this)" value="identities"><label id="sIdsLabel" for="sIds">Shared with Identities: </label><br>
+			</div>
+			<div id="identitiesList"></div>
+			<div id="buttonRow">
+				<input type="submit" class="btn" name="ok" id="okBtn"  onclick="onOkClick()"/>
+				<input type="submit" class="btn cancel_button" name="cancel" id="cancelBtn" onclick="onCancelClick()"/>
+			</div>
+		</div>
+	</body>
+</html>

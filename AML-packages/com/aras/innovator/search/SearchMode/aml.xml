@@ -1,0 +1,208 @@
+﻿<AML>
+ <Item type="SearchMode" id="BEF4CDA54AA74362A2C40BD530D4D9DD" action="add">
+  <is_active>0</is_active>
+  <label xml:lang="en">AML</label>
+  <search_handler>function Aml(searchContainer) {
+	this.supportXClassSearch = true;
+	// create markup by aml search
+	this.amlContainer = document.createElement('div');
+	this.amlContainer.setAttribute('id', 'aml_search_container');
+	this.amlContainer.setAttribute('style', 'overflow-x: hidden; overflow-y: auto; height: 150px;');
+
+	this.aml_search_prefix = document.createElement('div');
+	this.aml_search_prefix.setAttribute('id', 'aml_search_container');
+	this.aml_search_prefix.setAttribute('style', 'font-size: 8pt; margin-left: 5px; width: 100%; word-wrap:break-word; word-break: break-all;');
+
+	var divContainer = document.createElement('div');
+	divContainer.setAttribute('style', 'position:relative; padding:0px 10px 0px 30px;');
+
+	this.aml_search_text = document.createElement('textarea');
+	this.aml_search_text.setAttribute('id', 'aml_search_text');
+	const newStyle = 'font-size: 8pt; position:relative; overflow:auto; resize:none; width:100%; border:1px solid #808080; background-color:#BDDEF7;';
+	this.aml_search_text.setAttribute('style', newStyle);
+
+	this.aml_search_suffix = document.createElement('div');
+	this.aml_search_suffix.setAttribute('id', 'aml_search_suffix');
+	this.aml_search_suffix.setAttribute('style', 'font-size: 8pt; margin-left: 5px;');
+
+	divContainer.appendChild(this.aml_search_text);
+	this.amlContainer.appendChild(this.aml_search_prefix);
+	this.amlContainer.appendChild(divContainer);
+	this.amlContainer.appendChild(this.aml_search_suffix);
+	searchContainer.searchPlaceholderCell.appendChild(this.amlContainer);
+	this.searchContainer = searchContainer;
+	this.setupAMLContainerHeight();
+
+	// Call base SearchMode constructor
+	SearchMode.prototype.constructor.call(this, searchContainer, aras);
+	this.complexity = 3;
+}
+
+Aml.prototype = new SearchMode();
+Aml.prototype.setupAMLContainerHeight = function() {
+	const height = this.searchContainer.searchPlaceholderCell.offsetHeight - this.aml_search_prefix.offsetHeight - aml_search_suffix.offsetHeight - 10 + 'px';
+	this.aml_search_text.style.height = height;
+};
+
+Aml.prototype.onStartSearchMode = function AMLSearchMode_onStartSearchMode(sContainer) {
+	// Call base onStartSearchMode method.
+	//SearchMode.prototype.onStartSearchMode.call(this, sContainer);
+
+	// Inputrow must be hidden in AML search mode.
+	if (this.grid) {
+		this.grid.ShowInputRow(false);
+	}
+
+	this.searchContainer.setStyleAttribute('height', '150px');
+	this.searchContainer.setStyleAttribute('display', '');
+
+	this.aml_search_text.focus();
+};
+
+Aml.prototype.onEndSearchMode = function SimpleSearchMode_onStartSearchMode(sContainer) {
+	// Call base onEndSearchMode method.
+	SearchMode.prototype.onEndSearchMode.call(this);
+
+	this.searchContainer.setStyleAttribute('display', 'none');
+};
+
+Aml.prototype.clearSearchCriteria = function AMLSearchMode_clearSearchCriteria() {
+	this._initCurrentQueryItem();
+	this.putAMLintoUI(this.currQryItem.item.xml);
+};
+
+Aml.prototype.setAml = function AMLSearchMode_setAml(searchAML) {
+	SearchMode.prototype.setAml.call(this, searchAML);
+	this.putAMLintoUI(searchAML);
+};
+
+Aml.prototype.getAml = function AMLSearchMode_getAml() {
+	var amlFromUI = this.getAMLfromUI();
+	if (!this.testAmlForCompatibility(amlFromUI)) {
+		return undefined;
+	}
+
+	this.currQryItem.loadXML(amlFromUI);
+
+	var tempAML = SearchMode.prototype.getAml.call(this);
+	if (tempAML == undefined) {
+		return undefined;
+	}
+
+	this.putAMLintoUI(tempAML);
+	return tempAML;
+};
+
+Aml.prototype.putAMLintoUI = function AMLSearchMode_putAMLintoUI(aml) {
+	var prefixEndIndx = aml.indexOf('&gt;');
+	var bodyStartIndx;
+	var bodyEndIndx = aml.lastIndexOf('/');
+	var suffixStartIndx;
+	if (aml.lastIndexOf('&lt;/Item&gt;') &lt; 0) {
+		aml = aml.substr(0, bodyEndIndx) + '&gt;&lt;/Item&gt;';
+		prefixEndIndx = aml.indexOf('&gt;');
+		bodyEndIndx = aml.lastIndexOf('/');
+	}
+	bodyStartIndx = prefixEndIndx;
+	while (aml.substr(bodyStartIndx, 1) != '&lt;') {
+		bodyStartIndx += 1;
+	}
+	suffixStartIndx = bodyEndIndx;
+	while (aml.substr(suffixStartIndx, 1) != '&lt;') {
+		suffixStartIndx -= 1;
+	}
+	while (aml.substr(bodyEndIndx, 1) != '&gt;') {
+		bodyEndIndx -= 1;
+	}
+
+	var textPropName = aras.browserHelper.getTextContentPropertyName();
+	this.aml_search_prefix[textPropName] = aml.substr(0, prefixEndIndx + 1);
+	this.aml_search_text.value = aml.substr(bodyStartIndx, bodyEndIndx - bodyStartIndx + 1);
+	aml_search_suffix[textPropName] = aml.substr(suffixStartIndx);
+	this.setupAMLContainerHeight();
+};
+
+Aml.prototype.getAMLfromUI = function AMLSearchMode_getAMLfromUI() {
+	var textPropName = aras.browserHelper.getTextContentPropertyName();
+	return this.aml_search_prefix[textPropName] + this.aml_search_text.value + aml_search_suffix[textPropName];
+};
+
+Aml.prototype.setPageNumber = function AMLSearchMode_setPageNumber(page) {
+	var amlFromUI = this.getAMLfromUI();
+	if (!this.testAmlForCompatibility(amlFromUI)) {
+		return false;
+	}
+
+	this.currQryItem.loadXML(amlFromUI);
+
+	if (!SearchMode.prototype.setPageNumber.call(this, page)) {
+		return false;
+	}
+
+	this.putAMLintoUI(this.currQryItem.item.xml);
+	return true;
+};
+
+Aml.prototype.setPageSize = function AMLSearchMode_setPageSize(pageSize) {
+	var amlFromUI = this.getAMLfromUI();
+	if (!this.testAmlForCompatibility(amlFromUI)) {
+		return false;
+	}
+
+	this.currQryItem.loadXML(amlFromUI);
+
+	if (!SearchMode.prototype.setPageSize.call(this, pageSize)) {
+		return false;
+	}
+
+	this.putAMLintoUI(this.currQryItem.item.xml);
+	return true;
+};
+
+Aml.prototype.setMaxRecords = function AMLSearchMode_setMaxRecords(maxRecords) {
+	var amlFromUI = this.getAMLfromUI();
+	if (!this.testAmlForCompatibility(amlFromUI)) {
+		return false;
+	}
+
+	this.currQryItem.loadXML(amlFromUI);
+
+	if (!SearchMode.prototype.setMaxRecords.call(this, maxRecords)) {
+		return false;
+	}
+
+	this.putAMLintoUI(this.currQryItem.item.xml);
+	return true;
+};
+
+Aml.prototype.setOrderBy = function AMLSearchMode_setOrderBy(orderBy) {
+	var amlFromUI = this.getAMLfromUI();
+	if (!this.testAmlForCompatibility(amlFromUI)) {
+		return false;
+	}
+
+	this.currQryItem.loadXML(amlFromUI);
+
+	if (!SearchMode.prototype.setOrderBy.call(this, orderBy)) {
+		return false;
+	}
+
+	this.putAMLintoUI(this.currQryItem.item.xml);
+	return true;
+};
+Aml.prototype.hide = function AmlSearchMode_hide() {
+	this.amlContainer.style.display = 'none';
+};
+
+Aml.prototype.show = function AmlSearchMode_show() {
+	this.amlContainer.style.display = '';
+};
+
+Aml.prototype.remove = function AmlSearchMode_remove() {
+	this.searchContainer.searchPlaceholderCell.removeChild(this.amlContainer);
+};
+</search_handler>
+  <search_mode_order>384</search_mode_order>
+  <name>Aml</name>
+ </Item>
+</AML>

@@ -1,0 +1,100 @@
+﻿<AML>
+ <Item type="Method" id="56AEA23C700A463599371377BF3744A8" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const classifications = getClassificationList();
+
+if (
+	!Array.isArray(classifications) &&
+	classifications.isError(classifications)
+) {
+	return classifications;
+}
+
+let selectedIndex;
+if (document.item) {
+	let selectedClassification = aras.getItemProperty(
+		document.item,
+		'classification',
+		null
+	);
+
+	if (selectedClassification) {
+		selectedClassification = selectedClassification.replace(
+			'Mechanical Part/',
+			''
+		);
+	}
+
+	selectedIndex = classifications.indexOf(selectedClassification);
+}
+
+const dialogArgs = this.parent.frameElement.dialogArguments;
+selectClassificationDialog = new SelectClassificationDialog(
+	dialogArgs.item,
+	classifications,
+	selectedIndex
+);
+
+function getClassificationList() {
+	const currentUserIdentities = aras.getIdentityList();
+	const partQuery = aras.newIOMItem('ItemType', 'get');
+	partQuery.setProperty('name', 'Part');
+	partQuery.setAttribute('select', 'class_structure');
+
+	const canAddQuery = aras.newIOMItem('Can Add', 'get');
+	canAddQuery.setAttribute('select', 'class_path, related_id');
+
+	const identityQuery = aras.newIOMItem('Identity', 'get');
+	identityQuery.setAttribute('select', 'name');
+	identityQuery.setAttribute('idlist', currentUserIdentities);
+
+	canAddQuery.setRelatedItem(identityQuery);
+	partQuery.setPropertyItem('Relationships', canAddQuery);
+
+	const part = partQuery.apply();
+
+	if (part.isError()) {
+		return part;
+	}
+
+	const classification = part.getProperty('class_structure');
+	const domParser = new DOMParser();
+	const classificationsXml = domParser.parseFromString(
+		classification,
+		'text/xml'
+	);
+	const canAdds = part.dom.selectNodes(
+		'//SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type="Can Add"]/class_path'
+	);
+	let mechanicalPartClassifications;
+
+	if (canSelectAnyOptions(canAdds)) {
+		mechanicalPartClassifications = classificationsXml
+			.selectNodes("//class[@name='Mechanical Part']/class")
+			.map(function (x) {
+				return x.getAttribute('name');
+			});
+	} else {
+		mechanicalPartClassifications = canAdds
+			.map((x) => x.text)
+			.filter((x) => !!x)
+			.map((x) => x.replace('Mechanical Part/', ''));
+	}
+
+	return mechanicalPartClassifications
+		.sort()
+		.filter(function (value, index, self) {
+			//returns unique values
+			return self.indexOf(value) === index;
+		});
+}
+
+function canSelectAnyOptions(canAdds) {
+	return canAdds.find(function (x) {
+		return x.getAttribute('is_null') === '1';
+	});
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_SelectClassification_OnLoad</name>
+ </Item>
+</AML>

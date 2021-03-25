@@ -1,0 +1,40 @@
+﻿@{
+	Layout = "../../../Modules/aras.innovator.core.ItemWindow/Views/Shared/_cuiTabItemViewLayout.cshtml";
+
+	string state = Request.QueryString["state"];
+}
+
+@section extra_header
+{
+	<style type="text/css">
+		.claro .dijitTooltip.dijitTooltipRight {
+			white-space: nowrap;
+		}
+	</style>
+	<script type="text/javascript" src="../../Modules/aras.innovator.TDF/Scripts/Aras/Client/Controls/TechDoc/TDFItemView.js" ></script>
+	<script type="text/javascript" >
+		initTDFItemView(window);
+		window.addEventListener('load', function () {
+			if (window.tabViewsController.isTabLoading) {
+				aras.browserHelper.toggleSpinner(document, true);
+			}
+		});
+		document.addEventListener('commandBarChanged', window.commandBarChangedHandler);
+		document.addEventListener('loadWidgets', window.onWidgetsLoadedHandler);
+	</script>
+}
+
+@section instance {
+	<div id="formContentPane" @(state == "tabs off" ? Html.Raw("style=\"height:100%;\"") : Html.Raw(""))>
+		<div id="formLayoutContainer" class="aras-item-view__form-layout">
+			<div id="placeHolderContentPane" class="aras-item-view__placeholder-pane">
+				<aras-switcher id="viewers" class="aras-item-view__viewers">
+					<div class="aras-item-view__form-tab" data-dojo-type="Controls/Tab" data-dojo-props="selected:true" id="formTab"></div>
+					<div id="editor_container" data-dojo-type="Controls/Tab">
+						<div id="editorTab" data-dojo-type="TDF/Scripts/Viewers/UrlViewer" data-dojo-props="targetUrl:'../Modules/aras.innovator.TDF/HtmlRichTextEditor', getSwitchOffButtonIds: getSwitchOffButtonIds, getSwitchOffDisabledButtonIcons: getSwitchOffDisabledButtonIcons, fixedSidebarButtonId: true" baseClass="dijitContentPaneNoPadding" style="height:100%; width:100%;"></div>
+					</div>
+				</aras-switcher>
+			</div>
+		</div>
+	</div>
+}

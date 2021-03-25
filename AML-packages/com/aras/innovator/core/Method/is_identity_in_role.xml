@@ -1,0 +1,106 @@
+﻿<AML>
+ <Item type="Method" id="C937237753194F249623A37A56465A3B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' MethodTemplateName=VBScriptMainUpgrade;
+' input parameters: 
+'   selected_id - Identity or user id to test: is it in role_id Identity
+'   role_id     - id of target Identity
+'   is_user_id  - defines: is selected_id Identity or User id (if User id then is_alias identity for the user will be tested)
+' purpose: defines: is the selected_id belongs to role_id Identity
+' returned result: <is_in_role>res</is_in_role>
+'   where res is "1" or "0" or a name of special Identities: Manager, Owner, Creator.
+
+Sub MethodMainSubroutine()
+    Dim selected_id As String = ""
+    Dim role_id As String = ""
+    Dim res As String = "0"
+    
+    Dim tmpNd As XmlElement = CType(inDom.selectSingleNode("//Item/selected_id"),XmlElement)
+    If Not tmpNd Is Nothing Then selected_id = tmpNd.innerText
+    
+    tmpNd = CType(inDom.selectSingleNode("//Item/role_id"),XmlElement)
+    If Not tmpNd Is Nothing Then role_id = tmpNd.innerText
+
+    tmpNd = CType(inDom.selectSingleNode("//Item/is_user_id"),XmlElement)
+    If Not tmpNd Is Nothing Then 
+      If tmpNd.innerText = "1" Then ' get is_alias identity if user_id is given
+	    Dim qDom As XmlDocument = New XmlDocument()
+	    Dim rDom As XmlDocument = New XmlDocument()
+		qDom.loadXML("<Item type='Alias' action='get' select='related_id(id)' />")
+		Dim sql_aml_escaped_selected_id As String = System.Security.SecurityElement.Escape(CCO.DB.InnDatabase.QuoteValue(selected_id))
+	    CType(qDom.selectSingleNode("Item"),XmlElement).setAttribute("where","[Alias].source_id = '"+sql_aml_escaped_selected_id+"'")
+		
+	    CCO.GetItem.GetItem(qDom,rDom)
+	    
+	    tmpNd = CType(rDom.selectSingleNode("//related_id/Item[@type='Identity']"), XmlElement)
+	    If Not tmpNd Is Nothing Then 
+	      selected_id = tmpNd.getAttribute("id")
+	    Else
+	      tmpNd = CType(rDom.selectSingleNode("//related_id"), XmlElement)
+	      If Not tmpNd Is Nothing Then selected_id = tmpNd.innerText
+	    End If
+      End If
+    End If
+    
+    res = isFirstBelongsToSecond(selected_id, role_id)
+    
+    outDom.loadXML("<Result><is_in_role>"+res+"</is_in_role></Result>")
+End Sub
+
+Dim handledIds As New ArrayList
+' defines: is identity having first_id belongs to identity with second_id
+Function isFirstBelongsToSecond(ByVal first_id As String, ByVal second_id As String) As String
+	If second_id = "" Then Return "1"
+	If first_id = second_id Then Return "1"
+  Dim res As String = "0"
+
+	Dim qDom As XmlDocument = New XmlDocument()
+	Dim rDom As XmlDocument = New XmlDocument()
+	
+	Dim aml_escaped_second_id As String = System.Security.SecurityElement.Escape(second_id)
+	qDom.loadXML("<Item type='Identity' action='get' select='id,name' id='"+aml_escaped_second_id+"'/>")
+		
+	CCO.GetItem.GetItem(qDom,rDom)
+	Dim idenItem As XmlElement = CType(rDom.selectSingleNode("//Item[@type='Identity']"), XmlElement)
+	If Not IsNothing(idenItem) Then
+		Dim nameNd As XmlElement = CType(idenItem.selectSingleNode("name"), XmlElement)
+		If Not IsNothing(nameNd) Then
+			Dim name As String = nameNd.InnerText
+			If name="World" Then Return "1"
+			If name="Creator" Or name="Manager" Or name="Owner" Then
+				res = name
+				Return res
+			End If
+		End If
+		End If
+  
+	qDom.loadXML("<Item type='Member' action='get' select='source_id'/>")
+	Dim escaped_for_sql_injection_first_id As String = CCO.DB.InnDatabase.QuoteValue(first_id)
+	CType(qDom.selectSingleNode("Item"),XmlElement).setAttribute("where","[Member].related_id = '"+escaped_for_sql_injection_first_id+"'")
+		
+	CCO.GetItem.GetItem(qDom,rDom)
+	
+	Dim resItems As XmlNodeList = rDom.selectNodes("//Item[@type='Member']/source_id")
+	Dim itm As XmlElement
+	Dim itm_source_id As String = ""
+	
+	If resItems.Count<1 Then Return "0"
+	
+    For Each itm In resItems
+		itm_source_id = itm.innerText
+		
+		If itm_source_id=second_id Then
+		  res = "1"
+		ElseIf Not handledIds.Contains(itm_source_id)
+		  handledIds.Add(itm_source_id)
+		  res = isFirstBelongsToSecond(itm_source_id,second_id)
+		End If
+	    If res = "1" Then Exit For
+	Next itm
+
+    Return res
+End Function]]></method_code>
+  <method_type>VB</method_type>
+  <name>is_identity_in_role</name>
+ </Item>
+</AML>

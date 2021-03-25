@@ -1,0 +1,23 @@
+﻿<AML>
+ <Item type="Method" id="8C1C474BA7844B3584C416E5462C8A15" action="add">
+  <comments>Init configurations for ES search</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var adminIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+bool adminPermsWasSet = Aras.Server.Security.Permissions.GrantIdentity(adminIdentity);
+try
+{
+	Aras.ES.ServerMethods.InitSearchConfigurations(this);
+}
+finally
+{
+	if (adminPermsWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(adminIdentity);
+	}
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>ES_InitSearchConfigurations</name>
+ </Item>
+</AML>

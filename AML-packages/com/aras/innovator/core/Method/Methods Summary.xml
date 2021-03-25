@@ -1,0 +1,1747 @@
+﻿<AML>
+ <Item type="Method" id="92B9DD367A9D40ADAFDB2845A3D843F3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	//MethodTemplateName=CSharpInOut;
+
+	if (InnovatorServerASP == null)
+		throw new ArgumentNullException("InnovatorServerASP");
+
+	Aras.Server.Core.IOMConnection tmpConnection = (Aras.Server.Core.IOMConnection)InnovatorServerASP;
+	Aras.Server.Core.CallContext CCO = tmpConnection.CCO;
+	Innovator inn = new Innovator(InnovatorServerASP);
+	MethodsCallCounter countAll = new MethodsCallCounter(inn, CCO);
+
+	System.Collections.Generic.List<string> IDs = new System.Collections.Generic.List<string>();
+
+	XmlNode xmlItem = inDom.SelectSingleNode(@"//Item");
+	string idAttr = xmlItem.Attributes["id"] == null ? null : xmlItem.Attributes["id"].Value;
+	if (!String.IsNullOrEmpty(idAttr))
+	{
+		IDs.Add(idAttr);
+	}
+	else
+	{
+		string idlistAttr = xmlItem.Attributes["idlist"] == null ? null : xmlItem.Attributes["idlist"].Value;
+		if (idlistAttr != null)
+		{
+			System.Collections.Generic.IEnumerable<string> idlist = idlistAttr.Split(',').Select(x => x.Trim());;
+			IDs.AddRange(idlist);
+		}
+	}
+
+	string result = null;
+	
+	result = countAll.StartAnalysis(IDs.ToArray());
+
+	XmlDocument tmpDoc = new XmlDocument();
+	tmpDoc.LoadXml(result);
+	XmlNode impNode = outDom.ImportNode(tmpDoc.DocumentElement, true);
+	outDom.SelectSingleNode("//Result").AppendChild(impNode);
+
+}
+
+#region ReflectionRegion
+public static class Service
+{
+	private static System.Reflection.Emit.OpCode[] multiByteOPCodes;
+	private static System.Reflection.Emit.OpCode[] singleByteOPCodes;
+
+	/// <summary>
+	/// Get OpCode from singleByte or multiByte array
+	/// </summary>
+	/// <param name="isSingle">bool</param>
+	/// <param name="value">int</param>
+	/// <returns>System.Reflection.Emit.OpCode</returns>
+	public static System.Reflection.Emit.OpCode GetOPCodes(bool isSingle, int value)
+	{
+		if (isSingle)
+			return singleByteOPCodes[value];
+		else
+			return multiByteOPCodes[value];
+	}
+
+	/// <summary>
+	/// Set OpCode to singleByte or multiByte array
+	/// </summary>
+	/// <param name="code">System.Reflection.Emit.OpCode</param>
+	public static void SetByteOPCode(System.Reflection.Emit.OpCode code)
+	{
+		ushort num = (ushort)code.Value;
+		if (num < 0x100)
+		{
+			singleByteOPCodes[(int)num] = code;
+		}
+		else
+		{
+			multiByteOPCodes[num & 0xff] = code;
+		}
+	}
+
+	/// <summary>
+	/// Load OpCodes
+	/// </summary>
+	public static void LoadOPCodes()
+	{
+		singleByteOPCodes = new System.Reflection.Emit.OpCode[0x100];
+		multiByteOPCodes = new System.Reflection.Emit.OpCode[0x100];
+		System.Reflection.FieldInfo[] infoArray = typeof(System.Reflection.Emit.OpCodes).GetFields();
+		for (int num = 0; num < infoArray.Length; num++)
+		{
+			System.Reflection.FieldInfo info = infoArray[num];
+			if (info.FieldType == typeof(System.Reflection.Emit.OpCode))
+			{
+				SetByteOPCode((System.Reflection.Emit.OpCode)info.GetValue(null));
+			}
+		}
+	}
+
+
+	/// <summary>
+	/// Retrieve the friendly name of a type
+	/// </summary>
+	/// <param name="typeName">
+	/// The complete name to the type
+	/// </param>
+	/// <returns>
+	/// The simplified name of the type (i.e. "int" instead f System.Int32)
+	/// </returns>
+	public static string ProcessSpecialTypes(string typeName)
+	{
+		string result = typeName;
+		switch (typeName)
+		{
+			case "System.string":
+			case "System.String":
+			case "String":
+				result = "string"; break;
+			case "System.Int32":
+			case "Int":
+			case "Int32":
+				result = "int"; break;
+		}
+		return result;
+	}
+}
+
+
+public class ILInstruction
+{
+	#region Private Fields
+	private System.Reflection.Emit.OpCode code;
+	private object operand;
+	private int offset;
+	#endregion
+	#region Public Properties
+	public System.Reflection.Emit.OpCode Code
+	{
+		get { return code; }
+		set { code = value; }
+	}
+	public object Operand
+	{
+		get { return operand; }
+		set { operand = value; }
+	}
+	public int Offset
+	{
+		get { return offset; }
+		set { offset = value; }
+	}
+	#endregion
+
+	/// <summary>
+	/// Add enough zeros to a number as to be represented on 4 characters
+	/// </summary>
+	/// <param name="offset">
+	/// The number that must be represented on 4 characters
+	/// </param>
+	/// <returns>
+	/// </returns>
+	private static string GetExpandedOffset(long offset_)
+	{
+		string result = offset_.ToString(System.Globalization.CultureInfo.CurrentCulture);
+		for (int i = 0; result.Length < 4; i++)
+		{
+			result = "0" + result;
+		}
+		return result;
+	}
+
+	#region Processing OperandType
+
+	private static string GetParameterInfo(System.Reflection.MethodBase method)
+	{
+		string result = "(";
+
+		if (method != null)
+		{
+			System.Reflection.ParameterInfo[] parameters = method.GetParameters();
+
+			for (int i = 0; i < parameters.Length; i++)
+			{
+				result += parameters[i].ParameterType.FullName + ",";
+			}
+
+			if (parameters.Length > 0)
+				result = result.Remove(result.Length - 1, 1);
+		}
+
+		result += ")";
+		return result;
+	}
+
+	private static string ProcessingInlineMethod(System.Reflection.MethodBase methodBase)
+	{
+		System.Reflection.MethodInfo mOperand = methodBase as System.Reflection.MethodInfo;
+		string result = " ";
+		if (mOperand != null)
+		{
+			if (!mOperand.IsStatic)
+			{
+				result += "instance ";
+			}
+			result += Service.ProcessSpecialTypes(mOperand.ReturnType.ToString()) +
+				" " + Service.ProcessSpecialTypes(mOperand.ReflectedType.ToString()) +
+				"::" + mOperand.Name;
+			result += GetParameterInfo(mOperand);
+		}
+		else
+		{
+			System.Reflection.ConstructorInfo cOperand = methodBase as System.Reflection.ConstructorInfo;
+			if (cOperand != null)
+			{
+				if (!cOperand.IsStatic)
+				{
+					result += "instance ";
+				}
+				result += "void " +
+						Service.ProcessSpecialTypes(cOperand.ReflectedType.ToString()) +
+						"::" + cOperand.Name;
+				result += GetParameterInfo(cOperand);
+			}
+		}
+		return result;
+	}
+
+	#endregion
+
+
+	/// <summary>
+	/// Returns a friendly strign representation of this instruction
+	/// </summary>
+	/// <returns></returns>
+	public string GetCode
+	{
+		get
+		{
+			string result = "";
+			result += GetExpandedOffset(offset) + " : " + code;
+			if (operand != null)
+			{
+				switch (code.OperandType)
+				{
+					case System.Reflection.Emit.OperandType.InlineField:
+						System.Reflection.FieldInfo fOperand = ((System.Reflection.FieldInfo)operand);
+						result += " " + Service.ProcessSpecialTypes(fOperand.FieldType.ToString()) + " " +
+							Service.ProcessSpecialTypes(fOperand.ReflectedType.ToString()) +
+							"::" + fOperand.Name + "";
+						break;
+					case System.Reflection.Emit.OperandType.InlineMethod:
+						result += ProcessingInlineMethod(operand as System.Reflection.MethodBase);
+						break;
+					case System.Reflection.Emit.OperandType.ShortInlineBrTarget:
+					case System.Reflection.Emit.OperandType.InlineBrTarget:
+						result += " " + GetExpandedOffset((int)operand);
+						break;
+					case System.Reflection.Emit.OperandType.InlineType:
+						result += " " + Service.ProcessSpecialTypes(operand.ToString());
+						break;
+					case System.Reflection.Emit.OperandType.InlineString:
+						if (operand.ToString() == "\r\n") result += " \"\\r\\n\"";
+						else result += " \"" + operand.ToString() + "\"";
+						break;
+					case System.Reflection.Emit.OperandType.ShortInlineVar:
+						result += operand.ToString();
+						break;
+					case System.Reflection.Emit.OperandType.InlineI:
+					case System.Reflection.Emit.OperandType.InlineI8:
+					case System.Reflection.Emit.OperandType.InlineR:
+					case System.Reflection.Emit.OperandType.ShortInlineI:
+					case System.Reflection.Emit.OperandType.ShortInlineR:
+						result += operand.ToString();
+						break;
+					case System.Reflection.Emit.OperandType.InlineTok:
+						if (operand is System.Type)
+							result += ((System.Type)operand).FullName;
+						else
+							result += "not supported";
+						break;
+					default: result += "not supported"; break;
+				}
+			}
+			return result;
+		}
+	}
+	public ILInstruction()
+	{
+	}
+}
+
+public enum OperandOperation
+{
+	ResolveField,
+	ResolveMehod,
+	ResolveMember,
+	ResolveType
+}
+
+public class MethodBodyReader
+{
+	#region Private Fileds
+	private System.Collections.Generic.List<ILInstruction> instructions;
+	private byte[] il;
+	internal System.Reflection.MethodBase methodBase;
+	internal System.Reflection.MethodBody methodBody;
+	#endregion
+	#region il read methods
+
+	private ushort ReadUInt16(ref int position)
+	{
+		return (ushort)((il[position++] | (il[position++] << 8)));
+	}
+	private int ReadInt32(ref int position)
+	{
+		return (((il[position++] | (il[position++] << 8)) | (il[position++] << 0x10)) | (il[position++] << 0x18));
+	}
+	private ulong ReadInt64(ref int position)
+	{
+		return (ulong)(((il[position++] | (il[position++] << 8)) | (il[position++] << 0x10)) | (il[position++] << 0x18) | (il[position++] << 0x20) | (il[position++] << 0x28) | (il[position++] << 0x30) | (il[position++] << 0x38));
+	}
+	private double ReadDouble(ref int position)
+	{
+		return (((il[position++] | (il[position++] << 8)) | (il[position++] << 0x10)) | (il[position++] << 0x18) | (il[position++] << 0x20) | (il[position++] << 0x28) | (il[position++] << 0x30) | (il[position++] << 0x38));
+	}
+	private sbyte ReadSByte(ref int position)
+	{
+		return (sbyte)il[position++];
+	}
+	private byte ReadByte(ref int position)
+	{
+		return (byte)il[position++];
+	}
+	private System.Single ReadSingle(ref int position)
+	{
+		return (System.Single)(((il[position++] | (il[position++] << 8)) | (il[position++] << 0x10)) | (il[position++] << 0x18));
+	}
+	#endregion
+
+	private object GetOperand(System.Reflection.Module module, int metadataToken, OperandOperation operandOperation)
+	{
+		object result = null;
+		System.Type[] genericArguments = methodBase is System.Reflection.ConstructorInfo ? null : methodBase.GetGenericArguments();
+		switch (operandOperation)
+		{
+			case OperandOperation.ResolveField:
+				result = module.ResolveField(metadataToken, methodBase.DeclaringType.GetGenericArguments(), genericArguments);
+				break;
+			case OperandOperation.ResolveMehod:
+				result = module.ResolveMethod(metadataToken, methodBase.DeclaringType.GetGenericArguments(), genericArguments);
+				break;
+			case OperandOperation.ResolveMember:
+				result = module.ResolveMember(metadataToken, methodBase.DeclaringType.GetGenericArguments(), genericArguments);
+				break;
+			case OperandOperation.ResolveType:
+				result = module.ResolveType(metadataToken, methodBase.DeclaringType.GetGenericArguments(), genericArguments);
+				break;
+		}
+		return result;
+	}
+
+	private void InstructionInlineSwitch(ref int position)
+	{
+		int count = this.ReadInt32(ref position);
+
+		int[] casesAddresses = new int[count];
+		for (int i = 0; i < count; i++)
+		{
+			casesAddresses[i] = ReadInt32(ref position);
+		}
+
+		int[] cases = new int[count];
+		for (int i = 0; i < count; i++)
+		{
+			cases[i] = position + casesAddresses[i];
+		}
+	}
+
+	private System.Reflection.Emit.OpCode GetByteOPCode(ref int position)
+	{
+		System.Reflection.Emit.OpCode code = System.Reflection.Emit.OpCodes.Nop;
+		ushort value = this.il[position++];
+		if (value != 0xfe)
+		{
+			code = Service.GetOPCodes(true, (int)value);
+		}
+		else
+		{
+			value = this.il[position++];
+			code = Service.GetOPCodes(false, (int)value);
+		}
+		return code;
+	}
+
+	/// <summary>
+	/// Constructs the array of ILInstructions according to the IL byte code.
+	/// </summary>
+	/// <param name="module"></param>
+	private void ConstructInstructions(System.Reflection.Module module)
+	{
+		int position = 0;
+		instructions = new System.Collections.Generic.List<ILInstruction>();
+		while (position < il.Length)
+		{
+			ILInstruction instruction = new ILInstruction();
+			// get the operation code of the current instruction
+			System.Reflection.Emit.OpCode code = System.Reflection.Emit.OpCodes.Nop;
+			code = GetByteOPCode(ref position);
+			instruction.Code = code;
+			instruction.Offset = position - 1;
+			int metadataToken = 0;
+			// get the operand of the current operation
+			switch (code.OperandType)
+			{
+				case System.Reflection.Emit.OperandType.InlineBrTarget:
+					{
+						metadataToken = ReadInt32(ref position);
+						metadataToken += position;
+						instruction.Operand = metadataToken;
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineField:
+					{
+						metadataToken = this.ReadInt32(ref position);
+						instruction.Operand = GetOperand(module, metadataToken, OperandOperation.ResolveField);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineMethod:
+					{
+						metadataToken = this.ReadInt32(ref position);
+						instruction.Operand = GetOperand(module, metadataToken, OperandOperation.ResolveMember);
+						System.Reflection.MemberInfo memberInfo = instruction.Operand as System.Reflection.MemberInfo;
+						if (memberInfo != null && memberInfo.MemberType == System.Reflection.MemberTypes.Method)
+						{
+							instruction.Operand = GetOperand(module, metadataToken, OperandOperation.ResolveMehod);
+						}
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineSig:
+					{
+						metadataToken = this.ReadInt32(ref position);
+						instruction.Operand = module.ResolveSignature(metadataToken);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineTok:
+					{
+						metadataToken = this.ReadInt32(ref position);
+						instruction.Operand = GetOperand(module, metadataToken, OperandOperation.ResolveType);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineType:
+					{
+						metadataToken = this.ReadInt32(ref position);
+						if (this.methodBase is System.Reflection.MethodInfo || this.methodBase is System.Reflection.ConstructorInfo)
+						{
+							instruction.Operand = GetOperand(module, metadataToken, OperandOperation.ResolveType);
+						}
+						else
+						{
+							instruction.Operand = module.ResolveType(metadataToken);
+						}
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineI:
+					{
+						instruction.Operand = this.ReadInt32(ref position);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineI8:
+					{
+						instruction.Operand = this.ReadInt64(ref position);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineNone:
+					{
+						instruction.Operand = null;
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineR:
+					{
+						instruction.Operand = ReadDouble(ref position);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineString:
+					{
+						metadataToken = this.ReadInt32(ref position);
+						instruction.Operand = module.ResolveString(metadataToken);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineSwitch:
+					{
+						InstructionInlineSwitch(ref position);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.InlineVar:
+					{
+						instruction.Operand = this.ReadUInt16(ref position);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.ShortInlineBrTarget:
+					{
+						instruction.Operand = this.ReadSByte(ref position) + position;
+						break;
+					}
+				case System.Reflection.Emit.OperandType.ShortInlineI:
+					{
+						instruction.Operand = this.ReadSByte(ref position);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.ShortInlineR:
+					{
+						instruction.Operand = this.ReadSingle(ref position);
+						break;
+					}
+				case System.Reflection.Emit.OperandType.ShortInlineVar:
+					{
+						instruction.Operand = this.ReadByte(ref position);
+						break;
+					}
+				default:
+					System.Diagnostics.Debugger.Break();
+					break;
+			}
+			instructions.Add(instruction);
+		}
+	}
+
+	string[] bodyCodes;
+
+	/// <summary>
+	/// Gets the IL code of the method
+	/// </summary>
+	/// <returns></returns>
+	public string[] GetBodyCode()
+	{
+		if (bodyCodes != null)
+		{
+			return bodyCodes;
+		}
+
+		if (instructions == null)
+		{
+			bodyCodes = new string[] { };
+		}
+		else
+		{
+			bodyCodes = new string[instructions.Count];
+			for (int i = 0; i < instructions.Count; i++)
+			{
+				bodyCodes[i] = instructions[i].GetCode;
+			}
+		}
+		return bodyCodes;
+	}
+
+	/// <summary>
+	/// MethodBodyReader constructor
+	/// </summary>
+	/// <param name="mi">
+	/// The System.Reflection defined MethodInfo
+	/// </param>
+	public MethodBodyReader(System.Reflection.MethodBase mi)
+	{
+		this.methodBase = mi;
+		this.methodBody = mi.GetMethodBody();
+		if (this.methodBody == null)
+			return;
+
+		il = this.methodBody.GetILAsByteArray();
+		ConstructInstructions(mi.Module);
+	}
+}
+
+#endregion
+
+public class MethodsCallCounter
+{
+	Refl serverdll;
+	Report resReport;
+	StringWriter reportBuffer;
+
+	Aras.Server.Core.CallContext CCO;
+	Innovator inn;
+
+	XmlDocument method_config;
+	Aras.IOME.Evaluator iom_machine;
+
+	System.Collections.Generic.Dictionary<string, string> dialectTemplate = new System.Collections.Generic.Dictionary<string, string>();
+
+	internal MethodsCallCounter(Innovator inn, Aras.Server.Core.CallContext CCO)
+	{
+		this.inn = inn;
+		this.CCO = CCO;
+
+		string serverdllPath = System.Web.HttpContext.Current.Server.MapPath("./bin/");
+
+		serverdll = new Refl(serverdllPath);
+
+		reportBuffer = new StringWriter();
+		resReport = new Report(reportBuffer, serverdll);
+
+		iom_machine = new Aras.IOME.Evaluator(CCO);
+		method_config = iom_machine.GetMethodConfig();
+
+		XmlNodeList supportTags = method_config.SelectNodes("/MethodConfig/Support");
+		for (int i = 0; i < supportTags.Count; i++)
+		{
+			XmlElement support = (XmlElement)supportTags[i];
+			dialectTemplate.Add(support.GetAttribute("dialect"), support.GetAttribute("template"));
+		}
+	}
+
+	System.Text.RegularExpressions.Regex getItemsByXPathForRowRegEx =
+		new System.Text.RegularExpressions.Regex(".*getItemsByXPath\\s*\\([^)]*[\"']//row[\"'][^)]*\\).*", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+	System.Text.RegularExpressions.Regex envelopBodyStrRegEx =
+		new System.Text.RegularExpressions.Regex("Envelope/[^>]|[^<]/Envelope|Body/[^>]|[^<]/Body", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+	System.Text.RegularExpressions.Regex methodTemplateRex =
+		new System.Text.RegularExpressions.Regex("MethodTemplateName=([a-zA-Z]*);", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+	private static Item GetAllMethodsFromServer(Innovator inn)
+	{
+		Item res = inn.applyAML(@"<AML>
+					<Item type='method' action='get' select='id,name,method_type,method_code'>
+						<method_type condition='ne'>Internal</method_type>
+					</Item>
+				</AML>");
+		return res;
+	}
+
+	void AnalyzeClientMethod(Item method)
+	{
+		string methodCode = method.getProperty("method_code", "");
+		string methodName = method.getProperty("name");
+
+		string msg = parseScript("function global_func_6DF7D6247D764BFDB595E4AA04853436(){" + System.Environment.NewLine + methodCode + System.Environment.NewLine + "}");
+		resReport.StartMethod(methodName, msg);
+		resReport.EndMethod();
+	}
+
+	void AnalyzeServerMethod(Item method)
+	{
+		Analyzer innMethodAnalyzer = new Analyzer();
+
+		string methodId = method.getID();
+		string methodName = method.getProperty("name");
+		string methodType = method.getProperty("method_type");
+		string methodCode = method.getProperty("method_code", "");
+		if (string.Equals(methodType, "Internal", StringComparison.OrdinalIgnoreCase) || string.Equals(methodType, "External", StringComparison.OrdinalIgnoreCase))
+		{
+			//Any internal method we do consider as compiled and do not return any summary for that
+			resReport.StartMethod(methodName, null);
+			resReport.EndMethod();
+			return;
+		}
+
+		System.Collections.Generic.List<System.Reflection.MethodBase> list = new System.Collections.Generic.List<System.Reflection.MethodBase>();
+
+		String methfrm = dialectTemplate[methodType];
+
+		System.Text.RegularExpressions.Match match = methodTemplateRex.Match(methodCode);
+		if (match.Success)
+			methfrm = match.Groups[1].Captures[0].Value;
+
+		System.Type methodSystemType;
+		try
+		{
+			methodSystemType = iom_machine.DoCompile(methodId);
+		}
+		catch (Exception e)
+		{
+			resReport.StartMethod(methodName, e.Message);
+			resReport.EndMethod();
+			return;
+		}
+
+		System.Reflection.Assembly MethodAssembly = methodSystemType.Assembly;
+
+		System.Reflection.Module[] modules = MethodAssembly.GetModules();
+		Service.LoadOPCodes();
+		for (int j = 0; j < modules.Length; j++)
+		{
+			Type[] types = modules[j].GetTypes();
+			for (int k = 0; k < types.Length; k++)
+			{
+
+				System.Reflection.BindingFlags flags = System.Reflection.BindingFlags.DeclaredOnly
+				| System.Reflection.BindingFlags.Public
+				| System.Reflection.BindingFlags.NonPublic
+				| System.Reflection.BindingFlags.Static
+				| System.Reflection.BindingFlags.Instance
+				| System.Reflection.BindingFlags.CreateInstance;
+				list.AddRange(types[k].GetMethods(flags));
+				list.AddRange(types[k].GetConstructors(flags));
+			}
+		}
+
+		innMethodAnalyzer.templateCalls = new System.Collections.Generic.List<string>();
+		if (String.Equals(methfrm, "VBScriptMain", StringComparison.Ordinal) || String.Equals(methfrm, "VBScriptMainUpgrade", StringComparison.Ordinal))
+		{
+			innMethodAnalyzer.templateCalls.Add("Aras.Server.Core.IOMConnection.CCO");
+		}
+		else
+		{
+			innMethodAnalyzer.templateCalls.Add("Aras.IOM.Item..ctor");
+			innMethodAnalyzer.templateCalls.Add("Aras.IOM.Item.set_dom");
+			innMethodAnalyzer.templateCalls.Add("Aras.IOM.Item.set_node");
+			innMethodAnalyzer.templateCalls.Add("Aras.IOM.Item.set_node");
+			innMethodAnalyzer.templateCalls.Add("Aras.IOM.Item.set_nodeList");
+			innMethodAnalyzer.templateCalls.Add("Aras.IOM.Item.get_dom");
+			innMethodAnalyzer.templateCalls.Add("Aras.IOM.Item.serverConnection");
+		}
+
+		resReport.StartMethod(methodName, null);
+		try
+		{
+			innMethodAnalyzer.Check(list, serverdll, resReport);
+		}
+		catch (Exception e)
+		{
+			resReport.AddErrorAtribute(e.Message);
+		}
+
+		if (getItemsByXPathForRowRegEx.IsMatch(methodCode))
+		{
+			resReport.AddRecommendation(
+				@"Replace [code]getItemsByXPath(""//r" + /*this is required comment*/ @"ow"")[/code] with [code]getItemByIndex(...)[/code].
+
+For example, instead of (C# code)
+
+string sql = ""SELECT login_name, id FROM [USER] WHERE login_name='admin'"";
+Item sqlResults = this.getInnovator().applySQL(sql);
+Item SqlItems = sqlResults.getItemsByXPath(""//r" + /*this is required comment*/ @"ow"");
+Item user = SqlItems.getItemByIndex(0);
+string userId = user.getProperty(""id"");
+
+one may use
+
+string sql = ""SELECT login_name, id FROM [USER] WHERE login_name='admin'"";
+Item sqlResults = this.getInnovator().applySQL(sql);
+Item user = sqlResults.getItemByIndex(0);
+string userId = user.getProperty(""id"");
+");
+		}
+
+		if (!String.Equals(methodName, "methods summary", StringComparison.OrdinalIgnoreCase) && envelopBodyStrRegEx.IsMatch(methodCode))
+		{
+			resReport.AddRecommendation(@"Replace Innovator query result xpaths like [code]Envelope/Body[code] with [code]*/*[code].");
+		}
+
+		resReport.EndMethod();
+	}
+
+	public string StartAnalysis(params string[] ids)
+	{
+		resReport.StartMethodsReport();
+		Item methodList = null;
+
+		if (ids.Length == 0)
+		{
+			methodList = GetAllMethodsFromServer(inn);
+		}
+		else
+		{
+			methodList = GetMethodsFromServer(inn,ids);
+		}
+
+		for (int index = 0, L = methodList.getItemCount(); index < L; index++)
+		{
+			Item method = methodList.getItemByIndex(index);
+
+			if (String.Equals(method.getProperty("method_type"), "javascript", StringComparison.OrdinalIgnoreCase))
+				AnalyzeClientMethod(method);
+			else
+				AnalyzeServerMethod(method);
+		}
+
+		resReport.EndMethodsReport();
+		return reportBuffer.ToString();
+	}
+
+	private static Item GetMethodsFromServer(Innovator inn, string[] ids)
+	{
+		StringBuilder idlist = new StringBuilder();
+
+		idlist.Append(ids[0]);
+
+		for (int i = 1; i < ids.Length; i++)
+		{
+			idlist.Append(',');
+			idlist.Append(ids[i]);
+		}
+
+		Item res = inn.applyAML(@"<AML><Item type='method' action='get' idlist='" + System.Security.SecurityElement.Escape(idlist.ToString()) + "' select='id,name,method_type,method_code'><method_type condition='ne'>Internal</method_type></Item></AML>");
+		return res;
+	}
+
+	ActiveScriptParseWrapper my_ActiveScriptParse = null;
+	public string parseScript(string jsCode)
+	{
+		uint r;
+		if (my_ActiveScriptParse == null)
+		{
+			Guid id = Guid.Empty;
+			r = NativeMethods.CLSIDFromProgID("JScript", out id);
+			if (r != Ole32.S_OK)
+				return "JScript CLSID cannot be received from 'JScript' prog id.";
+
+			IntPtr jsPtr = IntPtr.Zero;
+			Guid IActiveScriptGUID = new Guid(@"BB1A2AE1-A4F9-11cf-8F20-00805F2CD064");
+			r = Ole32.CoCreateInstance(ref id, IntPtr.Zero, CLSCTX.CLSCTX_INPROC_SERVER, ref IActiveScriptGUID, ref jsPtr);
+			if (r != Ole32.S_OK)
+			{
+				return "JScript COM object cannot be created.";
+			}
+
+			object jsObj = System.Runtime.InteropServices.Marshal.GetObjectForIUnknown(jsPtr);
+			IActiveScript my_IActiveScript = (IActiveScript)jsObj;
+			my_ActiveScriptParse = new ActiveScriptParseWrapper(jsObj);
+			if (my_IActiveScript == null || my_ActiveScriptParse == null)
+			{
+				return "IActiveScript or IActiveScriptParse cannot be received from JScript COM object.";
+			}
+
+			MyScriptSite my_IActiveScriptSite = new MyScriptSite();
+			my_ActiveScriptParse.InitNew();
+			try
+			{
+				my_IActiveScript.SetScriptSite((IActiveScriptSite)my_IActiveScriptSite);
+			}
+			catch (Exception ex)
+			{
+				return "ExecutionEngineException: " + ex.Message;
+			}
+		}
+
+		System.Runtime.InteropServices.ComTypes.EXCEPINFO rInf = new System.Runtime.InteropServices.ComTypes.EXCEPINFO();
+		object rObj = null;
+		r = (uint)my_ActiveScriptParse.ParseScriptText(jsCode, null, IntPtr.Zero, null, IntPtr.Zero, 0, (uint)SCRIPTITEMFLAGS.SCRIPTITEM_ALL_FLAGS, out rObj, out rInf);
+		if (r != Ole32.S_OK)
+		{
+			return MyScriptSite.LastErrMsg;
+		}
+
+		return null;
+	}
+}
+
+public class Analyzer
+{
+	string parameters = "";
+	bool isFull = true;
+	string serverMethod;
+	string type;
+	System.Reflection.Module module;
+	public System.Collections.Generic.List<string> templateCalls;
+	private long curLineInCode;
+
+	void Clear()
+	{
+		parameters = "";
+		serverMethod = "";
+		type = "";
+		module = null;
+	}
+
+	public void Check(System.Collections.Generic.List<System.Reflection.MethodBase> list, Refl serverdll, Report resReport)
+	{
+		Clear();
+
+		foreach (System.Reflection.MethodBase mb in list)
+		{
+			MethodBodyReader mbr = new MethodBodyReader(mb);
+			if (mbr.methodBody == null)
+				continue;
+
+			string[] lines = mbr.GetBodyCode();
+			for (int i = 0; i < lines.Length; i++)
+			{
+				this.Analyze(mbr, lines[i], serverdll, resReport);
+				this.curLineInCode++;
+			}
+			this.curLineInCode = 0;
+		}
+	}
+
+	public void Analyze(MethodBodyReader mbr, string line, Refl serverdll, Report resReport)
+	{
+		bool isCall = false;
+		bool isField = false;
+
+		if (!isFull)
+		{
+			string[] paramsArr = GetParams(line, "");
+			if (isFull)
+			{
+				bool isTemplateCall = false;
+				int pos;
+				if ((pos = templateCalls.IndexOf(type + "." + serverMethod)) != -1)
+				{
+					templateCalls.RemoveAt(pos);
+					isTemplateCall = true;
+				}
+
+				if (!isTemplateCall)
+				{
+					resReport.AddCall(type, serverMethod, paramsArr, module);
+				}
+
+				Clear();
+			}
+
+			return;
+		}
+
+		if (
+			line.IndexOf("callvirt", StringComparison.Ordinal) != -1 ||
+			line.IndexOf("call", StringComparison.Ordinal) != -1 ||
+			line.IndexOf("newobj", StringComparison.Ordinal) != -1 ||
+			line.IndexOf("stfld", StringComparison.Ordinal) != -1 ||
+			line.IndexOf("ldfld", StringComparison.Ordinal) != -1)
+		{
+			if (line.IndexOf("Microsoft.VisualBasic.CompilerServices.NewLateBinding::LateGet") != -1 ||
+				line.IndexOf("Microsoft.VisualBasic.CompilerServices.NewLateBinding::LateCall") != -1)
+			{
+				ExploreBindingCall(mbr, resReport);
+				return;
+			}
+
+			int j = 0;
+			int typeStrPos;
+			for (j = 0; j < serverdll.serverType.Length; j++)
+			{
+				Type serverType = serverdll.serverType[j];
+				type = serverType.FullName;
+				module = serverType.Module;
+
+				string tempStr = line;
+				while ((typeStrPos = tempStr.IndexOf(type, StringComparison.Ordinal)) != -1)
+				{
+					if (tempStr[typeStrPos + type.Length] != ':')
+					{
+						tempStr = tempStr.Substring(typeStrPos + type.Length);
+						continue;
+					}
+					if (line.IndexOf("stfld", StringComparison.OrdinalIgnoreCase) != -1 || line.IndexOf("ldfld", StringComparison.OrdinalIgnoreCase) != -1)
+						isField = true;
+					else
+						isCall = true;
+
+					break;
+				}
+
+				if (isCall || isField)
+					break;
+			}
+
+			if (isCall || isField)
+			{
+				System.Reflection.MemberInfo[] membersInfo = serverdll.serverType[j].GetMembers(
+					System.Reflection.BindingFlags.Public |
+					System.Reflection.BindingFlags.NonPublic |
+					System.Reflection.BindingFlags.Instance |
+					System.Reflection.BindingFlags.DeclaredOnly);
+
+				for (int k = 0; k < membersInfo.Length; k++)
+				{
+					System.Reflection.MemberTypes mt = membersInfo[k].MemberType;
+					String memberInfoName = membersInfo[k].Name;
+
+					if (isField)
+					{
+						if (mt == System.Reflection.MemberTypes.Field)
+						{
+							System.Reflection.FieldInfo fieldInfo = (System.Reflection.FieldInfo)membersInfo[k];
+							if (fieldInfo.IsPrivate)
+								continue;
+
+							if (line.IndexOf("::" + memberInfoName) != -1)
+							{
+								string serverField = memberInfoName;
+								bool isTemplateCall = false;
+								int pos;
+								if ((pos = templateCalls.IndexOf(type + "." + serverField)) != -1)
+								{
+									templateCalls.RemoveAt(pos);
+									isTemplateCall = true;
+								}
+
+								if (!isTemplateCall)
+								{
+									resReport.AddCall(type, serverField, null, module);
+								}
+								Clear();
+								return;
+							}
+						}
+					}
+					else
+					{
+						if (mt == System.Reflection.MemberTypes.Constructor || mt == System.Reflection.MemberTypes.Method)
+						{
+							System.Reflection.MethodBase methodBase = (System.Reflection.MethodBase)membersInfo[k];
+							if (methodBase.IsPrivate)
+								continue;
+
+							if (line.IndexOf("::" + memberInfoName + "(") != -1)
+							{
+								serverMethod = memberInfoName;
+								string[] paramsArr = GetParams(line, memberInfoName);
+								if (isFull == true)
+								{
+									bool isTemplateCall = false;
+									int pos;
+									if ((pos = templateCalls.IndexOf(type + "." + memberInfoName)) != -1)
+									{
+										templateCalls.RemoveAt(pos);
+										isTemplateCall = true;
+									}
+									if (!isTemplateCall)
+									{
+										resReport.AddCall(type, memberInfoName, paramsArr, module);
+									}
+									Clear();
+									return;
+								}
+								else return;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private static string GetCodeInfo(ref int start, System.Collections.ArrayList codeList, int number)
+	{
+		bool flag = false;
+		string str = "";
+		string codeListStart = codeList[start].ToString();
+		while (start < codeList.Count && !codeListStart.Contains("nop"))
+		{
+			if (codeListStart.Contains("ldc.i4." + number) && !flag)
+			{
+				flag = true;
+			}
+
+			if (flag && codeListStart.Contains("box"))
+			{
+				if (!String.IsNullOrEmpty(codeListStart) && codeListStart.Split(' ').Length > 3)
+					str = codeListStart.Split(' ')[3];
+			}
+			start++;
+		}
+		start++;
+		return str;
+	}
+
+	private static System.Collections.ArrayList GetCodeList(int start, System.Collections.ArrayList codeList)
+	{
+		System.Collections.ArrayList paramInfoList = new System.Collections.ArrayList();
+		string codeListStart = codeList[start].ToString();
+		int paramsCount = 0;
+		if (codeListStart.Contains("ldc.i4."))
+		{
+			paramsCount = System.Convert.ToInt32(codeListStart.Split('.')[2], System.Globalization.CultureInfo.InvariantCulture);
+			for (int i = start + 1; i < codeList.Count; i++)
+			{
+				if (codeList[i].ToString().Contains("stloc." + paramsCount))
+				{
+					for (int j = 0; j < paramsCount; j++)
+					{
+						string paramName = GetCodeInfo(ref i, codeList, j);
+						if (!String.IsNullOrEmpty(paramName))
+							paramInfoList.Add(paramName);
+					}
+				}
+			}
+		}
+		return paramInfoList;
+	}
+
+	private void ExploreBindingCall(MethodBodyReader mbr, Report resReport)
+	{
+		ArrayList buf = new ArrayList();
+		int curLine = 0;
+		string[] lines = mbr.GetBodyCode();
+		for (int i = 0; i < lines.Length; i++)
+		{
+			if (curLine == this.curLineInCode)
+			{
+				break;
+			}
+			buf.Add(lines[i]);
+			curLine++;
+		}
+		curLine--;
+
+		string name = "";
+		for (int i = buf.Count - 1; i >= 0; i--)
+		{
+			string bufM = buf[i - 1].ToString();
+			if (bufM.IndexOf("System.Object Microsoft.VisualBasic.CompilerServices.NewLateBinding", StringComparison.Ordinal) != -1)
+				return;
+
+			if ((buf.Count > i - 1) &&
+				(buf[i].ToString().IndexOf("ldc.i4.", StringComparison.OrdinalIgnoreCase) != -1) &&
+				(bufM.IndexOf("ldstr", StringComparison.OrdinalIgnoreCase) != -1))
+			{
+				name = bufM.Replace('"', ' ').Split(' ')[4];
+				curLine = i;
+				break;
+			}
+		}
+		System.Collections.ArrayList paramInfoList = GetCodeList(curLine, buf);
+		resReport.AddBindCall(name, paramInfoList.Count);
+	}
+
+	string[] GetParams(string line, string methodName)
+	{
+		int pos;
+		if (!isFull)
+		{
+			pos = 0;
+			while (line[pos] == ' ') pos++;
+		}
+		else
+		{
+			pos = line.IndexOf("::" + methodName) + methodName.Length + 2;
+			pos++;
+		}
+
+		while (pos < line.Length && line[pos] != ')')
+			parameters += line[pos++];
+
+		isFull = (pos != line.Length);
+
+		return parameters.Split(',');
+	}
+}
+
+public class Refl
+{
+	private static string[] _excludeDlls = new []
+	{
+		"ReportExecution2005.Proxy.dll",
+		"Newtonsoft.Json.dll",
+		"Microsoft.Data.Tools.Schema.Sql.dll",
+		"minisat.dll"
+	};
+	
+	public Type[] serverType;
+	public System.Collections.Generic.List<System.Reflection.Assembly> asm;
+
+	public Refl(string serverDllPath)
+	{
+		var di = new DirectoryInfo(serverDllPath);
+		var dllFiles = di.GetFiles("*.dll");
+
+		int count = 0;
+		asm = new System.Collections.Generic.List<System.Reflection.Assembly>();
+		for (int i = 0; i < dllFiles.Length; i++)
+		{
+			var dllFile = dllFiles[i];
+			if (_excludeDlls.Contains(dllFile.Name))
+			{
+				continue;
+			}
+
+			try
+			{
+				var assembly = System.Reflection.Assembly.LoadFrom(dllFile.FullName);
+				asm.Add(assembly);
+				count += assembly.GetTypes().Length;
+			}
+			catch (System.Reflection.ReflectionTypeLoadException e)
+			{
+				string errorInfo = e.LoaderExceptions
+					.Aggregate(e.Message, (current, next) => current + Environment.NewLine + next.ToString());
+				throw new Exception(errorInfo, e); // Throw more verbose error
+			}
+		}
+
+		serverType = new Type[count];
+		count = 0;
+
+		for (int i = 0; i < asm.Count; i++)
+		{
+			Type[] Temp = asm[i].GetTypes();
+			Temp.CopyTo(serverType, count);
+			count += Temp.Length;
+		}
+	}
+}
+
+public class Report
+{
+	private XmlTextWriter writer;
+	public Report(StringWriter resFile, Refl serverdll)
+	{
+		writer = new XmlTextWriter(resFile);
+		writer.WriteStartElement("CalledMethodInfo");
+		writer.WriteStartElement("DllVersionInfo");
+		for (int i = 0; i < serverdll.asm.Count; i++)
+		{
+			writer.WriteStartElement("dll");
+			writer.WriteString(serverdll.asm[i].FullName);
+			writer.WriteEndElement();
+		}
+		writer.WriteEndElement();
+	}
+
+	public void StartMethod(string methodName, string errMsg)
+	{
+		bool compiled = String.IsNullOrEmpty(errMsg);
+
+		writer.WriteStartElement("method");
+		writer.WriteAttributeString("Name", methodName);
+		writer.WriteAttributeString("Compiled", compiled.ToString());
+
+		if (!compiled)
+			writer.WriteAttributeString("ErrMsg", errMsg);
+	}
+
+	public void EndMethod()
+	{
+		writer.WriteEndElement();
+	}
+
+	public void StartMethodsReport()
+	{
+		writer.WriteStartElement("Report");
+	}
+
+	public void EndMethodsReport()
+	{
+		writer.WriteEndElement();
+		writer.WriteEndElement();
+		writer.Flush();
+		writer.Close();
+	}
+
+	internal void AddErrorAtribute(string errMsg)
+	{
+		writer.WriteAttributeString("ErrMsg", errMsg);
+	}
+
+	internal void AddBindCall(string serverMethod, int argsCount)
+	{
+		writer.WriteStartElement("callMethod");
+
+		writer.WriteAttributeString("Name", serverMethod + '(' + (argsCount == 0 ? "" : argsCount.ToString() + " param") + ')');
+		writer.WriteAttributeString("dll", "");
+		writer.WriteAttributeString("type", "");
+		writer.WriteEndElement();
+	}
+
+	internal void AddCall(string type, string serverMethod, string[] paramsArr, System.Reflection.Module module)
+	{
+		writer.WriteStartElement("callMethod");
+
+		string methodSignature = serverMethod;
+		if (serverMethod.IndexOf(".ctor", StringComparison.Ordinal) != -1)
+			methodSignature = serverMethod.Replace(".ctor", "constructor");
+
+		if (paramsArr != null)
+		{
+			methodSignature += "(";
+
+			for (int i = 0; i <= paramsArr.Length - 1; i++)
+				methodSignature += paramsArr[i].Replace("&", "") + ",";
+
+			if (methodSignature.Length > 0)
+				methodSignature = methodSignature.Substring(0, methodSignature.Length - 1);
+
+			methodSignature += ")";
+		}
+
+		writer.WriteAttributeString("Name", methodSignature);
+		writer.WriteAttributeString("dll", module.ToString());
+		writer.WriteAttributeString("type", type);
+		writer.WriteEndElement();
+	}
+
+	public void AddRecommendation(string recommendation)
+	{
+		writer.WriteStartElement("recommendation");
+		writer.WriteString(recommendation);
+		writer.WriteEndElement();
+	}
+}
+
+public class MyScriptSite : IActiveScriptSite
+{
+	public static string LastErrMsg = "";
+	public MyScriptSite()
+	{
+	}
+	#region Interface members.
+	public void GetLCID(
+		out uint id)
+	{
+		id = (uint)(new Guid().ToByteArray().GetHashCode());
+	}
+
+	public void GetItemInfo(
+		[System.Runtime.InteropServices.In, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.BStr)] string name,
+		[System.Runtime.InteropServices.In, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.U4)] uint returnMask,
+		[System.Runtime.InteropServices.Out, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.IUnknown)] out object item,
+		IntPtr ppti)
+	{
+		item = null;
+	}
+
+	public void GetDocVersionString(
+		out string v)
+	{
+		v = "1.2.3.4";
+	}
+
+	public void OnScriptTerminate(
+		ref object result,
+		ref System.Runtime.InteropServices.ComTypes.EXCEPINFO info)
+	{
+
+	}
+
+	public void OnStateChange(
+		SCRIPTSTATE state)
+	{
+
+	}
+
+	public void OnScriptError(
+		[System.Runtime.InteropServices.In, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.IUnknown)] object err)
+	{
+		LastErrMsg = "";
+		IActiveScriptError _err = (IActiveScriptError)err;
+		string sourceLineTxt;
+		_err.GetSourceLineText(out sourceLineTxt);
+		uint srcCntxt = 0;
+		uint lineNum = 0;
+		int charNum = 0;
+		_err.GetSourcePosition(out srcCntxt, out lineNum, out charNum);
+		System.Runtime.InteropServices.ComTypes.EXCEPINFO exinf = new System.Runtime.InteropServices.ComTypes.EXCEPINFO();
+		_err.GetExceptionInfo(out exinf);
+
+		LastErrMsg = String.Format("Script parsing error. " + System.Environment.NewLine + " Line: {0}." + System.Environment.NewLine + " Line Text: {1}." + System.Environment.NewLine + " Error: {2}", lineNum - 1, sourceLineTxt, exinf.bstrDescription);
+	}
+
+	public void OnEnterScript()
+	{
+	}
+
+	public void OnLeaveScript()
+	{
+	}
+	#endregion
+}
+
+public class NativeMethods
+{
+	[System.Runtime.InteropServices.DllImport("Ole32", SetLastError = true)]
+	internal static extern uint CLSIDFromProgID([System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.LPWStr)] string lpszProgID, out Guid pclsid);
+}
+
+public enum CLSCTX
+{
+	CLSCTX_INPROC_SERVER = 0x1,
+	CLSCTX_INPROC_HANDLER = 0x2,
+	CLSCTX_LOCAL_SERVER = 0x4,
+	CLSCTX_INPROC_SERVER16 = 0x8,
+	CLSCTX_REMOTE_SERVER = 0x10,
+	CLSCTX_INPROC_HANDLER16 = 0x20,
+	CLSCTX_RESERVED1 = 0x40,
+	CLSCTX_RESERVED2 = 0x80,
+	CLSCTX_RESERVED3 = 0x100,
+	CLSCTX_RESERVED4 = 0x200,
+	CLSCTX_NO_CODE_DOWNLOAD = 0x400,
+	CLSCTX_RESERVED5 = 0x800,
+	CLSCTX_NO_CUSTOM_MARSHAL = 0x1000,
+	CLSCTX_ENABLE_CODE_DOWNLOAD = 0x2000,
+	CLSCTX_NO_FAILURE_LOG = 0x4000,
+	CLSCTX_DISABLE_AAA = 0x8000,
+	CLSCTX_ENABLE_AAA = 0x10000,
+	CLSCTX_FROM_DEFAULT_CONTEXT = 0x20000
+}
+
+public class Ole32
+{
+	public static Guid CLSID_StdComponentCategoriesMgr = new Guid(0x0002E005, 0x0000, 0x0000, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
+	public static Guid IID_IEnumGUID = new Guid(0x0002E000, 0x0000, 0x0000, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
+	public static Guid IID_IEnumCATEGORYINFO = new Guid(0x0002E011, 0x0000, 0x0000, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
+	public static Guid IID_ICatRegister = new Guid(0x0002E012, 0x0000, 0x0000, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
+	public static Guid IID_ICatInformation = new Guid(0x0002E013, 0x0000, 0x0000, 0xC0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46);
+
+	public const uint S_OK = 0x00000000;
+	// CoCreateInstance
+	public const uint REGDB_E_CLASSNOTREG = 0x80040154;
+	public const uint CLASS_E_NOAGGREGATION = 0x80040110;
+	public const uint E_NOINTERFACE = 0x80004002;
+	public const uint E_INVALIDARG = 0x8007005;
+	public const uint E_POINTER = 0x80004003;
+
+	// COM uses StdCall
+	[System.Runtime.InteropServices.DllImport("OLE32.DLL", EntryPoint = "CLSIDFromProgID", CallingConvention = System.Runtime.InteropServices.CallingConvention.StdCall)]
+	public static extern uint CLSIDFromProgID([System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.BStr)]string ProgId, ref Guid ClsId);
+	[System.Runtime.InteropServices.DllImport("OLE32.DLL", EntryPoint = "ProgIDFromCLSID", CallingConvention = System.Runtime.InteropServices.CallingConvention.StdCall)]
+	public static extern uint ProgIDFromCLSID(ref Guid ClsId, ref IntPtr ProgId);
+	[System.Runtime.InteropServices.DllImport("OLE32.DLL", EntryPoint = "CoCreateInstance", CallingConvention = System.Runtime.InteropServices.CallingConvention.StdCall)]
+	public static extern uint CoCreateInstance(ref Guid ClassGuid, IntPtr pUnkOuter, CLSCTX dwClsContext, ref Guid InterfaceGuid, ref IntPtr Result);
+
+	public static IntPtr CreateComObject(ref Guid CoClass, ref Guid Interface)
+	{
+		IntPtr Result = IntPtr.Zero;
+		if (CoCreateInstance(ref CoClass, IntPtr.Zero, CLSCTX.CLSCTX_INPROC_SERVER, ref Interface, ref Result) == S_OK)
+		{
+			return Result;
+		}
+		else
+		{
+			return IntPtr.Zero;
+		}
+	}
+	public static string ProgIDFromCLSID(Guid ClsId)
+	{
+		IntPtr RefStr = IntPtr.Zero;
+
+		if (ProgIDFromCLSID(ref ClsId, ref RefStr) == S_OK)
+		{
+			string Str = System.Runtime.InteropServices.Marshal.PtrToStringAuto(RefStr);
+			return Str;
+		}
+		else
+		{
+			return string.Empty;
+		}
+	}
+}
+
+[System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIUnknown),
+	System.Runtime.InteropServices.Guid(@"BB1A2AE1-A4F9-11cf-8F20-00805F2CD064")]
+public interface IActiveScript
+{
+	#region Interface members.
+
+	void SetScriptSite(
+		[System.Runtime.InteropServices.In, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Interface)]
+IActiveScriptSite site);
+
+	void GetScriptSite(
+		ref Guid riid,
+		out IntPtr ppvObject);
+
+	void SetScriptState(
+		SCRIPTSTATE ss);
+
+	void GetScriptState(
+		out SCRIPTSTATE ss);
+
+	void Close();
+
+	void AddNamedItem(
+		[System.Runtime.InteropServices.In, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.BStr)] 
+string name,
+		[System.Runtime.InteropServices.In, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.U4)] 
+uint flags);
+
+	void AddTypeLib(
+		ref Guid rguidTypeLib,
+		uint major,
+		uint minor,
+		uint flags);
+
+	void GetScriptDispatch(
+		string itemName,
+		out object ppdisp);
+
+	void GetCurrentScriptThreadiD(
+		out uint id);
+
+	void GetScriptThreadID(
+		uint threadID,
+		out uint id);
+
+	void GetScriptThreadState(
+		uint id,
+		out SCRIPTTHREADSTATE state);
+
+	void InterruptScriptThread(
+		uint id,
+		ref System.Runtime.InteropServices.ComTypes.EXCEPINFO info,
+		uint flags);
+
+	void Clone(
+		out IActiveScript item);
+
+	#endregion
+}
+
+[System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIUnknown),
+System.Runtime.InteropServices.Guid(@"BB1A2AE2-A4F9-11cf-8F20-00805F2CD064")]
+public interface IActiveScriptParse32
+{
+	#region Interface members.
+
+	void InitNew();
+
+	void AddScriptlet(
+		string defaultName,
+		string code,
+		string itemName,
+		string subItemName,
+		string eventName,
+		string delimiter,
+		IntPtr sourceContextCookie,
+		uint startingLineNumber,
+		uint flags,
+		out string name,
+		out System.Runtime.InteropServices.ComTypes.EXCEPINFO info);
+
+	[System.Runtime.InteropServices.PreserveSig]
+	int ParseScriptText(
+		string code,
+		string itemName,
+		[System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.IUnknown)] object context,
+		string delimiter,
+		IntPtr sourceContextCookie,
+		uint startingLineNumber,
+		uint flags,
+		out object result,
+		out System.Runtime.InteropServices.ComTypes.EXCEPINFO info);
+
+	#endregion
+}
+
+[System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIUnknown),
+System.Runtime.InteropServices.Guid(@"C7EF7658-E1EE-480E-97EA-D52CB4D76D17")]
+public interface IActiveScriptParse64
+{
+	#region Interface members.
+
+	void InitNew();
+
+	void AddScriptlet(
+		string defaultName,
+		string code,
+		string itemName,
+		string subItemName,
+		string eventName,
+		string delimiter,
+		IntPtr sourceContextCookie,
+		uint startingLineNumber,
+		uint flags,
+		out string name,
+		out System.Runtime.InteropServices.ComTypes.EXCEPINFO info);
+
+	[System.Runtime.InteropServices.PreserveSig]
+	int ParseScriptText(
+		string code,
+		string itemName,
+		[System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.IUnknown)] object context,
+		string delimiter,
+		IntPtr sourceContextCookie,
+		uint startingLineNumber,
+		uint flags,
+		out object result,
+		out System.Runtime.InteropServices.ComTypes.EXCEPINFO info);
+
+	#endregion
+}
+
+internal class ActiveScriptParseWrapper
+{
+	private readonly IActiveScriptParse32 asp32;
+	private readonly IActiveScriptParse64 asp64;
+
+	internal ActiveScriptParseWrapper(object comObject)
+	{
+		if (IntPtr.Size == 4)
+		{
+			asp32 = (IActiveScriptParse32)comObject;
+		}
+		else
+		{
+			asp64 = (IActiveScriptParse64)comObject;
+		}
+	}
+
+	internal void InitNew()
+	{
+		if (asp32 != null)
+		{
+			asp32.InitNew();
+		}
+		else
+		{
+			asp64.InitNew();
+		}
+	}
+
+	internal void AddScriptlet(
+		string defaultName,
+		string code,
+		string itemName,
+		string subItemName,
+		string eventName,
+		string delimiter,
+		IntPtr sourceContextCookie,
+		uint startingLineNumber,
+		uint flags,
+		out string name,
+		out System.Runtime.InteropServices.ComTypes.EXCEPINFO exceptionInfo)
+	{
+		if (asp32 != null)
+		{
+			asp32.AddScriptlet(defaultName, code, itemName, subItemName, eventName,
+				delimiter, sourceContextCookie, startingLineNumber, flags, out name, out exceptionInfo);
+		}
+		else
+		{
+			asp64.AddScriptlet(defaultName, code, itemName, subItemName, eventName,
+				delimiter, sourceContextCookie, startingLineNumber, flags, out name, out exceptionInfo);
+		}
+	}
+
+	internal int ParseScriptText(
+		string code,
+		string itemName,
+		[System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.IUnknown)] object context,
+		string delimiter,
+		IntPtr sourceContextCookie,
+		uint startingLineNumber,
+		uint flags,
+		[System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Struct)] out object result,
+		out System.Runtime.InteropServices.ComTypes.EXCEPINFO exceptionInfo)
+	{
+		if (asp32 != null)
+		{
+			return asp32.ParseScriptText(code, itemName, context, delimiter, sourceContextCookie,
+				startingLineNumber, flags, out result, out exceptionInfo);
+		}
+		else
+		{
+			return asp64.ParseScriptText(code, itemName, context, delimiter, sourceContextCookie,
+				startingLineNumber, flags, out result, out exceptionInfo);
+		}
+	}
+}
+
+[System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIUnknown),
+System.Runtime.InteropServices.Guid(@"DB01A1E3-A42B-11cf-8F20-00805F2CD064")]
+public interface IActiveScriptSite
+{
+	#region Interface members.
+
+	void GetLCID(
+		out uint id);
+
+	void GetItemInfo(
+		[System.Runtime.InteropServices.In, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.BStr)] string name,
+		[System.Runtime.InteropServices.In, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.U4)] uint returnMask,
+		[System.Runtime.InteropServices.Out, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.IUnknown)] out object item,
+		IntPtr ppti);
+
+	void GetDocVersionString(
+		out string v);
+
+	void OnScriptTerminate(
+		ref object result,
+		ref System.Runtime.InteropServices.ComTypes.EXCEPINFO info);
+
+	void OnStateChange(
+		SCRIPTSTATE state);
+
+	void OnScriptError(
+		[System.Runtime.InteropServices.In, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.IUnknown)] object err);
+
+	void OnEnterScript();
+
+	void OnLeaveScript();
+
+	#endregion
+}
+
+[System.Runtime.InteropServices.InterfaceType(System.Runtime.InteropServices.ComInterfaceType.InterfaceIsIUnknown),
+System.Runtime.InteropServices.Guid(@"EAE1BA61-A4ED-11cf-8F20-00805F2CD064")]
+public interface IActiveScriptError
+{
+	#region Interface members.
+
+	void GetExceptionInfo(
+		[System.Runtime.InteropServices.Out, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Struct)] out System.Runtime.InteropServices.ComTypes.EXCEPINFO info);
+
+	void GetSourcePosition(
+		[System.Runtime.InteropServices.Out, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.U4)] out uint sourceContext,
+		[System.Runtime.InteropServices.Out, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.U4)] out uint lineNumber,
+		[System.Runtime.InteropServices.Out, System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.U4)] out int characterPosition);
+
+	void GetSourceLineText(
+		out string sourceLine);
+
+	#endregion
+}
+
+public enum SCRIPTSTATE : uint
+{
+	#region Enum members.
+	SCRIPTSTATE_UNINITIALIZED = 0,
+	SCRIPTSTATE_INITIALIZED = 5,
+	SCRIPTSTATE_STARTED = 1,
+	SCRIPTSTATE_CONNECTED = 2,
+	SCRIPTSTATE_DISCONNECTED = 3,
+	SCRIPTSTATE_CLOSED = 4,
+	#endregion
+}
+
+public enum SCRIPTTHREADSTATE : uint
+{
+	#region Enum members.
+	SCRIPTTHREADSTATE_NOTINSCRIPT = 0,
+	SCRIPTTHREADSTATE_RUNNING = 1,
+	#endregion
+}
+
+[Flags]
+public enum SCRIPTITEMFLAGS : uint
+{
+	#region Enum members.
+	SCRIPTITEM_ISVISIBLE = 0x00000002,
+	SCRIPTITEM_ISSOURCE = 0x00000004,
+	SCRIPTITEM_GLOBALMEMBERS = 0x00000008,
+	SCRIPTITEM_ISPERSISTENT = 0x00000040,
+	SCRIPTITEM_CODEONLY = 0x00000200,
+	SCRIPTITEM_NOCODE = 0x00000400,
+	SCRIPTITEM_ALL_FLAGS =
+		SCRIPTITEM_ISSOURCE |
+		SCRIPTITEM_ISVISIBLE |
+		SCRIPTITEM_ISPERSISTENT |
+		SCRIPTITEM_GLOBALMEMBERS |
+		SCRIPTITEM_NOCODE |
+		SCRIPTITEM_CODEONLY
+	#endregion
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>Methods Summary</name>
+ </Item>
+</AML>

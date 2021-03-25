@@ -1,0 +1,132 @@
+﻿<AML>
+ <Item type="Report" id="485D52BE44B4409F956BF037480572D1" action="add">
+  <description />
+  <location>client</location>
+  <method keyed_name="ECR Log Report" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>ECR Log Report</name>
+   </Item>
+  </method>
+  <report_query><![CDATA[<Item type="ECR" action="get" />]]></report_query>
+  <target>one window</target>
+  <type>itemtype</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:user="urn:user-scripts" xmlns:aras="http://www.aras-corp.com">
+	 <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes"></xsl:output>
+	 <xsl:template match="/">
+	  <html>
+	   <head></head>
+	   <body topmargin="50" leftmargin="50">
+	    <div class="print_button_wrapper">
+	     <img id="print_button" src="../images/Print.svg" onclick="printReport(window);" />
+	     <a href="#" onclick="printReport(window); return false;">Print</a>
+	    </div>
+	    <div class="table_wrapper">
+	    <div class="report_name">
+	     ECR Log Report
+	    </div>
+	    <div class="report_generation_time"></div>
+	    <table border="0" cellspacing="0" cellpadding="0">
+	        <tr>
+	         <th>ECR Number</th>
+	         <th>Title</th>
+	         <th>Priority</th>
+	         <th>Fast Track</th>
+	         <th>Date Requested</th>
+	         <th>Requested By</th>
+	         <th>Assigned Creator</th>
+	         <th>Status</th>
+	         <th>ECN</th>
+	        </tr>
+	        <xsl:for-each select="//Item">
+	         <xsl:sort select="name" order="ascending" case-order="upper-first" data-type="text"></xsl:sort>
+	         <tr valign="center">
+	          <td>
+	           <xsl:value-of select="item_number"></xsl:value-of>
+	           <xsl:if test="item_number='' or not(item_number)">
+	            <xsl:text>&#160;</xsl:text>
+	           </xsl:if>
+	          </td>
+	          <td>
+	           <xsl:value-of select="title"></xsl:value-of>
+	           <xsl:if test="title='' or not(title)">
+	            <xsl:text>&#160;</xsl:text>
+	           </xsl:if>
+	          </td>
+	          <td>
+	           <xsl:value-of select="priority"></xsl:value-of>
+	           <xsl:if test="priority='' or not(priority)">
+	            <xsl:text>&#160;</xsl:text>
+	           </xsl:if>
+	          </td>
+	          <td>
+	           <xsl:choose>
+	            <xsl:when test="fast_track='1'">Yes</xsl:when>
+	            <xsl:otherwise>No</xsl:otherwise>
+	           </xsl:choose>
+	          </td>
+	          <td>
+	           <xsl:value-of select="created_on"></xsl:value-of>
+	           <xsl:if test="created_on='' or not(created_on)">
+	            <xsl:text>&#160;</xsl:text>
+	           </xsl:if>
+	          </td>
+	          <td>
+	           <xsl:choose>
+	            <xsl:when test="requested_by[@is_null='0' and string(.)='']">
+	             <span style="color:#ff0000">Restricted</span>
+	            </xsl:when>
+	            <xsl:otherwise>
+	             <xsl:value-of select="requested_by/@keyed_name"/>
+	             <xsl:if test="requested_by/@keyed_name='' or not(requested_by/@keyed_name)">
+	              <xsl:text>&#160;</xsl:text>
+	             </xsl:if>
+	            </xsl:otherwise>
+	           </xsl:choose>
+	          </td>
+	          <td>
+	           <xsl:value-of select="owned_by_id/@keyed_name"></xsl:value-of>
+	           <xsl:if test="owned_by_id/@keyed_name='' or not(owned_by_id/@keyed_name)">
+	            <xsl:text>&#160;</xsl:text>
+	           </xsl:if>
+	          </td>
+	          <td>
+	           <xsl:value-of select="state"></xsl:value-of>
+	           <xsl:if test="state='' or not(state)">
+	            <xsl:text>&#160;</xsl:text>
+	           </xsl:if>
+	          </td>
+	          <td>
+	           <xsl:value-of select="ECN"></xsl:value-of>
+	           <xsl:if test="ECN='' or not(ECN)">
+	            <xsl:text>&#160;</xsl:text>
+	           </xsl:if>
+	          </td>
+	         </tr>
+	        </xsl:for-each>
+	    </table>
+	    </div>
+	   </body>
+	   <script>
+	    function loadScript(url)
+	    {
+	     const loadedJS = document.createElement('script');
+	     loadedJS.src = url;
+	     document.getElementsByTagName('head')[0].appendChild(loadedJS);
+	    }
+	    function loadStyle(url)
+	    {
+	     const link = document.createElement('link');
+	     link.setAttribute('rel', 'stylesheet');
+	     link.setAttribute('href', url);
+	     document.getElementsByTagName('head')[0].appendChild(link)
+	    }
+	    loadScript(parent.aras.getBaseURL('/Solutions/PLM/javascript/report.js'));
+	    loadStyle(parent.aras.getBaseURL('/Solutions/PLM/styles/report.css'));
+	   </script>
+	  </html>
+	 </xsl:template>
+	</xsl:stylesheet>
+	]]></xsl_stylesheet>
+  <name>ECR Log Report</name>
+ </Item>
+</AML>

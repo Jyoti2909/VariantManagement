@@ -1,0 +1,43 @@
+﻿<AML>
+ <Item type="SQL" id="EB9233989B004A6F9EC7B4B84B234F35" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_sched_date</old_name>
+  <sqlserver_body><![CDATA[/*Purpose: select a scheduled date based on a ramp function
+            that gives the user input, S, preference if it fits
+            between the [E,L] interval.
+   Input:   3 dates, early, schedule, late, 
+            plus a flag 1 = forward 0 = backward
+   Output:  a single date.
+
+   Algorithm:                     **** L         
+                                 *
+                  F(S)          *      
+                               *            
+                         E ****
+                                 S
+*/
+
+CREATE FUNCTION [select_sched_date](@EARLY DATETIME, @SCHED DATETIME, @LATE DATETIME, @FLAG INT)
+RETURNS DATETIME
+AS
+BEGIN
+	IF @SCHED IS NULL
+	BEGIN
+		IF @FLAG = 1
+			RETURN @EARLY
+		ELSE
+			RETURN @LATE
+	END
+	ELSE IF @SCHED < @EARLY
+		RETURN @EARLY
+	ELSE IF @SCHED > @LATE
+		RETURN @LATE
+	RETURN @SCHED
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_sched_date</name>
+ </Item>
+</AML>

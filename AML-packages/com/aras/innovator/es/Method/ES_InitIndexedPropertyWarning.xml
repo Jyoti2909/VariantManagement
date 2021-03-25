@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="804EBFA427F3439CAF3F8EFCC52F6BEB" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[function hasXProperty() {
+	var propNameColumn = 1;
+	var ifrm = parent.relationships.iframesCollection[options.relationshipTypeId];
+	var grid = ifrm.contentWindow.grid;
+
+	if (!grid.getRowCount()) {
+		return false;
+	}
+
+	var itemIds = grid.getAllItemIds(',').split(',');
+
+	return itemIds.some(function(id) {
+		var propName = grid.getCellValue(id, propNameColumn);
+		return propName.startsWith('xp-');
+	});
+}
+
+return {
+	hidden: !hasXProperty()
+};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_InitIndexedPropertyWarning</name>
+ </Item>
+</AML>

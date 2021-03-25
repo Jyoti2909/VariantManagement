@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="CC30E72FB0DF47E0AA2941997E8B0449" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/* Purpose is to show warning about: the PolyItem, when saved,
+ drops the standard ItemType DB table in favor of a DB View,
+ selecting an ItemType to be a polyitem cannot be reversed. */
+var prevValueKey = 'implementation_type_previous_value_system';
+var sysTa = document.getElementById(prevValueKey);
+var prevValue = sysTa.value;
+sysTa.value = this.value;
+
+if (this.value == 'polymorphic' && this.value != prevValue) {
+	var res = aras.confirm(aras.getResource('', 'imports_core.poly_cannot_be_reversed_to_non_poly'), window);
+	if (!res) {
+		handleItemChange('implementation_type', prevValue);
+		sysTa.value = prevValue;
+	}
+}
+
+if (prevValue == 'polymorphic' && this.value != prevValue && (document.item.getAttribute('isTemp') !== '1')) {
+	aras.AlertError(aras.getResource('', 'imports_core.poly_cannot_be_reversed_to_non_poly_error'), window);
+	handleItemChange('implementation_type', prevValue);
+	sysTa.value = prevValue;
+}
+
+aras.evalItemMethod('ItemType Form onload', document.item);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>onChangeImplementationTypeField</name>
+ </Item>
+</AML>

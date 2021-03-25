@@ -1,0 +1,323 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2013. -->
+<html>
+<head>
+	<title></title>
+	<script>
+		var aras = window.frameElement.dialogArguments.aras;
+	</script>
+	<script type="text/javascript" src="../../javascript/dialog.js"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: true, baseUrl:'../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=XmlDocument"></script>
+	<style type="text/css">
+		@import "../../javascript/dojo/resources/dojo.css";
+		@import "../../javascript/dijit/themes/claro/claro.css";
+		@import "../../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../../javascript/dojox/form/resources/CheckedMultiSelect.css";
+		@import "../../styles/default.css";
+		@import "../../javascript/include.aspx?classes=common.css";
+
+		html,body {
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+</head>
+<script type="text/javascript">
+	var userNds = null,
+		allChecked = false,
+		checked = {},
+		mySessionId = "mySessionId_is_unknown",
+		toolbar,
+		grid;
+
+	window.onload = function () {
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.ToolBar", { connectId: "top" }, function (control) {
+			toolbar = control;
+			toolbar.loadXml(aras.getI18NXMLResource("usersManagement_toolbar.xml"));
+			toolbar.show();
+			clientControlsFactory.on(toolbar, {
+				"onClick": onBtnClick
+			});
+		});
+
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", { canEdit_Experimental: function (rowId) { return (rowId !== mySessionId) }, onStartSearch_Experimental: populateGrid, onApplyEdit_Experimental: applyEdit }, function(control) {
+		
+			grid = control;
+			grid.inputRow.set("visible", true);
+			grid.setLayout_Experimental([{ field: "number", name: aras.getResource("", "licmanager.n_column_caption"), width: "5%", styles: "text-align: right;", headerStyles: "text-align: center;" },
+							{ field: "session", name: aras.getResource("", "licmanager.x_column_caption"), width: "5%", styles: "text-align: center;", headerStyles: "text-align: center;", editable: true },
+							{ field: "login", name: aras.getResource("", "licmanager.login"), width: "10%", styles: "text-align: left;", headerStyles: "text-align: center;" },
+							{ field: "database", name: aras.getResource("", "licmanager.database"), width: "10%", styles: "text-align: left;", headerStyles: "text-align: center;" },
+							{ field: "loginTime", name: aras.getResource("", "licmanager.login_time"), width: "15%", styles: "text-align: left;", headerStyles: "text-align: center;" },
+							{ field: "lastActivity", name: aras.getResource("", "licmanager.last_activity"), width: "15%", styles: "text-align: left;", headerStyles: "text-align: center;" },
+							{ field: "features", name: aras.getResource("", "licmanager.licenses"), width: "20%", styles: "text-align: left;", headerStyles: "text-align: center;" },
+							{ field: "comments", name: aras.getResource("", "licmanager.comments"), width: "20%", styles: "text-align: left;", headerStyles: "text-align: center;" } ]);
+			grid.inputRow.set(0, "disabled", true);
+			grid.inputRow.set(1, "disabled", true);
+			populateGrid();
+		});
+	}
+
+	function populateGrid() {
+		grid.RemoveAllRows();
+
+		var res = aras.soapSend("GetUsersList", "<GetUsersList/>");
+		if (res.getFaultCode() !== 0) {
+			aras.AlertError(res);
+			return false;
+		}
+
+		var tmp = res.results.selectNodes("//aras_user");
+		userNds = (tmp && tmp.length > 0) ? tmp : null;
+
+		executeFilter();
+
+		if (userNds) {
+			var itemsGrid = [];
+			for (var i = 0; i < userNds.length; i++) {
+				var usrNd = userNds[i];
+				if (!usrNd.getAttribute("KN")) {
+					if (usrNd.getAttribute('self') === "true") {
+						mySessionId = usrNd.getAttribute("id");
+					}
+					itemsGrid.push({
+						uniqueId: usrNd.getAttribute("id"),
+						number: i + 1,
+						session: (usrNd.getAttribute('self') === "true") ? "" : false,
+						login: aras.getNodeElement(usrNd, "login"),
+						database: aras.getNodeElement(usrNd, "db"),
+						loginTime: aras.getNodeElement(usrNd, "loginTime"),
+						lastActivity: aras.getNodeElement(usrNd, "lastActivity"),
+						features: aras.getNodeElement(usrNd, "consumed_features"),
+						comments: aras.getNodeElement(usrNd, "comments")
+					});
+				}
+			}
+			grid.setArrayData_Experimental(itemsGrid);
+		}
+
+		allChecked = false;
+		checked = {};
+		updateToolbarState();
+	}
+
+	function clearSearchCriteria() {
+		for (var i = 0; i < grid.columns_Experimental.get("count") ; i++) {
+			grid.inputRow.set(i, "value", "");
+		}
+	}
+
+	function applyEdit(rowId, column, value) {
+		checkItem(rowId, value);
+	}
+
+	function checkAll() {
+		allChecked = allChecked ? false : true;
+		var ids = grid.items_Experimental.getAllId();
+
+		for (var i = 0; i < ids.length; i++) {
+			if (ids[i] !== mySessionId) {
+				grid.items_Experimental.set(ids[i], "value", "session", allChecked);
+				checkItem(ids[i], allChecked);
+			}
+		}
+
+		updateToolbarState();
+	}
+
+	function onBtnClick(btn) {
+		var cmdId = btn.getId();
+
+		if (cmdId == "update") {
+			populateGrid();
+		}
+		else if (cmdId == "select_all") {
+			checkAll();
+		}
+		else if (cmdId == "newsearch") {
+			clearSearchCriteria();
+		}
+		else if (cmdId == "terminate") {
+			if (!userNds || userNds.length == 1) {
+				aras.AlertError(aras.getResource("", "common.an_internal_error_has_occured"), aras.getResource("", "licmanager.usernds_not_exist"), aras.getResource("", "common.client_side_err"));
+				return true;
+			}
+
+			let _soapBody = "<aras_users>";
+			var askStr = aras.getResource("", "licmanager.sessions_terminated");
+			var delFlg = false;
+			for (var usrId in checked) {
+				var cell = grid.cells(usrId, 1);
+				if (cell.isCheckbox() && cell.isChecked() && (usrId != mySessionId)) {
+					_soapBody += "<aras_user id='" + usrId + "' action='delete'/>";
+					with (aras) {
+						var usrNd = getUserNodeByUserId(usrId);
+						askStr += getNodeElement(usrNd, "login") + " " + getNodeElement(usrNd, "loginTime");
+						askStr += " - " + getNodeElement(usrNd, "lastActivity") + "\n";
+					}
+					delFlg = true;
+				}
+			}
+			_soapBody += "</aras_users>";
+
+			if (!delFlg) {
+				aras.AlertError(aras.getResource("", "licmanager.no_sessions_terminated"));
+				return true;
+			}
+
+			askStr += ". " + aras.getResource("", "licmanager.sure")
+			if (!aras.confirm(askStr)) return true;
+
+			var res = aras.soapSend("DeleteUsers", _soapBody);
+			if (res.getFaultCode() != 0) {
+				aras.AlertError(res);
+				return false;
+			}
+
+			populateGrid();
+		}
+	}
+
+	function getUserNodeByUserId(usrId) {
+		for (var i = 0; i < userNds.length; i++) {
+			if (userNds[i].getAttribute("id") === usrId) {
+				return userNds[i];
+			}
+		}
+		return null;
+	}
+
+	function checkItem(rowId, bFlg) {
+		if (typeof (bFlg) != "boolean") bFlg = true;
+		checked[rowId] = bFlg;
+
+		updateAllCheckedFlag();
+		updateToolbarState();
+	}
+
+	function updateAllCheckedFlag() {
+		if (testAllCheked(true))
+			allChecked = true;
+		if (testAllCheked(false))
+			allChecked = false;
+	}
+
+	function testAllCheked(flg) {
+		var ids = grid.items_Experimental.getAllId();
+		for (var i = 0; i < ids.length; i++) {
+			if (ids[i] !== mySessionId && checked[ids[i]] !== flg) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	function updateToolbarState() {
+		var flag = (grid.getRowCount() > 1 || grid.items_Experimental.get(0, "id") !== mySessionId);
+		toolbar.getElement("select_all").setEnabled(flag);
+
+		flag = false;
+		if (grid.getRowCount() > 0) {
+			for (var idx in checked) {
+				if (checked[idx]) {
+					flag = true;
+					break;
+				}
+			}
+		}
+		toolbar.getElement("terminate").setEnabled(flag);
+	}
+
+	function executeFilter() {
+		var condArr = getInputRowVals();
+
+		if (condArr.length) {
+			applyFilter(condArr);
+		}
+	}
+
+	function applyFilter(condArr) {
+		var cache = [];
+		for (var i = 0; i < userNds.length; i++) {
+			var user = userNds[i];
+			var userId = user.getAttribute('id');
+			for (var j = 0; j < condArr.length; j++) {
+				var cond = condArr[j];
+				var val = getCellValue(user, cond.colId);
+
+				if (!cache[cond.colId]) cache[cond.colId] = getFilterCondition(cond.val, cond.colId);
+				var condPrepared = cache[cond.colId];
+
+				if (!condPrepared.test(val)) {
+					user.setAttribute("KN", "true");
+					break;
+				}
+			}
+		}
+		condArr = null;
+		cache = null;
+	}
+
+	function getCellValue(usrNd, headerName) {
+		switch (headerName) {
+			case "login":
+			case "loginTime":
+			case "lastActivity":
+			case "comments":
+				return aras.getNodeElement(usrNd, headerName);
+				break;
+			case "database":
+				return aras.getNodeElement(usrNd, 'db');
+				break;
+			case "features":
+				return aras.getNodeElement(usrNd, 'consumed_features');
+				break;
+		}
+	}
+
+	function getInputRowVals() {
+		var condArr = [];
+		for (var i = 0; i < grid.columns_Experimental.get("count") ; i++) {
+			var colId = grid.columns_Experimental.get(i, "name");
+			var val = grid.inputRow.get(i, "value");
+			if (val) {
+				condArr.push({ colId: colId, val: val });
+			}
+		}
+		return condArr;
+	}
+
+	function getFilterCondition(condVal, colId) {
+		return new filterDefaultCondition(condVal);
+
+		function filterDefaultCondition(condVal) {
+			this.error = false;
+			this.test = function (val) {
+				if (this.error) return true; // filter is not working
+				return this.regex.test(val);
+			}
+
+			if (typeof (condVal) !== "string") {
+				this.error = true;
+				return;
+			}
+
+			var reSpecChars = /(\$|\(|\)|\+|\.|\[|\?|\^|\{|\||\\)/g; // except *, because * and % used in mask
+			condVal = condVal.replace(reSpecChars, "\\$1");
+			var reMask = /(\*|%)/g;
+			condVal = condVal.replace(reMask, ".*");
+			condVal = "^" + condVal + "$";
+			this.regex = new RegExp();
+			this.regex.compile(condVal, "i");
+		}
+	}
+</script>
+<body class="claro">
+	<div id="top" style="height: 30px; overflow: hidden"></div>
+	<div id="gridTD" style="position: fixed; left: 0px; right: 0px; top: 30px; bottom: 0px; overflow: auto;"></div>
+</body>
+</html>

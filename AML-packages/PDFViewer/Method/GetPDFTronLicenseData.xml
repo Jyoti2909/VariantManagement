@@ -1,0 +1,43 @@
+﻿<AML>
+ <Item type="Method" id="9CCC6657607547ED84D8DACA94874815" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = this.getInnovator();
+string licenceId = innovator.ConsumeLicense("Aras.PDFViewer");
+
+Aras.Server.Security.Identity adminIdentity = null;
+bool permsWasSet = false;
+try
+{
+	adminIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+	permsWasSet =  Aras.Server.Security.Permissions.GrantIdentity(adminIdentity);
+	Item queryItem = this.newItem("Feature License", "get");
+	queryItem.setID(licenceId);
+	queryItem.setAttribute("select", "additional_license_data");
+	Item result = queryItem.apply();
+	if (result.isError())
+	{
+		return result;
+	}
+	string additionalLicenseData = result.getProperty("additional_license_data");
+	XmlDocument xmlDoc = new XmlDocument();
+	xmlDoc.LoadXml(additionalLicenseData);
+	const string keyForWindowsPlatform = "data/key";
+	const string keyForLinuxPlatform = "data/key3";
+	string platformName = this.getProperty("platform_name");
+	var licenseKeyNodeName = string.Equals(platformName, "linux", StringComparison.Ordinal)
+		? keyForLinuxPlatform
+		: keyForWindowsPlatform;
+	XmlNode keyNd = xmlDoc.SelectSingleNode(licenseKeyNodeName);
+	return innovator.newResult(keyNd.InnerText);
+}
+finally
+{
+	if (permsWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(adminIdentity);
+	}
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetPDFTronLicenseData</name>
+ </Item>
+</AML>

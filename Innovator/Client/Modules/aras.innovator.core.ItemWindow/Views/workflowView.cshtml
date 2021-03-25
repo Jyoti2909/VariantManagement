@@ -1,0 +1,100 @@
+﻿@{
+	Layout = "Shared/_cuiLayout.cshtml";
+}
+@section header
+{
+	<style type="text/css">
+		@@import "@Url.ContentWithSalt("~/styles/default.css")";
+
+		.aras-workflowtool-container {
+			height: 100%;
+		}
+
+		.aras-workflowtool-container__editor,
+		.aras-workflowtool-container__form,
+		.aras-workflowtool-container__relationships {
+			overflow: hidden;
+			min-height: 10px;
+		}
+
+	</style>
+	<script type="text/javascript">
+		var urlToResources =
+		{
+			workflowEditor: '@Url.ContentWithSalt("~/scripts/Workflow/workflowEditor.html")',
+		};
+	</script>
+	<script type="text/javascript" id="ScriptSet1" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=tearoffWindow")"></script>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/jsBundles/cui.js")"></script>
+}
+@section init_widgets
+{
+	<script type="text/javascript">
+		const initTearOffMenuController = () => {
+			const tearOffMenuController = new TearOffMenuController({ view: 'wokflowtool', aras: window.aras });
+			tearOffMenuController.menuFrameReady = true;
+			tearOffMenuController.initSvgManager();
+			tearOffMenuController.initController();
+			window.tearOffMenuController = tearOffMenuController;
+			return clientControlsFactory.createControl('Aras.Client.Frames.TearOffMenu', { tearOffMenuController });
+		};
+		const initCuiLayout = async () => {
+			const options = window.getDefaultOptions(window.itemID, window.itemTypeName);
+			const layoutNode = document.getElementById('top-toolbars');
+			window.layout = new ItemViewToolbarsCuiLayout(layoutNode, '', options);
+			window.addEventListener('unload', () => window.layout.destroy());
+			await window.layout.init();
+			const commandBarNode = layoutNode.querySelector('.aras-commandbar');
+			if (commandBarNode) {
+				const itemTypeColor = aras.getItemTypeColor(window.itemTypeName, 'name');
+				commandBarNode.style.borderBottom = `4px solid ${itemTypeColor}`;
+			}
+		};
+		document.addEventListener('DOMContentLoaded', async () => {
+			await Promise.all([
+				initTearOffMenuController(),
+				initCuiLayout()
+			]);
+
+			window.setupToolOnLoad();
+		});
+	</script>
+}
+@section center
+{
+<!------ workflowtool.html page content -------------------------------------------------------------------------->
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/Modules/aras.innovator.core.ItemWindow/Scripts/workflowtool.js")"></script>
+	<script type="text/javascript">
+		initializeWorkflowToolFunctions(window);
+		var isWorkflowTool = true;
+		var tabbars = {};
+		var pathIdConst = aras.getRelationshipTypeId('Workflow Map Path');
+		var activityIdConst = aras.getRelationshipTypeId('Workflow Map Activity');
+		var formsCache = null;
+
+		window.initFormsCache('forms');
+		window.updateWorkflowItem();
+		window.addEventListener('unload', () => {
+			if (aras.isNew(item) && aras.isInCache(itemID)) {
+				aras.itemsCache.updateItem(item);
+			}
+		});
+		window.initializeTabbars([
+			'Workflow Map',
+			'Activity Template',
+			'Workflow Map Path'
+		]);
+	</script>
+	<div id="worflowToolContent" class="aras-flex aras-flex_column aras-workflowtool-container">
+		<div id="editorPane" class="aras-workflowtool-container__editor" style="height: 35%;">
+			<iframe id="editor" src="about:blank" frameborder="no" scrolling="no" marginwidth="0" marginheight="0" style="position:relative; width:100%; height:100%;"></iframe>
+		</div>
+		<aras-splitter></aras-splitter>
+		<div id="forms" class="aras-workflowtool-container__form" style="height: 35%;"></div>
+		<aras-splitter></aras-splitter>
+		<div id="relationshipsPane" class="aras-workflowtool-container__relationships aras-flex-grow" style="height: 30%;">
+			<iframe id="tabs" src="about:blank" frameborder="no" scrolling="auto" marginwidth="0" marginheight="0" style="position:relative; width:100%; height:100%"></iframe>
+		</div>
+	</div>
+<!------ end of workflowtool.html page -------------------------------------------------------------------------->
+}

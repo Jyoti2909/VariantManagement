@@ -1,0 +1,39 @@
+﻿<AML>
+ <Item type="Method" id="4E11680EE49A4BE291908B9812201D59" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+return BusinessLogic.Run(this);
+        }
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		public static class BusinessLogic
+		{
+			public static Item Run(Item contextItem)
+			{
+				_ = contextItem ?? throw new ArgumentNullException(nameof(contextItem));
+				string classification = contextItem.getProperty("classification");
+				string iconPath = "../Images/";
+				switch (classification)
+				{
+					case "Mechanical Part/D-Phantom":
+						iconPath += "Part_light.svg";
+						break;
+					case "Mechanical Part/M-Phantom":
+						iconPath += "Part_light_green.svg";
+						break;
+					case "Mechanical Part/MBOM only Part":
+						iconPath += "Part_green.svg";
+						break;
+					default:
+						iconPath += "Part.svg";
+						break;
+				}
+
+				contextItem.setProperty("gag_icon", iconPath);
+				return contextItem;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_SetMechPartIcon</name>
+ </Item>
+</AML>

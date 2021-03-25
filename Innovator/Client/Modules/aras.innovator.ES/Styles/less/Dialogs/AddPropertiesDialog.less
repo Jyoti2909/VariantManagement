@@ -1,0 +1,140 @@
+﻿@import '../../../../styles/less/core/variables';
+
+body#addPropertiesDialog,
+body#addPropertiesWarnDialog {
+	display: flex;
+	flex-direction: column;
+
+	#dialogContent {
+		display: flex;
+		flex-grow: 1;
+		overflow: hidden;
+		margin: 0 16px 0 16px;
+
+		& > *:not(:last-child) {
+			margin-right: 16px;
+		}
+	}
+
+	#buttonsContainer {
+		display: flex;
+		justify-content: flex-end;
+		margin: 20px 16px 16px 16px;
+
+		& > .aras-button {
+			min-width: 80px;
+
+			&:not(:first-child) {
+				margin-left: 8px;
+			}
+
+			.aras-button__text {
+				width: 100%;
+				font-weight: bold;
+			}
+		}
+	}
+
+	.hidden {
+		display: none !important;
+	}
+}
+
+body#addPropertiesDialog {
+	.subtitle {
+		font: @font-14-med;
+		margin-bottom: 8px;
+	}
+
+	#availablePropsContainer {
+		display: flex;
+		flex-direction: column;
+		flex-grow: 1;
+
+		& > .content {
+			display: flex;
+			flex-direction: column;
+			flex-grow: 1;
+			position: relative;
+			overflow: hidden;
+		}
+
+		#searchSpinner {
+			border: 0;
+			display: block;
+			position: absolute;
+			left: 0;
+			top: 0;
+			z-index: 999999;
+			width: 100%;
+			height: 100%;
+			opacity: 0.7;
+			background-color: white;
+		}
+
+		#gridToolbar {
+			margin-bottom: 12px;
+
+			.aras-grid-head-cell:first-child {
+				border-left: 1px solid #aaaaaa;
+			}
+
+			.aras-grid-search-row-cell:first-child {
+				border-left: 1px solid #cccccc;
+			}
+
+			.aras-grid-row {
+				border-left: 1px solid #dddddd;
+			}
+		}
+	}
+
+	#selectedPropsContainer {
+		display: flex;
+		flex-direction: column;
+
+		.listbox {
+			flex-grow: 1;
+			width: 256px;
+			padding: 8px;
+			overflow-y: auto;
+			overflow-x: hidden;
+			border: @neutral-a 1px solid;
+			border-radius: 2px;
+		}
+
+		.propItem {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+
+			.propItemLabel {
+				text-overflow: ellipsis;
+				overflow: hidden;
+				white-space: nowrap;
+			}
+			&:not(:last-child) {
+				margin-bottom: 8px;
+			}
+			.aras-button {
+				border-radius: 16px;
+			}
+		}
+	}
+}
+
+body#addPropertiesWarnDialog {
+	#warnIcon {
+		width: 48px;
+		height: $width;
+	}
+
+	#warnMessage {
+		font: @font-12-med;
+	}
+
+	#acceptButton {
+		width: 192px;
+		background-color: @red-700;
+	}
+}

@@ -1,0 +1,51 @@
+﻿<AML>
+ <Item type="Method" id="59C89BDDF1304645A34B134449377E6C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var a = top.aras;
+var predTypeNm = "Predecessor";
+var tmpItm;
+var s, actsFromServerDom, nd;
+var predNds = this.dom.selectNodes("//Item[@type='"+predTypeNm+"']");
+var prjItm = item.selectSingleNode("ancestor::Item[@type='Project' or @type='Project Template']");
+if (!prjItm && predNds.length)
+{
+  var relatedIds = new Array();
+  for (var i=0; i<predNds.length; i++)
+  {
+    relatedIds.push(a.getItemProperty(predNds[i], "related_id"));
+  }
+  s = "<Item type='Activity2' action='get' select='name'><id condition='in'>'" + relatedIds.join("','") + "'</id></Item>";
+  s = a.applyItem(s);
+  actsFromServerDom = a.createXMLDocument();
+  if (s)
+  {
+    actsFromServerDom.loadXML(s);
+  }
+}
+for (var i=0; i<predNds.length; i++)
+{
+  tmpItm = predNds[i];
+  s = a.getItemProperty(tmpItm, "related_id");
+  if (!prjItm)
+  {
+    nd = actsFromServerDom.selectSingleNode("//Item[@type='Activity2' and @id='"+s+"']");
+  }
+  else
+  {
+    nd = prjItm.selectSingleNode(".//Item[@type='Activity2' and @id='"+s+"']");
+  }
+  if (!nd)
+  {
+    a.AlertError(a.getResource("project", "pr_methods.scheduling_is_not_success", s));
+    return;
+  }
+  a.setItemProperty(tmpItm, "fake_related_name", a.getItemProperty(nd, "name"));
+  if (tmpItm.getAttribute("action")=="add") tmpItm.setAttribute("isNew", "1");
+}
+
+grid.setNewItemCreationEnabled(false);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PM_predecessorCGOnload</name>
+ </Item>
+</AML>

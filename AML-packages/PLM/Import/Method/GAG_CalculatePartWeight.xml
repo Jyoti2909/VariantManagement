@@ -1,0 +1,133 @@
+﻿<AML>
+ <Item type="Method" id="489D8B60431E431FBEF51C505AF527D3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer, RequestState);
+
+			return businessLogic.Run(this);
+		}
+
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+			private readonly Aras.Server.Core.IContextState _requestState;
+
+			public BusinessLogic(IDataAccessLayer dal, Aras.Server.Core.IContextState requestState)
+			{
+				_dal = dal;
+				_requestState = requestState;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string contextPartId = contextItem.getID();
+
+				List<string> partsWithUpdatedWeight = GetIdsOfPartsWithCalculatedWeight();
+				if (partsWithUpdatedWeight.Contains(contextPartId))
+				{
+					return contextItem;
+				}
+
+				Item cad = GetRelatedMasterCad(contextPartId);
+				Item part = GetContextPart(contextPartId);
+				string weight;
+
+				if (cad.isEmpty())
+				{
+					weight = null;
+				}
+				else
+				{
+					string density = part.getProperty("gag_density");
+					string volume = cad.getProperty("gag_volume");
+					weight = CalculateWeight(density, volume);
+				}
+
+				partsWithUpdatedWeight.Add(contextPartId);
+				SetWeightOnPart(contextPartId, weight, part.getLockStatus());
+
+				return contextItem;
+			}
+
+			private List<string> GetIdsOfPartsWithCalculatedWeight()
+			{
+				List<string> partsWithUpdatedWeight;
+
+				if (!_requestState.Contains("PartsWithUpdatedWeight"))
+				{
+					partsWithUpdatedWeight = new List<string>();
+					_requestState.Add("PartsWithUpdatedWeight", partsWithUpdatedWeight);
+				}
+				else
+				{
+					partsWithUpdatedWeight = (List<string>)_requestState["PartsWithUpdatedWeight"];
+				}
+
+				return partsWithUpdatedWeight;
+			}
+
+			protected Item GetRelatedMasterCad(string partId)
+			{
+				Item relationships = _dal.NewItem("Part CAD", "get");
+				relationships.setProperty("source_id", partId);
+				relationships.setAttribute("select", "related_id");
+
+				Item parts = relationships.createRelatedItem("CAD", "get");
+				parts.setAttribute("select", "gag_volume");
+				parts.setProperty("gag_classification", "MASTER");
+
+				relationships = _dal.ApplyItem(relationships);
+
+				Contract.ThrowIfError(relationships, false);
+				return relationships.isEmpty() ? relationships : relationships.getRelatedItem();
+			}
+
+			private Item GetContextPart(string partId)
+			{
+				Item part = _dal.NewItem("Part", "get");
+				part.setID(partId);
+				part.setAttribute("select", "gag_density, locked_by_id");
+				part = _dal.ApplyItem(part);
+
+				Contract.ThrowIfError(part);
+				return part;
+			}
+
+			private static string CalculateWeight(string density, string volume)
+			{
+				if (string.IsNullOrEmpty(density) || string.IsNullOrEmpty(volume))
+				{
+					return null;
+				}
+
+				string weight =
+					(float.Parse(density, CultureInfo.InvariantCulture) *
+					 float.Parse(volume, CultureInfo.InvariantCulture))
+					.ToString(CultureInfo.InvariantCulture);
+
+				return weight;
+			}
+
+			private void SetWeightOnPart(string partId, string weight, int lockStatus)
+			{
+				Item updatedPart = _dal.NewItem("Part", lockStatus == 0 ? "edit" : "update");
+				updatedPart.setID(partId);
+				updatedPart.setAttribute("version", "0");
+
+				if (string.IsNullOrEmpty(weight))
+				{
+					updatedPart.setProperty("gag_theoretical_weight", string.Empty);
+					updatedPart.setPropertyAttribute("gag_theoretical_weight", "is_null", "1");
+				}
+				else
+				{
+					updatedPart.setProperty("gag_theoretical_weight", weight);
+				}
+
+				updatedPart = _dal.ApplyItem(updatedPart);
+				Contract.ThrowIfError(updatedPart);
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_CalculatePartWeight</name>
+ </Item>
+</AML>

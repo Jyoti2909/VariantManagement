@@ -1,0 +1,86 @@
+﻿<AML>
+ <Item type="qry_QueryDefinition" id="DA502F1857E24091B8973B338E365C63" action="add">
+  <name>GAG_CadRelatedToLegacy</name>
+  <Relationships>
+   <Item type="qry_QueryItem" id="387D7BA7E9AD44E9A8046BA1DE080AF3" action="add">
+    <filter_xml><![CDATA[<condition>
+	<exists>
+		<query_reference_path>2BC3801EC5834FE48FE245850CDEB4E4</query_reference_path>
+	</exists>
+</condition>]]></filter_xml>
+    <item_type keyed_name="CAD" type="ItemType" name="CAD">CCF205347C814DD1AF056875E0A880AC</item_type>
+    <ref_id>719DA0C871804755A220C0F6A733E607</ref_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="GAG_CadRelatedToLegacy" type="qry_QueryDefinition">DA502F1857E24091B8973B338E365C63</source_id>
+    <alias>CAD</alias>
+   </Item>
+   <Item type="qry_QueryItem" id="5816AD03F799440A84296BF50D2ABABC" action="add">
+    <filter_xml><![CDATA[<condition>
+	<exists>
+		<query_reference_path>852447529B5148A3B6B77D280A312588</query_reference_path>
+	</exists>
+</condition>]]></filter_xml>
+    <item_type keyed_name="GAG_LegacyWorkflow CAD" type="ItemType" name="GAG_LegacyWorkflow CAD">65B0501C994342ED9D1C8636922F568B</item_type>
+    <ref_id>C119162A18C04FDD81424F52DF084C72</ref_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="GAG_CadRelatedToLegacy" type="qry_QueryDefinition">DA502F1857E24091B8973B338E365C63</source_id>
+    <alias>GAG_LegacyWorkflowCAD related_id</alias>
+   </Item>
+   <Item type="qry_QueryItem" id="F6A6E930338A457C9395779A517F7DA1" action="add">
+    <item_type keyed_name="GAG_LegacyWorkflowItem" type="ItemType" name="GAG_LegacyWorkflowItem">CD49D8E55FC24009BBB31D667B98C7C8</item_type>
+    <ref_id>85867BE6D3054B26A4370390CCE22E80</ref_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="GAG_CadRelatedToLegacy" type="qry_QueryDefinition">DA502F1857E24091B8973B338E365C63</source_id>
+    <alias>GAG_LegacyWorkflowItem</alias>
+    <Relationships>
+     <Item type="qry_QueryItemSelectProperty" id="967722B1EC7746A0AFFC5D733AAD771A" action="add">
+      <property_name>item_number</property_name>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="GAG_LegacyWorkflowItem" type="qry_QueryItem">F6A6E930338A457C9395779A517F7DA1</source_id>
+     </Item>
+     <Item type="qry_QueryItemSelectProperty" id="C1F316B5C6D84551B5CBEAAF21CCAD70" action="add">
+      <property_name>gag_smarteam_workflow_name</property_name>
+      <sort_order>256</sort_order>
+      <source_id keyed_name="GAG_LegacyWorkflowItem" type="qry_QueryItem">F6A6E930338A457C9395779A517F7DA1</source_id>
+     </Item>
+     <Item type="qry_QueryItemSelectProperty" id="5CFEE324AA3A4286B10E17869290669D" action="add">
+      <property_name>gag_attached_report</property_name>
+      <sort_order>384</sort_order>
+      <source_id keyed_name="GAG_LegacyWorkflowItem" type="qry_QueryItem">F6A6E930338A457C9395779A517F7DA1</source_id>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="qry_QueryReference" id="0180054B4FE44C92A6AEC9A6B99FE9DE" action="add">
+    <child_ref_id>719DA0C871804755A220C0F6A733E607</child_ref_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="GAG_CadRelatedToLegacy" type="qry_QueryDefinition">DA502F1857E24091B8973B338E365C63</source_id>
+   </Item>
+   <Item type="qry_QueryReference" id="21FDF8CCA120472D9794F63E22D5CBB6" action="add">
+    <child_ref_id>C119162A18C04FDD81424F52DF084C72</child_ref_id>
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property name="id" query_items_xpath="parent::Item" />
+		<property name="related_id" />
+	</eq>
+</condition>]]></filter_xml>
+    <parent_ref_id>719DA0C871804755A220C0F6A733E607</parent_ref_id>
+    <ref_id>2BC3801EC5834FE48FE245850CDEB4E4</ref_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="GAG_CadRelatedToLegacy" type="qry_QueryDefinition">DA502F1857E24091B8973B338E365C63</source_id>
+   </Item>
+   <Item type="qry_QueryReference" id="E85F56193F49497E8C9C071D92F0E31C" action="add">
+    <child_ref_id>85867BE6D3054B26A4370390CCE22E80</child_ref_id>
+    <filter_xml><![CDATA[<condition>
+	<eq>
+		<property query_items_xpath="parent::Item" name="source_id" />
+		<property name="id" />
+	</eq>
+</condition>]]></filter_xml>
+    <parent_ref_id>C119162A18C04FDD81424F52DF084C72</parent_ref_id>
+    <ref_id>852447529B5148A3B6B77D280A312588</ref_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="GAG_CadRelatedToLegacy" type="qry_QueryDefinition">DA502F1857E24091B8973B338E365C63</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

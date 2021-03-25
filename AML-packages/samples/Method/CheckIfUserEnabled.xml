@@ -1,0 +1,86 @@
+﻿<AML>
+ <Item type="Method" id="12C7EB2DF8E949108D5D3D07AB531186" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+		}
+
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string loginName = contextItem.getProperty("login_name");
+				if (string.IsNullOrEmpty(loginName))
+				{
+					throw new Aras.Server.Core.InnovatorServerException("login_name is not defined");
+				}
+
+				Item request = dal.NewItem("User", "get");
+				request.setProperty("login_name", loginName);
+				request.setAttribute("select", "logon_enabled");
+
+				Item result = dal.ApplyItem(request);
+				if (result.isError())
+				{
+					return result;
+				}
+
+				if (result.getProperty("logon_enabled") == "0")
+				{
+					return dal.NewError("Login disabled for user " + loginName);
+				}
+
+				return result;
+			}
+		}
+
+		internal interface IDataAccessLayer
+		{
+			Item NewItem(string type = null, string action = null);
+			Item ApplyItem(Item item);
+			Item NewError(string errorMessage);
+		}
+
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this.innovator = innovator;
+			}
+
+			public Item NewItem(string type = null, string action = null)
+			{
+				if (string.IsNullOrEmpty(type))
+				{
+					return innovator.newItem();
+				}
+				if (string.IsNullOrEmpty(action))
+				{
+					return innovator.newItem(type);
+				}
+				return innovator.newItem(type, action);
+			}
+
+			public Item NewError(string errorMessage)
+			{
+				return innovator.newError(errorMessage);
+			}
+
+			public Item ApplyItem(Item item)
+			{
+				return item.apply();
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>CheckIfUserEnabled</name>
+ </Item>
+</AML>

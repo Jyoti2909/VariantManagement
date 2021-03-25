@@ -1,0 +1,127 @@
+{
+  "id" : "single_page_social_media",
+  "type"  : "wrapperGroup",
+  "extraclass": "skin-component-properties",
+  "wrapper": "divElement",
+  "items" : [
+    {
+      "type": "collapsible",
+      "label": "General",
+      "expanded": "@uiStates.single_page_social_media_color",
+      "defaultState": true,
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Use Facebook"
+            },
+            {
+              "type": "switch",
+              "on-change": {"name": "switchChanged", "args": {"attr": "use_facebook"}},
+              "data": "attrs.use_facebook",
+              "value": true
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Use Twitter"
+            },
+            {
+              "type": "switch",
+              "on-change": {"name": "switchChanged", "args": {"attr": "use_twitter"}},
+              "data": "attrs.use_twitter",
+              "value": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "collapsible",
+      "label": "Colors",
+      "expanded": "@uiStates.single_page_social_media_color",
+      "defaultState": true,
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Border"
+            },
+            {
+              "type": "colorpicker",
+              "extraclass": "coral-Form-field",
+              "data": "attrs.social_media_border_color",
+              "on-change": {"name": "colorChanged", "args": {"attr": "social_media_border_color"}}
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "collapsible",
+      "label": "Images",
+      "expanded": "@uiStates.single_page_social_media_images",
+      "defaultState": true,
+      "items": [
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Open"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "social_media_open_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.social_media_open_image"
+              }
+            }
+          ]
+        },
+        {
+          "type": "divElement2",
+          "extraclass": "group",
+          "items": [
+            {
+              "type": "label",
+              "extraclass": "coral-FieldLabel",
+              "label": "Close"
+            },
+            {
+              "type": "widget",
+              "id"  : "media_source",
+              "changeEvent": "imageChanged",
+              "hrefAttrName": "social_media_close_image",
+              "inputModel": {
+                "variant": "secondary",
+                "basePath": "@basePath",
+                "filePath": "@attrs.social_media_close_image"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

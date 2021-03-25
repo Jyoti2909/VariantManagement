@@ -1,0 +1,26 @@
+﻿<AML>
+ <Item type="Method" id="9E64D7396233499A921D5A6B16391F4A" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+if (inDom.getAttribute('action') !== 'add' && aras.isAdminUser()) {
+	return ModulesManager.using(
+		['aras.innovator.core.ItemWindow/DefaultItemWindowView',
+		'aras.innovator.core.ItemWindow/DefaultItemWindowCreator'], function(View, Creator) {
+			var view = new View(inDom, inArgs);
+			var creator = new Creator(view);
+			return creator.ShowView();
+		});
+} else {
+	return ModulesManager.using(
+		['aras.innovator.core.ItemWindow/MassPromoteWindowView',
+		'aras.innovator.core.ItemWindow/DefaultItemWindowCreator'], function(View, Creator) {
+			var view = new View(inDom, inArgs);
+			var creator = new Creator(view);
+			return creator.ShowView();
+		});
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>mpo_onShowItem</name>
+ </Item>
+</AML>

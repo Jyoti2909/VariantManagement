@@ -1,0 +1,337 @@
+﻿<TestCase author="apetrovsky@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../TestCase.xsd">
+	<Description>
+		<![CDATA[
+		Info about the last user who completed “Mechanical Part Task” activity added to the Part (“Revise” action)
+		]]>
+	</Description>
+
+	<Request runAs="root:innovator">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Create Part
+			Then:
+				Should create Part
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part-Pre-Rel3.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part'][1]/@id" />
+			<Variable id="Part-Pre-Rel3.Name" action="set" xpath="Query/AML/Item[@type='Part'][1]/name" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="add" doGetItem="0">
+					<name>Part-Pre-Rel3</name>
+					<classification>Mechanical Part/Assembly</classification>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="productEng1:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				productEng1
+			When:
+				add new GECO as productEng1
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="GECO.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="GECO1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Part-Pre-Rel3.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="add" doGetItem="0">
+					<classification>Pre-Release &amp; Change/Mechanical Part</classification>
+					<gag_sap_change_number>SMOK00000003</gag_sap_change_number>
+					<gag_master_data_review_team>
+						<Item type="Identity" action="get">
+							<name>masterDataReview</name>
+						</Item>
+					</gag_master_data_review_team>
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Release</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{Part-Pre-Rel3.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.Promotion.StartMechanicalPartTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.EvaluateActivityWithTwoTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.Promotion.StartReview"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="masterDataReview:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="masterDataReview:1"
+		srcName="Common.Promotion.MasterDataReviewCompleted"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+
+	<Request
+		runAs="masterDataReview:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request runAs="productEng1:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				productEng1
+			When:
+				add new GECO as productEng1
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="GECO.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="GECO2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Part-Pre-Rel3.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="add" doGetItem="0">
+					<classification>Pre-Release &amp; Change/Mechanical Part</classification>
+					<gag_sap_change_number>SMOK00000004</gag_sap_change_number>
+					<gag_master_data_review_team>
+						<Item type="Identity" action="get">
+							<name>masterDataReview</name>
+						</Item>
+					</gag_master_data_review_team>
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Revise</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{Part-Pre-Rel3.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.Promotion.StartMechanicalPartTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.EvaluateActivityWithTwoTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.Promotion.StartReview"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+
+	<Request
+		runAs="productEng1:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="masterDataReview:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="masterDataReview:1"
+		srcName="Common.Promotion.ReworkRequired"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+
+	<Request
+		runAs="masterDataReview:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="productEng2:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="productEng2:1"
+		srcName="Common.Promotion.StartReview"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="productEng2:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="masterDataReview:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request
+		runAs="masterDataReview:1"
+		srcName="Common.Promotion.MasterDataReviewCompleted"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"/>
+	<Request
+		runAs="masterDataReview:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+	<Request runAs="root:innovator">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Get the part with gag_released_by and id properties
+			Then:
+				Should return the part. The gag_released_by property should be the same as the id of the productEng2 user.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part-Pre-Rel3.Name" action="apply" xpath="Query/AML/Item[@type='Part']/name" />
+			<Variable id="Part-Pre-Rel3.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="get" select="gag_released_by, id" is_current="1">
+					<name>{Part-Pre-Rel3.Name}</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="A5894E76DE734EB68DAAF7722018F5D5">
+							<gag_released_by keyed_name="DB957EF7BEFD45C48101B2E182E31D22" type="User">DB957EF7BEFD45C48101B2E182E31D22</gag_released_by>
+							<id keyed_name="GP00116" type="Part">A5894E76DE734EB68DAAF7722018F5D5</id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs="root:innovator">
+		<Variables>
+			<Variable id="GECO1.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject'][1]/@id" />
+			<Variable id="GECO2.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject'][2]/@id" />
+			<Variable id="Part-Pre-Rel3.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_SAPTransferLog" action="delete" where="[GAG_SAPTransferLog].created_by_id IN ('693D07A3C5FB4BCCBFDF318031243C2F','DB957EF7BEFD45C48101B2E182E31D22', '21A873D4A6234776A937E9F2831AF08A')" />
+				<Item type="GAG_EngineeringChangeObject" action="delete" id="{GECO1.Id}" />
+				<Item type="GAG_EngineeringChangeObject" action="delete" id="{GECO2.Id}" />
+				<Item type="Workflow Process" action="delete" where="[WORKFLOW_PROCESS].created_by_id IN ('693D07A3C5FB4BCCBFDF318031243C2F','DB957EF7BEFD45C48101B2E182E31D22', '21A873D4A6234776A937E9F2831AF08A')" />
+				<Item type="Part" action="delete" id="{Part-Pre-Rel3.Id}" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

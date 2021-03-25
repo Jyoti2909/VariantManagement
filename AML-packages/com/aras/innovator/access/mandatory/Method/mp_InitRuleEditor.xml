@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="83F5E43A82FA4DF1A70A8C3E7A004B27" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[require(['dojo/_base/connect',
+	'MacPolicy/Scripts/Configurator/MacConditionRulesEditor',
+	'MacPolicy/Scripts/Configurator/MacCondition',
+	'MacPolicy/Scripts/Configurator/MacConditionDataLoader'
+], function(connect, MacConditionRulesEditor, macCondition, DataLoader) {
+	var dataLoader = new DataLoader();
+	var conditionXml = this.document.thisItem.getProperty('condition_xml');
+	var item = aras.newIOMItem();
+	if (conditionXml && conditionXml !== '') {
+		item.loadAML(conditionXml);
+	} else {
+		var emptyCondition = macCondition.getDefaultConditionXml();
+		item.loadAML(emptyCondition);
+	}
+	item = macCondition.prepareToUI(item);
+	var dataStore = dataLoader.load(item.node);
+	if (dataStore.treeModelCollection.length !== 0) {
+		window.rulesEditor = new MacConditionRulesEditor({
+			store: dataStore,
+			loader: dataLoader
+		});
+	}
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>mp_InitRuleEditor</name>
+ </Item>
+</AML>

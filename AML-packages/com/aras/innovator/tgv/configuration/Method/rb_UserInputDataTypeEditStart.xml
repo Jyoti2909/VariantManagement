@@ -1,0 +1,24 @@
+﻿<AML>
+ <Item type="Method" id="0D86D21ED0514BD5B640225457363E6A" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var propertyBlacklist = ['image', 'sequence', 'filter list', 'federated', 'foreign', 'ml_string', 'md5'];
+var valueArray = [];
+var labelArray = [];
+var dataTypesListId = '858DCAAD7FF94EDC969A1C3CFA57FA93';
+var list = aras.getListValues(dataTypesListId);
+for (var i = 0; i < list.length; i++) {
+	var listItem = list[i];
+	var value = aras.getItemProperty(listItem, 'value');
+	if (propertyBlacklist.indexOf(value) != -1) {
+		continue;
+	}
+	valueArray.push(value);
+	labelArray.push(aras.getItemProperty(listItem, 'label'));
+}
+
+grid.columns_Experimental.set(colNumber, 'comboList', valueArray, labelArray);
+return true;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>rb_UserInputDataTypeEditStart</name>
+ </Item>
+</AML>

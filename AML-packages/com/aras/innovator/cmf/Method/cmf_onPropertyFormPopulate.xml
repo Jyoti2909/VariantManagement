@@ -1,0 +1,104 @@
+﻿<AML>
+ <Item type="Method" id="632B26BD81224FAABA1C9982B2343E9E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[require([
+	'dijit/form/MultiSelect',
+	'dojo/dom', 'dojo/_base/window', 'dojo/on', 'dojo/domReady!'
+], function(MultiSelect, dom, win, on) {
+
+	var sel = dom.byId('dependency-multi-select');
+	var computedMethod = document.item.selectSingleNode('Relationships/Item[@type=\'cmf_ComputedProperty\' and not(@action=\'delete\')]');
+	var computedProperty = document.thisItem.getProperty('ui_computed_property');
+	var display = computedProperty !== null && computedProperty !== '';
+	if (parent.isEditMode) {
+		runMultiSelect(computedMethod, display, false, sel);
+	} else {
+		if (computedMethod) {
+			runMultiSelect(computedMethod, true, true, sel);
+		} else {
+			sel = reDrawSelect(sel);
+			sel.style.display = 'none';
+		}
+	}
+
+	function reDrawSelect(select) {
+		if (dijit.byId) {
+			var alreadyExist = dijit.byId('dependency-multi-select');
+			if (alreadyExist) {
+				var parentNode = select.parentNode;
+				alreadyExist.destroy();
+				select = parentNode.ownerDocument.createElement('select');
+				select.id = 'dependency-multi-select';
+				parentNode.appendChild(select);
+			}
+		}
+		return select;
+	}
+
+	function createEmtyNode(propertyNodes, select) {
+		if (propertyNodes.length > 0) {
+			var c = win.doc.createElement('option');
+			c.innerHTML = '';
+			c.value = 'empty';
+			select.appendChild(c);
+		}
+	}
+
+	function generatePropertyNodes(propertyNodes, select) {
+		for (var i = 0; i < propertyNodes.length; i++) {
+			var c = win.doc.createElement('option');
+			var nameTags = propertyNodes[i].getElementsByTagName('name');
+			if (nameTags && nameTags.length > 0) {
+				c.innerHTML = nameTags[0].text;
+				c.value = propertyNodes[i].getAttribute('id');
+				select.appendChild(c);
+			}
+		}
+	}
+
+	function generateDependencyArray(computedMethodNode) {
+		var dependencyArray = [];
+		if (computedMethodNode) {
+			var dependencies = computedMethodNode.selectNodes('Relationships/Item[@type=\'cmf_ComputedPropertyDependency\'' +
+				' and not(@action=\'delete\')]/related_id');
+			for (var j = 0; j < dependencies.length; j++) {
+				dependencyArray.push(dependencies[j].text);
+			}
+		}
+		return dependencyArray;
+	}
+
+	function getPropertyNodes() {
+		return parent.item.selectNodes('Relationships/Item[@type=\'cmf_ElementType\' and not(@action=\'delete\')]' +
+			'/Relationships/Item[@type=\'cmf_PropertyType\' and not(@action=\'delete\')]');
+	}
+
+	function runMultiSelect(computedMethodNode, display, readOnly, selectNode) {
+		var dependencyArray = generateDependencyArray(computedMethodNode);
+		selectNode = reDrawSelect(selectNode);
+
+		var propertyNodes = getPropertyNodes();
+
+		createEmtyNode(propertyNodes, selectNode);
+		generatePropertyNodes(propertyNodes, selectNode);
+
+		var multiSelect = new MultiSelect({
+			name: 'dependency-multi-select',
+			onChange: stub,
+			style: {width: '200px', height: '200px', display: display ? '' : 'none'},
+			disabled: readOnly
+		}, selectNode);
+
+		multiSelect.set('value', dependencyArray);
+		multiSelect.startup();
+	}
+
+	function stub(result) {
+		parent.onDependencyChanged(document.item, result);
+	}
+});
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cmf_onPropertyFormPopulate</name>
+ </Item>
+</AML>

@@ -1,0 +1,80 @@
+﻿<AML>
+ <Item type="SQL" id="48389E48690D45EBA62E8AAB40035E91" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>Business_DateDiff</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION [Business_datediff](@STARTDATE DATETIME,
+                                    @ENDDATE   DATETIME,
+                                    @TZ_NAME   NVARCHAR(50) = NULL)
+RETURNS @RESULT TABLE(
+  value INT)
+AS
+  BEGIN
+      IF @STARTDATE IS NULL
+          OR @ENDDATE IS NULL
+        BEGIN
+            INSERT @RESULT
+            SELECT NULL
+
+            RETURN
+        END
+
+      DECLARE @START_DAY_NUMBER INT
+      DECLARE @END_DAY_NUMBER INT
+
+      SET @START_DAY_NUMBER = Abs((SELECT VALUE
+                                   FROM   [innovator].[Business_day_number](@STARTDATE, @TZ_NAME)))
+
+      IF NOT @START_DAY_NUMBER IS NULL
+        BEGIN
+            SET @END_DAY_NUMBER = Abs((SELECT VALUE
+                                       FROM   [innovator].[Business_day_number](@ENDDATE, @TZ_NAME)))
+
+            IF NOT @END_DAY_NUMBER IS NULL
+              BEGIN
+                  INSERT INTO @RESULT
+                  SELECT @END_DAY_NUMBER - @START_DAY_NUMBER
+
+                  RETURN
+              END
+        END
+
+      -- Otherwise, fall through to Peano subtraction.  
+      DECLARE @INC INT
+      DECLARE @ACC INT
+      DECLARE @PTR DATETIME
+      DECLARE @ENDPTR DATETIME
+
+      IF @STARTDATE > @ENDDATE
+        SET @INC = -1
+      ELSE
+        SET @INC = 1
+
+      SET @PTR = @STARTDATE
+      -- make sure the endptr is a business day by subtracting one and  
+      -- then adding one, otherwise the loop might not terminate  
+      SET @ENDPTR = (SELECT value
+                     FROM   [innovator].[Business_dateadd](@ENDDATE, -1, @TZ_NAME))
+      SET @ENDPTR = (SELECT value
+                     FROM   [innovator].[Business_dateadd](@ENDPTR, 1, @TZ_NAME))
+      SET @ACC = 0
+
+      WHILE Datepart(YEAR, @PTR) <> Datepart(YEAR, @ENDPTR)
+             OR Datepart(dayofyear, @PTR) <> Datepart(dayofyear, @ENDPTR)
+        BEGIN
+            SET @PTR = (SELECT value
+                        FROM   [innovator].[Business_dateadd](@PTR, @INC, @TZ_NAME))
+            SET @ACC = @ACC + @INC
+        END
+
+      INSERT INTO @RESULT
+      SELECT @ACC
+
+      RETURN
+  END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>Business_DateDiff</name>
+ </Item>
+</AML>

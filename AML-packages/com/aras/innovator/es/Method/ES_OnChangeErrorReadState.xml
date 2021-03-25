@@ -1,0 +1,35 @@
+﻿<AML>
+ <Item type="Method" id="772603008B4A493C803AAC449A7F7509" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var controlID = '';
+var errorItem = aras.newIOMItem('ES_Error', 'edit');
+
+if (isNullOrUndefined(inArgs.commandId)) {
+	controlID = inArgs.control.getId();
+	errorItem.setAttribute('where', 'component_id=\'' + thisItem.getID() + '\'');
+} else {
+	var gridData = inArgs.contextParams.tgvContext.getGridData();
+	var dataObjectAsString = gridData.focus[0].row.cells[0].data;
+	var dataObject = JSON.parse(dataObjectAsString);
+
+	controlID = inArgs.commandId;
+	errorItem.setID(dataObject.id);
+}
+
+var isRead = controlID.indexOf('ES_Error_MarkRead') > -1 ? 1 : 0;
+var dateNow = isRead === 1 ? aras.convertToNeutral((new Date()).toISOString(), 'date') : '';
+
+errorItem.setProperty('is_read', isRead);
+errorItem.setProperty('read_on', dateNow);
+errorItem.apply();
+
+inArgs.contextParams.tgvContext.reload();
+
+function isNullOrUndefined(obj) {
+	return ((typeof(obj) === 'undefined') || (obj === null));
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_OnChangeErrorReadState</name>
+ </Item>
+</AML>

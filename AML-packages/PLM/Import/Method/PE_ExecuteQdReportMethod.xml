@@ -1,0 +1,392 @@
+﻿<AML>
+ <Item type="Method" id="B2E87F1B9B684ADABDFEE560847984AF" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Item queryDefinition = ExecuteQueryDefinition(this.getProperty("query_definition"), this.getProperty("part_id"));
+	Innovator inn = this.getInnovator();
+
+	TransformQueryDefinitionResultToDictionary(queryDefinition, inn);
+
+	Item res = inn.newItem();
+	res.loadAML(
+		"<Result>" + GenerateResultStringForReport(this.getProperty("report_name"), CCO.ErrorLookup) + "</Result>");
+	return res;
+}
+
+private readonly Dictionary<string, FlatItem> _flatItemsDictionary = new Dictionary<string, FlatItem>();
+private int _depth;
+private readonly List<TreeItem> _partsTree = new List<TreeItem>();
+private const string ItemTplWithCount = @"<Item alias=""Part"">
+	<total_count>{0}</total_count>
+	{1}{2}
+</Item>";
+private const string ItemTplMultilevelReport = @"<Item alias=""Part"">
+	<quantity>{0}</quantity>
+	<depth>{1}</depth>
+	{2}{3}
+</Item>";
+private const string ItemTplCostingReport = @"<Item alias=""Part"">
+	<quantity>{0}</quantity>
+	<depth>{1}</depth>
+	{2}{3}
+</Item>";
+private const string ItemAmlTpl = @"<Item alias=""{0}"">
+	{1}{2}
+</Item>";
+private const string FilterXmlTpl = @"<condition>
+	<eq>
+		<property name=""id""/>
+		<constant>{0}</constant>
+	</eq>
+</condition>";
+
+internal class FlatItem
+{
+	internal HashSet<string> ParentIds;
+	internal double? TotalCount;
+	internal string Quantity;
+	internal string Type;
+	internal HashSet<FlatItem> ChildItems = new HashSet<FlatItem>();
+	internal XmlDocument Properties;
+}
+
+internal class PartAml
+{
+	internal readonly FlatItem PartAmlItem;
+	internal readonly List<FlatItem> ManufacturerParts;
+
+	internal PartAml(FlatItem part, List<FlatItem> manufacturerParts)
+	{
+		PartAmlItem = part;
+		ManufacturerParts = manufacturerParts;
+	}
+}
+
+internal class TreeItem
+{
+	internal readonly FlatItem Part;
+	internal readonly string Quantity;
+	internal readonly int Depth;
+	internal readonly List<PartAml> PartAmlList;
+
+	internal TreeItem(FlatItem part, string quantity, int depth, List<PartAml> partAmlList)
+	{
+		Part = part;
+		Quantity = quantity;
+		Depth = depth;
+		PartAmlList = partAmlList;
+	}
+}
+
+internal void TransformQueryDefinitionResultToDictionary(Item queryDefinition, Innovator innovator)
+{
+	Item flatItems = queryDefinition.getItemsByXPath("//Result/Item");
+	var propertiesToRemove = new List<string> { "QB_FLAT_ID", "QB_FLAT_PARENT_IDS" };
+	for (var i = 0; i < flatItems.getItemCount(); i++)
+	{
+		Item flatItem = flatItems.getItemByIndex(i);
+		string flatId = flatItem.getProperty("QB_flat_id");
+		FlatItem flatItemObj;
+
+		if (!_flatItemsDictionary.TryGetValue(flatId, out flatItemObj))
+		{
+			flatItemObj = new FlatItem();
+			_flatItemsDictionary.Add(
+				flatId,
+				flatItemObj);
+		}
+
+		string flatParentIdsString = flatItem.getProperty("QB_flat_parent_ids");
+		HashSet<string> flatParentIds = string.IsNullOrEmpty(flatParentIdsString)
+			? new HashSet<string>()
+			: new HashSet<string>(flatParentIdsString.Split(',').ToList());
+
+		var itemAlias = flatItem.getAttribute("alias");
+
+		flatItemObj.Properties = innovator.newXMLDocument();
+		XmlElement additionalPropertiesElement = flatItemObj.Properties.CreateElement(
+			string.Empty,
+			"properties",
+			string.Empty);
+		flatItemObj.Properties.AppendChild(additionalPropertiesElement);
+
+		foreach (XmlNode childNode in flatItem.node.SelectNodes("*"))
+		{
+			if (propertiesToRemove.Contains(childNode.Name.ToUpperInvariant()))
+			{
+				continue;
+			}
+			XmlNode importNode = flatItemObj.Properties.ImportNode(childNode, true);
+			additionalPropertiesElement.AppendChild(importNode);
+		}
+
+
+		flatItemObj.Type = itemAlias;
+		flatItemObj.ParentIds = flatParentIds;
+		flatItemObj.Quantity = flatItem.getProperty("quantity");
+
+		foreach (string parentId in flatParentIds)
+		{
+			FlatItem parentflatItemObj;
+			if (!_flatItemsDictionary.TryGetValue(parentId, out parentflatItemObj))
+			{
+				parentflatItemObj = new FlatItem();
+				_flatItemsDictionary.Add(
+					parentId,
+					parentflatItemObj);
+			}
+			parentflatItemObj.ChildItems.Add(flatItemObj);
+		}
+	}
+}
+
+internal string AppendRelationshipItemsToResponse(FlatItem item)
+{
+	var result = new StringBuilder();
+	var itemsToAdd = item.ChildItems.Where(i => i.Type != "Part BOM");
+	if (itemsToAdd.Any())
+	{
+		result.Append("<Relationships>");
+		foreach (FlatItem childItem in itemsToAdd)
+		{
+			var relatedString = string.Empty;
+			if (childItem.ChildItems.Any())
+			{
+				relatedString = AppendRelationshipItemsToResponse(childItem);
+			}
+
+			result.AppendFormat(
+				CultureInfo.InvariantCulture,
+				ItemAmlTpl,
+				childItem.Type,
+				childItem.Properties.SelectSingleNode("properties").InnerXml,
+				relatedString);
+		}
+		result.Append("</Relationships>");
+	}
+	return result.ToString();
+}
+
+internal void EnsureThatSelectedPropertiesTheSameInQueryItemPart(Aras.Server.Core.ErrorLookup errorLookup)
+{
+	if (!_flatItemsDictionary.Values.Any(i => i.Type == "Part"))
+	{
+		return;
+	}
+
+	var rootPart = _flatItemsDictionary.Values.First(i => i.Type == "RootPart");
+	var firstNestedPart = _flatItemsDictionary.Values.First(i => i.Type == "Part");
+
+	List<string> rootPartAdditionalProperties =
+	(from XmlNode childNode in rootPart.Properties.SelectSingleNode("//properties").ChildNodes
+	 select childNode.Name.ToUpperInvariant()).ToList();
+	List<string> firstNestedPartAdditionalProperties =
+	(from XmlNode childNode in firstNestedPart.Properties.SelectSingleNode("//properties").ChildNodes
+	 select childNode.Name.ToUpperInvariant()).ToList();
+
+	if (rootPartAdditionalProperties.Except(firstNestedPartAdditionalProperties).Any() ||
+		firstNestedPartAdditionalProperties.Except(rootPartAdditionalProperties).Any())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(errorLookup.Lookup("PE_SelectedPropertiesShouldBeTheSame"));
+	}
+}
+
+internal string GenerateResultStringForReport(string reportName, Aras.Server.Core.ErrorLookup errorLookup)
+{
+	var result = new StringBuilder();
+
+	EnsureThatSelectedPropertiesTheSameInQueryItemPart(errorLookup);
+
+	if (string.Equals(reportName, "quantity", StringComparison.OrdinalIgnoreCase))
+	{
+		foreach (FlatItem part in _flatItemsDictionary.Values.Where(i => (i.Type == "Part" || i.Type == "RootPart")))
+		{
+			CalculateCount(_flatItemsDictionary, part);
+		}
+
+		foreach (FlatItem part in _flatItemsDictionary.Values.Where(i => (i.Type == "Part" || i.Type == "RootPart")))
+		{
+			var relatedItems = AppendRelationshipItemsToResponse(part);
+		
+			result.AppendFormat(
+				CultureInfo.InvariantCulture,
+				ItemTplWithCount,
+				System.Security.SecurityElement.Escape(part.TotalCount.ToString()),
+				part.Properties.SelectSingleNode("properties").InnerXml,
+				relatedItems);
+		}
+	}
+	else if (string.Equals(reportName, "multilevel", StringComparison.OrdinalIgnoreCase))
+	{
+		FillItemsTreeMultilevelReport(_flatItemsDictionary["0"], null, errorLookup);
+
+		foreach (TreeItem treeItem in _partsTree)
+		{
+			var relatedItems = AppendRelationshipItemsToResponse(treeItem.Part);
+
+			result.AppendFormat(
+				CultureInfo.InvariantCulture,
+				ItemTplMultilevelReport,
+				System.Security.SecurityElement.Escape(treeItem.Quantity),
+				System.Security.SecurityElement.Escape(treeItem.Depth.ToString(CultureInfo.InvariantCulture)),
+				treeItem.Part.Properties.SelectSingleNode("properties").InnerXml,
+				relatedItems);
+		}
+	}
+	else if (string.Equals(reportName, "costing", StringComparison.OrdinalIgnoreCase))
+	{
+		FillItemsTreeCostingReport(_flatItemsDictionary["0"], null, errorLookup);
+
+		foreach (TreeItem treeItem in _partsTree)
+		{
+			var relatedItems = AppendRelationshipItemsToResponse(treeItem.Part);
+		
+			result.AppendFormat(
+				CultureInfo.InvariantCulture,
+				ItemTplCostingReport,
+				System.Security.SecurityElement.Escape(treeItem.Quantity),
+				System.Security.SecurityElement.Escape(treeItem.Depth.ToString(CultureInfo.InvariantCulture)),
+				treeItem.Part.Properties.SelectSingleNode("properties").InnerXml,
+				relatedItems);
+		}
+	}
+
+	return result.ToString();
+}
+
+internal Item ExecuteQueryDefinition(string queryDefinitionId, string partId)
+{
+	Item queryDefinition = this.newItem();
+	const string queryAml = @"<AML>
+	<Item action='get' id='{0}' type='qry_QueryDefinition' levels='2' />
+</AML>";
+	queryDefinition.loadAML(
+		string.Format(CultureInfo.InvariantCulture, queryAml, System.Security.SecurityElement.Escape(queryDefinitionId)));
+	queryDefinition = queryDefinition.apply();
+	if (queryDefinition.isError())
+	{
+		return queryDefinition;
+	}
+
+	Item queryItems = queryDefinition.getItemsByXPath("//Relationships/Item[@type=\"qry_QueryItem\"]");
+	for (var i = 0; i < queryItems.getItemCount(); i++)
+	{
+		Item queryItem = queryItems.getItemByIndex(i);
+		Item queryItemSelectProperty = this.newItem("qry_QueryItemSelectProperty");
+		queryItemSelectProperty.setProperty("property_name", "QB_flat_id");
+		queryItem.addRelationship(queryItemSelectProperty);
+		queryItemSelectProperty = this.newItem("qry_QueryItemSelectProperty");
+		queryItemSelectProperty.setProperty("property_name", "QB_flat_parent_ids");
+		queryItem.addRelationship(queryItemSelectProperty);
+	}
+
+	string filterXml = string.Format(
+		CultureInfo.InvariantCulture,
+		FilterXmlTpl,
+		System.Security.SecurityElement.Escape(partId));
+	Item rootQueryReference =
+		queryDefinition.getItemsByXPath(
+			"//Relationships/Item[@type=\"qry_QueryReference\" and (parent_ref_id[not(text())] or not(parent_ref_id))]");
+	rootQueryReference.setProperty("filter_xml", filterXml);
+	queryDefinition.setProperty("output_format_info", "{\"type\": \"flat\", \"key_properties\": \"id\"}");
+	queryDefinition = queryDefinition.apply("qry_ExecuteQueryDefinition");
+
+	return queryDefinition;
+}
+
+internal void FillItemsTreeMultilevelReport(FlatItem part, FlatItem partBom, Aras.Server.Core.ErrorLookup errorLookup)
+{
+	string quantity = string.Empty;
+	if (partBom != null)
+	{
+		quantity = partBom.Quantity;
+	}
+
+	if (_partsTree.Count >= 1000000)
+	{
+		throw new Aras.Server.Core.InnovatorServerException(errorLookup.Lookup("PE_ReportIsVeryLarge"));
+	}
+
+	var partAmlList = new List<PartAml>();
+
+	foreach (FlatItem partAml in part.ChildItems.Where(c => c.Type == "Part AML"))
+	{
+		var manufacturerPartsList = new List<FlatItem>();
+		foreach (FlatItem manufacturerPart in partAml.ChildItems.Where(c => c.Type == "Manufacturer Part"))
+		{
+			manufacturerPartsList.Add(manufacturerPart);
+		}
+		var partAmlObj = new PartAml(partAml, manufacturerPartsList);
+		partAmlList.Add(partAmlObj);
+	}
+
+	_partsTree.Add(new TreeItem(part, quantity, _depth, partAmlList));
+
+	foreach (FlatItem childPartBom in part.ChildItems.Where(c => c.Type == "Part BOM"))
+	{
+		_depth++;
+		foreach (FlatItem childPart in childPartBom.ChildItems.Where(c => c.Type == "Part"))
+		{
+			FillItemsTreeMultilevelReport(childPart, childPartBom, errorLookup);
+		}
+		_depth--;
+	}
+}
+
+internal void FillItemsTreeCostingReport(FlatItem part, FlatItem partBom, Aras.Server.Core.ErrorLookup errorLookup)
+{
+	string quantity = string.Empty;
+	if (partBom != null)
+	{
+		quantity = partBom.Quantity;
+	}
+
+	if (_partsTree.Count >= 1000000)
+	{
+		throw new Aras.Server.Core.InnovatorServerException(errorLookup.Lookup("PE_ReportIsVeryLarge"));
+	}
+
+	_partsTree.Add(new TreeItem(part, quantity, _depth, null));
+
+	foreach (FlatItem childPartBom in part.ChildItems.Where(c => c.Type == "Part BOM"))
+	{
+		_depth++;
+		foreach (FlatItem childPart in childPartBom.ChildItems.Where(c => c.Type == "Part"))
+		{
+			FillItemsTreeCostingReport(childPart, childPartBom, errorLookup);
+		}
+		_depth--;
+	}
+}
+
+internal double? CalculateCount(Dictionary<string, FlatItem> flatItems, FlatItem part)
+{
+	if (part.TotalCount != null)
+	{
+		return part.TotalCount;
+	}
+
+	if (part.ParentIds.Count == 0)
+	{
+		return 1;
+	}
+	double? totalCount = 0;
+	foreach (string partBomId in part.ParentIds)
+	{
+		FlatItem partBom = flatItems[partBomId];
+		string quantityString = partBom.Quantity;
+		double quantity = double.Parse(quantityString, CultureInfo.InvariantCulture);
+		if (partBom.ParentIds.Count == 0)
+		{
+			totalCount += quantity;
+		}
+		foreach (string partId in partBom.ParentIds)
+		{
+			totalCount += quantity * CalculateCount(flatItems, flatItems[partId]);
+		}
+	}
+	part.TotalCount = totalCount;
+	return totalCount;]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_ExecuteQdReportMethod</name>
+ </Item>
+</AML>

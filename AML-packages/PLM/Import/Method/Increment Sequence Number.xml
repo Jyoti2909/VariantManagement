@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="DE1740E6A74B4CC4818D7A957D04A797" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var prt = typeof(parent.document.item) == "object" ? parent.document : parent.parent;
+var tmpThisItem = typeof(parent.document.thisItem) == "object" ? parent.document.thisItem : parent.thisItem;
+var NewRels = prt.item.selectNodes("Relationships/Item[@type='" + relationshipTypeName + "' and @isTemp='1']");
+if (!NewRels || NewRels.length < 2) 
+	aras.getItemRelationshipsEx(prt.item, relationshipTypeName);
+
+var maxVal = 0;
+var rels = tmpThisItem.getRelationships(relationshipTypeName);
+var count = rels.getItemCount();
+for (var i = 0; i < count; i++) {
+	var rel = rels.getItemByIndex(i);
+	var sort_order = parseInt(rel.getProperty("sort_order"));
+	if (sort_order > maxVal) {
+		maxVal = sort_order;
+	}
+}
+
+var thisRel = tmpThisItem.getItemsByXPath("//Item[@id='" + relationshipID + "']").getItemByIndex(0);
+thisRel.setProperty("sort_order", maxVal + 1);
+grid.items_Experimental.set(relationshipID, "value", "sort_order_D", maxVal + 1);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Increment Sequence Number</name>
+ </Item>
+</AML>

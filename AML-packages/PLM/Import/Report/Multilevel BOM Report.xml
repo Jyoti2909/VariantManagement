@@ -1,0 +1,156 @@
+﻿<AML>
+ <Item type="Report" id="FB8CA61BE45E46DE9E4346BB653398C2" action="add">
+  <description />
+  <location>client</location>
+  <method keyed_name="PE_execMultilevelRepAndApplyXslt" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>PE_execMultilevelRepAndApplyXslt</name>
+   </Item>
+  </method>
+  <report_query />
+  <target>one window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:exslt="http://exslt.org/common" extension-element-prefixes="exslt" xmlns:aras="http://www.aras-corp.com">
+	<xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes"></xsl:output>
+	<xsl:variable name="MaxDepth">
+		<xsl:for-each select="Result/Item[@alias='Part']/depth">
+			<xsl:sort select="." data-type="number" order="descending"/>
+			<xsl:if test="position() = 1">
+				<xsl:value-of select="."/>
+			</xsl:if>
+		</xsl:for-each>
+	</xsl:variable>
+	<xsl:template match="/">
+		<html>
+			<head></head>
+			<body topmargin="50" leftmargin="50">
+				<div class="print_button_wrapper">
+					<img id="print_button" src="../images/Print.svg" onclick="printReport(window);" />
+					<a href="#" onclick="printReport(window); return false;">Print</a>
+				</div>
+				<div class="table_wrapper">
+					<div class="report_name">
+						Bill of Materials Report
+					</div>
+					<div class="report_generation_time"></div>
+					<table border="0" cellspacing="0" cellpadding="0">
+						<tr>
+							<th colspan="{$MaxDepth + 1}">BOM Level</th>
+							<th>Part Number</th>
+							<th>Name</th>
+							<th>Quantity</th>
+							<th>AML Status</th>
+							<th>Manufacturer</th>
+							<th>Manufacturer Part</th>
+						</tr>
+						<xsl:call-template name ="rootItems"></xsl:call-template>
+					</table>
+				</div>
+			</body>
+			<script>
+				function loadScript(url)
+				{
+					const loadedJS = document.createElement('script');
+					loadedJS.src = url;
+					document.getElementsByTagName('head')[0].appendChild(loadedJS);
+				}
+				function loadStyle(url)
+				{
+					const link = document.createElement('link');
+					link.setAttribute('rel', 'stylesheet');
+					link.setAttribute('href', url);
+					document.getElementsByTagName('head')[0].appendChild(link)
+				}
+				loadScript(parent.aras.getBaseURL('/javascript/PopupMenu.js'));
+				loadScript(parent.aras.getBaseURL('/Solutions/PLM/javascript/report.js'));
+				loadStyle(parent.aras.getBaseURL('/Solutions/PLM/styles/report.css'));
+			</script>
+		</html>
+	</xsl:template>
+
+	<xsl:template name="rootItems">
+		<xsl:apply-templates select="/Result/Item[@alias='Part']"></xsl:apply-templates>
+	</xsl:template>
+	
+	<xsl:template name="IndentureLevel">
+		<xsl:param name="currentDepth" select="0" />
+		<xsl:param name="rowCount" />
+		<xsl:if test="$currentDepth = 0">
+			<td rowspan="{$rowCount}" width="20px" style="padding: 5px 0px 5px 10px" align="center">
+				<xsl:if test="depth=$currentDepth">
+					<xsl:value-of select="depth"/>
+				</xsl:if>
+			</td>
+		</xsl:if>
+		<xsl:if test="$currentDepth != 0">
+			<td rowspan="{$rowCount}" width="20px" style="padding: 5px 0" align="center">
+				<xsl:if test="depth=$currentDepth">
+					<xsl:value-of select="depth"/>
+				</xsl:if>
+			</td>
+		</xsl:if>
+		<xsl:if test="not($currentDepth = $MaxDepth)">
+			<xsl:call-template name="IndentureLevel">
+				<xsl:with-param name="currentDepth" select="$currentDepth + 1"/>
+				<xsl:with-param name="rowCount" select="$rowCount"/>
+			</xsl:call-template>
+		</xsl:if>
+	</xsl:template>
+
+	<xsl:template match="/Result/Item[@alias='Part']">
+		<xsl:variable name="rowCount">
+			<xsl:choose>
+				<xsl:when test="count(Relationships/Item[@alias='Part AML'])=0">1</xsl:when>
+				<xsl:otherwise>
+					<xsl:value-of select="count(Relationships/Item[@alias='Part AML'])"/>
+				</xsl:otherwise>
+			</xsl:choose>
+		</xsl:variable>
+		<tr>
+			<xsl:call-template name="IndentureLevel" >
+				<xsl:with-param name="rowCount" select="$rowCount"/>
+			</xsl:call-template>
+			<td rowspan="{$rowCount}" width="120px">
+				<xsl:value-of select="item_number"></xsl:value-of>
+			</td>
+			<td rowspan="{$rowCount}" width="120px">
+				<xsl:value-of select="name"></xsl:value-of>
+			</td>
+			<td rowspan="{$rowCount}" width="80px" align="center">
+				<xsl:choose>
+					<xsl:when test="depth=0">1</xsl:when>
+					<xsl:when test="depth!=0 and (quantity)=''">1</xsl:when>
+					<xsl:otherwise>
+						<xsl:value-of select="quantity"/>
+					</xsl:otherwise>
+				</xsl:choose>
+			</td>
+			<td width="100px">
+				<xsl:value-of select="Relationships/Item[@alias='Part AML'][1]/state"/>
+			</td>
+			<td width="120px">
+				<xsl:value-of select="Relationships/Item[@alias='Part AML'][1]/Relationships/Item[@alias='Manufacturer Part']/manufacturer/@keyed_name"/>
+			</td>
+			<td width="120px">
+				<xsl:value-of select="Relationships/Item[@alias='Part AML'][1]/Relationships/Item[@alias='Manufacturer Part']/item_number"/>
+			</td>
+		</tr>
+		<xsl:apply-templates select="Relationships/Item[@alias='Part AML'][position()!=1]"/>
+	</xsl:template>
+	<xsl:template match="Item[@alias='Part AML']">
+		<tr>
+			<td width="100px">
+				<xsl:value-of select="state"></xsl:value-of>
+			</td>
+			<td width="120px">
+				<xsl:value-of select="Relationships/Item[@alias='Manufacturer Part']/manufacturer/@keyed_name"/>
+			</td>
+			<td width="120px">
+				<xsl:value-of select="Relationships/Item[@alias='Manufacturer Part']/item_number"/>
+			</td>
+		</tr>
+	</xsl:template>
+</xsl:stylesheet>]]></xsl_stylesheet>
+  <name>Multilevel BOM Report</name>
+ </Item>
+</AML>

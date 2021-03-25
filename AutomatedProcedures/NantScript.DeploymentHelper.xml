@@ -1,0 +1,142 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project name="DeploymentHelper">
+	<target name="Import.Language.Pack">
+		<property name="Build.Tools.LanguageTool" value="${path::get-full-path('tools\LanguagePackManagementUtility\LanguageTool.exe')}" />
+		<property name="Path.To.Language.Packs.For.Deploy" overwrite="false" value="${path::combine(Path.To.Deployment.Package.Dir, 'Language packs')}" />
+		<foreach item="Folder" in="${Path.To.Language.Packs.For.Deploy}" property="Language.CodeFolder">
+			<do>
+				<property name="Language.Code" value="${string::substring(Language.CodeFolder, 0, 2)}" />
+				<property name="Path.To.Translations.Folder" value="${path::combine(Path.To.Language.Packs.For.Deploy, Language.CodeFolder)}" />
+				<echo>Import translations from '${Path.To.Translations.Folder}', to [${MSSQL.Server}].[${MSSQL.Database.Name}] using login 'innovator'</echo>
+				<exec program="${Build.Tools.LanguageTool}">
+					<arg value='-import' />
+					<arg value='-config_file:"${path::combine(Path.To.Translations.Folder, &apos;ImportConfig.xml&apos;)}"' />
+					<arg value='-folder:"${path::combine(Path.To.Translations.Folder, &apos;xml&apos;)}"' />
+					<arg value='-language_code:"${Language.Code}"' />
+					<arg value='-server:"${MSSQL.Server}"' />
+					<arg value='-db:"${MSSQL.Database.Name}"' />
+					<arg value='-login:"${MSSQL.Innovator.User}"' />
+					<arg value='-pwd:"${MSSQL.Innovator.Password}"' />
+				</exec>
+			</do>
+		</foreach>
+	</target>
+
+	<target name="SetupFeatureLicenses">
+		<if test="${Do.Deploy.Innovator.Database and not (property::exists('Skip.Innovator.DB.Upgrade') and Skip.Innovator.DB.Upgrade == 'yes')}">
+			<if test="${property::exists('Feature.License.Credential.IDs') and string::get-length(Feature.License.Credential.IDs) != 0}">
+				<foreach item="String" property="Feature.License.Credential.ID" in="${Feature.License.Credential.IDs}" delim=",">
+					<echo message="Importing '${Feature.License.Credential.ID}' feature license..." />
+
+					<property name="Feature.License.String" value="${environment::get-variable(Feature.License.Credential.ID)}" />
+					<call target="Import.Feature.License.String" />
+				</foreach>
+			</if>
+			<if test="${property::exists('Feature.License.Strings.List') and string::get-length(Feature.License.Strings.List) != 0}">
+				<foreach item="String" property="Feature.License.String" in="${Feature.License.Strings.List}" delim=",">
+					<call target="Import.Feature.License.String" />
+				</foreach>
+			</if>
+			<call target="Validate.Feature.Licenses" />
+		</if>
+	</target>
+
+	<target name="Import.Feature.License.String">
+		<ImportFeatureLicense
+				innovatorUrl="${Url.Of.Installed.Innovator}"
+				featureLicense="${Feature.License.String}"
+				loginName="root"
+				password="${aras::compute-MD5(Password.Of.Root.Innovator.User)}"
+				databaseName="${MSSQL.Database.Name}" />
+	</target>
+
+	<target name="Setup.Branding.Depending.On.Branch">
+		<property name="Is.Branding.Copy.Possible" value="true" />
+		<property name="Deploy.Environment.Name" value="${Commit.Pointer}" />
+		<property name="Path.To.Branding" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures/Branding')}" />
+
+		<choose>
+			<when test="${Deploy.Environment.Name=='development'}">
+				<property name="Path.To.Branding" value="${path::combine(Path.To.Branding, 'development/')}" />
+			</when>
+			<when test="${Deploy.Environment.Name=='sit'}">
+				<property name="Path.To.Branding" value="${path::combine(Path.To.Branding, 'sit/')}" />
+			</when>
+			<when test="${Deploy.Environment.Name=='uat'}">
+				<property name="Path.To.Branding" value="${path::combine(Path.To.Branding, 'uat/')}" />
+			</when>
+			<when test="${Deploy.Environment.Name=='production'}">
+				<property name="Path.To.Branding" value="${path::combine(Path.To.Branding, 'production/')}" />
+			</when>
+			<otherwise>
+				<property name="Is.Branding.Copy.Possible" value="false" />
+			</otherwise>
+		</choose>
+
+		<if test="${Is.Branding.Copy.Possible=='true'}">
+			<property name="First.Image.From.Path" value="${path::combine(Path.To.Branding, 'GRAMMER_LOGIN.png')}" />
+			<property name="First.Image.To.Path" value="${path::combine(Path.To.Deployment.Package.Dir, 'OAuthServer/wwwroot/images/GRAMMER_LOGIN.png')}" />
+			<property name="Second.Image.From.Path" value="${path::combine(Path.To.Branding, 'SYSTEM_LOGO.png')}" />
+			<property name="Second.Image.To.Path" value="${path::combine(Path.To.Deployment.Package.Dir, 'Innovator/Client/images/SYSTEM_LOGO.png')}" />
+
+			<copy 
+				file="${First.Image.From.Path}"
+				tofile="${First.Image.To.Path}"
+				overwrite="true"/>
+			<copy 
+				file="${Second.Image.From.Path}"
+				tofile="${Second.Image.To.Path}"
+				overwrite="true"/>
+		</if>
+	</target>
+
+	<target name="Adapt.Innovator.For.Developer.Environment">
+		<property name="Aras.Update.Application.Path.List" overwrite="false" value="" />
+
+		<foreach item="String" property="Aras.Update.Application.Path" in="${Aras.Update.Application.Path.List}" delim=",">
+			<if test="${string::starts-with(Aras.Update.Application.Path, 'http://') or string::starts-with(Aras.Update.Application.Path, 'https://')}">
+				<property name="Aras.Update.Application.Archive.Path" value="${path::combine(Path.To.Automated.Procedures.Output, path::get-file-name(Aras.Update.Application.Path))}" />
+				<get src="${Aras.Update.Application.Path}" dest="${Aras.Update.Application.Archive.Path}" />
+
+				<property name="Aras.Update.Application.Path" value="${string::replace(Aras.Update.Application.Archive.Path, '.zip', '')}" />
+				<exec program="${Path.To.SevenZip}" verbose="true">
+					<arg value="x" />
+					<arg value="${Aras.Update.Application.Archive.Path}" />
+					<arg value="-o${Aras.Update.Application.Path}" />
+					<arg value="-aoa" />
+					<arg value="-mcu"/>
+				</exec>
+			</if>
+
+			<call target="Install.Aras.Update.Application" />
+		</foreach>
+	</target>
+
+	<!--
+		Target takes several parameters besides global constanst properties:
+		1) Aras.Update.Application.Path - path to the directory containing unzipped ArasUpdate application.
+	-->
+	<target name="Install.Aras.Update.Application">
+		<xmlpeek file="${path::combine(Aras.Update.Application.Path, 'package.config')}" property="Aras.Update.Application.Name" xpath="/package/info/name" />
+
+		<echo message="Installing '${Aras.Update.Application.Name}'..." />
+
+		<exec program="${Path.To.ArasUpdate.Tool}" verbose="true">
+			<arg value="install" />
+			<arg value="${Aras.Update.Application.Name}" />
+			<arg value="-path:${Aras.Update.Application.Path}" />
+			<arg value="-D:Innovator.Dir=${path::combine(Path.To.Installed.Innovator, 'Innovator')}" />
+			<arg value="-D:Innovator.URL=${Url.Of.Installed.Innovator}" />
+			<arg value="-D:Innovator.DB=${MSSQL.Database.Name}" />
+			<arg value="-D:Innovator.Username=root" />
+			<arg value="-D:Innovator.Password=${aras::compute-MD5(Password.Of.Root.Innovator.User)}" />
+			<arg value="-D:DB.Username=${MSSQL.Innovator.User}" />
+			<arg value="-D:DB.Password=${MSSQL.Innovator.Password}" />
+			<arg value="-D:Vault.Dir=${path::combine(Path.To.Installed.Innovator, 'VaultFolder')}" />
+			<arg value="-D:Conversion.Dir=${path::combine(Path.To.Installed.Innovator, 'ConversionServer')}" />
+			<arg value="-D:AgentService.Dir=${path::combine(Path.To.Installed.Innovator, 'AgentService')}" />
+			<arg value="-skipinnovatorversionvalidation:true" />
+			<arg value="-logLevel:2" />
+		</exec>
+	</target>
+</project> 

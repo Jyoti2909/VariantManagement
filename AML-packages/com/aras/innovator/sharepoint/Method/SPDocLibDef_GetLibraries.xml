@@ -1,0 +1,147 @@
+﻿<AML>
+ <Item type="Method" id="14B6263882234ACFB0FE7A533DD2E7AB" action="add">
+  <comments>Gets libraries from SharePoint site</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var item = document.item;
+var spSiteUrl = aras.getItemProperty(item, 'sp_site_url');
+var authType = aras.getItemProperty(item, 'authentication_type');
+
+if (spSiteUrl.length > 0 && authType.length > 0) {
+	// Try to get libraries using Windows Authentication
+	var xmlhttp = aras.XmlHttpRequestManager.CreateRequest();
+
+	var request = aras.getServerBaseURL() + 'SharePoint/Auth/SPHelperWinAuth.aspx';
+	try {
+		xmlhttp.open('GET', request, false);
+		xmlhttp.setRequestHeader('SP-Action', 'GetDocumentLibraries');
+		xmlhttp.setRequestHeader('SP-Url', spSiteUrl);
+		xmlhttp.send(null);
+	} catch (ex) {
+		return aras.AlertError(aras.getResource('', 'sharepoint.client_error_message') + ex.message);
+	}
+
+	// If user specified wrong Sharepoint URL
+	if (xmlhttp.status === 404) {
+		return aras.AlertError(aras.getResource('', 'sharepoint.failed_to_get_libs_with_url').replace('{0}', spSiteUrl),
+			aras.getResource('', 'sharepoint.server_error_message') + xmlhttp.statusText, '');
+	}
+
+	// If windows authentication failed then try to use dedicated or popup credentials
+	if (xmlhttp.status != 200) {
+		var tryToUseDedicatedUser = false;
+		request = aras.getServerBaseURL() + 'SharePoint/SPHelper.aspx';
+
+		var spUser = aras.getItemProperty(item, 'sp_user');
+		var spDomain = aras.getItemProperty(item, 'sp_domain');
+		var spPass = aras.getItemProperty(item, 'sp_password');
+		// After saving SPDocLib sp_pass is empty, so get it from the form
+		if (spPass.length === 0) {
+			spPass = document.forms.MainDataForm['sp_password'].value;
+		}
+
+		// If dedicated credentials is provided than use them
+		if (spUser.length > 0 && spPass.length > 0 && spDomain.length > 0) {
+			tryToUseDedicatedUser = true;
+			try {
+				xmlhttp.open('GET', request + '?salt=' + Date.now(), false);
+				xmlhttp.setRequestHeader('SP-Action', 'GetDocumentLibraries');
+				xmlhttp.setRequestHeader('SP-Url', spSiteUrl);
+				xmlhttp.setRequestHeader('SP-User', spUser);
+				xmlhttp.setRequestHeader('SP-Password', spPass);
+				xmlhttp.setRequestHeader('SP-Domain', spDomain);
+				xmlhttp.send(null);
+			} catch (ex) {
+				return aras.AlertError(aras.getResource('', 'sharepoint.client_error_message') + ex.message);
+			}
+		}
+
+		if (xmlhttp.status === 404) {
+			return aras.AlertError(aras.getResource('', 'sharepoint.failed_to_get_libs_with_url').replace('{0}', spSiteUrl),
+				aras.getResource('', 'sharepoint.server_error_message') + xmlhttp.statusText, '');
+		}
+
+		// If dedicated credentials is not provided or haven't sufficient permissions to get libraries, then
+		// ask user to provide credentials in popup
+		if ((tryToUseDedicatedUser && xmlhttp.status != 200) ||
+			(spUser.length === 0 || spPass.length === 0 || spDomain.length === 0)) {
+			var data = {};
+			data.title = aras.getResource('', 'sharepoint.user_creds_dialog_title');
+			data.aras = aras;
+			if (tryToUseDedicatedUser) {
+				data.message = aras.getResource('', 'sharepoint.both_auth_failed');
+			} else {
+				data.message = aras.getResource('', 'sharepoint.winauth_failed');
+			}
+
+			data.dialogWidth = 350;
+			data.dialogHeight = 250;
+			data.center = true;
+
+			data.content = 'credentialsDialog.html';
+			window.ArasModules.Dialog.show('iframe', data).promise.then(function(creds) {
+				if (creds) {
+					try {
+						xmlhttp.open('GET', request + '?salt=' + Date.now(), false);
+						xmlhttp.setRequestHeader('SP-Action', 'GetDocumentLibraries');
+						xmlhttp.setRequestHeader('SP-Url', spSiteUrl);
+						xmlhttp.setRequestHeader('SP-User', creds.user);
+						xmlhttp.setRequestHeader('SP-Password', creds.pass);
+						xmlhttp.setRequestHeader('SP-Domain', creds.domain);
+						xmlhttp.send(null);
+					} catch (ex) {
+						return aras.AlertError(aras.getResource('', 'sharepoint.client_error_message') + ex.message);
+					}
+
+					if (xmlhttp.status === 200) {
+						// If Windows authentication is not correctly configured we should provide
+						// custom credentials (from a dialog) to be able to connect to SharePoint
+						// from Innovator server method during saving SPDocLibDefinition.
+						aras.setItemProperty(item, 'custom_user', creds.user);
+						aras.setItemProperty(item, 'custom_password', creds.pass);
+						aras.setItemProperty(item, 'custom_domain', creds.domain);
+					} else if (xmlhttp.status === 404) {
+						return aras.AlertError(aras.getResource('', 'sharepoint.failed_to_get_libs_with_url').replace('{0}', spSiteUrl),
+							aras.getResource('', 'sharepoint.server_error_message') + xmlhttp.statusText, '');
+					} else {
+						return aras.AlertError(aras.getResource('', 'sharepoint.failed_to_get_libs_with_user').replace('{0}', creds.user),
+							aras.getResource('', 'sharepoint.server_error_message') + xmlhttp.statusText, '');
+					}
+				} else {
+					// User presses cancel on a dialog so we just do nothing
+					return;
+				}
+			});
+		}
+	}
+
+	if (xmlhttp.status == 200) {
+		var spDoclibNameList = document.forms.MainDataForm.elements['sp_doclib_name'];
+		var nodes = xmlhttp.responseXML.selectNodes('/docLibs/lib');
+		var spDoclibId = aras.getItemProperty(item, 'sp_doclib_id');
+		var oldLibIsFound = false;
+		spDoclibNameList.options.length = 0;
+		for (var i = 0; i < nodes.length; i++) {
+			var option = new Option(nodes[i].getAttribute('name'), nodes[i].getAttribute('id'));
+			spDoclibNameList.options[i] = option;
+			if (option.value == spDoclibId) {
+				spDoclibNameList.selectedIndex = i;
+				oldLibIsFound = true;
+			}
+		}
+		if (!oldLibIsFound) {
+			var eventObj = document.createEvent('Event');
+			eventObj.initEvent('change',true,false);
+
+			spDoclibNameList.selectedIndex = -1;
+			spDoclibNameList.dispatchEvent(eventObj);
+		}
+		spDoclibNameList.disabled = (!document.isEditMode) || (spDoclibNameList.options.length === 0);
+	}
+} else {
+	aras.AlertError(aras.getResource('', 'sharepoint.fill_required_fields'));
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>SPDocLibDef_GetLibraries</name>
+ </Item>
+</AML>

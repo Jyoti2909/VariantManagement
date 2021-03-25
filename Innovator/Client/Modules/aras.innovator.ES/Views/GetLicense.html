@@ -1,0 +1,29 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2016. -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<link rel="stylesheet" href="../Styles/Main.min.css">
+	</head>
+	<body id="getLicense">
+		<div class="licenseContainer"></div>
+		<a href="https://www.aras.com/en/capabilities/enterprise-search" target="_blank" class="licenseContainer-button"></a>
+	</body>
+	<script type="text/javascript">
+		(function (aras) {
+			document.querySelector('div.licenseContainer').textContent = getResourceValueByKey(aras, 'advertisement.get_subscription');
+			document.querySelector('a').textContent = getResourceValueByKey(aras, 'advertisement.see_more');
+			const topWnd = aras.getMostTopWindowWithAras();
+			const label = getResourceValueByKey(aras, 'tab.title');
+			topWnd.arasTabs.updateTitleTab(window.name, {label: label, image: '../images/EnterpriseSearch.svg'});
+		})(parent.aras);
+
+		function getResourceValueByKey(arasObj, resourceKey) {
+			var resultDom = arasObj.createXMLDocument();
+			resultDom.load(arasObj.getI18NXMLResource('ui_resources.xml', arasObj.getScriptsURL() + '../Modules/aras.innovator.ES/'));
+			var resourceNode = resultDom.selectSingleNode('ui_resources/resource[@key="{0}"]'.replace('{0}', resourceKey));
+
+			return resourceNode.getAttribute('value');
+		}
+	</script>
+</html>

@@ -1,0 +1,368 @@
+﻿<AML>
+ <Item type="Report" id="6BFD740544514B21826F9E4E59431E41" action="add">
+  <description>Displays a report about all core public methods used in Innovator server methods</description>
+  <location>server</location>
+  <method keyed_name="Methods Summary" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>Methods Summary</name>
+   </Item>
+  </method>
+  <report_query><![CDATA[<Item type="Method" action="get" select=""/>]]></report_query>
+  <target>window</target>
+  <type>itemtype</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:user="urn:user-scripts" xmlns:aras="http://www.aras.com" xmlns:my="http://mycompany.com/mynamespace">
+  <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes" cdata-section-elements="script msxsl:script"></xsl:output>
+  <msxsl:script language="JScript" implements-prefix="my">
+
+function WriteDllInfo(DllNodeList)
+{
+  var dllNode = DllNodeList.nextNode();
+  var nodelist = dllNode.childNodes;
+  var res= "&lt;table width=\"700\"&gt;";
+  res += "&lt;tr&gt;&lt;th class=\"itHeader\"&gt;Assembly Information&lt;/th&gt;&lt;/tr&gt;"
+  res += "&lt;tr&gt;&lt;td class=\"itInfo\"&gt;"
+  for (var j=0; j&lt;nodelist.length; j++)
+  {
+    var objNode = nodelist.nextNode();
+    res += objNode.text + "&lt;br&gt;";
+  }
+  
+  res+="&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;";
+
+  return res;
+}
+
+function GetMethodInf(methodNode,signatureArr,countArr,dllArr,typeArr,count)
+{
+  var nodelist = methodNode.selectNodes("callMethod");
+  
+  for (var i=0; i&lt;nodelist.length; i++)
+  {
+    var objNode = nodelist.nextNode();
+    oNamedNodeMap = objNode.attributes;
+    var callMethodName = oNamedNodeMap.getNamedItem("Name").text;
+    var type = oNamedNodeMap.getNamedItem("type").text;
+    var dllName = oNamedNodeMap.getNamedItem("dll").text;
+
+    if (countArr[callMethodName] == undefined)
+    {
+      countArr[callMethodName] = 1;
+      signatureArr[count] = callMethodName ;
+      dllArr[count] = dllName;
+      typeArr[count] = type;
+      count++;
+    }
+    else
+      countArr[callMethodName]++;
+  }
+  
+  return count;
+}
+
+function WriteMethodInf(signatureArr,countArr,dllArr,typeArr,count)
+{
+  var res =  "&lt;tr&gt;&lt;td class=\"istHeader\"&gt;" + "IOM.dll" + "&lt;/td&gt;&lt;/tr&gt;";
+  for (var i=0; i&lt;count; i++)
+  {
+    if (dllArr[i] == "IOM.dll")
+      res +=   "&lt;tr&gt;&lt;td class=\"istCell\" onmouseover=\"className='istCellHvr'\" onmouseout=\"className='istCell'\"&gt;" + "&lt;div class=\"istNumSpan\"&gt;"  +   countArr[signatureArr[i]] + "&lt;/div&gt;" + typeArr[i] + "." + signatureArr[i] + "&lt;/td&gt;&lt;/tr&gt;";
+  }
+  
+  res +=  "&lt;tr&gt;&lt;td class=\"istHeader\"&gt;" + "Aras.Server.Core.dll" + "&lt;/td&gt;&lt;/tr&gt;";
+  for (var i=0; i&lt;count; i++)
+  {
+    if (dllArr[i] == "Aras.Server.Core.dll")
+      res +=   "&lt;tr&gt;&lt;td class=\"istCell\" onmouseover=\"className='istCellHvr'\" onmouseout=\"className='istCell'\"&gt;" + "&lt;div class=\"istNumSpan\"&gt;"  +   countArr[signatureArr[i]] + "&lt;/div&gt;" + typeArr[i] + "." + signatureArr[i] + "&lt;/td&gt;&lt;/tr&gt;";
+  }
+    
+  res +=  "&lt;tr&gt;&lt;td class=\"istHeader\"&gt;" + "Late binding calls" + "&lt;/td&gt;&lt;/tr&gt;";
+  for (var i=0; i&lt;count; i++)
+  {
+    if (dllArr[i] == "")
+      res +=   "&lt;tr&gt;&lt;td class=\"istCell\" onmouseover=\"className='istCellHvr'\" onmouseout=\"className='istCell'\"&gt;" + "&lt;div class=\"istNumSpan\"&gt;"  +   countArr[signatureArr[i]] + "&lt;/div&gt;" + signatureArr[i] + "&lt;/td&gt;&lt;/tr&gt;";
+  }
+  
+  return res;
+}
+
+function WriteReportByMethod(methodNodeList) {
+  var signatureArr = new Array();
+  var countArr = new Array();
+  var dllArr = new Array();
+  var typeArr = new Array();
+  var count = 0;
+  var oNamedNodeMap;
+  var methodNode = methodNodeList.nextNode();
+  oNamedNodeMap = methodNode.attributes;
+  var innMethodName = oNamedNodeMap[0].text;
+  var compiled = oNamedNodeMap[1].text;
+  var errMsg = (oNamedNodeMap[2] ? oNamedNodeMap[2].text : "");
+  if (compiled == "false" || errMsg != "")
+  {
+    var res="&lt;td style=\"color:Red\" class=\"itCell1\"&gt;" + innMethodName + "&lt;/td&gt;";
+    res += "&lt;td style=\"color:Red\" class=\"istHeader\"&gt;" + (errMsg ? errMsg : "Compilation Error") + "&lt;/td&gt;"
+    return res;
+  }
+
+  count = GetMethodInf(methodNode,signatureArr,countArr,dllArr,typeArr,count);
+
+  var res="&lt;td class=\"itCell1\"&gt;" + innMethodName + "&lt;/td&gt;";
+  
+  res += "&lt;td class=\"itCell2\"&gt;" + "&lt;table width=\"100%\" cellspacing=\"0\" border=\"0\"&gt;";
+  
+  res += WriteMethodInf(signatureArr,countArr,dllArr,typeArr,count);
+  
+  res+="&lt;/table&gt;" + "&lt;/td&gt;";
+
+  return res;
+}
+
+
+function WriteReport(reportNodeList) {
+  var res="";
+  var signatureArr = new Array();
+  var countArr = new Array();
+  var typeArr = new Array();  var dllArr = new Array();  var count = 0;
+  var rootNode = reportNodeList.nextNode();
+
+  var methodNodeList = rootNode.selectNodes("method");
+  
+  for (var j=1; j&lt;methodNodeList.length; j++)
+  {
+    var methodNode = methodNodeList.nextNode();
+	count = GetMethodInf(methodNode,signatureArr,countArr,dllArr,typeArr,count);
+  }
+  res += WriteMethodInf(signatureArr,countArr,dllArr,typeArr,count);  return res;
+}
+</msxsl:script>
+  <xsl:template match="CalledMethodInfo">
+    <html>
+      <head>
+      </head>
+      <style type="text/css" userData="Global">
+.cellSolid {
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+border-left:1px #000000 solid;
+}
+.cellSolidTopRight {
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+}
+.cellSolidTopLeft {
+border-top:1px #000000 solid;
+border-left:1px #000000 solid;
+}
+.cellSolidRightBottom {
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+}
+.cellSolidBottomLeft {
+border-bottom:1px #000000 solid;
+border-left:1px #000000 solid;
+}
+.cellSolidTop {
+border-top:1px #000000 solid;
+}
+.cellSolidRight {
+border-right:1px #000000 solid;
+}
+.cellSolidBottom {
+border-bottom:1px #000000 solid;
+}
+.cellSolidLeft {
+border-left:1px #000000 solid;
+}
+.cellDashed {
+border-top:1px #666666 dashed;
+border-right:1px #666666 dashed;
+border-bottom:1px #666666 dashed;
+border-left:1px #666666 dashed;
+}
+.cellDashedTopRight {
+border-top:1px #666666 dashed;
+border-right:1px #666666 dashed;
+}
+.cellDashedTopLeft {
+border-top:1px #666666 dashed;
+border-left:1px #666666 dashed;
+}
+.cellDashedBottomRight {
+border-bottom:1px #666666 dashed;
+border-right:1px #666666 dashed;
+}
+.cellDashedBottomLeft {
+border-bottom:1px #666666 dashed;
+border-left:1px #666666 dashed;
+}
+.cellDashedTop {
+border-top:1px #666666 dashed;
+}
+.cellDashedRight {
+border-right:1px #666666 dashed;
+}
+.cellDashedBottom {
+border-bottom:1px #666666 dashed;
+}
+.cellDashedLeft {
+border-left:1px #666666 dashed;
+}
+.cellHeader {
+background-color:#CCCCCC;
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+padding:2px;
+text-align:center;
+text-transform:capitalize;
+text-align:center;
+font-family:helvetica;
+font-weight:bold;
+font-size:8pt;
+}
+.cellHeaderVertBT {
+background-color:#CCCCCC;
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+border-left:1px #000000 solid;
+padding:2px;
+writing-mode:tb-rl;filter: flipv fliph;
+text-align:center;
+text-transform:capitalize;
+text-align:center;
+font-family:helvetica;
+font-weight:bold;
+font-size:8pt;
+}
+.cellHeaderVertTB {
+background-color:#CCCCCC;
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+border-left:1px #000000 solid;
+padding:2px;
+writing-mode:tb-rl;filter: flipv flipv;
+text-align:center;
+text-transform:capitalize;
+text-align:center;
+font-family:helvetica;
+font-weight:bold;
+font-size:8pt;
+}
+.itHeader {font-family: Arial, Helvetica, Tahoma, sans-serif; font-weight: bold; font-size: 14px; color: #EFEFEF; background-color: #676767; padding: 2px 0px 2px 0px; text-align: center; border-left: 3px solid #FFFFFF;}
+.itErrorHeader {font-family: Arial, Helvetica, Tahoma, sans-serif; font-weight: bold; font-size: 14px; color: red; background-color: white; padding: 2px 0px 2px 0px; text-align: center; border-left: 3px solid #FFFFFF;}
+.itCell1 {font-family: Arial, Helvetica, Tahoma, sans-serif; font-weight: bold; font-size: 13px; color: #4F4f4F; background-color: #FFFFFF; padding: 6px 15px 2px 20px; text-align: left; vertical-align: top; border-width: 0px 0px 1px 0px; border-style: dotted; border-color: #9F9F9F; border-left: 3px solid #FFFFFF;}
+.itCell2 {font-family: Arial, Helvetica, Tahoma, sans-serif; font-weight: normal; font-size: 12px; color: #2F2F2F; background-color: #FFFFFF; padding: 0px 0px 6px 0px; text-align: left; vertical-align: top; border-width: 0px 0px 1px 0px; border-style: dotted; border-color: #9F9F9F;}
+.itInfo {font-family: Arial, Helvetica, Tahoma, sans-serif; font-weight: normal; font-size: 10px; color: #2F2F2F; background-color: #F5F5F5; padding: 5px 5px 5px 15px; text-align: left; vertical-align: top; border-bottom: 1px solid #9F9F9F; border-left: 3px solid #FFFFFF;}
+
+.istCell {font-family: Arial, Helvetica, Tahoma, sans-serif; font-weight: normal; font-size: 12px; color: #2F2F2F; background-color: #FFFFFF; padding: 1px 10px 1px 10px; text-align: left; border-bottom: 1px solid #EFEFEF;  border-left: 3px solid #FFFFFF; cursor: default; }
+.istCellHvr {font-family: Arial, Helvetica, Tahoma, sans-serif; font-weight: normal; font-size: 12px; color: #2F2F2F; background-color: #F4F9FC; padding: 1px 10px 1px 10px; text-align: left; border-bottom: 1px solid #a8bcc7; border-left: 3px solid #FFFFFF; cursor: default;}
+.istNumSpan {font-family: Arial, Helvetica, Tahoma, sans-serif; font-weight: bold; font-size: 12px; color: #4F4F4F; padding: 0px 4px 0px 4px; text-align: left; vertical-align: top; float: right; margin: 0px; width: 10px;}
+.istHeader {font-family: Arial, Helvetica, Tahoma, sans-serif; font-weight: bold; font-size: 13px; color: #4F4F4F; background-color: #F0F0F0; padding: 2px 0px 2px 10px; text-align: left; border-top: 6px solid #FFFFFF; border-left: 3px solid #FFFFFF;}
+
+</style>
+
+<body topmargin="50" leftmargin="50">
+<script>
+function doSaveAs()
+{
+  if (document.execCommand)
+  {
+    if (document.readyState == 'complete')
+      document.execCommand("SaveAs");
+    else
+      alert('Feature available only in Internet Exlorer 4.0 and later.');
+  }
+}
+</script>
+        <input type="button" id="SaveReport" value="Save Report" onclick="doSaveAs();"></input>
+	<table width="700">
+		<tbody>
+			<tr>
+				<th class="itHeader">NOTE</th>
+			</tr>
+			<tr>
+				<td class="itInfo">The Method Summary report requires the .NET SDK to be installed on the Server.</td>
+			</tr>
+			<tr>
+				<td class="itInfo">Information gathered about late binding calls can be inaccurate</td>
+			</tr>
+		</tbody>
+	</table>
+	<xsl:apply-templates select="DllVersionInfo"></xsl:apply-templates>
+	<xsl:apply-templates select="DisassmError"></xsl:apply-templates>
+	<xsl:variable name="noError">
+		<xsl:value-of select="count(Report/method)"></xsl:value-of>
+	</xsl:variable>
+	
+	<xsl:if test="$noError>0">
+		<xsl:call-template name="main"></xsl:call-template>
+	</xsl:if>
+        
+</body>
+      <script src="../../javascript/PopupMenu.js"></script>
+      <script src="../../javascript/PopupMenu.js"></script>
+</html>
+</xsl:template>
+
+<xsl:template name="main">
+	<table width="700">
+	<tr>
+		<th class="itHeader">Innovator Method Name</th>
+		<th class="itHeader">Called Methods Summary</th>
+	</tr>
+
+		<xsl:apply-templates select="Report/method" mode="first"></xsl:apply-templates>
+	</table>
+
+	<table border="0" cellpadding="0" cellspacing="0" style="margin-top: 20px;">
+	<tr>
+        <th class="itHeader">Methods Summary</th>
+	</tr>
+		<xsl:apply-templates select="Report" mode="second">   </xsl:apply-templates>
+	</table>
+
+    <table border="0" cellpadding="0" cellspacing="0" style="margin-top: 20px;">
+      <tr>
+        <th class="itHeader">Recommendations on Methods improvement</th>
+      </tr>
+      <xsl:for-each select="Report/method/recommendation">
+      <tr>
+        <td class="istCell" onmouseover="className='istCellHvr'" onmouseout="className='istCell'">
+          <strong><xsl:value-of select="../@Name"/></strong>
+          <br/>
+          <pre><xsl:value-of select="."/></pre>
+        </td>
+      </tr>
+      </xsl:for-each>
+    </table>
+</xsl:template>
+
+<xsl:template match="Report/method" mode="first">
+    <tr>
+		<xsl:value-of select="my:WriteReportByMethod(.)" disable-output-escaping="yes"></xsl:value-of>
+	</tr>
+</xsl:template>
+
+<xsl:template match="DisassmError">
+	<table width="700">
+	<tr>
+		<th class="itErrorHeader"><xsl:value-of select="."></xsl:value-of></th>
+	</tr>
+	</table>
+</xsl:template>
+
+<xsl:template match="Report" mode="second">
+	<xsl:value-of select="my:WriteReport(.)" disable-output-escaping="yes"></xsl:value-of>
+</xsl:template>
+
+<xsl:template match="DllVersionInfo">
+	<xsl:value-of select="my:WriteDllInfo(.)" disable-output-escaping="yes"></xsl:value-of>
+</xsl:template>
+
+</xsl:stylesheet>]]></xsl_stylesheet>
+  <name>Methods Summary</name>
+ </Item>
+</AML>

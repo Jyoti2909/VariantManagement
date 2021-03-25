@@ -1,0 +1,500 @@
+﻿<AML>
+ <Item type="Method" id="86A11F521FD344C38192876269D008D9" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+
+	Aras.Server.Core.ErrorLookup errorLookup = CCO.ErrorLookup;
+	string currentUserId = CCO.Variables.GetUserID();
+	bool isAdminUser = CCO.Permissions.UserHasRootOrAdminIdentity();
+	Aras.Server.Core.InnovatorDatabase database = CCO.DB.InnDatabase;
+
+	var updateMessageHandlers = new IMessageUpdateHandler[]
+	{
+		new DisableMassageHandler(this, errorLookup, currentUserId, isAdminUser, CCO),
+		new UpdateCommentsMessageHandler(this, errorLookup, database, currentUserId, CCO)
+	};
+
+	IMessageUpdateHandler updateMessageHandler = updateMessageHandlers.FirstOrDefault(updateHandler => updateHandler.IsSupported());
+	if (updateMessageHandler == null)
+	{
+		throw new Exception("Messages could be only disabled.");
+	}
+
+	List<Item> secureMessageItemsForUpdate = null;
+	try
+	{
+		secureMessageItemsForUpdate = GetItemsForUpdate();
+		updateMessageHandler.ValidateItems(secureMessageItemsForUpdate);
+	}
+	catch (Exception ex)
+	{
+		return this.getInnovator().newError(ex.Message);
+	}
+
+	IEnumerable<Item> itemsForApply = updateMessageHandler.GetItemsForApply(secureMessageItemsForUpdate);
+	string amlQuery = "<AML>" + string.Concat(itemsForApply.Select(item => item.dom.InnerXml)) + "</AML>";
+
+	Item result = null;
+	RunAs("SecureMessageReaderWriter", () => result = getInnovator().applyAML(amlQuery));
+	return result;
+}
+
+private void RunAs(string identityName, Action method)
+{
+	Aras.Server.Security.Identity identity = null;
+	bool permsWasSet = false;
+	try
+	{
+		identity = Aras.Server.Security.Identity.GetByName(identityName);
+		permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(identity);
+		method();
+	}
+	finally
+	{
+		if (permsWasSet)
+		{
+			Aras.Server.Security.Permissions.RevokeIdentity(identity);
+		}
+	}
+}
+
+private List<Item> GetItemsForUpdate()
+{
+	var itemsForUpdate = new List<Item>();
+	Item query = this.newItem("SecureMessage", "get");
+	if (!String.IsNullOrEmpty(this.getAttribute("id")))
+	{
+		query.setAttribute("id", this.getAttribute("id"));
+	}
+	if (!String.IsNullOrEmpty(this.getAttribute("idlist")))
+	{
+		query.setAttribute("idlist", this.getAttribute("idlist"));
+	}
+	if (!String.IsNullOrEmpty(this.getAttribute("where")))
+	{
+		query.setAttribute("where", this.getAttribute("where"));
+	}
+	query.setAttribute("select", "id, created_by_id, created_on, classification, item_id, item_config_id, item_type, item_type_name, disabled_by_id");
+
+	Item result = query.apply();
+	if (result.isError())
+	{
+		throw new Exception(result.getErrorString());
+	}
+	for (int i = 0; i < result.getItemCount(); i++)
+	{
+		Item resultItem = result.getItemByIndex(i);
+		itemsForUpdate.Add(resultItem);
+	}
+	return itemsForUpdate;
+}
+
+private class UpdateCommentsMessageHandler : MessageUpdateHandler
+{
+	Aras.Server.Core.InnovatorDatabase _database;
+
+	public UpdateCommentsMessageHandler(Item item, Aras.Server.Core.ErrorLookup errorLookup, Aras.Server.Core.InnovatorDatabase database, string currentUserId,  Aras.Server.Core.CallContext cco)
+				: base(item, errorLookup, currentUserId, cco)
+	{
+		_database = database;
+	}
+
+	public override void ValidateItems(IEnumerable<Item> itemsForUpdate)
+	{
+		foreach (Item resultItem in itemsForUpdate)
+		{
+			if (resultItem.getProperty("classification") == "History")
+			{
+				throw new Exception(ErrorLookup.Lookup("SSVC_HistoryMessageCannotBeUpdated"));
+			}
+			if (!string.IsNullOrEmpty(resultItem.getProperty("disabled_by_id")))
+			{
+				throw new Exception(ErrorLookup.Lookup("SSVC_DisabledMessageCannotBeUpdated"));
+			}
+			string createdById = resultItem.getProperty("created_by_id");
+			if (string.IsNullOrEmpty(createdById) || !string.Equals(createdById, CurrentUserId))
+			{
+				throw new Exception(ErrorLookup.Lookup("SSVC_MessageCanBeUpdatedOnlyByCreator"));
+			}
+		}
+
+		if (itemsForUpdate.Any(itemForUpdate => !HasAttachment(itemForUpdate)) && string.IsNullOrEmpty(Item.getProperty("comments")))
+		{
+			throw new Exception(ErrorLookup.Lookup("SSVC_NotAllowedEmptyComments"));
+		}
+	}
+
+	public override bool IsSupported()
+	{
+		string comments = Item.getProperty("comments");
+		string isNull = Item.getPropertyAttribute("comments", "is_null");
+
+		return comments != null || isNull != null;
+	}
+
+	private static bool HasAttachment(Item itemForUpdate)
+	{
+		return itemForUpdate.getRelationships("SecureMessageMarkup").getItemCount() > 0 ||
+			itemForUpdate.getRelationships("SecureMessageAudio").getItemCount() > 0 ||
+			itemForUpdate.getRelationships("SecureMessageVideo").getItemCount() > 0;
+	}
+
+	public override IEnumerable<Item> GetItemsForApply(IEnumerable<Item> itemsForUpdate)
+	{
+		return itemsForUpdate.Select(GetItemForApply);
+	}
+
+	private Item GetItemForApply(Item itemForUpdate)
+	{
+		var messageItem = Item.newItem();
+
+		messageItem.setType("StoredSecureMessage");
+		messageItem.setAction("edit");
+		messageItem.setID(itemForUpdate.getID());
+		messageItem.setProperty("comments", Item.getProperty("comments"));
+
+		UpdateMention(messageItem);
+		return messageItem;
+	}
+
+	private void UpdateMention(Item messageItem)
+	{
+		// Reading current visibility filters for message
+		IEnumerable<Item> existedVisibilityFilters = GetExistedVisibilityFilters(messageItem).ToArray();
+		// Reading identities from sharedWith parameter
+		IEnumerable<string> sharedWithIdentitiesIds = GetSharedWithIdentities(existedVisibilityFilters);
+
+		// Parsing message text for extract users identificators
+		IEnumerable<string> currentUserIds = GetMentionUserIdsFromMessage(messageItem.getProperty("comments"));
+		// Getting users alias identities only if they belongs to sharedWith
+		IEnumerable<string> currentAliasIdentityIds = GetAliasIdentitiesBelongsToSharedIdentities(sharedWithIdentitiesIds, currentUserIds).ToArray();
+		// Getting all existed SecureMessageVisibilityFilter Items for mentions for message
+		IEnumerable<Item> existedMentionVisibilityFilters = existedVisibilityFilters.Where(filterItem => filterItem.getProperty("classification") == "UserMention").ToArray();
+
+		// If user mention was removed from message text then SecureMessageVisibilityFilter Item with action 'delete' is added
+		GetVisibilityFiltersToRemove(existedMentionVisibilityFilters, currentAliasIdentityIds)
+			.ToList()
+			.ForEach(filterItem => RemoveSecureMessageVisibilityFilterItem(messageItem, filterItem));
+
+		// Getting all existed alias identities for mentions
+		IEnumerable<string> prevAliasIdentityIds = existedMentionVisibilityFilters.Select(filterItem => filterItem.getRelatedItemID());
+
+		// If user mention was added to message text then SecureMessageVisibilityFilter Item with action 'add' is added
+		GetMentionIdentityIdsToAdd(currentAliasIdentityIds, prevAliasIdentityIds)
+			.ToList()
+			.ForEach(mentionIdentityId => CreateSecureMessageVisibilityFilterItem(messageItem, mentionIdentityId));
+	}
+
+	private IEnumerable<string> GetAliasIdentitiesBelongsToSharedIdentities(IEnumerable<string> sharedWithIdentitiesIds, IEnumerable<string> currentUserIds)
+	{
+		return currentUserIds
+			.Select(GetAliasIdentityId)
+			.Where(aliasIdentityId => BelongsToAnyOfSharedIdentities(aliasIdentityId, sharedWithIdentitiesIds));
+	}
+
+	private bool BelongsToAnyOfSharedIdentities(string aliasIdentityId, IEnumerable<string> sharedWithIdentitiesIds)
+	{
+		const string worldIdentityId = "A73B655731924CD0B027E4F4D5FCC0A9";
+		return Aras.Server.Security.Permissions.GetAncestorIdentityIds(_database, new[] { aliasIdentityId })
+			.Union(new[] { worldIdentityId })
+			.Intersect(sharedWithIdentitiesIds)
+			.Any();
+	}
+
+	private static IEnumerable<string> GetSharedWithIdentities(IEnumerable<Item> existedVisibilityFilters)
+	{
+		return existedVisibilityFilters
+			.Where(filterItem => filterItem.getPropertyAttribute("classification", "is_null") == "1" && filterItem.getProperty("is_creator") == "0")
+			.Select(filterItem => filterItem.getRelatedItemID());
+	}
+
+	private static IEnumerable<string> GetMentionIdentityIdsToAdd(IEnumerable<string> currentAliasIdentityIds, IEnumerable<string> prevAliasIdentityIds)
+	{
+		return currentAliasIdentityIds
+			.Where(mentionIdentityId => !prevAliasIdentityIds.Contains(mentionIdentityId));
+	}
+
+	private static void CreateSecureMessageVisibilityFilterItem(Item messageItem, string mentionIdentityId)
+	{
+		const string secureMessageTypeId = "F0A8BC4265E44C47A127AEC1975F4C89";
+		var filterItem = messageItem.createRelationship("SecureMessageVisibilityFilter", "add");
+		filterItem.setProperty("related_id", mentionIdentityId);
+		filterItem.setProperty("source_id", messageItem.getID());
+		filterItem.setProperty("source_type", secureMessageTypeId);
+		filterItem.setProperty("classification", "UserMention");
+	}
+
+	private static IEnumerable<Item> GetVisibilityFiltersToRemove(IEnumerable<Item> existedMentionVisibilityFilters, IEnumerable<string> currentAliasIdentityIds)
+	{
+		return existedMentionVisibilityFilters
+			.Where(filterItem => !currentAliasIdentityIds.Contains(filterItem.getRelatedItemID()));
+	}
+
+	private static void RemoveSecureMessageVisibilityFilterItem(Item messageItem, Item filterItem)
+	{
+		var item = messageItem.createRelationship("SecureMessageVisibilityFilter", "delete");
+		item.setID(filterItem.getID());
+	}
+
+	private static IEnumerable<Item> GetExistedVisibilityFilters(Item messageItem)
+	{
+		var secureMessageItem = messageItem.newItem("SecureMessage", "get");
+		secureMessageItem.setID(messageItem.getID());
+		var visibilityFilterItem = secureMessageItem.newItem("SecureMessageVisibilityFilter", "get");
+		visibilityFilterItem.setAttribute("select", "classification, related_id, is_creator");
+		secureMessageItem.addRelationship(visibilityFilterItem);
+		secureMessageItem.setAttribute("select", "id");
+
+		var result = secureMessageItem.apply();
+		if (result.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(result.getErrorString());
+		}
+		for (int i = 0; i < result.getItemCount(); i++)
+		{
+			Item resultItem = result.getItemByIndex(i);
+
+			var relationships = resultItem.getRelationships("SecureMessageVisibilityFilter");
+			for (int j = 0; j < relationships.getItemCount(); j++)
+			{
+				yield return relationships.getItemByIndex(j);
+			}
+		}
+	}
+
+	// method copied from VC_PopulateAndAddSecureMessage
+	private static IEnumerable<string> GetMentionUserIdsFromMessage(string sourceMessage)
+	{
+		List<string> userIds = new List<string>();
+		if (sourceMessage == null)
+		{
+			return userIds;
+		}
+		while (sourceMessage.Contains("<user_ref"))
+		{
+			var startIndex = sourceMessage.IndexOf("<user_ref", StringComparison.OrdinalIgnoreCase);
+			var endIndex = sourceMessage.IndexOf("/>", startIndex, StringComparison.OrdinalIgnoreCase);
+			if (endIndex > startIndex)
+			{
+				var substring = sourceMessage.Substring(startIndex, endIndex + 2 - startIndex);
+				var xmlDocument = Aras.Server.Core.XML.CreateNewXMLDocument(substring);
+				if (xmlDocument == null || xmlDocument.FirstChild == null)
+				{
+					break;
+				}
+				else
+				{
+					var userId = xmlDocument.FirstChild.Attributes["user_id"];
+					if (userId != null && !String.IsNullOrEmpty(userId.Value))
+					{
+						userIds.Add(userId.Value);
+						sourceMessage = sourceMessage.Replace(substring, "");
+					}
+					else
+					{
+						break;
+					}
+				}
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return userIds.Distinct().ToList();
+	}
+
+	private string GetAliasIdentityId(string userId)
+	{
+		var aliasItem = Item.newItem("Alias", "get");
+		aliasItem.setProperty("source_id", userId);
+
+		var identityItem = Item.newItem("Identity", "get");
+		identityItem.setProperty("is_alias", "1");
+		aliasItem.setPropertyItem("related_id", identityItem);
+		aliasItem.setAttribute("select", "related_id");
+
+		var result = aliasItem.apply();
+
+		if (result.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(result.getErrorString());
+		}
+
+		return result.getRelatedItemID();
+	}
+}
+
+private class DisableMassageHandler : MessageUpdateHandler
+{
+
+	private bool _isAdminUser;
+
+	public DisableMassageHandler(Item item, Aras.Server.Core.ErrorLookup errorLookup, string currentUserId, bool isAdminUser, Aras.Server.Core.CallContext cco)
+		: base(item, errorLookup, currentUserId, cco)
+	{
+		_isAdminUser = isAdminUser;
+	}
+
+	public override void ValidateItems(IEnumerable<Item> itemsForUpdate)
+	{
+		foreach (Item resultItem in itemsForUpdate)
+		{
+			if (resultItem.getProperty("classification") == "History")
+			{
+				throw new Exception(ErrorLookup.Lookup("SSVC_HistoryMessagesCannotBeDisabled"));
+			}
+			CheckSecureMessagePermissions(resultItem);
+		}
+	}
+
+	private void CheckSecureMessagePermissions(Item sm)
+	{
+		if (String.IsNullOrEmpty(sm.getProperty("disabled_by_id")))
+		{
+			if (!_isAdminUser)
+			{
+				string createdById = sm.getProperty("created_by_id");
+				if (String.IsNullOrEmpty(createdById) || !string.Equals(createdById, CurrentUserId))
+				{
+					throw new Exception(ErrorLookup.Lookup("SSVC_MassageCanBeDisabledByAdminOrCreator"));
+				}
+			}
+		}
+		else
+		{
+			throw new Exception(ErrorLookup.Lookup("SSVC_MessageIsDisabled"));
+		}
+	}
+
+	public override IEnumerable<Item> GetItemsForApply(IEnumerable<Item> itemsForUpdate)
+	{
+		RemoveNotAllowedProperties("disabled_by_id", "disabled_on");
+		if (Item.getPropertyItem("disabled_by_id") == null)
+		{
+			SetDisabledById();
+		}
+		else
+		{
+			SetDisabledOnProperty();
+		}
+		string[] idList = itemsForUpdate.Select(item => item.getID()).ToArray();
+
+		Item.removeAttribute("id");
+		Item.removeAttribute("where");
+		Item.setAttribute("idlist", String.Join(",", idList));
+		SetPermissionsToRelationships(idList);
+
+		Item.setType("StoredSecureMessage");
+		Item.setAction("edit");
+
+		yield return Item;
+	}
+
+	private void SetDisabledById()
+	{
+		string disabledById = Item.getProperty("disabled_by_id");
+		if (String.IsNullOrEmpty(disabledById))
+		{
+			disabledById = CurrentUserId;
+			Item.setProperty("disabled_by_id", disabledById);
+		}
+	}
+
+	private void SetDisabledOnProperty()
+	{
+		string disabledOn = Item.getProperty("disabled_on");
+		if (String.IsNullOrEmpty(disabledOn))
+		{
+			disabledOn = GetFormattedCurrentDateTime();
+			Item.setProperty("disabled_on", disabledOn);
+		}
+	}
+
+	public override bool IsSupported()
+	{
+		Item disabledByIdPropertyItem = Item.getPropertyItem("disabled_by_id");
+		string disabledByIdProperty = Item.getProperty("disabled_by_id");
+		string disabledOnProperty = Item.getProperty("disabled_on");
+
+		return disabledByIdPropertyItem != null
+			|| !String.IsNullOrEmpty(disabledByIdProperty)
+			|| !String.IsNullOrEmpty(disabledOnProperty);
+	}
+
+	private string GetFormattedCurrentDateTime()
+	{
+		I18NSessionContext sessionContext = Item.getInnovator().getI18NSessionContext();
+		return sessionContext.ConvertUtcDateTimeToNeutral(DateTime.UtcNow.ToString(CultureInfo.InvariantCulture), String.Empty);
+	}
+
+	private void SetPermissionsToRelationships(string[] sourceIds)
+	{
+		const string permissionId = "4D61B5EC0D2448D08B8C4A596F48B0F1";
+
+		string[] types = new string[] { "SecureMessageAudio", "SecureMessageMarkup", "SecureMessageVideo" };
+		for (int i = 0; i < types.Length; i++)
+		{
+			for (int j = 0 ; j < sourceIds.Length; j++)
+			{
+				Item premissionItem = CreateRelationshipPermissionItem(types[i], sourceIds[j], permissionId);
+				Item.addRelationship(premissionItem);
+			}
+		}
+	}
+
+	private Item CreateRelationshipPermissionItem(string type, string sourceItemId, string permissionId)
+	{
+		Item premissionItem = Item.newItem(type, "edit");
+		premissionItem.setProperty("permission_id", permissionId);
+		premissionItem.setAttribute("where", String.Format(CultureInfo.InvariantCulture, "source_id = '{0}'", 
+			System.Security.SecurityElement.Escape(DbQuoteValue(sourceItemId))));
+		return premissionItem;
+	}
+
+	private void RemoveNotAllowedProperties(params string[] allowedProperties)
+	{
+		for (int i = Item.node.ChildNodes.Count - 1; i >= 0; i--)
+		{
+			XmlNode child = Item.node.ChildNodes[i];
+			if (child.NodeType != XmlNodeType.Whitespace && !allowedProperties.Contains(child.Name))
+			{
+				child.ParentNode.RemoveChild(child);
+			}
+		}
+	}
+}
+
+private abstract class MessageUpdateHandler : IMessageUpdateHandler
+{
+	private Item _item;
+	protected Item Item { get { return _item; } }
+	protected Aras.Server.Core.ErrorLookup ErrorLookup { get; private set; }
+	protected string CurrentUserId { get; private set; }
+	public Func<string, string> DbQuoteValue { get; private set; }
+
+	public MessageUpdateHandler(Item item, Aras.Server.Core.ErrorLookup errorLookup, string currentUserId, Aras.Server.Core.CallContext cco)
+	{
+		_item = item;
+		ErrorLookup = errorLookup;
+		CurrentUserId = currentUserId;
+		DbQuoteValue = cco.DB.InnDatabase.QuoteValue;
+	}
+
+	public abstract bool IsSupported();
+	public abstract void ValidateItems(IEnumerable<Item> itemsForUpdate);
+	public abstract IEnumerable<Item> GetItemsForApply(IEnumerable<Item> itemsForUpdate);
+}
+
+private interface IMessageUpdateHandler
+{
+	bool IsSupported();
+	void ValidateItems(IEnumerable<Item> itemsForUpdate);
+	IEnumerable<Item> GetItemsForApply(IEnumerable<Item> itemsForUpdate);
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_OnUpdateSecureMessage</name>
+ </Item>
+</AML>

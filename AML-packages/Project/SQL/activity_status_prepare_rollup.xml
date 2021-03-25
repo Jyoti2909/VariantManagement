@@ -1,0 +1,24 @@
+﻿<AML>
+ <Item type="SQL" id="ED69A7FCB63F45138A6C0F9261F023B4" action="add">
+  <execution_count>3</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>activity_status_prepare_rollup</old_name>
+  <sqlserver_body><![CDATA[/*
+name: activity_status_prepare_rollup
+solution: Project
+purpose: Should be run before activity_status_rollup.xml!!!Drops  activity_status_rollup  and  select_wbs_element_pure_rollup_values  procedures  if already created.*/
+
+IF EXISTS (SELECT * FROM sysobjects WHERE id = object_id('innovator.activity_status_rollup') AND OBJECTPROPERTY(id, N'IsProcedure') = 1)
+BEGIN
+	DROP PROCEDURE innovator.activity_status_rollup
+END
+IF EXISTS (SELECT * FROM sysobjects WHERE id = object_id('innovator.select_wbs_element_pure_rollup_values') AND OBJECTPROPERTY(id, N'IsProcedure') = 1)
+BEGIN
+	DROP PROCEDURE innovator.select_wbs_element_pure_rollup_values
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>table</type>
+  <name>activity_status_prepare_rollup</name>
+ </Item>
+</AML>

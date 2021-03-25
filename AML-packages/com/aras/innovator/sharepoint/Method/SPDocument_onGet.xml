@@ -1,0 +1,764 @@
+﻿<AML>
+ <Item type="Method" id="B49DB3FE7D7D4793B9FF11864F0FF7C7" action="add">
+  <comments>Queries SP document library and returns the result in AML form to Innovator client</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[      //MethodTemplateName=CSharpInOut;
+      if (InnovatorServerASP == null)
+        throw new ArgumentNullException("InnovatorServerASP");
+
+      Innovator inn = new Innovator(InnovatorServerASP);
+      Aras.Server.Core.CallContext CCO = ((Aras.Server.Core.IOMConnection)InnovatorServerASP).CCO;
+
+      DocumentGetter docGetter = new DocumentGetter(inn, inDom, outDom, CCO);
+      docGetter.GetDocuments();
+    }
+
+
+    /// <summary>
+    /// Document Getter entity.
+    /// </summary>
+    internal class DocumentGetter
+    {
+      private const string SP_PAGINATION = "__sharepoint_pagination__";
+      private const string SP_ALL_COUNT = "__sharepoint_all_count__";
+
+      private Innovator _inn;
+      private XmlDocument _request;
+      private XmlDocument _response;
+      private Item _doclib_def;
+      private Aras.Tools.SPSite _site;
+      private Aras.Tools.SPDocumentLibrary _doclib;
+      private string _sp_permission_id;
+      private string _typeId;
+      private Aras.Server.Core.CallContext _CCO;
+      private Aras.Tools.SharePointAuthenticationType _auth_type;
+
+
+      /// <summary>
+      /// Initializes new instance of DocLibGetter class.
+      /// </summary>
+      /// <param name="inn">Innovator</param>
+      /// <param name="inDom">XmlDocument</param>
+      /// <param name="outDom">XmlDocument</param>
+      /// <param name="CCO">Aras.Server.Core.CallContext</param>
+      protected internal DocumentGetter(Innovator inn, XmlDocument inDom, XmlDocument outDom, Aras.Server.Core.CallContext CCO)
+      {
+        _CCO = CCO;
+        _inn = inn;
+        _request = inDom;
+        _response = outDom;
+
+        // Find SPDocumentLibraryDefinition that generated this type
+        string type = _request.DocumentElement.Attributes["type"].Value;
+        string aml = string.Format(CultureInfo.InvariantCulture, "<Item type='SPDocumentLibraryDefinition' action='get' levels='1' configPath='SPField'><doc_type_name>{0}</doc_type_name></Item>", System.Security.SecurityElement.Escape(type));
+        Item def_request = _inn.newItem();
+        def_request.loadAML(aml);
+        _doclib_def = def_request.apply();
+        if (_doclib_def.isError())
+          throw new Exception(string.Format(CultureInfo.InvariantCulture, "Can't find item of type 'SPDocumentLibraryDefinition' that generated type '{0}'", type));
+
+        string aml4TypeId = string.Format(CultureInfo.InvariantCulture, "<Item type='ItemType' action='get' select='id'><name>{0}</name></Item>", System.Security.SecurityElement.Escape(type));
+        Item def2_req = _inn.newItem();
+        def2_req.loadAML(aml4TypeId);
+        Item response = def2_req.apply();
+        if (response.isError())
+          throw new Exception(string.Format(CultureInfo.InvariantCulture, "Can't get id of ItemType '{0}'", type));
+        else
+          _typeId = response.getID();
+
+        string auth_type = _doclib_def.getProperty("authentication_type");
+        switch (auth_type)
+        {
+          case "WindowsAuthenticationOnly":
+            {
+              _auth_type = Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationOnly;
+            } break;
+          case "WindowsAuthenticationPreferred":
+            {
+              _auth_type = Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationPreferred;
+            } break;
+          case "DedicatedUserOnly":
+            {
+              _auth_type = Aras.Tools.SharePointAuthenticationType.DedicatedUserOnly;
+            } break;
+          default:
+            {
+              _auth_type = Aras.Tools.SharePointAuthenticationType.Undefined;
+            } break;
+        }
+      }
+
+
+      /// <summary>
+      /// Initialize DocumentGetter object depends on SharePointAuthenticationType and get documents.
+      /// </summary>
+      protected internal void GetDocuments()
+      {
+        bool useDedicatedFlag = (_auth_type == Aras.Tools.SharePointAuthenticationType.DedicatedUserOnly);
+
+        //Checks if Windows Authentication credentials are ready to pass to SharePoint Server.
+        useDedicatedFlag = CredentialsAreReady(useDedicatedFlag);
+
+        System.Security.Principal.WindowsImpersonationContext c = null;
+        if (!useDedicatedFlag &&
+            (_auth_type == Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationOnly ||
+            _auth_type == Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationPreferred))
+        {
+          c = HttpContext.Current.Request.LogonUserIdentity.Impersonate();
+        }
+        try
+        {
+          SetSPSiteAndLib(useDedicatedFlag);
+          GetSPPermissionID();
+          GetDocumentsInternal();
+        }
+        catch (WebException ex)
+        {
+          if ((ex.Message == "Unauthorized" || ((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.Unauthorized)
+             && HttpContext.Current.Request.Headers["IsRedirected"] != "1")
+          {
+            if (_auth_type == Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationOnly
+               || _auth_type == Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationPreferred)
+            {
+              HttpContext.Current.Response.AddHeader("IE.Bug.PostRequestMustRedirectedManualy", "1");
+              HttpContext.Current.Response.AddHeader("IE.Bug.RedirectToUrl", "SharePoint/Auth/InnovatorServerWinAuth.aspx");
+              HttpContext.Current.Response.End();
+            }
+            else
+            {
+              throw ex;
+            }
+          }
+          else if (!useDedicatedFlag &&
+                   _auth_type != Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationOnly &&
+                  (ex.Message == "Unauthorized" || ((HttpWebResponse)ex.Response).StatusCode == HttpStatusCode.Unauthorized)
+                  && HttpContext.Current.Request.Headers["IsRedirected"] == "1")
+          {
+            useDedicatedFlag = true;
+            try
+            {
+              SetSPSiteAndLib(useDedicatedFlag);
+              GetSPPermissionID();
+              GetDocumentsInternal();
+            }
+            catch (WebException ex2)
+            {
+              throw ex2;
+            }
+          }
+          else
+          {
+            throw ex;
+          }
+        }
+        finally
+        {
+          if (c != null)
+          {
+            c.Undo();
+          }
+        }
+      }
+
+      private bool CredentialsAreReady(bool useDedicatedFlag)
+      {
+         if (HttpContext.Current.Request.Headers["IsRedirected"] != null
+            && HttpContext.Current.Request.Headers["IsRedirected"] == "1")
+         {
+            if (!HttpContext.Current.Request.LogonUserIdentity.IsAuthenticated)
+            {
+               if (_auth_type == Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationOnly)
+               {
+                  throw new WebException("User is not authenticated.");
+               }
+               useDedicatedFlag = true;
+            }
+            if (HttpContext.Current.Request.Headers["Authorization"] != null
+               && HttpContext.Current.Request.Headers["Authorization"].Length < 1500)
+            {
+               if (_auth_type == Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationOnly)
+               {
+                  throw new WebException("Authentication mode 'Kerberos' should be enabled.");
+               }
+               useDedicatedFlag = true;
+            }
+            if (HttpContext.Current.Request.LogonUserIdentity.ImpersonationLevel
+               != System.Security.Principal.TokenImpersonationLevel.Delegation)
+            {
+               if (_auth_type == Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationOnly)
+               {
+                  throw new WebException("Identity impersonation level should be 'Delegation'.");
+               }
+               useDedicatedFlag = true;
+            }
+         }
+         return useDedicatedFlag;
+      }
+
+      /// <summary>
+      /// Gets documents from SharePoint, based on inDom query.
+      /// </summary>
+      private void GetDocumentsInternal()
+      {
+        // Get "page", "pagesize" and "maxRecords" attributes of the request and calculate how many rows to request from SP
+        int pageNumber = 1;
+        XmlAttribute pnattr = _request.DocumentElement.Attributes["page"];
+        if (pnattr != null && pnattr.Value.Trim().Length > 0)
+          pageNumber = Int32.Parse(pnattr.Value, CultureInfo.InvariantCulture);
+
+        int maxRows = -1;
+        XmlAttribute mrattr = _request.DocumentElement.Attributes["maxRecords"];
+        if (mrattr != null && mrattr.Value.Trim().Length > 0)
+          maxRows = Int32.Parse(mrattr.Value, CultureInfo.InvariantCulture);
+
+        int pageSize = -1;
+        XmlAttribute psattr = _request.DocumentElement.Attributes["pagesize"];
+        if (psattr != null && psattr.Value.Trim().Length > 0)
+          pageSize = Int32.Parse(psattr.Value, CultureInfo.InvariantCulture);
+
+        int rows;
+        if (maxRows > 0)
+        {
+          if (pageSize > 0)
+          {
+            if (pageSize * pageNumber > maxRows)
+              rows = maxRows - pageSize * (pageNumber - 1);
+            else
+              rows = pageSize;
+          }
+          else
+          {
+            rows = maxRows;
+          }
+        }
+        else
+        {
+          rows = pageSize;
+        }
+
+        // Convert AML query to CAML query
+        Aras.Tools.QueryConverter qc = new Aras.Tools.QueryConverter(_doclib_def.node);
+        XmlDocument caml_query = qc.FromAmlToCaml(PreprocessIDs(_request.DocumentElement));
+
+        // Get pagination string
+        string pstr = InitSessionPagination(caml_query, pageNumber, pageSize, maxRows);
+        // Get collection of fields that have to be brought
+        ArrayList fields = GetRequiredFields();
+        // Get ordered list of fields that constitutes "keyed_name"
+        string[] knfields = GetKeyedFieldsInOrder();
+        ArrayList result = new ArrayList();
+        pstr = _doclib.GetDocuments(caml_query, fields, rows, pstr, out result);
+
+        // Calculate 'itemmax' (how many items matching the query exists in SP). The problem
+        // here is that SP does NOT return this number :-(. So we cheat to avoid getting
+        // all documents from the SP to just calculate the 'itemmax'.
+        int all_count = -1;
+        if (pstr == null)
+        {
+          // If no more pages then all_count equals to what was found so far
+          if (pageSize > 0)
+            all_count = pageSize * (pageNumber - 1) + result.Count;
+          else if (maxRows > 0)
+            all_count = maxRows;
+          else
+            all_count = result.Count;
+        }
+        else
+        {
+          all_count = (int)HttpContext.Current.Session[SP_ALL_COUNT];
+          if (all_count == -1 && maxRows > 0)
+          {
+            all_count = maxRows;
+          }
+        }
+        UpdateSessionPagination(pageNumber, pstr, all_count);
+
+        _response.LoadXml(_inn.newResult("").dom.OuterXml);
+        _response.XmlResolver = null; // to prevent XXE
+        string type_name = _request.DocumentElement.Attributes["type"].Value;
+        foreach (Aras.Tools.SPDocument doc in result)
+        {
+          XmlElement item_node = AddDocumentToResponse(type_name, doc, fields, pageNumber, pageSize, all_count, knfields);
+
+          // The original implementation kept Innovator table for the federated type empty and on every
+          // request information about SP documents was brought from the SP and there were no need 
+          // for synchronization between SP and Innovator. Unfortunately this approach doesn't work
+          // in case the federated type is used either in relationships and\or as poly-source because
+          // in these case core Innovator code relies on the fact that the table that represents the 
+          // federated type has some records in it. So, check whether found SP document is in the 
+          // Innovator table or not and insert it if it's not there yet.
+          // NOTE: the implementation is probably not the most optimal in terms of performance as the
+          //       following call makes a query to the database to find out if the corresponding record in
+          //       the federated table was already created. And this is done on every "get" request. And
+          //       because it's done inside the loop we end up with as many queries to Innovator database
+          //       as many records are brought from the SharePoint on this particular "get" request.
+          IDataAccessLayer dataAccessLayer = new DataAccessLayer(_inn);
+          AddRecordToTable(type_name, item_node, dataAccessLayer, _sp_permission_id, _CCO.DB.InnDatabase.QuoteName, _CCO.DB.InnDatabase.QuoteValue);
+        }
+      }
+
+
+      /// <summary>
+      /// Adds document to Response.
+      /// </summary>
+      /// <param name="type_name">string</param>
+      /// <param name="doc">Aras.Tools.SPDocument</param>
+      /// <param name="fields">ArrayList</param>
+      /// <param name="pageNumber">int</param>
+      /// <param name="pageSize">int</param>
+      /// <param name="acount">int</param>
+      /// <param name="knfields">string[]</param>
+      /// <returns>XmlElement</returns>
+      internal XmlElement AddDocumentToResponse(string type_name, Aras.Tools.SPDocument doc, ArrayList fields,
+                                     int pageNumber, int pageSize, int acount, string[] knfields)
+      {
+        XmlElement ditem = _response.CreateElement("Item");
+        ditem.SetAttribute("type", type_name);
+        ditem.SetAttribute("typeId", _typeId);
+        // Set 'id'
+        string guid = doc.GetPropertyValue("GUID");
+        string inn_id = guid.Substring(1, guid.Length - 2).Replace("-", string.Empty);
+        ditem.SetAttribute("id", inn_id);
+        // Add page related attributes
+        ditem.SetAttribute("page", pageNumber.ToString(CultureInfo.InvariantCulture));
+
+        int pmax, imax;
+        if (acount > 0)
+        {
+          imax = acount;
+          if (pageSize > 0)
+          {
+            float remains = ((float)acount / (float)pageSize) - (acount / pageSize);
+            if (remains > 0)
+              pmax = acount / pageSize + 1;
+            else
+              pmax = acount / pageSize;
+          }
+          else
+          {
+            pmax = 1;
+          }
+        }
+        else
+        {
+          // Here is where we cheat: until we know how many are there we always say that there is one more page
+          imax = pageSize * (pageNumber + 1);
+          pmax = pageNumber + 1;
+        }
+
+        ditem.SetAttribute("pagemax", pmax.ToString(CultureInfo.InvariantCulture));
+        ditem.SetAttribute("itemmax", imax.ToString(CultureInfo.InvariantCulture));
+
+        AddNewElementWithValue(ditem, "id", inn_id);
+        string[] dateFields = new string[] { "sp_created", "sp_modified" };
+        if (fields != null)
+        {
+          foreach (Aras.Tools.SPField field in fields)
+          {
+            string xpath = string.Format(CultureInfo.InvariantCulture, "Relationships/Item[@type='SPField' and sp_field_name='{0}']", field.Name);
+            Item fitem = _doclib_def.getItemsByXPath(xpath);
+            if (Array.IndexOf(dateFields, fitem.getProperty("property_name")) > -1)
+               AddNewElementWithValue(ditem, fitem.getProperty("property_name"), ConvertDatePropToNeutral(doc.GetPropertyValue(field)));
+            else
+               AddNewElementWithValue(ditem, fitem.getProperty("property_name"), doc.GetPropertyValue(field));          }
+        }
+
+        // Properties like 'created_on', 'modified_on' are shown on the right side of the main grid when a grid row is selected,
+        // so we set them to corresponding SP fields
+        // Set 'Created' as Innovator's property 'created_on'
+        AddNewElementWithValue(ditem, "created_on", ConvertDatePropToNeutral(doc.GetPropertyValue("Created")));
+        // Set 'Modified' as Innovator's property 'modified_on'
+        AddNewElementWithValue(ditem, "modified_on", ConvertDatePropToNeutral(doc.GetPropertyValue("Modified")));
+        // Set permission id
+        var element = AddNewElementWithValue(ditem, "permission_id", _sp_permission_id);
+        element.SetAttribute("type", "Permission");
+        // Set keyed name
+        if (knfields != null)
+        {
+          string keyed_name = string.Empty;
+          for (int i = 0; i < knfields.Length; i++)
+          {
+            if (i > 0)
+              keyed_name += " ";
+            keyed_name += doc.GetPropertyValue(knfields[i]);
+          }
+          AddNewElementWithValue(ditem, "keyed_name", keyed_name);
+        }
+        _response.SelectSingleNode("//Result").AppendChild(ditem);
+        return ditem;
+      }
+
+       internal XmlElement AddNewElementWithValue(XmlElement element, string elementName, string value)
+       {
+            XmlElement newElement = _response.CreateElement(elementName);
+            newElement.InnerText = value;
+            return (XmlElement) element.AppendChild(newElement);
+        }
+
+      internal interface IDataAccessLayer
+      {
+         Item ApplySQL(string sql);
+         string GetUserID();
+      }
+
+      internal class DataAccessLayer : IDataAccessLayer
+      {
+         private Innovator _innovator;
+         internal DataAccessLayer(Innovator innovator)
+         {
+            _innovator = innovator;
+         }
+         public Item ApplySQL(string sql)
+         {
+            return _innovator.applySQL(sql);
+         }
+         public string GetUserID()
+         {
+            return _innovator.getUserID();
+         }
+      }
+
+      internal static string GetSPDocumentSql(string type_name, string guid, Func<string, string> quoteNameFunc, Func<string, string> quoteValueFunc)
+      {
+         return string.Format(CultureInfo.InvariantCulture, "SELECT [ID] FROM {0} WHERE [SP_GUID]='{1}' /*SPDocument_onGet marker*/",
+           quoteNameFunc(type_name),
+           quoteValueFunc(guid));
+      }
+
+      internal static string GetInstertSql(string type_name, XmlElement item_node, string guid, IDataAccessLayer dataAccessLayer, string permissionId, Func<string, string> quoteNameFunc, Func<string, string> quoteValueFunc)
+      {
+          string id = item_node.SelectSingleNode("id").InnerText;
+          string created_on = item_node.SelectSingleNode("created_on").InnerText;
+          string keyed_name = item_node.SelectSingleNode("keyed_name").InnerText;
+          return string.Format(CultureInfo.InvariantCulture, "INSERT INTO {0} ([ID], [CONFIG_ID], [IS_CURRENT], [CREATED_ON], [CREATED_BY_ID], [KEYED_NAME], [PERMISSION_ID], [SP_GUID]) VALUES ('{1}','{2}','1','{3}','{4}','{5}','{6}', '{7}')",
+             quoteNameFunc(type_name),
+             quoteValueFunc(id),
+             quoteValueFunc(id),
+             quoteValueFunc(created_on),
+             quoteValueFunc(dataAccessLayer.GetUserID()),
+             quoteValueFunc(keyed_name),
+             quoteValueFunc(permissionId),
+             quoteValueFunc(guid));
+      }
+
+      /// <summary>
+      /// Adds record to database table
+      /// </summary>
+      /// <param name="type_name">SharePoint generated type name.</param>
+      /// <param name="item_node">XmlElement with Innovator document definition.</param>
+      internal static void AddRecordToTable(string type_name, XmlElement item_node, IDataAccessLayer dataAccessLayer, string permissionId, Func<string, string> quoteNameFunc, Func<string, string> quoteValueFunc)
+      {
+        type_name = type_name.ToUpper(CultureInfo.InvariantCulture).Replace(' ', '_');
+        string guid = item_node.SelectSingleNode("sp_guid").InnerText;
+        string sql = GetSPDocumentSql(type_name, guid, quoteNameFunc, quoteValueFunc);
+        Item sql_result = dataAccessLayer.ApplySQL(sql);
+        if (!sql_result.isError() && sql_result.getItemCount() <= 0)
+        {
+           sql = GetInstertSql(type_name, item_node, guid, dataAccessLayer, permissionId, quoteNameFunc, quoteValueFunc);
+           dataAccessLayer.ApplySQL(sql);
+        }
+      }
+
+
+      /// <summary>
+      /// Get required document fields.
+      /// </summary>
+      /// <returns>List of SPDocuments.</returns>
+      private ArrayList GetRequiredFields()
+      {
+        ArrayList result = new ArrayList();
+
+        string[] asked_props = null;
+        XmlAttribute sattr = _request.DocumentElement.Attributes["select"];
+        string select_attr = (sattr == null ? null : sattr.Value);
+        if (select_attr != null && select_attr.Trim() != "*")
+          asked_props = select_attr.Split(',');
+
+        Item fdefs = _doclib_def.getRelationships("SPField");
+        int fieldsCount = fdefs.getItemCount();
+        if (fieldsCount < 1)
+          throw new Exception("Can't get SPFields for '" + _request.DocumentElement.Attributes["type"].Value + "' ItemType.");
+        for (int i = 0; i < fieldsCount; i++)
+        {
+          Item field = fdefs.getItemByIndex(i);
+          string inn_name = field.getProperty("property_name");
+          string sp_name = field.getProperty("sp_field_name");
+          string inn_keyed_order = field.getProperty("property_keyed_order");
+
+          bool found = false;
+          if (asked_props != null)
+          {
+            for (int j = 0; j < asked_props.Length; j++)
+            {
+              if (inn_name == asked_props[j])
+              {
+                found = true;
+                break;
+              }
+            }
+          }
+          else
+          {
+            found = true;
+          }
+
+          // Even if a standard field is not in the "select" bring it anyway
+          // Same about fields that are required for "keyed_name" of the returned items
+          if (!found && ((inn_keyed_order != null && inn_keyed_order.Trim().Length > 0) || _doclib.GetField(sp_name).IsStandard))
+            found = true;
+
+          if (found)
+          {
+            result.Add(_doclib.GetField(sp_name));
+          }
+        }
+        return result;
+      }
+
+
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <returns></returns>
+      private string[] GetKeyedFieldsInOrder()
+      {
+        SortedList slist = new SortedList();
+
+        Item fdefs = _doclib_def.getRelationships("SPField");
+        int fcount = fdefs.getItemCount();
+        for (int i = 0; i < fcount; i++)
+        {
+          Item field = fdefs.getItemByIndex(i);
+          string inn_keyed_order = field.getProperty("property_keyed_order");
+          if (inn_keyed_order != null && inn_keyed_order.Trim().Length > 0)
+          {
+            slist.Add(Int32.Parse(inn_keyed_order, CultureInfo.InvariantCulture), field.getProperty("sp_field_name"));
+          }
+        }
+
+        if (slist.Count == 0)
+          return null;
+        else
+        {
+          string[] result = new string[slist.Count];
+          for (int j = 0; j < slist.Count; j++)
+          {
+            result[j] = (string)slist.GetByIndex(j);
+          }
+          return result;
+        }
+      }
+
+
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="request"></param>
+      /// <returns></returns>
+      private static XmlElement PreprocessIDs(XmlElement request)
+      {
+        // If request contains ID they have to be converted into SP GUID
+        XmlNode idnode = request.SelectSingleNode("id");
+        if (idnode == null)
+        {
+          // If "id" property is not found then check if "id" attribute is set
+          // If yes, then create "id" property as converter from AML to CAML assumes
+          // that condition is specified by AML properties only.
+          XmlAttribute id_attr = request.Attributes["id"];
+          if (id_attr != null && id_attr.Value.Trim().Length > 0)
+          {
+            XmlElement id_elem = request.OwnerDocument.CreateElement("id");
+            id_elem.InnerText = id_attr.Value.Trim();
+            request.AppendChild(id_elem);
+            idnode = id_elem;
+          }
+        }
+
+        if (idnode != null)
+        {
+          string idval = idnode.InnerText;
+          idnode.InnerText = "{" + idval.Substring(0, 8) + "-" + idval.Substring(8, 4) + "-" +
+            idval.Substring(12, 4) + "-" + idval.Substring(16, 4) + "-" + idval.Substring(20, 12) + "}";
+        }
+
+        return request;
+      }
+
+
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="useDedicated"></param>
+      private void SetSPSiteAndLib(bool useDedicated)
+      {
+        // URL
+        string site_url = _doclib_def.getProperty("sp_site_url");
+
+        Aras.Tools.SPConnector spc = null;
+        if (!useDedicated)
+        {
+          System.Net.ICredentials cred = CredentialCache.DefaultCredentials;
+          spc = new Aras.Tools.SPConnector(site_url, cred);
+        }
+        else
+        {
+          // Need to get credentials from db directly
+          string query = String.Format(CultureInfo.InvariantCulture, "SELECT [SP_USER], [SP_PASSWORD], [SP_DOMAIN] FROM {0} WHERE [DOC_TYPE_NAME]='" +
+			  _CCO.DB.InnDatabase.QuoteValue(_doclib_def.getProperty("doc_type_name")) + "'", _CCO.DB.InnDatabase.GetTableName("SPDocumentLibraryDefinition"));
+          Aras.Server.Core.InnovatorDataSet ds = _CCO.DB.InnDatabase.ExecuteSelectCommand(query);
+          if (ds.RowsNumber != 1)
+          {
+            throw new Exception("DataType has more than one definitions with the same name.");
+          }
+          ds.MoveFirst();
+
+          System.Net.NetworkCredential cred = new System.Net.NetworkCredential();
+          cred.UserName = ds["sp_user"].ToString();
+          cred.Password = ds["sp_password"].ToString();
+          cred.Domain = ds["sp_domain"].ToString();
+
+          spc = new Aras.Tools.SPConnector(site_url, cred);
+        }
+        if (spc == null)
+          throw new Exception("Could not create SharePoint Connector.");
+
+        // Set SharePoint site
+        _site = spc.GetSite(site_url);
+        if (_site == null)
+          throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "SharePoint site with URL '{0}' not found.", site_url));
+
+        // Document library ID
+        string doclib_id = _doclib_def.getProperty("sp_doclib_id");
+        // Set SharePoint document library 
+        _doclib = _site.GetDocumentLibrary(doclib_id);
+        if (_doclib == null)
+        {
+          if (_auth_type == Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationPreferred && !useDedicated)
+            throw new WebException("Unauthorized");
+          else
+            throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "SharePoint document library with ID={0} not found.", doclib_id));
+        }
+      }
+
+
+      /// <summary>
+      /// Gets SharePoint Document Library Permission ID
+      /// </summary>
+      private void GetSPPermissionID()
+      {
+        Item spp_req = _inn.newItem();
+        spp_req.loadAML("<Item type='Permission' action='get' select='id'><name>SP Document Permission</name></Item>");
+
+        Item response = spp_req.apply();
+        if (response.isError())
+          throw new Exception("Could not find permission with name 'SP Document Permission'.");
+
+        _sp_permission_id = response.getID();
+      }
+
+
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="caml_query">XmlDocument</param>
+      /// <param name="pageNumber">int</param>
+      /// <param name="pageSize">int</param>
+      /// <param name="maxRows">int</param>
+      /// <returns>string</returns>
+      private string InitSessionPagination(XmlDocument caml_query, int pageNumber, int pageSize, int maxRows)
+      {
+        string camlq = (caml_query == null ? "null" : caml_query.DocumentElement.OuterXml);
+
+        string request_key = string.Format(CultureInfo.InvariantCulture, "{0}-{1}-{2}-{3}", _doclib.Id, camlq, pageSize, maxRows);
+        HttpSessionState session = HttpContext.Current.Session;
+
+        string paging_str = null;
+
+        Hashtable phash = (Hashtable)session[SP_PAGINATION];
+        if (pageSize > 0)
+        {
+          if (phash == null)
+          {
+            phash = new Hashtable();
+            session[SP_PAGINATION] = phash;
+          }
+
+          if (!phash.ContainsKey(request_key))
+          {
+            // The hash must always contains only one key
+            phash.Clear();
+            // If anything in the key changed but page number is not '1', then set it to '1'
+            // as we start from the scratch if anything in the key modified
+            pageNumber = 1;
+            phash.Add(request_key, new ArrayList());
+            session[SP_ALL_COUNT] = -1;
+          }
+
+          ArrayList pstrs = (ArrayList)phash[request_key];
+
+          if (pageNumber > 1)
+          {
+            if (pageNumber > pstrs.Count + 1)
+            {
+              // This needs more parameters to call SPDocumentLibrary.GetDocuments(...)
+              //_skipPages(pstrs, pageNumber - 1);
+              throw new Exception("Can't skip pages (previous page(s) was not retrieved).");
+            }
+
+            paging_str = (string)pstrs[pageNumber - 2];
+          }
+        }
+
+        return paging_str;
+      }
+
+
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="pageNumber">int</param>
+      /// <param name="pstr">string</param>
+      /// <param name="all_count">int</param>
+      private static void UpdateSessionPagination(int pageNumber, string pstr, int all_count)
+      {
+        if (pstr != null)
+        {
+          Hashtable phash = (Hashtable)HttpContext.Current.Session[SP_PAGINATION];
+          IEnumerator venum = phash.Values.GetEnumerator();
+          if (venum.MoveNext())
+          {
+            // If currently it's page N, then stored pagination string is for the next page (N+1).
+            // In general: pagination string for page #2 is stored in element with index 0; page #3 with index 1; etc.
+            int indx = pageNumber - 1;
+
+            ArrayList pstrs = (ArrayList)venum.Current;
+            if (indx > pstrs.Count)
+              throw new Exception("Can't skip pages (previous page(s) was not retrieved).");
+            else if (indx == pstrs.Count)
+              pstrs.Add(pstr);
+          }
+          else
+          {
+            // This actually shouldn't happen ever !!!
+            throw new Exception("Pagination hash on the session contains more than one entry.");
+          }
+        }
+
+        if (all_count > 0)
+          HttpContext.Current.Session[SP_ALL_COUNT] = all_count;
+      }
+
+
+      /// <summary>
+      /// Convert date property from SharePoint to neutral fromat.
+      /// </summary>
+      /// <param name="utcDt">string</param>
+      /// <returns>string</returns>
+      private string ConvertDatePropToNeutral(string utcDt)
+      {
+        return _inn.getI18NSessionContext().ConvertToNeutral(utcDt, "date", "yyyy-MM-ddTHH:mm:ssZ");
+      }]]></method_code>
+  <method_type>C#</method_type>
+  <name>SPDocument_onGet</name>
+ </Item>
+</AML>

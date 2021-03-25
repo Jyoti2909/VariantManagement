@@ -1,0 +1,39 @@
+﻿<AML>
+ <Item type="Method" id="226464C82E55422A962711F38467D902" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var nameField = getFieldByName('name');
+var effExpressionItemTypeIdField = getFieldByName('effs_expression_itemtype_id');
+
+function setFieldsVisibilityState(fields, state) {
+	fields.nameField.disabled = state.isNameReadOnly;
+	fields.nameField.style.display = state.isNameVisible ? '' : 'none';
+
+	fields.effExpressionItemTypeIdField.disabled = true;
+	fields.effExpressionItemTypeIdField.style.display = state.isNameVisible ? 'none' : '';
+}
+
+var fields = {
+	nameField: nameField,
+	effExpressionItemTypeIdField: effExpressionItemTypeIdField
+};
+
+var topWnd = aras.getMostTopWindowWithAras();
+var item = topWnd.item;
+var isTemp = item.getAttribute('isTemp') == '1';
+
+if (!isTemp) {
+	setFieldsVisibilityState(fields, {isNameVisible: false, isNameReadOnly: true});
+} else {
+	var effExpressionItemTypeId = aras.getItemProperty(item, 'effs_expression_itemtype_id');
+	if (effExpressionItemTypeId) {
+		setFieldsVisibilityState(fields, {isNameVisible: false, isNameReadOnly: true});
+	} else {
+		setFieldsVisibilityState(fields, {isNameVisible: true, isNameReadOnly: false});
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_ScopeItemTypeShowHideFields</name>
+ </Item>
+</AML>

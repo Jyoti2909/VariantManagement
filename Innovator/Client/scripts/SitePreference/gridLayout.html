@@ -1,0 +1,806 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2014. -->
+<html>
+<head>
+	<style type="text/css">
+		@import "../../javascript/dojo/resources/dojo.css";
+		@import "../../javascript/dijit/themes/claro/claro.css";
+		@import "../../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../../javascript/dojox/form/resources/CheckedMultiSelect.css";
+		@import "../../javascript/include.aspx?classes=common.css";
+
+		.toolbar {
+			border-bottom: 0px !important;
+		}
+		#toolbarContainer {
+			position:absolute;
+			top:0px;
+			height:30px;
+			width: 100%;
+		}
+		#gridTD {
+			position:absolute;
+			top:30px;
+			bottom:0px;
+			width: 100%;
+		}
+	</style>
+	<script>
+        var aras = a = parent.aras;
+	</script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js"
+		data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=XmlDocument"></script>
+	<script>
+		var grid,
+			toolbar,
+			realIds = {};
+
+		var spItem; // site preference item
+		var spId;
+
+		var editingCell = {};
+		var xmlBase = a.getScriptsURL() + "SitePreference/";
+		var lastGLNameNum = 0; // = NN of column_NN - name of new not system grid layout
+
+		var props = {};
+		props["0"] = "position";
+		props["1"] = "label";
+		props["2"] = "width";
+		props["3"] = "row_type";
+		props["4"] = "data_source";
+
+		var cols = {};
+		cols["position"] = "0";
+		cols["label"] = "1";
+		cols["width"] = "2";
+		cols["row_type"] = "3";
+		cols["data_source"] = "4";
+
+		var uniCache = { propsDom: { wbs: null, act: null} };
+
+		var copyBuffer = { item: null, action: null, copyAction: null, id: null };
+
+		var gridLayoutName = "PM_ProjectGridLayout";
+		var colDescrName = "PM_ProjectColumnDescription";
+
+		var onload_handler = function () {
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.ToolBar", { id: "bom_toolbar", connectId: "toolbarContainer" }, function (control) {
+				toolbar = control;
+				clientControlsFactory.on(toolbar, {
+					"onClick": onclickToolbarButton
+				});
+				initToolbar();
+			});
+
+			spItem = parent.item;
+			spId = spItem.getAttribute("id");
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.TreeGridContainer", { canEdit_Experimental: canEditCell }, function (control) {
+				treeGrid = control;
+				treeGrid.setMultiselect(false);
+				clientControlsFactory.on(treeGrid, {
+					"gridClick": onGridClick,
+					"onStartEdit_Experimental": onStartEdit,
+					"onApplyEdit_Experimental": onFinishEdit
+				});
+				treeGrid.selectedCol;
+				initTree();
+				loadExcelTable();
+				treeGrid.grid_Experimental.resize();
+			});
+		}
+
+		function initToolbar() {
+			toolbar.loadXml(aras.getI18NXMLResource("gridLayout_toolbar.xml", aras.getScriptsURL() + "SitePreference/"));
+			toolbar.show();
+			toolbar.showLabels(aras.getPreferenceItemProperty("Core_GlobalLayout", null, "core_show_labels") == 'true');
+		}
+
+		window.addEventListener("load", onload_handler);
+		window.addEventListener("keydown", function (ev) {
+			ev = ev || window.event;
+			onKeyPressed(ev);
+		});
+
+		// ==================================================================================================================
+		function onGridClick(rowId, column) {
+			treeGrid.selectedCol = column;
+
+			if (!treeGrid.isEditing_Experimental()) {
+				updateControls(rowId, column);
+			}
+		}
+
+		function _canEditForDataSource(rowId, colId, colName) {
+			updateControls(false);
+			editingCell.val = treeGrid.items_Experimental.get(rowId, 'value', colName);
+			editingCell.rowId = rowId;
+			editingCell.colId = colId;
+			editDataSource(rowId);
+		}
+
+		function canEditCell(rowId, colName) {
+			if (!parent.isEditMode) return false;
+			var colId = treeGrid.columns_Experimental.get(colName, "index");
+			var isDataSourceCell = (String(colId) === cols["data_source"]);
+			if (isDataSourceCell) {
+				_canEditForDataSource(rowId, colId, colName);
+				return false;
+			}
+			var isSystemChild = (treeGrid.cells(rowId, colId).cell_Experimental.parent[0] + ':system' == rowId);
+			if (isSystemChild) return false;
+			var isHaveParent = !(treeGrid.cells(rowId, colId).cell_Experimental.parent[0].length == 0);
+			var isSystem = isItemSystem(getItemByCell(rowId, colId));
+			var rowTypeValue = (colId == 4) ? treeGrid.items_Experimental.get(rowId, 'value', aras.getResource("", "gridlayout.itemtype")) : '';
+			if ((isHaveParent && (colId == 3 || (rowTypeValue != ''))) || (!isHaveParent && (colId < 3))) return true;
+			return false;
+		}
+
+		function initTree() {
+			if (spItem.selectSingleNode("Relationships/Item[@type='" + gridLayoutName + "']")) return;
+
+			var xml =
+				'<Item type="Preference" action="get" select="id" id="' + spId + '">' +
+				'  <Relationships>' +
+				'    <Item type="' + gridLayoutName + '" action="get" select="name,label,position,width,is_system">' +
+				'      <Relationships>' +
+				'        <Item type="' + colDescrName + '" select="row_type,data_source" />' +
+				'      </Relationships>' +
+				'    </Item>' +
+				'  </Relationships>' +
+				'</Item>';
+
+			var res = a.applyItem(xml);
+			var resDom = a.createXMLDocument();
+
+			resDom.loadXML(res);
+			var rootItem = resDom.selectSingleNode("//Item");
+
+			var spRelationships = spItem.selectSingleNode("Relationships");
+			if (!spRelationships) spRelationships = spItem.appendChild(spItem.ownerDocument.createElement("Relationships"));
+
+			var gridLayoutNodes = rootItem.selectNodes("Relationships/Item");
+
+			for (var i = 0; i < gridLayoutNodes.length; i++) {
+				var glNode = gridLayoutNodes[i];
+				spRelationships.appendChild(glNode);
+			}
+		}
+
+		function loadExcelTable() // XML load to excel applet
+		{
+			var tableGrid = { value: "", rowNo: 0, itemsDict: {} };
+			tableGrid.add = function (val) { this.value += val }
+			tableGrid.nextRowNo = function () {
+				this.rowNo++;
+				return this.rowNo;
+			}
+			tableGrid.returnItemByNumberOfPosition = function (number, itemsList, maxNumber) {
+				if (this.itemsDict[number]) return this.itemsDict[number];
+				for (var n = (number - 1); n < maxNumber; n++) {
+					var nextItem = itemsList[n];
+					var position = aras.getItemProperty(nextItem, "position");
+					if (position == number)
+						return nextItem;
+					else
+						this.itemsDict[position] = nextItem;
+				}
+			}
+			tableGrid.addChildRowSystem = function (id, isSystemValue) {
+				this.value += '<tr id="' + id + ':system" pid="' + id + '" level="1">' +
+					'<td /><td /><td />' +
+					'<td>' + isSystemValue + '</td>' +
+					'<td />' +
+					'</tr>';
+			}
+			tableGrid.addChildRow = function (pid, pmPCDItem) {
+				var rowType = aras.getItemProperty(pmPCDItem, "row_type", "");
+				var id = pmPCDItem.getAttribute("id");
+				var dataSource = aras.getItemProperty(pmPCDItem, "data_source", "");
+				this.value += '<tr id="' + id + '" pid="' + pid + '" level="1">' +
+					'<td /><td /><td />' +
+					'<td>' + rowType + '</td>' +
+					'<td>' + dataSource + '</td>' +
+					'</tr>';
+			}
+			tableGrid.addRootRow = function (pmPGLItem) {
+				var id = pmPGLItem.getAttribute("id");
+				var position = aras.getItemProperty(pmPGLItem, "position", "0");
+				var label = aras.getItemProperty(pmPGLItem, "label", "");
+				var width = aras.getItemProperty(pmPGLItem, "width", "");
+				var isSystem = aras.getItemProperty(pmPGLItem, "is_system");
+				this.add('<tr id="' + id + '" position ="' + position + '" level="0">' +
+					'<td>' + this.nextRowNo() + '</td>' +
+					'<td>' + aras.escapeXMLAttribute(label) + '</td>' +
+					'<td>' + aras.escapeXMLAttribute(width) + '</td>' +
+					'<td /><td />');
+				if (isSystem == 1) {
+					var isSystemValue = "System(" + aras.getItemProperty(pmPGLItem, "name", "") + ")";
+					this.addChildRowSystem(id, isSystemValue);
+				} else {
+					var pmProjectColumnDescriptionItems = pmPGLItem.selectNodes("Relationships/Item[@type='" + colDescrName + "'][not(@action='delete')]");
+					var pmPCDItemsLength = pmProjectColumnDescriptionItems.length;
+					for (var j = 0; j < pmPCDItemsLength; j++) {
+						tableGrid.addChildRow(id, pmProjectColumnDescriptionItems[j]);
+					}
+				}
+				this.add('</tr>');
+			}
+
+			tableGrid.add('<?xml version="1.0" encoding="utf-8"?> ' +
+				'<table font="Microsoft Sans Serif-8" sel_bgColor="steelbue" sel_TextColor="white" header_BgColor="buttonface" expandroot="true" expandall="false" treelines="1" editable="true" draw_grid="true" multiselect="true" column_draggable="false" enableHtml="false" enterAsTab="false" bgInvert="true" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:aras="http://www.aras.com" xmlns:usr="urn:the-xml-files:xslt">' +
+				'<thead>' +
+				'  <th align="c">' + aras.getResource("", "gridlayout.position") + '</th>' +
+				'  <th align="c">' + aras.getResource("", "gridlayout.label") + '</th>' +
+				'  <th align="c">' + aras.getResource("", "gridlayout.width") + '</th>' +
+				'  <th align="c">' + aras.getResource("", "gridlayout.itemtype") + '</th>' +
+				'  <th align="c">' + aras.getResource("", "gridlayout.property") + '</th>' +
+				'</thead>' +
+				'<columns>' +
+				'  <column order="0" width="50" align="left" edit="FIELD" />' +
+				'  <column order="1" width="120" align="left" edit="FIELD" />' +
+				'  <column order="2" width="100" align="left" edit="FIELD" />' +
+				'  <column order="3" width="160" align="left" edit="COMBO:0" />' +
+				'  <column order="4" width="140" align="left" edit="NOEDIT" />' +
+				'</columns>' +
+				'<list id="0">' +
+				'<listitem value="" label="" />' +
+				'<listitem value="wbs" label="WBS Element" />' +
+				'<listitem value="act" label="Activity" />' +
+				'<listitem value="mil" label="Milestone" />' +
+				'</list>');
+
+			var pmProjectGridLayoutItems = spItem.selectNodes("//Item/Relationships/Item[@type='" + gridLayoutName + "'][not(@action='delete')]");
+
+			var maxCount = pmProjectGridLayoutItems.length;
+			for (var i = 0; i < maxCount; i++) {
+				var pmPGLItem = tableGrid.returnItemByNumberOfPosition((i + 1), pmProjectGridLayoutItems, maxCount);
+				tableGrid.addRootRow(pmPGLItem);
+			}
+			tableGrid.add('</table>');
+			treeGrid.InitXML(tableGrid.value);
+			treeGrid.expandAll(true);
+			updateControls();
+		}
+
+		// END OF INIT PROCEDURES
+		/*
+		updateControls:
+		there are two versions
+		updateControls(string,string) - updates controls depending on cell selection
+		updateControls(bool) - set all controlls to bool
+		*/
+
+		function updateControls(rowId, colId) {
+			var enableAll = false;
+
+			var flg = {
+				'insert_below': false,
+				'insert_above': false,
+				'delete': false,
+				'cut': false,
+				'copy': false,
+				'paste': false
+			};
+
+			if (parent.isEditMode) {
+				if (rowId && typeof (colId) == "number") {
+					flg['insert_below'] = true;
+					flg['insert_above'] = true;
+					if (copyBuffer.item) {
+						flg['paste'] = true;
+					}
+					if (!isItemSystem(getItemById(rowId))) {
+						flg['delete'] = true;
+						if (!copyBuffer.item) {
+							flg['cut'] = true;
+							flg['copy'] = true;
+						}
+					}
+					else {
+						if (parseInt(colId, 10) > 2) {
+							flg['insert_below'] = false;
+							flg['insert_above'] = false;
+						}
+					}
+				}
+				else {
+					if (typeof (rowId) == "boolean") // overload : updateControls(bool)
+					{
+						enableAll = rowId;
+					}
+				}
+			}
+
+			for (var btnName in flg) {
+				setControlEnabled(btnName, enableAll ? true : flg[btnName]);
+			}
+		}
+
+		function onStartEdit(rowId, colName) {
+			var r = onCellEdit_implementation(0, rowId, treeGrid.columns_Experimental.get(colName, 'index'), colName);
+			return r;
+		}
+
+		function onFinishEdit(rowId, colName) {
+			var r = onCellEdit_implementation(2, rowId, treeGrid.columns_Experimental.get(colName, 'index'), colName);
+			return r;
+		}
+
+		function onCellEdit_implementation(mode, rowId, colId, colName) {
+			var val = treeGrid.items_Experimental.get(rowId, 'value', colName);
+			switch (mode) {
+				case 0:
+					updateControls(false);
+					editingCell.val = val;
+					editingCell.rowId = rowId;
+					editingCell.colId = colId;
+					break;
+				case 2:
+					updateControls(rowId, colId);
+					var bNeedToReloadExcel = false;
+					var prevVal = editingCell.val;
+					editingCell = {};
+					if (val == prevVal) return;
+					switch (String(colId)) {
+						case cols["position"]: // position
+							if (val.search(/\D/) != -1) {
+								setVal(rowId, colId, prevVal);
+								return true;
+							}
+							val = parseInt(val, 10);
+							prevVal = parseInt(prevVal, 10);
+							var glItemsCount = getRowsCount();
+							if (val > glItemsCount) {
+								val = glItemsCount;
+								setVal(rowId, colId, val);
+							}
+							else if (val < 1) {
+								val = 1;
+								setVal(rowId, colId, val);
+							}
+							if (val != prevVal) {
+								if (val < prevVal) {
+									changePosition(val, prevVal - 1, 1);
+								}
+								else {
+									changePosition(prevVal + 1, val, -1);
+								}
+
+								setVal(rowId, colId, val);
+
+								bNeedToReloadExcel = true;
+							}
+							break;
+						case cols["label"]: // label
+						case cols["width"]: // width
+							setVal(rowId, colId, val);
+							break;
+						case cols["row_type"]: // row_type
+							setVal(rowId, cols["data_source"], "", !bNeedToReloadExcel);
+							setVal(rowId, colId, val);
+							break;
+					}
+					if (bNeedToReloadExcel) repaintExcel();
+					return true;
+					break;
+			}
+		}
+
+		function setVal(rowId, colId, val, bNeedToUpdateCell) {
+			var itemNode = getItemByCell(rowId, colId);
+			setProp(itemNode, props[colId], val + "");
+			if (bNeedToUpdateCell) {
+				var cell = treeGrid.cells(rowId, colId);
+				cell.setValue(val);
+			}
+		}
+
+		function getRowsCount() {
+			return spItem.selectNodes("Relationships/Item[@type='" + gridLayoutName + "'][not(@action='delete')]").length;
+		}
+
+		function getNextGLName() {
+			do {
+				lastGLNameNum++;
+				var customGL = spItem.selectSingleNode("Relationships/Item[@type='" + gridLayoutName + "'][not(@action='delete')][not(is_system='1')][name='column_" + lastGLNameNum + "']");
+			} while (customGL);
+			return "column_" + lastGLNameNum;
+		}
+
+		function getRealId(rowId, colId) {
+			if (colId < 3) return rowId;
+			else {
+				var pItem = getItemById(rowId);
+				if (isItemSystem(pItem)) return rowId;
+				else {
+					if (realIds[rowId]) return realIds[rowId];
+					else return rowId;
+				}
+			}
+		}
+
+		function getItemById(id, includeDeleted) {
+			var tid = id.replace(":system", "");
+			var cond = "[not(@action='delete')]";
+			if (includeDeleted) cond = "";
+			var retItem = spItem.selectSingleNode("descendant::Item" + cond + "[@id='" + tid + "']");
+			if (!retItem) {
+				a.AlertError(aras.getResource("", "gridlayout.err_cannot_find_item_id", tid));
+				return false;
+			}
+			return retItem;
+		}
+
+		function getItemByCell(rowId, colId) {
+			var id = getRealId(rowId, colId);
+			var retItem = getItemById(id);
+			return retItem;
+		}
+
+		function getGLItemById(id) // Returns GridLayout item node even if id belongs to ColumnDescription
+		{
+			var itemNode = getItemById(id);
+			return getGLItem(itemNode);
+		}
+
+		function getGLItem(itemNode) {
+			var type = itemNode.getAttribute("type");
+			if (type != gridLayoutName) itemNode = itemNode.selectSingleNode("ancestor::Item[@type='" + gridLayoutName + "']");
+			return itemNode;
+		}
+
+		function isItemSystem(itemNode) {
+			var itemNode = getGLItem(itemNode);
+			var is_system = a.getItemProperty(itemNode, "is_system");
+			return is_system == "1" ? true : false;
+		}
+
+		function getPropsDomByRowType(rowType) {
+			var dPar = "";
+			if (rowType == "wbs") {
+				dPar = "wbs";
+			}
+			else if (rowType == "act" || rowType == "mil") {
+				dPar = "act";
+			}
+
+			if (!uniCache.propsDom[dPar]) {
+				var queryFile = aras.getI18NXMLResource("query_" + dPar + ".xml", xmlBase);
+				var xmlDoc = a.createXMLDocument();
+				xmlDoc.load(queryFile);
+
+				var res = a.applyItem(xmlDoc.xml);
+
+				resDoc = a.createXMLDocument();
+				resDoc.loadXML(res);
+				uniCache.propsDom[dPar] = resDoc;
+			}
+			return uniCache.propsDom[dPar];
+		}
+
+		function editDataSource(rowId) {
+			var rowTypeCell = treeGrid.cells(rowId, cols["row_type"]);
+			var rowType = rowTypeCell.getValue();
+			if (rowType != "wbs" && rowType != "act" && rowType != "mil") return;
+
+			var param = {
+				title: "Property Selection Dialog",
+				aras: a,
+				propsDom: getPropsDomByRowType(rowType),
+				dialogWidth: 250,
+				dialogHeight: 600,
+				content: "SitePreference/propSelectTree.html"
+			};
+			var win = a.getMostTopWindowWithAras(window);
+			(win.main || win).ArasModules.Dialog.show("iframe", param).promise.then(function (res) {
+				if (res) {
+					var edItem = getItemByCell(rowId, cols["data_source"]);
+					setProp(edItem, "data_source", res);
+					var cell = treeGrid.cells(rowId, cols["data_source"]);
+					cell.setValue(res);
+				}
+				updateControls(rowId, cols["data_source"]);
+			});
+		}
+
+		function setEdit(itemNode) {
+			var action = itemNode.getAttribute("action");
+			if (!action) itemNode.setAttribute("action", "edit");
+		}
+
+		function setProp(itemNode, propName, propVal) {
+			setEdit(itemNode);
+			a.setItemProperty(itemNode, propName, propVal);
+		}
+
+		function setControlEnabled(ctrlName, b) {
+			if (b == undefined) b = true;
+			else b = Boolean(b);
+
+			try {
+				var tbi = toolbar.getActiveToolbar().getItem(ctrlName);
+				if (tbi) tbi.setEnabled(b);
+			} catch (excep) { }
+		}
+
+		function onclickToolbarButton(btn) {
+			var rowId = treeGrid.getSelectedID();
+			var colId = treeGrid.selectedCol;
+
+			var btnId = btn.getId();
+
+			switch (btnId) {
+				case "insert_below":
+					insertRow(rowId, colId, "below");
+					break;
+				case "insert_above":
+					insertRow(rowId, colId, "above");
+					break;
+				case "delete":
+					deleteRow(rowId, colId);
+					break;
+				case "cut":
+					cut(rowId, colId);
+					break;
+				case "copy":
+					copy(rowId, colId);
+					break;
+				case "paste":
+					paste(rowId, colId);
+					break;
+			}
+		}
+
+		function deleteRow(rowId, colId) {
+			var itemNode = getItemByCell(rowId, colId);
+			if (!itemNode) return;
+
+			if (realIds[rowId] && colId > 2) {
+				var cdItems = spItem.selectNodes("Relationships/Item[@type='" + gridLayoutName + "'][@id='" + rowId + "'][not(@action='delete')]/Relationships/Item[@type='" + colDescrName + "'][not(@action='delete')]");
+				if (cdItems.length == 1) {
+					var row_type = a.getItemProperty(itemNode, "row_type");
+					var data_source = a.getItemProperty(itemNode, "data_source");
+					if (!row_type && !data_source) return; // we don't need to delete empty column description
+					else {
+						a.setItemProperty(itemNode, "row_type", "");
+						a.setItemProperty(itemNode, "data_source", "");
+						repaintExcel();
+						return;
+					}
+				}
+			}
+
+			var type = itemNode.getAttribute("type");
+			var action = itemNode.getAttribute("action");
+			var position = a.getItemProperty(itemNode, "position");
+			var name = a.getItemProperty(itemNode, "name");
+			if (action == "add") {
+				itemNode.parentNode.removeChild(itemNode);
+			}
+			else {
+				a.setItemProperty(itemNode, "position", position); //Make itemNode "isDirty" (IR-007660)
+				itemNode.setAttribute("action", "delete");
+			}
+
+			if (type == gridLayoutName) // reOrder rows
+			{
+				changePosition(parseInt(position, 10), null, -1);
+				var curNameNum = parseInt(name.replace(/\D/g, ""), 10);
+				if (lastGLNameNum >= curNameNum) lastGLNameNum = curNameNum - 1;
+			}
+			repaintExcel();
+		}
+
+		function insertRow(rowId, colId, where) {
+			if (colId < 3) {
+				var thisItem = getItemById(rowId);
+				var pos = a.getItemProperty(thisItem, "position");
+				if (!pos) {
+					var pid = treeGrid.cells(rowId, colId).cell_Experimental.parent[0];
+					thisItem = getItemById(pid);
+					pos = a.getItemProperty(thisItem, "position");
+				}
+				switch (where) {
+					case "below":
+						pos = parseInt(pos, 10) + 1;
+						break;
+					case "above":
+						break;
+				}
+				changePosition(pos, null, 1);
+				var newGL = addGridLayout(pos);
+				addColumnDescription(newGL);
+			}
+			else {
+				var glItemNode = getGLItemById(rowId);
+				addColumnDescription(glItemNode);
+			}
+			repaintExcel();
+		}
+
+		function cut(rowId, colId) {
+			var itemNode = getGLItemById(rowId);
+			var action = itemNode.getAttribute("action");
+			var id = itemNode.getAttribute("id");
+			var position = a.getItemProperty(itemNode, "position");
+
+			copyBuffer.item = itemNode;
+			copyBuffer.action = action;
+			copyBuffer.copyAction = "cut";
+			copyBuffer.id = id;
+
+			if (action == "add") {
+				itemNode.parentNode.removeChild(itemNode);
+			}
+			else itemNode.setAttribute("action", "delete");
+
+			changePosition(parseInt(position, 10), null, -1);
+			var curNameNum = parseInt(name.replace(/\D/g, ""), 10);
+			if (lastGLNameNum >= curNameNum) lastGLNameNum = curNameNum - 1;
+
+			repaintExcel();
+		}
+
+		function copy(rowId, colId) {
+			var glItem = getGLItemById(rowId);
+			copyBuffer.item = glItem;
+			copyBuffer.copyAction = "copy";
+			updateControls(rowId, colId);
+		}
+
+		function paste(rowId, colId) {
+			var glItem = getGLItemById(rowId);
+			var position = a.getItemProperty(glItem, "position");
+			var spRel = spItem.selectSingleNode("Relationships");
+			var copiedItem;
+			if (copyBuffer.copyAction == "cut") {
+				if (copyBuffer.action == "add") {
+					copiedItem = copyBuffer.item;
+					spRel.appendChild(copiedItem);
+				}
+				else {
+					copiedItem = getItemById(copyBuffer.id, true);
+					if (copyBuffer.action != null) {
+						copiedItem.setAttribute("action", copyBuffer.action);
+					}
+					else if (copiedItem.getAttribute("action") == "delete") {
+						copiedItem.setAttribute("action", "edit");
+					}
+				}
+			}
+			else if (copyBuffer.copyAction == "copy") {
+				var copiedItem = copyData(copyBuffer.item, spRel);
+			}
+
+			function copyData(itemNodeFrom, whereNode, xpath) {
+				var itemNodeTo = a.newItem(itemNodeFrom.getAttribute("type"));
+				whereNode.appendChild(itemNodeTo);
+				if (!xpath) {
+					xpath = "*[local-name()='Relationships'";
+					for (var col in cols) {
+						xpath += " or local-name()='" + col + "'";
+					}
+					xpath += "]";
+				}
+				var childs = itemNodeFrom.selectNodes(xpath);
+				for (var i = 0; i < childs.length; i++) {
+					var child = childs[i];
+					if (child.tagName != "Relationships") {
+						itemNodeTo.appendChild(child.cloneNode(true));
+					}
+					else {
+						var itemNodeToRel = itemNodeTo.appendChild(child.cloneNode(false));
+						var rels = child.selectNodes("Item[not(@action='delete')]");
+						for (j = 0; j < rels.length; j++) {
+							var rel = rels[j];
+							copyData(rel, itemNodeToRel, xpath);
+						}
+					}
+				}
+				return itemNodeTo;
+			}
+
+			var name = getNextGLName();
+			changePosition(parseInt(position, 10) + 1, null, 1);
+			a.setItemProperty(copiedItem, "position", parseInt(position, 10) + 1);
+			a.setItemProperty(copiedItem, "name", name);
+
+			copyBuffer = { item: null, action: null, copyAction: null, id: null };
+
+			repaintExcel();
+		}
+
+		function repaintExcel() {
+			setTimeout(loadExcelTable, 10);
+		}
+
+		function changePosition(startPos, finishPos, inc) {
+			var cond = "";
+			if (finishPos) cond = "[position <= " + finishPos + "]";
+			var nodesToChange = spItem.selectNodes("Relationships/Item[@type='" + gridLayoutName + "'][not(@action='delete')][position >= " + startPos + "]" + cond);
+			for (var i = 0; i < nodesToChange.length; i++) {
+				var node = nodesToChange[i];
+				var prevPosition = a.getItemProperty(node, "position");
+				var newPosition = parseInt(prevPosition, 10) + inc;
+				newPosition += ""; // toString
+				setProp(node, "position", newPosition);
+			}
+		}
+
+		function addGridLayout(pos) {
+			var newItem = a.newItem(gridLayoutName);
+			setProp(newItem, "position", pos);
+			setProp(newItem, "name", getNextGLName())
+			var spRel = spItem.selectSingleNode("Relationships")
+			return spRel.appendChild(newItem);
+		}
+
+		function addColumnDescription(glItem) {
+			var cdRels = glItem.selectSingleNode("Relationships");
+			if (!cdRels) cdRels = glItem.appendChild(glItem.ownerDocument.createElement("Relationships"));
+			var newColDescr = a.newItem(colDescrName);
+			cdRels.appendChild(newColDescr);
+		}
+
+		function setEditMode() {
+			copyBuffer = { item: null, action: null, copyAction: null, id: null };
+			spItem = parent.item;
+			initTree();
+			loadExcelTable();
+		}
+
+		function setViewMode() {
+			spItem = parent.item;
+			initTree();
+			loadExcelTable();
+		}
+
+		function onKeyPressed(keyEvent) {
+			// +++ key codes
+			var k_F2 = 113;
+			// --- key codes
+			var keyCode = keyEvent.keyCode;
+
+			if (keyCode == k_F2) {
+				var colId = (editingCell ? editingCell.colId : "") + "";
+
+				if (colId == cols["label"]) {
+					const itm = getItemById(editingCell.rowId);
+					if (!itm) return;
+
+					const r = editingCell.rowId;
+					const c = editingCell.colId;
+					const propertyName = 'label';
+
+					aras.getItemPropertyTranslations(itm, propertyName)
+						.then(function(translations) {
+							const topWnd = aras.getMostTopWindowWithAras(window);
+
+							return topWnd.ArasCore.Dialogs.multiLingual(translations, {readOnly: !parent.isEditMode});
+						})
+						.then(function(updatedTranslations) {
+							const isUpdated = aras.setItemPropertyTranslations(
+								itm,
+								propertyName,
+								updatedTranslations
+							);
+							if (isUpdated) {
+								setVal(r, c, aras.getItemProperty(itm, 'label'), true);
+							}
+						});
+				} else if (colId == cols["data_source"]) {
+					editDataSource(editingCell.rowId);
+				}
+			}
+		}
+	</script>
+</head>
+<body class="claro" ondrop="return false;" ondragover="return false;" ondragenter="return false;">
+	<div id="toolbarContainer">
+	</div>
+	<div id="gridTD">
+	</div>
+</body>
+</html>

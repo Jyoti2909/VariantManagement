@@ -1,0 +1,49 @@
+﻿<AML>
+ <Item type="Method" id="6B16345BFED74CA3A5476D2F023C7E8C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[GvdGenerationSettingsDialog = function() {
+	this.aras = aras;
+	this.topWindow = this.aras.getMostTopWindowWithAras();
+	this.dialogArguments = parent.dialogArguments || this.topWindow.dialogArguments;
+	this.gvdId = this.dialogArguments.gvdId;
+
+	this.InitializeControls();
+};
+
+GvdGenerationSettingsDialog.prototype.InitializeControls = function() {
+	this.applyButton = document.getElementById(document.fieldsTab.generateButton);
+	this.applyButton.addEventListener('click', function() { this.Generate(); }.bind(this));
+
+	this.cancelButton = document.getElementById(document.fieldsTab.cancelButton);
+	this.cancelButton.addEventListener('click', function() { this.Close(); }.bind(this));
+
+	this.treatConnectorAsRelationshipInput = document.getElementById(document.fieldsTab.treatConnectorAsRelationship).querySelector('input');
+	this.treatConnectorAsRelationshipInput.checked = true;
+
+	this.generateViewCardsInput = document.getElementById(document.fieldsTab.generateViewCards).querySelector('input');
+	this.generateViewCardsInput.checked = true;
+};
+
+GvdGenerationSettingsDialog.prototype.Generate = function(value) {
+	let methodItem = this.aras.newIOMItem('Method', 'gn_GenerateGvdFromQd');
+	methodItem.setProperty('gvd_id', this.gvdId);
+	methodItem.setProperty('treat_relationship_as_connector', this.treatConnectorAsRelationshipInput.checked ? 1 : 0);
+	methodItem.setProperty('generate_default_view_cards', this.generateViewCardsInput.checked ? 1 : 0);
+	methodItem = methodItem.apply();
+	if (methodItem.isError()) {
+		this.aras.AlertError(methodItem);
+	}
+
+	this.Close();
+};
+
+GvdGenerationSettingsDialog.prototype.Close = function(value) {
+	this.dialogArguments.dialog.close(value);
+};
+
+GvdGenerationDialog = new GvdGenerationSettingsDialog();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>gn_GenerateGvdSettingsFormLoad</name>
+ </Item>
+</AML>

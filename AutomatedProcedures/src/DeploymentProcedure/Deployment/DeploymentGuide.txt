@@ -1,0 +1,62 @@
+﻿This file describes how to deploy the package to the existing Innovator instance.
+
+Prerequisites:
+1. Create a backup of existing CodeTree and database.
+	a. Open location where Innovator is (e. g. C:\Program Files (x86)\Aras) and copy Innovator folder to Innovator_BAK folder.
+	b. Open Microsoft SQL Server Management Studio and create a backup of using database (e. g. InnovatorSolutions)
+
+Installation:
+1. Unblock Deployment-Package-Content.zip if necessary. (Open properties and check 'Ublock' in the lower right corner)
+2. Unzip Deployment-Package-Content.zip to Deployment-Package-Content folder and ensure that path will not contain spaces.
+3. Open the InstanceTemplate.deploy.xml and fill it with appropriate values:
+	a. Database (Most of these values can be taken from InnovatorServerConfig.xml):
+		1. SqlServer - the name of the SQL server where the Innovator database is hosted.
+		2. DatabaseName - the name of the database where should we deploy our package.
+		3. InnovatorLogin – the SQL server login, which doesn’t have sa privileges, but has access to DatabaseName database. (Can be omitted if it’s an innovator)
+		4. InnovatorPassword – the password of InnovatorLogin.
+		5. InnovatorUrl – the URL to Innovator application.
+		6. PasswordOfRootInnovatorUser – the password of root user in the Innovator.
+	b. Innovator:
+		1. ServerName - the name of the server where this component is installed. (Can be omitted if it’s localhost)
+		2. InstallationPath – the path to the folder where this component is installed on the ServerName server. (e. g. C:\Program Files (x86)\Aras\Innovator\Innovator)
+		3. VirtualDirectoryPath – the web alias by which the component is accessible. Must begin with the '/' symbol.
+	c. SelfServiceReporting:
+		1. ServerName - the name of the server where this component is installed. (Can be omitted if it’s localhost)
+		2. InstallationPath – the path to the folder where this component is installed on the ServerName server. (e. g. C:\Program Files (x86)\Aras\Innovator\SelfServiceReporting)
+		3. VirtualDirectoryPath – the web alias by which the component is accessible. Must begin with the '/' symbol.
+	d. Vault:
+		1. ServerName - the name of the server where this component is installed. (Can be omitted if it’s localhost)
+		2. InstallationPath – the path to the folder where this component is installed on the ServerName server. (e. g. C:\Program Files (x86)\Aras\Innovator\VaultServer)
+		3. VirtualDirectoryPath – the web alias by which the component is accessible. Must begin with the '/' symbol.
+	e. Conversion:
+		1. ServerName - the name of the server where this component is installed. (Can be omitted if it’s localhost)
+		2. InstallationPath – the path to the folder where this component is installed on the ServerName server. (e. g. C:\Program Files (x86)\Aras\Innovator\ConversionServer)
+		3. VirtualDirectoryPath – the web alias by which the component is accessible. Must begin with the '/' symbol.
+	f. Agent:
+		1. ServerName – the name of the server where this component is installed. (Can be omitted if it’s localhost)
+		2. InstallationPath – the path to the folder where this component is installed on the ServerName server. (e. g. C:\Program Files (x86)\Aras\Innovator\AgentService)
+		3. ServiceName – the Windows service name on the ServerName server.
+	g. OAuth:
+		1. ServerName – the name of the server where this component is installed. (Can be omitted if it’s localhost)
+		2. InstallationPath – the path to the folder where this component is installed on the ServerName server. (e. g. C:\Program Files (x86)\Aras\Innovator\OAuthServerw)
+		3. VirtualDirectoryPath – the web alias by which the component is accessible. Must begin with the '/' symbol.
+		4. InnovatorUrl - the URL to Innovator application.
+	h. Package:
+		1. PathToDeploymentPackage - must be absolute path to unzipped Deployment-Package-Content folder from step 2.
+4. If you need to apply this package to more components you can add them to the components section. For example, we need to apply the package to one more Innovator web application,
+in that case we need to add the following lines to the components section:
+
+<components>
+  ...
+  <innovator id="Innovator2">
+    <ServerName>application-server.company.net</ServerName>
+    <InstallationPath>C:\Program Files (x86)\Aras\Innovator\Innovator</InstallationPath>
+    <VirtualDirectoryPath>/InnovatorServer</VirtualDirectoryPath>
+  </innovator>
+  ...
+</components>
+
+In that case deployment procedure will try to use AdminShare at application-server.company.net (\\application-server.company.net\c$\Program Files (x86)\Aras\Innovator\Innovator) to apply the package.
+5. Save InstanceTemplate.deploy.xml somewhere to be able to reuse it during next deployments. If this config doesn't contain sensitive data it can be commited in the repository.
+6. Run Deploy.bat.
+	a. Enter a path to the InstanceTemplate.deploy.xml you want to use for the deployment. (e. g. the file which was saved at step 5 during the previous deployment).

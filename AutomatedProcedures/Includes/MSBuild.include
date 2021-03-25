@@ -1,0 +1,59 @@
+﻿<project name="MSBuild">
+	<property name="MSBuild.Dir" value="${path::combine(environment::get-folder-path('ProgramFilesX86'), 'Microsoft Visual Studio\2019\BuildTools\MSBuild')}" />
+	<property name="MSBuild.exe" value="${path::combine(MSBuild.Dir, 'Current\Bin\MSBuild.exe')}" readonly="true" />
+	<property name="MSBuild.Default.Solution.Configuration" overwrite="false" value="Release" />
+
+	<!--
+		Target takes several parameters:
+		1) Path.To.Build.Logs - directory where log files will be written.
+		2) Path.To.VS.Solution - name of solution to compile (for example CompileAll.sln, AllTests.sln).
+		3) Solution.Configuration - Solution Configuration used by MSBuild (Debug or Release).
+	-->
+	<target name="BuildVsSolutionUsingMSBUILD" description="Builds Visual Studio solution using MSBUILD utility">
+		<property name="Additional.Arguments.For.MSBuild" value="/t:Build /p:DeployOnBuild=true" />
+		<call target="CallMSBuildWithParameters" />
+	</target>
+
+	<!--
+		Target takes several parameters:
+		1) Path.To.Build.Logs - directory where log files will be written.
+		2) Path.To.VS.Solution - name of solution to compile (for example CompileAll.sln, AllTests.sln).
+		3) Solution.Configuration - Solution Configuration used by MSBuild (Debug or Release).
+		4) Additional.Arguments.For.MSBuild - a string that contains command line agruments that will be appended to MSBuild default agruments.
+	-->
+	<target name="CallMSBuildWithParameters" depends="Validate.Microsoft.CodeAnalysis.Targets.Existence">
+		<property name="VS.Solution.File.Name" value="${path::get-file-name(Path.To.VS.Solution)}" />
+		<property name="Path.To.VS.Solution.Dir" value="${path::get-directory-name(Path.To.VS.Solution)}" />
+
+		<exec program="${Path.To.Nuget}"
+					commandline='restore "${Path.To.VS.Solution}"'
+					output="${Path.To.Build.Logs}\Nuget.${VS.Solution.File.Name}.log"
+					append="true" />
+
+		<property name="MsBuild.maxcpucount" value="/m" />
+		<property name="Solution.Configuration" value="${MSBuild.Default.Solution.Configuration}" if="${not property::exists('Solution.Configuration') or string::get-length(Solution.Configuration) == 0}" />
+		<property name="Path.To.Build.Log.File" value="${Path.To.Build.Logs}\msbuild.${VS.Solution.File.Name}.${datetime::get-ticks(datetime::now())}.log" />
+		<trycatch>
+			<try>
+				<!-- Since Microsoft.WebApplication.targets are not a part of standard MSBuild Tools. We get it from the Nuget.org and set VSToolsPath there -->
+				<setenv name="VSToolsPath" value="${path::combine(Path.To.Tools.Dir, 'MSBuild.Microsoft.VisualStudio.Web.targets\tools\VSToolsPath')}" />
+
+				<exec program="${MSBuild.exe}"
+					  commandline='"${Path.To.VS.Solution}" ${MsBuild.maxcpucount} /v:n /nologo /clp:ErrorsOnly /nodeReuse:False /flp:logfile="${Path.To.Build.Log.File}" /p:Configuration=${Solution.Configuration} /p:Platform="Any CPU" ${Additional.Arguments.For.MSBuild}'
+					  verbose="true" />
+			</try>
+			<finally>
+				<property name="Solution.Configuration" value="" />
+				<property name="Additional.Arguments.For.MSBuild" value="" />
+			</finally>
+		</trycatch>
+	</target>
+
+	<target name="Validate.Microsoft.CodeAnalysis.Targets.Existence">
+		<!-- Microsoft.CodeAnalysis.Targets existence validation -->
+		<property name="Path.To.Microsoft.CodeAnalysis.Targets" value="${path::combine(MSBuild.Dir, 'Microsoft\VisualStudio\v16.0\CodeAnalysis\Microsoft.CodeAnalysis.Targets')}" />
+		<echo message="Validating '${Path.To.Microsoft.CodeAnalysis.Targets}' existence..." />
+		<fail message="File '${Path.To.Microsoft.CodeAnalysis.Targets}' was not found. Ensure that 'Microsoft.VisualStudio.Component.Roslyn.LanguageServices' is installed. See 'AutomatedProcedures\PowershellScripts\SetupEnvironment.ps1'"
+			  if="${not file::exists(Path.To.Microsoft.CodeAnalysis.Targets)}" />
+	</target>
+</project>

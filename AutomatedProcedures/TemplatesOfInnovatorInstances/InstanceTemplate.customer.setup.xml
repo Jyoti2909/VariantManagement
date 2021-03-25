@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Instance configVersion="1.0">
+  <components>
+    <database id="Database" depends="Innovator SelfServiceReporting Vault Conversion Agent OAuth">
+      <SqlServer>${MSSQL.Server}</SqlServer>
+      <DatabaseName>${MSSQL.Database.Name}</DatabaseName>
+      <SaLogin>${MSSQL.SA.User}</SaLogin>
+      <SaPassword type="EnvironmentVariable">MSSQL.SA.Password</SaPassword>
+      <InnovatorLogin>${MSSQL.Innovator.User}</InnovatorLogin>
+      <InnovatorPassword type="EnvironmentVariable">MSSQL.Innovator.Password</InnovatorPassword>
+      <InnovatorRegularLogin>${MSSQL.Innovator.Regular.User}</InnovatorRegularLogin>
+      <InnovatorRegularPassword type="EnvironmentVariable">MSSQL.Innovator.Regular.Password</InnovatorRegularPassword>
+      <InnovatorUrl>${Innovator.Load.Balancer.Url}/${Name.Of.Innovator.Instance}</InnovatorUrl>
+    </database>
+    <innovator id="Innovator">
+      <ServerName>${Innovator.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\Innovator</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-Innovator</ApplicationPoolName>
+      <LicenseString type="EnvironmentVariable">Innovator.License.String</LicenseString>
+      <LicenseKey>${Innovator.License.Key}</LicenseKey>
+      <LicenseActivationKey>${Innovator.Activation.Key}</LicenseActivationKey>
+      <SmtpServer>${SMTP.Server}</SmtpServer>
+      <Protocol>${Innovator.Web.Protocol}</Protocol>
+      <Url>${Innovator.Load.Balancer.Url}/${Name.Of.Innovator.Instance}</Url>
+    </innovator>
+    <ssr id="SelfServiceReporting">
+      <ServerName>${Innovator.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\SelfServiceReporting</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/SelfServiceReporting</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-SelfServiceReporting</ApplicationPoolName>
+      <Protocol>${Innovator.Web.Protocol}</Protocol>
+      <Url>${Innovator.Load.Balancer.Url}/${Name.Of.Innovator.Instance}/SelfServiceReporting</Url>
+    </ssr>
+    <vault id="Vault">
+      <ServerName>${Vault.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Vault}\VaultServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/Vault</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-Vault</ApplicationPoolName>
+      <PathToVaultFolder>${Path.To.Vault.Share}\VaultFolder</PathToVaultFolder>
+      <Protocol>${Vault.Web.Protocol}</Protocol>
+      <Url>${Vault.Load.Balancer.Url}/${Name.Of.Innovator.Instance}/Vault</Url>
+    </vault>
+    <conversion id="Conversion">
+      <ServerName>${Conversion.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Conversion}\ConversionServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/ConversionServer</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-Conversion</ApplicationPoolName>
+      <Protocol>${Conversion.Web.Protocol}</Protocol>
+      <Url>${Conversion.Load.Balancer.Url}/${Name.Of.Innovator.Instance}/ConversionServer</Url>
+      <OAuthCertificateName>ConversionServer</OAuthCertificateName>
+      <OAuthCertificatesTemplateDir>ConversionServer\App_Data\Certificates</OAuthCertificatesTemplateDir>
+      <OAuthConfigTemplateFile>ConversionServer\OAuth.config</OAuthConfigTemplateFile>
+      <OAuthConfigCertificatePasswordXpath>/oauth/client/secret/certificate/@password</OAuthConfigCertificatePasswordXpath>
+      <IsOAuthPublicCertificateRequired>true</IsOAuthPublicCertificateRequired>
+      <CodeTreeTemplatesDir>ConversionServer</CodeTreeTemplatesDir>
+    </conversion>
+    <agent id="Agent">
+      <ServerName>${Agent.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.Agent}\AgentService</InstallationPath>
+      <ServiceName>${Agent.Service.Name}</ServiceName>
+      <Url>${Agent.Load.Balancer.Url}</Url>
+      <DoStartOnSetup>true</DoStartOnSetup>
+    </agent>
+    <oauth id="OAuth">
+      <ServerName>${OAuth.Server.IP}</ServerName>
+      <InstallationPath>${Path.To.Installed.OAuth}\OAuthServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/OAuthServer</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-OAuth</ApplicationPoolName>
+      <Protocol>${OAuth.Web.Protocol}</Protocol>
+      <Url>${OAuth.Load.Balancer.Url}/${Name.Of.Innovator.Instance}/OAuthServer</Url>
+    </oauth>
+  </components>
+  <setup components="Database, Innovator, SelfServiceReporting, Vault, Conversion, Agent, OAuth" />
+  <link>
+    <oauth2innovator oauth="OAuth" innovator="Innovator" />
+    <database2innovator database="Database" innovator="Innovator" />
+    <database2ssr database="Database" ssr="SelfServiceReporting" />
+    <agent2innovator agent="Agent" innovator="Innovator" />
+    <vault2database vault="Vault" database="Database" />
+    <database2agent database="Database" agent="Agent" />
+    <conversion2database conversion="Conversion" database="Database" />
+  </link>
+</Instance>

@@ -1,0 +1,63 @@
+﻿<AML>
+ <Item type="Method" id="C4469A9A99A3442B8E08DEAD8CC4FC83" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var crawlerItem = this.newItem('ES_Crawler', 'get');
+crawlerItem.setID(this.getID());
+crawlerItem.setAttribute('select', 'crawler_state');
+crawlerItem = crawlerItem.apply();
+
+if (!crawlerItem.isError()) {
+	if (crawlerItem.getProperty('crawler_state', '') !== 'Active') {
+		this.setProperty('crawler_state', 'Active');
+
+		var crawlerStateItem = this.newItem('ES_CrawlerState', 'get');
+		crawlerStateItem.setProperty('source_id', this.getID());
+		crawlerStateItem = crawlerStateItem.apply();
+
+		if (!crawlerStateItem.isError() && crawlerStateItem.getItemCount() === 0) {
+			crawlerStateItem = this.newItem('ES_CrawlerState', 'add');
+			crawlerStateItem.setProperty('source_id', this.getID());
+			crawlerStateItem = crawlerStateItem.apply();
+		}
+
+		if (!crawlerStateItem.isError() && crawlerStateItem.getItemCount() === 1) {
+			crawlerStateItem.setProperty('current_action', 'Restart');
+			crawlerStateItem.setProperty('next_action', '');
+			crawlerStateItem.setProperty('ca_start', '');
+			crawlerStateItem.setProperty('ca_finish', '');
+			crawlerStateItem.setProperty('currently_processed', '0');
+			crawlerStateItem.setProperty('is_iteration_finished', '0');
+			crawlerStateItem.setProperty('total_to_process', '0');
+			crawlerStateItem.setProperty('has_errors', '0');
+
+			var iLockStatus = crawlerStateItem.getLockStatus();
+
+			if (iLockStatus === 0) {
+				crawlerStateItem.apply('edit');
+			}
+
+			if (iLockStatus === 1) {
+				crawlerStateItem.apply('update');
+			}
+		}
+
+		var iLockStatus = this.getLockStatus();
+
+		if (iLockStatus === 0) {
+			this.apply('edit');
+		}
+
+		if (iLockStatus === 1) {
+			this.apply('update');
+		}
+	} else {
+		aras.AlertError('Crawler has already been enabled');
+	}
+} else {
+	aras.AlertError(crawlerState.getErrorString());
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_EnableCrawler</name>
+ </Item>
+</AML>

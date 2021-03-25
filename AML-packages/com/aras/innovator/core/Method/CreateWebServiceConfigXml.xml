@@ -1,0 +1,212 @@
+﻿<AML>
+ <Item type="Method" id="AB7F1EEA48D149778B4C257367FC076C" action="add">
+  <comments>Creates xml configuration for the specified WSConfiguration</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+//MethodTemplateName=CSharpInOut;
+if (InnovatorServerASP == null) 
+  throw new ArgumentNullException("InnovatorServerASP");
+Innovator inn = new Innovator( InnovatorServerASP );
+WSConfigGenerator wscg = new WSConfigGenerator( inn, InnovatorServerASP, InnovatorContext, inDom );
+wscg.CreateConfigXml( outDom );
+outDom.InnerXml ="<Result>"+ outDom.InnerXml+"</Result>";
+}
+
+public class WSConfigGenerator
+{
+  private HttpContext _cntx;
+  private IServerConnection _isconn;
+  private Item _wsconf;
+  private string _temp_dir;
+  private bool _tofile;
+
+  /// It's assumed that inDom xml contains the following sub-element:
+  /// <![CDATA[
+  /// <WSConfiguration action='generate_config' name='...' />
+  /// ]]]]><![CDATA[>
+  public WSConfigGenerator(Innovator inn, IServerConnection isconn, HttpContext cntx, XmlDocument inDom)
+  {
+    _cntx = cntx;
+    _isconn = isconn;
+
+    XmlElement wsc_elem = (XmlElement)inDom.DocumentElement.SelectSingleNode(".//WSConfiguration");
+    string wsname = wsc_elem.Attributes["name"].Value;
+    if (wsname == null || wsname.Trim().Length == 0)
+      throw new ArgumentException("WSConfiguration name is not defined");
+
+    _wsconf = inn.applyAML(
+      string.Format("<AML><Item type='WSConfiguration' action='get' levels='2'><name>{0}</name></Item></AML>", System.Security.SecurityElement.Escape(wsname)));
+    if (_wsconf.isError())
+    {
+      if (_wsconf.getErrorCode() == "0")
+        throw new Exception(string.Format("WSConfiguration with name '{0}' not found", wsname));
+      else
+        throw new Exception(string.Format("Error when getting WSConfiguration '{0}': {1}", wsname, _wsconf.getErrorDetail()));
+    }
+
+    _temp_dir = (string)_isconn.GetOperatingParameter("temp_dir", HttpContext.Current.Server.MapPath("temp"));
+  }
+
+  public void CreateConfigXml(XmlDocument outDom)
+  {
+    outDom.LoadXml(GenerateConfigXmlFromWSConfiguration());
+  }
+
+  private string GenerateConfigXmlFromWSConfiguration()
+  {
+    XmlDocument cdoc = new XmlDocument();
+    cdoc.LoadXml("<service_config/>");
+    
+    bool generateNullableWrappers = (_wsconf.getProperty("compat_mode") == "1");
+    cdoc.DocumentElement.SetAttribute("compatmode", generateNullableWrappers.ToString());
+
+    Item wstypes = _wsconf.getItemsByXPath("Relationships/Item[@type='WSType']");
+    int tcount = wstypes.getItemCount();
+    for (int i = 0; i < tcount; i++)
+    {
+      Item wstype = wstypes.getItemByIndex(i);
+
+      string tname = wstype.getProperty("type_name");
+      string expand = wstype.getProperty("expand");
+      string talias = wstype.getProperty("alias");
+      bool is_top = (wstype.getProperty("is_top") == "1");
+
+      XmlElement telem = cdoc.CreateElement("type");
+      telem.SetAttribute("name", tname);
+      telem.SetAttribute("expand", (expand != null && expand == "1" ? "1" : "0"));
+      if (talias != null && talias.Trim().Length > 0)
+        telem.SetAttribute("alias", talias.Trim());
+      cdoc.DocumentElement.AppendChild(telem);
+
+      // Add type properties
+      Item tprops = wstype.getItemsByXPath("Relationships/Item[@type='WSTypeProperty']");
+      int pcount = tprops.getItemCount();
+      if (pcount > 0)
+      {
+        XmlElement props_elem = cdoc.CreateElement("properties");
+
+        int ppos = 0;
+        string pcontent = string.Empty;
+        for (int j = 0; j < pcount; j++)
+        {
+          Item prop = tprops.getItemByIndex(j);
+          string pname = prop.getProperty("property_name");
+          // ID is always added anyway; plus in Innovator it has type of its ItemType (e.g. "Part")
+          // and we need it to be "String" in proxy.
+          if( pname == "id" )
+            continue;
+         
+          string palias = prop.getProperty("alias");
+          string ptype = prop.getProperty("property_type");
+
+          pcontent +=
+            (ppos > 0 ? ", " : "") + pname + (palias != null && palias.Trim().Length > 0 ? "{" + palias + "}" : "") + ":" + ptype;
+          ppos++;
+        }
+        props_elem.InnerText = pcontent;
+        telem.AppendChild(props_elem);
+      }
+
+      // Add 'config_path' elements
+      Item tassociates = wstype.getItemsByXPath("Relationships/Item[@type='WSTypeAssociate']");
+      int ascount = tassociates.getItemCount();
+      if (ascount > 0)
+      {
+        // If this is a 'top' type (i.e. type that has actions) then build full path for config_path
+        // as the depth of the path defines 'levels' attribute on 'get'
+        if (is_top)
+        {
+          XmlNode get_action = wstype.node.SelectSingleNode("Relationships/Item[@type='WSTypeAction' and action='get']");
+          if (get_action != null)
+          {
+            for (int asi = 0; asi < ascount; asi++)
+            {
+              Item tassociate = tassociates.getItemByIndex(asi);
+              Item ws_associated_type = tassociate.getItemsByXPath("related_id/Item[@type='WSType']");
+              string full_path = BuildFullPath(ws_associated_type.getProperty("type_name"), string.Empty);
+
+              XmlElement cfelem = cdoc.CreateElement("config_path");
+              cfelem.SetAttribute("path", full_path);
+              telem.AppendChild(cfelem);
+            }
+          }
+        }
+      }
+
+      // Add actions
+      Item tactions = wstype.getItemsByXPath("Relationships/Item[@type='WSTypeAction']");
+      int acount = tactions.getItemCount();
+      if (acount > 0)
+      {
+        XmlElement aelem = cdoc.CreateElement("actions");
+        string alist = string.Empty;
+        for (int ai = 0; ai < acount; ai++)
+        {
+          Item action = tactions.getItemByIndex(ai);
+          string aname = action.getProperty("name");
+          if (aname== null)
+            aname = action.getProperty("custom_action_name");
+
+          alist += (ai > 0 ? ", " : "") + aname;
+        }
+
+        aelem.InnerText = alist;
+        telem.AppendChild(aelem);
+      }
+    }
+
+    return cdoc.OuterXml;
+  }
+
+  private bool IsRelationshipType(string tname)
+  {
+    string is_rel_query =
+      string.Format("<Item type='ItemType' action='get' select='is_relationship'><name>{0}</name></Item>", System.Security.SecurityElement.Escape(tname));
+    Item is_rel_request = this._wsconf.newItem();
+    is_rel_request.loadAML(is_rel_query);
+    Item is_rel_response = is_rel_request.apply();
+    if (is_rel_response.isError())
+      throw new Exception(string.Format("Failed to get ItemType '{0}' from Innovator", tname));
+
+    return (is_rel_response.getProperty("is_relationship") == "1");
+  }
+
+  // Do not try to add aliases to intermediate relationship types and leaf related types (could be not-relationships
+  // but regular item types) as they will be defined specifically on the <type> elements that represent those
+  // types explicitly.
+  private string BuildFullPath(string associated_type_name, string path)
+  {
+    if (!IsRelationshipType(associated_type_name))
+    {
+      if (path.Length == 0)
+        path = associated_type_name;
+      else
+        path += string.Format("({0})", associated_type_name);
+    }
+    else
+    {
+      if (path.Length == 0)
+        path = associated_type_name;
+      else
+        path += string.Format("/{0}", associated_type_name);
+
+      string xpath =
+        string.Format("Relationships/Item[@type='WSType' and type_name='{0}']/Relationships/Item[@type='WSTypeAssociate']", associated_type_name);
+      Item associates_of_associated = this._wsconf.getItemsByXPath(xpath);
+      int aacount = associates_of_associated.getItemCount();
+      if (aacount > 0)
+      {
+        // This portion is called for relationship types ONLY; so it could be ONLY one sub-associated for
+        // a WSType that represents a relationship type
+        Item aofa0 = associates_of_associated.getItemByIndex(0);
+        Item the_associated_of_associated = aofa0.getItemsByXPath("related_id/Item[@type='WSType']");
+        path = BuildFullPath(the_associated_of_associated.getProperty("type_name"), path);
+      }
+    }
+
+    return path;
+  }]]></method_code>
+  <method_type>C#</method_type>
+  <name>CreateWebServiceConfigXml</name>
+ </Item>
+</AML>

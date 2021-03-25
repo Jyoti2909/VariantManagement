@@ -1,0 +1,52 @@
+﻿<AML>
+ <Item type="Method" id="36C65BE0928B4C4294618166282E46D1" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// Called from the Part AML Editor form. Allows limited editing of a released Part,
+//  allowing only allows changes to the Part AML relationships.
+
+Item itemsWithNotAllowedActions = this.getItemsByXPath("//Item[@action and @action!='PE_EditAML' and @action!='add' and " +
+    "@action!='delete' and @action!='update' and @action!='edit' and @action!='get' and @action!='skip']");
+if (itemsWithNotAllowedActions.getItemCount() > 0)
+{
+    //"this" shouldn't contain Items with not allowed "actions" because such Items is applied in this server-side method.
+    //So, e.g., not admin user can call actions where "execution_allowed_to" is for administrators.
+    throw new InvalidOperationException();
+}
+
+// Grant 'Aras PLM' permissions
+Aras.Server.Security.Identity plmIdentity = Aras.Server.Security.Identity.GetByName("Aras PLM");
+Boolean PermissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(plmIdentity);
+
+Innovator innovator = this.getInnovator();
+
+Item q = innovator.applyAML(String.Format(CultureInfo.InvariantCulture,
+	"<AML>" +
+	"	<Item type='Part' action='get' id='{0}' select='state'>" +
+	"		<state>{1}</state>" +
+	"	</Item>" +
+	"</AML>",
+	System.Security.SecurityElement.Escape(this.getAttribute("id")),
+	"Manual Change"));
+
+if (q.isError() || q.isEmpty())
+	return innovator.newError(q.getErrorString());
+
+//+++++ Validate that only Part AML relationships are being edited
+if (this.getItemsByXPath("Relationships/Item[@action and @type != 'Part AML']").getItemCount() > 0)
+	return innovator.newError("Relationships with type != 'Part AML' are not allowed to be modified in this context.");
+//----- Validate that only Part AML relationships are being edited
+
+this.setAction("edit");
+this.setAttribute("version", "0");
+this.setAttribute("doGetItem", "0");
+q = this.apply();
+//----- Apply the change
+
+if (PermissionWasSet)
+	Aras.Server.Security.Permissions.RevokeIdentity(plmIdentity);
+
+return q;]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_EditAML</name>
+ </Item>
+</AML>

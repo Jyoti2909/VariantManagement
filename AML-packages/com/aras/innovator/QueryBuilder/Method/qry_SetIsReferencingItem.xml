@@ -1,0 +1,140 @@
+﻿<AML>
+ <Item type="Method" id="5B153574776247DBB2C9086DB307E37C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			return Execute(this);
+		}
+
+		internal static Item Execute(Item queryDefinition)
+		{
+			var queryItemByRefId = new Dictionary<string, Item>();
+			if (queryDefinition.getProperty("is_to_get_item_from_server") == "1")
+			{
+				queryDefinition = queryDefinition.apply("get");
+			}
+			Item queryItems = queryDefinition.getRelationships("qry_QueryItem");
+			int queryItemsCount = queryItems.getItemCount();
+			for (int i = 0; i < queryItemsCount; i++)
+			{
+				Item queryItem = queryItems.getItemByIndex(i);
+				if (queryItem.getAction() != "delete")
+				{
+					queryItemByRefId.Add(queryItem.getProperty("ref_id"), queryItem);
+				}
+			}
+
+			Item queryReferenceItems = queryDefinition.getRelationships("qry_QueryReference");
+			int queryReferenceItemsCount = queryReferenceItems.getItemCount();
+			for (int i = 0; i < queryReferenceItemsCount; i++)
+			{
+				Item queryReferenceItem = queryReferenceItems.getItemByIndex(i);
+				string filterXml = queryReferenceItem.getProperty("filter_xml");
+				if (string.IsNullOrEmpty(filterXml) || queryReferenceItem.getAction() == "delete")
+				{
+					continue;
+				}
+				XmlDocument doc = queryReferenceItem.newXMLDocument();
+				doc.XmlResolver = null;
+				doc.LoadXml(filterXml);
+				XmlElement conditionElement = null;
+				if (doc.DocumentElement != null && doc.DocumentElement.HasChildNodes)
+				{
+					conditionElement = doc.DocumentElement.ChildNodes.OfType<XmlElement>().FirstOrDefault();
+				}
+				if (conditionElement == null)
+				{
+					continue;
+				}
+				if (IsReferencingItem(queryReferenceItem, conditionElement, queryItemByRefId))
+				{
+					queryReferenceItem.setAttribute("is_referencing_item", "1");
+				}
+			}
+
+			return queryDefinition;
+		}
+
+		internal static bool IsReferencingItem(Item queryReferenceItem, XmlElement element, Dictionary<string, Item> queryItemByRefId)
+		{
+			switch (element.LocalName.ToUpperInvariant())
+			{
+				case "AND":
+					IEnumerable<XmlElement> andElements = element.ChildNodes.OfType<XmlElement>();
+					foreach (XmlElement childCondition in andElements)
+					{
+						if (IsReferencingItem(queryReferenceItem, childCondition, queryItemByRefId))
+						{
+							return true;
+						}
+					}
+					break;
+				case "EQ":
+					XmlNode node = element.SelectSingleNode("property[1]/@name");
+					string firstPropertyName = node != null ? node.InnerText : null;
+					XmlNode firstPropertyXPathNode = element.SelectSingleNode("property[1]/@query_items_xpath");
+					bool isFirstPropertyOnParent = firstPropertyXPathNode != null ? firstPropertyXPathNode.InnerText == "parent::Item" : false;
+					node = element.SelectSingleNode("property[2]/@name");
+					string secondPropertyName = node != null ? node.InnerText : null;
+					XmlNode secondPropertyXPathNode = element.SelectSingleNode("property[2]/@query_items_xpath");
+					bool isSecondPropertyOnParent = secondPropertyXPathNode != null ? secondPropertyXPathNode.InnerText == "parent::Item" : false;
+
+					if (string.IsNullOrEmpty(firstPropertyName) || string.IsNullOrEmpty(secondPropertyName))
+					{
+						return false;
+					}
+					string parentQueryReferenceRefId = queryReferenceItem.getProperty("parent_ref_id");
+					if (string.IsNullOrEmpty(parentQueryReferenceRefId))
+					{
+						return false; //it's a root row
+					}
+					string parentPropertyName;
+					string childPropertyName;
+
+					if (isFirstPropertyOnParent && !isSecondPropertyOnParent)
+					{
+						parentPropertyName = firstPropertyName;
+						childPropertyName = secondPropertyName;
+					}
+					else if (!isFirstPropertyOnParent && isSecondPropertyOnParent) {
+						parentPropertyName = secondPropertyName;
+						childPropertyName = firstPropertyName;
+					}
+					else 
+					{
+						return false;
+					}
+
+					if (IsPropertyNamesOfReferencingItem(parentPropertyName, childPropertyName))
+					{
+						return true;
+					}
+					break;
+			}
+
+			return false;
+		}
+
+		internal static bool IsPropertyNamesOfReferencingItem(string parentPropertyName, string childPropertyName)
+		{
+			if (parentPropertyName == "id" && childPropertyName == "id")
+			{
+				// covers the case when Parent.id = Child.id.
+				return false;
+			}
+
+			if (parentPropertyName == "id" && childPropertyName != "source_id")
+			{
+				// covers cases when Parent.id is used to find Child Item which has property of type Item pointing to the parent
+				return true;
+			}
+
+			if (parentPropertyName == "source_id" && childPropertyName == "id")
+			{
+				// covers all cases of reverse relationships
+				return true;
+			}
+			return false;
+			]]></method_code>
+  <method_type>C#</method_type>
+  <name>qry_SetIsReferencingItem</name>
+ </Item>
+</AML>

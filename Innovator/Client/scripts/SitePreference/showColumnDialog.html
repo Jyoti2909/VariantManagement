@@ -1,0 +1,149 @@
+﻿<!DOCTYPE HTML>
+<!-- (c) Copyright by Aras Corporation, 2005-2013. -->
+<html>
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" href="../../styles/default.css" />
+	<style type="text/css">
+		@import "../../javascript/dojo/resources/dojo.css";
+		@import "../../javascript/dijit/themes/claro/claro.css";
+		@import "../../javascript/include.aspx?classes=common.css";
+		@import "../../styles/default.css";
+
+		html, body{
+			overflow: hidden;
+			width : 100%;
+			height : 100%;
+			margin : 0px;
+			padding : 0px;
+		}
+		td {
+			font-size: 14px;
+			margin-left: 10px;
+			margin-right: 10px;
+			color: black;
+		}
+		
+		.body_div_class {
+			overflow: auto;
+			width: 100%;
+			height: 77%;
+		}
+		.buttons {
+			width: 100%;
+			height: 13%;
+		}
+		table tr.highlighted {
+			background: #dddddd;
+		}
+		#title1 {
+			font-size: 14px;
+		}
+	</style>
+	<script type="text/javascript">
+		var tmpDialogArguments = window.frameElement.dialogArguments;
+		var propsToShow = tmpDialogArguments.propsToShow;
+		var aras = tmpDialogArguments.aras;
+
+		document.title = aras.getResource("", "showcolumndlg.title");
+		function onClickCheckBox(ch) {
+			var checkedCh = getSelectedProperties();
+			btnOk.disabled = checkedCh.length <= 0;
+			if (btnOk.disabled) {
+				btnOk.className = "btn disabled";
+			}
+			else
+			{
+				btnOk.className = "btn";
+			}
+			document.getElementById("ch_all").checked = checkedCh.length > 0 ? checkedCh.length == propsToShow.length : false;
+		}
+
+		function onSelectAllProps(select) {
+			for (var i = 0; i < propsToShow.length; i++) {
+				var ch = document.getElementById("ch" + i);
+				ch.checked = select;
+			}
+			btnOk.disabled = !select;
+			if (!btnOk.disabled) {
+				btnOk.className = "btn";
+				btnOk.focus();
+			}
+			else
+			{
+				btnOk.className = "btn disabled";
+			}
+		}
+
+		function getSelectedProperties() {
+			var input_nodes = document.getElementsByTagName('input');
+			var res = new Array();
+			for (var i = 0; i < input_nodes.length; i++) {
+				if (input_nodes[i].getAttribute('name') == 'r1' && input_nodes[i].checked) {
+					res[res.length] = input_nodes[i].value;
+				}
+			}
+			return res;
+		}
+
+		onload = function f() {
+			populateLabels();
+			if (document.getElementById("ch_all")) {
+				document.getElementById("ch_all").focus();
+			}
+		}
+
+		function closeWindow(value) {
+			if (tmpDialogArguments.dialog) {
+				tmpDialogArguments.dialog.close(value);
+			} else {
+				window.returnValue = value;
+				window.close();
+			}
+		}
+
+		function populateLabels() {
+			document.getElementById("title1").innerHTML = aras.getResource("", "showcolumndlg.title1");
+			document.getElementById("btnOk").value = aras.getResource("", "common.ok");
+			document.getElementById("btnCancel").value = aras.getResource("", "common.cancel");
+		}
+	</script>
+</head>
+<body class="claro">
+	<div align="center" style="padding-top: 10px; min-height: 20px; height: 10%;">
+		<b id="title1"></b>
+	</div>
+	<div align="center" class="body_div_class">
+		<script type="text/javascript">
+			var selectedProperty = null;
+			if (!propsToShow) {
+				alert(aras.getResource("", "showcolumndlg.incorrect_dlg_arg"));
+				closeWindow();
+			}
+
+			document.write("<table align=\"center\" style=\"text-align: left;\" >");
+			document.write("<tr class='highlighted'>" +
+							"	<td><\/td>" +
+							"	<td onclick=\"var ch = document.getElementById('ch_all'); ch.checked = !ch.checked; onSelectAllProps(ch.checked); event.stopPropagation();\">" +
+							"		<input type='checkbox' class='arasCheckboxOrRadio btncheckbox' id='ch_all' style='display: block;' onclick='onSelectAllProps(this.checked); event.stopPropagation();' />" +
+							"		<label>" + aras.getResource("", "showcolumndlg.select_all") + "</label>" +
+							"	<\/td>" +
+							"<\/tr>");
+			for (var i = 0; i < propsToShow.length; i++) {
+				document.write("<tr>" +
+								"	<td><\/td>" +
+								"	<td onclick=\"var ch=document.getElementById('ch" + i + "'); ch.checked = !ch.checked; onClickCheckBox(ch); event.stopPropagation();\">" +
+								"		<input type='checkbox' class='arasCheckboxOrRadio btncheckbox' style='display: block;' id='ch" + i + "' name='r1' value='" + propsToShow[i].label + "' onclick='onClickCheckBox(this); event.stopPropagation();' />" +
+								"		<label>" + propsToShow[i].label + "</label>" +
+								"	<\/td>" +
+								"<\/tr>");
+			}
+			document.write("<\/table>");
+		</script>
+	</div>
+	<div align="center" class="buttons">
+		<input type="button" id="btnOk" class="btn disabled" disabled="disabled" onclick="closeWindow(getSelectedProperties());"></input>
+		<input type="button" id="btnCancel" class="btn cancel_button" onclick="closeWindow();" style="margin-left: 10px;"></input>
+	</div>
+</body>
+</html>

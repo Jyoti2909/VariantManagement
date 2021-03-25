@@ -1,0 +1,211 @@
+﻿<AML>
+ <Item type="Metric" id="F2273CAED21B43F7919FAA27402F2EB2" action="add">
+  <color>#ff5c28</color>
+  <frequency>Quarterly</frequency>
+  <label>Weight Vs. Goal</label>
+  <stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:exslt="http://exslt.org/common" extension-element-prefixes="exslt" xmlns:aras="http://www.aras-corp.com">
+ <xsl:output method="xml" omit-xml-declaration="yes"/>
+ <xsl:template match="/">
+  <xsl:variable name="weight_scores">
+   <xsl:for-each select="//Item[@type='Part']">
+    <xsl:variable name="weight" select="weight"/>
+    <xsl:variable name="target_value" select="Relationships/Item/target_value"/>
+    <weight_score>
+     <xsl:value-of select="($weight div $target_value)*100"/>
+    </weight_score>
+   </xsl:for-each>
+  </xsl:variable>
+  <xsl:variable name="num_of_items" select="count(//Item[@type='Part'])"/>
+  <Result>
+   <xsl:variable name="result">
+    <xsl:choose>
+     <xsl:when test="function-available('exslt:node-set')">
+       <xsl:value-of select="sum(exslt:node-set($weight_scores)/weight_score) div $num_of_items" />
+     </xsl:when>
+     <xsl:when test="function-available('msxsl:node-set')">
+       <xsl:value-of select="sum(msxsl:node-set($weight_scores)/weight_score) div $num_of_items" />
+     </xsl:when>
+    </xsl:choose>
+   </xsl:variable>
+   <xsl:choose>
+    <xsl:when test="number($result) or number($result+1)">
+     <xsl:value-of select="$result"/>
+    </xsl:when>
+    <xsl:otherwise>100</xsl:otherwise>
+   </xsl:choose>
+  </Result>
+ </xsl:template>
+</xsl:stylesheet>]]></stylesheet>
+  <name>Weight vs. Goal</name>
+  <Relationships>
+   <Item type="Metric Value" id="FF8AC795572C4A0991C020163529203B" action="add">
+    <calculate>1</calculate>
+    <color>#96ff88</color>
+    <label>Q4 '04</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,weight" page="1" pagesize="10000">
+  <release_date condition="gt">2004-10-01</release_date>
+  <release_date condition="lt">2005-01-01</release_date>
+  <weight condition="is not null"/>
+  <weight_basis condition="ne">Target</weight_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Weight</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>1</sort_order>
+    <source_id keyed_name="Weight vs. Goal" type="Metric">F2273CAED21B43F7919FAA27402F2EB2</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="B1EA0DB9401543C087F08765DF835F87" action="add">
+    <calculate>1</calculate>
+    <color>#daeaff</color>
+    <label>Q1 '05</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,weight" page="1" pagesize="10000">
+  <release_date condition="gt">2005-01-01</release_date>
+  <release_date condition="lt">2005-04-01</release_date>
+  <weight condition="is not null"/>
+  <weight_basis condition="ne">Target</weight_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Weight</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>2</sort_order>
+    <source_id keyed_name="Weight vs. Goal" type="Metric">F2273CAED21B43F7919FAA27402F2EB2</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="3456525B84D7450CA09DA47A8100945C" action="add">
+    <calculate>1</calculate>
+    <color>#ffa624</color>
+    <label>Q2 '05</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,weight" page="1" pagesize="10000">
+  <release_date condition="gt">2005-04-01</release_date>
+  <release_date condition="lt">2005-07-01</release_date>
+  <weight condition="is not null"/>
+  <weight_basis condition="ne">Target</weight_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Weight</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>3</sort_order>
+    <source_id keyed_name="Weight vs. Goal" type="Metric">F2273CAED21B43F7919FAA27402F2EB2</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="33647D360D954E988FA7AAB535A74E68" action="add">
+    <calculate>1</calculate>
+    <color>#78c8ff</color>
+    <label>Q3 '05</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,weight" page="1" pagesize="10000">
+  <release_date condition="gt">2005-07-01</release_date>
+  <release_date condition="lt">2005-10-01</release_date>
+  <weight condition="is not null"/>
+  <weight_basis condition="ne">Target</weight_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Weight</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>4</sort_order>
+    <source_id keyed_name="Weight vs. Goal" type="Metric">F2273CAED21B43F7919FAA27402F2EB2</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="67A4316B1C5A4F5A99DF21F9DA9C49C0" action="add">
+    <calculate>1</calculate>
+    <color>#daffe6</color>
+    <label>Q4 '05</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,weight" page="1" pagesize="10000">
+  <release_date condition="gt">2005-10-01</release_date>
+  <release_date condition="lt">2006-01-01</release_date>
+  <weight condition="is not null"/>
+  <weight_basis condition="ne">Target</weight_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Weight</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>5</sort_order>
+    <source_id keyed_name="Weight vs. Goal" type="Metric">F2273CAED21B43F7919FAA27402F2EB2</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="8B5F214FF41E4EC1B656C3993F1102D8" action="add">
+    <calculate>1</calculate>
+    <color>#ff64a2</color>
+    <label>Q1 '06</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,weight" page="1" pagesize="10000">
+  <release_date condition="gt">2006-01-01</release_date>
+  <release_date condition="lt">2006-04-01</release_date>
+  <weight condition="is not null"/>
+  <weight_basis condition="ne">Target</weight_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Weight</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>6</sort_order>
+    <source_id keyed_name="Weight vs. Goal" type="Metric">F2273CAED21B43F7919FAA27402F2EB2</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="8E2C2810DA9E46828F05EE3C4D7C68CC" action="add">
+    <calculate>1</calculate>
+    <color>#6e62ff</color>
+    <label>Q2 '06</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,weight" page="1" pagesize="10000">
+  <release_date condition="gt">2006-04-01</release_date>
+  <release_date condition="lt">2006-07-01</release_date>
+  <weight condition="is not null"/>
+  <weight_basis condition="ne">Target</weight_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Weight</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>7</sort_order>
+    <source_id keyed_name="Weight vs. Goal" type="Metric">F2273CAED21B43F7919FAA27402F2EB2</source_id>
+    <value>100</value>
+   </Item>
+   <Item type="Metric Value" id="33093E20CFC94E5DBA3E2D57E6B2C943" action="add">
+    <calculate>1</calculate>
+    <color>#ca23c3</color>
+    <label>Current</label>
+    <query><![CDATA[<Item type="Part" action="get" select="id,weight" page="1" pagesize="10000">
+  <release_date condition="gt">2006-07-01</release_date>
+  <release_date condition="lt">2006-10-01</release_date>
+  <weight condition="is not null"/>
+  <weight_basis condition="ne">Target</weight_basis>
+  <Relationships>
+    <Item type="Part Goal" action="get" select="id,target_value">
+      <target_value condition="is not null"/>
+      <target_value condition="ne">0</target_value>
+      <goal>Weight</goal>
+    </Item>
+  </Relationships>
+</Item>]]></query>
+    <sort_order>8</sort_order>
+    <source_id keyed_name="Weight vs. Goal" type="Metric">F2273CAED21B43F7919FAA27402F2EB2</source_id>
+    <value>100</value>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

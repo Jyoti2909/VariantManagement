@@ -1,0 +1,76 @@
+﻿<AML>
+ <Item type="Method" id="B19BC790706945A1A424B26AC5DAF465" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[ 
+//server-side Method (VB): xPLM Set working directory without administration rights (server-side)
+
+Innovator inn = this.getInnovator();
+Aras.Server.Security.Identity plmIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+bool PermissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(plmIdentity);
+
+//Param "WORKDIR" ->  Itemtype which should be updated
+
+string itemType = "User";
+string itemID = inn.getUserID();
+string propertyName = "working_directory";
+string propertyValue = this.getProperty("WORKDIR","");
+
+if(propertyValue.Length == 0)
+{
+	return inn.newError("No workdir set!");
+}
+
+Item baseItem = inn.getItemById(itemType,itemID);
+if(baseItem == null)
+{
+	return inn.newError(String.Format("xplmSetWorkDir: No Item of Type {0} found for ID {1} ",itemType,itemID));
+}
+
+int lockState = baseItem.fetchLockStatus();
+
+if (lockState == -1)
+{
+	return inn.newError(String.Format("xplmSetWorkDir: Failed to get lock state of Item {1} Type {0}",itemType,itemID));
+}
+
+if (lockState == 2)
+{
+	return inn.newError(String.Format("xplmSetWorkDir: Item of Type {0} with ID {1} locked by other user",itemType,itemID));
+}
+
+if(lockState == 0)
+{
+	baseItem.setAction("lock");
+	baseItem = baseItem.apply();
+	if(baseItem.isError())
+	{
+		return baseItem;
+	}
+	
+	baseItem.setAction("edit");
+	
+}
+
+if(lockState == 1)
+{
+	baseItem.setAction("update");
+}
+
+baseItem.setProperty(propertyName,propertyValue);
+baseItem = baseItem.apply();
+if(baseItem.isError())
+{
+	return baseItem;
+}
+
+if (PermissionWasSet)
+{
+	Aras.Server.Security.Permissions.RevokeIdentity(plmIdentity);
+}
+
+return this;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>xplm_setWorkDir</name>
+ </Item>
+</AML>

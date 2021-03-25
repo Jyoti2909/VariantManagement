@@ -1,0 +1,81 @@
+﻿<AML>
+ <Item type="Method" id="7BBB4EEABAAF4A7FA7EAE5B65293CBC1" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[int affectedItemsCount = this.getItemCount();
+Dictionary<string, string> dct = new Dictionary<string, string>(affectedItemsCount);
+
+for (int i = 0; i < affectedItemsCount; i++)
+{
+	Item currItm = this.getItemByIndex(i);
+	Item affectedItem = currItm.getRelatedItem();
+
+	if (affectedItem == null)
+		continue;
+	
+	Item affected_id_item = affectedItem.getPropertyItem("affected_id");
+	Item new_item_id_item = affectedItem.getPropertyItem("new_item_id");
+
+	string itemtype = null;
+
+	if (affected_id_item != null)
+	{
+		itemtype = affected_id_item.getProperty("itemtype");
+		
+		if(String.IsNullOrEmpty(itemtype))
+		{
+		  Item item = this.newItem(affected_id_item.getType(), "get"); 
+		  item.setID(affected_id_item.getID());
+		  item.setAttribute("select", "id");
+		  affected_id_item = item.apply();
+  		
+  		  if(affected_id_item.isError())
+		  {
+		    continue;
+		  }
+		  
+		  itemtype = affected_id_item.getAttribute("typeId");
+		}
+	}
+	else if (new_item_id_item != null)
+	{
+		itemtype = new_item_id_item.getProperty("itemtype");
+		
+		if(String.IsNullOrEmpty(itemtype))
+		{
+		  Item item = this.newItem(new_item_id_item.getType(), "get"); 
+		  item.setID(new_item_id_item.getID());
+		  item.setAttribute("select", "id");
+		  new_item_id_item = item.apply();
+  		
+  		  if(new_item_id_item.isError())
+		  {
+		    continue;
+		  }
+		  
+		  itemtype = new_item_id_item.getAttribute("typeId");
+		}
+	}
+	else
+		continue;
+
+	if (String.IsNullOrEmpty(itemtype))
+		continue;
+
+	string open_icon = null;
+	if (!dct.TryGetValue(itemtype, out open_icon))
+	{
+		string searchCriteria = "id";
+		XmlElement IT = CCO.Cache.GetItemTypeFromCache(ref itemtype, ref searchCriteria);
+		open_icon = IT.GetAttribute("open_icon");
+
+		dct.Add(itemtype, open_icon);
+	}
+
+	affectedItem.setProperty("affected_type", "<img src=\"" + open_icon + "\">");
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_PopulateAffectedType</name>
+ </Item>
+</AML>

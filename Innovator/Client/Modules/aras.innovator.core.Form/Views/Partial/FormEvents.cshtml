@@ -1,0 +1,128 @@
+﻿@using System.Text.RegularExpressions
+@using Models.AML.ItemTypes
+@model List<Item>
+
+<script type="text/javascript">
+	window.addEventListener('load', function (event) {
+		aras.uiPopulateFormWithItemEx(document.forms.MainDataForm, document.item, document.itemTypeNd, document.mode);
+		if (window.onLoadHandler) onLoadHandler(event);		var textareas = document.querySelectorAll("textarea[rows='0']");
+		Array.prototype.forEach.call(textareas, function (textarea) {
+			var newHeight = aras.browserHelper.adjustHeightTexAreaWithNullableRows(textarea);
+			textarea.style.height = newHeight + "px";
+		});
+	});
+</script>
+
+@if (@Model.Any(ev => ev.Type == Models.AML.Enums.ItemNodeType.FormEvent && !string.IsNullOrEmpty(((FormEvent)ev).Event)))
+{
+	var eventsRes = new HashSet<string>();
+	var functionNumber = new Dictionary<string, int>();
+	var functionNames = new Dictionary<string, string>();
+	<script type="text/javascript">
+		@foreach (var item in Model)
+		{
+			var ev = (FormEvent) item;
+			var eventName = ev.Event;
+			if (string.IsNullOrEmpty(eventName))
+			{
+				continue;
+			}
+			if (!eventsRes.Contains(eventName))
+			{
+				eventsRes.Add(eventName);
+			}
+			string methodCode = ev.RelatedId.Item.MethodCode;
+
+			var methodNamesWithTopAras = new HashSet<string>
+			{
+				"PM_DISPLAYROLLUPFIELDSIFNEED", "PM_ONACWLOAD", "PM_ONLOADFROMPROJECTTEMPLATE",
+				"PROJECTFORMONLOAD", "PM_PROJECTONADD_ONLOAD"
+			};
+
+			if (!string.IsNullOrEmpty(ev.RelatedId.Item.Name) && methodNamesWithTopAras.Contains(ev.RelatedId.Item.Name.ToUpperInvariant()))
+			{
+				methodCode = Regex.Replace(methodCode, @"\btop.aras\b", "aras");
+
+				var methodNamesWithTop = new HashSet<string>
+				{
+					"PROJECTFORMONLOAD"
+				};
+				if (methodNamesWithTop.Contains(ev.RelatedId.Item.Name.ToUpperInvariant()))
+				{
+					methodCode = Regex.Replace(methodCode, @"\btop\b", "aras.getMostTopWindowWithAras(window)");
+				}
+			}
+
+			if (!functionNumber.ContainsKey(eventName))
+			{
+				functionNumber[eventName] = 1;
+			}
+			else
+			{
+				functionNumber[eventName] = functionNumber[eventName] + 1;
+			}
+			@:function @(eventName + functionNumber[eventName])(event)
+			@:{
+				@Html.Raw(methodCode)
+				@:
+				@:/*Fix for mistakes with missed closing comments brackets*/
+			@:}
+			@:
+			if (!functionNames.ContainsKey(eventName))
+			{
+				functionNames[eventName] = eventName + functionNumber[eventName] + ",";
+			}
+			else
+			{
+				functionNames[eventName] += eventName + functionNumber[eventName] + ",";
+			}
+		}
+
+		@foreach (string eventName in eventsRes)
+		{
+			var functionNameArray = functionNames[eventName].Split(',');
+			<text>
+				function @(eventName + "$user$handler")(e)
+				{
+					try
+					{
+						@for (var i = 0; i < functionNumber[eventName]; i++)
+						{
+							@:if (@(functionNameArray[i])(e) === false)
+							@:	return false;
+						}
+					}
+					catch (exp)
+					{
+						aras.AlertError(aras.getResource('', 'ui_methods_ex.event_handler_failed'), aras.getResource('', 'ui_methods_ex.event_handler_failure_msg', exp.description ? exp.description : (exp + ' [' +arguments.callee.toString()+ ']')), aras.getResource('','common.client_side_err'));
+						return false;
+					}
+				}
+			</text>
+		}
+		with (document)
+		{
+			@foreach (string eventName in eventsRes)
+			{
+				if (eventName == "onload")
+				{
+					@:window.onLoadHandler = onload$user$handler;
+				}
+				else
+				{
+					@:@eventName = @(eventName)$user$handler;
+				}
+			}
+		}
+		// Code provided below need to process beforeunload event in Chrome, because this event is not triggers in Chrome by security policy
+		// If window has beforeunload handler defined on window then onunload handler will be overwriten by custom handler that calls
+		// beforeunload handler before the unload handler
+		if (aras.Browser.isCh() && window.onbeforeunload) {
+			const onUnloadHandler = window.onunload || function() {};
+			window.onunload = function(e) {
+				const result = window.onbeforeunload(e);
+				return result !== false ? onUnloadHandler(e) : result;
+			}
+		}
+	</script>
+}

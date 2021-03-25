@@ -1,0 +1,35 @@
+﻿<AML>
+ <Item type="Method" id="3DD70B1CD0194EF2B9B48F4A2D2C92D4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string docClassification = this.getProperty("classification");
+string linkProperty = this.getProperty("linkProperty");
+
+Item MSO_docType;
+if (docClassification == "Email")
+{
+    MSO_docType = this.newItem("MSO_EmailDocumentType");
+}
+else
+{
+    MSO_docType = this.newItem("MSO_DocumentType");
+}
+
+MSO_docType.setProperty("document_type", docClassification);
+
+Item MSO_settings = this.newItem("MSO_CommonSettings", "get");
+MSO_settings.addRelationship(MSO_docType);
+MSO_settings = MSO_settings.apply();
+
+var referenceProperty = MSO_settings.node.SelectSingleNode("Relationships/Item/" + linkProperty);
+if (referenceProperty == null || string.IsNullOrEmpty(referenceProperty.InnerText))
+    return null;
+    
+Item reference = this.newItem("MSO_Reference", "get");
+reference.setProperty("id", referenceProperty.InnerText);
+reference = reference.apply();
+
+return reference;]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_CommonSettings_GetReference</name>
+ </Item>
+</AML>

@@ -1,0 +1,56 @@
+﻿<AML>
+ <Item type="Method" id="1EA2AC86C5764E4D89FC7ED3EA48A2E7" action="add">
+  <comments>AM - is abbreviation of Actions Menu</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var itemId = inArgs.itemId;
+var itemTypeName = inArgs.itemTypeName;
+var itemTypeId = inArgs.typeId;
+
+if (!aras.getPermissions('can_get', itemId, itemTypeId, itemTypeName)) {
+	aras.AlertWarning(aras.getResource('', 'ssvc.secure_message.no_get_permission'));
+	return;
+}
+
+if (execInTearOffWindow(itemId)) {
+	return;
+}
+
+aras.uiShowItem(itemTypeName, itemId);
+
+function execInTearOffWindow(id) {
+	var itemWindow = aras.uiFindWindowEx(id);
+
+	if (!itemWindow) {
+		return false;
+	}
+
+	if (aras.isWindowClosed(itemWindow)) {
+		aras.uiUnregWindowEx(id);
+		return true;
+	}
+
+	if (itemWindow.name === 'work') {
+		return true;
+	}
+
+	aras.browserHelper.setFocus(itemWindow);
+
+	var tearoffMC = itemWindow.tearOffMenuController;
+
+	if (!tearoffMC || !tearoffMC.onClickMenuItem) {
+		return true;
+	}
+
+	var execResult = tearoffMC.onClickMenuItem('view');
+
+	if (!execResult || !execResult.result) {
+		return true;
+	}
+
+	return execResult;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VC_AM_ViewThisVersionItem</name>
+ </Item>
+</AML>

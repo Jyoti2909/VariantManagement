@@ -1,0 +1,64 @@
+﻿<AML>
+ <Item type="Method" id="E04F7D55CA9D44C9A00CE837945112DC" action="add">
+  <comments>This is editable server method that illustrates how to call the wmoc_GetPDFWMContent conditionally, and allows the customer to add logic for other scenarios</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+String contextItemType = this.getProperty("context_item_type");
+String contextItemId = this.getProperty("context_item_id");
+String relationshipName, souceProperty, sourceContentLocation;
+Item curRel, item, files, file, resultItem;
+
+String inParams = @"
+ <context_item_type>{0}</context_item_type>
+ <context_item_id>{1}</context_item_id>
+ <event_context>{2}</event_context>
+ <wm_type>{3}</wm_type>";
+ 
+String res = String.Format(CultureInfo.InvariantCulture, inParams,
+    System.Security.SecurityElement.Escape(contextItemType),
+    System.Security.SecurityElement.Escape(contextItemId),
+    System.Security.SecurityElement.Escape(this.getProperty("event_context")),
+    System.Security.SecurityElement.Escape(this.getProperty("wm_type")));
+
+Item result = inn.applyMethod("wmoc_GetPDFWMContent", res);
+if(!string.IsNullOrWhiteSpace(result.getProperty("source_content_id")) & !string.IsNullOrWhiteSpace(result.getProperty("source_content_location"))){
+    return result;
+}
+if (string.Equals(contextItemType, "Document")) {
+    relationshipName = "Document File";
+    
+    item = this.newItem("Document", "get");
+    item.setProperty("id", contextItemId);
+    Item isRelationship = this.newItem(relationshipName, "get");
+    item.addRelationship(isRelationship);
+    item = item.apply();
+
+    files = item.getRelationships(relationshipName);
+    for (int i = 0; i < files.getItemCount(); i++) {
+        curRel = files.getItemByIndex(i);
+        
+        souceProperty = "related_id";
+        
+        file = this.newItem("File", "get");
+        file.setProperty("id", curRel.getProperty(souceProperty));
+        file = file.apply();
+        if (file.getProperty("file_type") == "7869D76D50ED4BD4985BECB20B1102F7") {
+            sourceContentLocation = String.Format(CultureInfo.InvariantCulture, "{0}={1}/{2}", relationshipName, curRel.getID(), souceProperty);
+            
+            resultItem = this.newItem();
+            resultItem.setProperty("source_content_id", file.getID());
+            resultItem.setProperty("source_content_location", sourceContentLocation);
+            resultItem.setProperty("log_message", String.Format(CultureInfo.InvariantCulture, "Source content located. File name = {0}", file.getProperty("filename")));
+            return resultItem;
+        }
+    }
+}
+resultItem = this.newItem();
+resultItem.setProperty("source_content_id", null);
+resultItem.setProperty("source_content_location", null);
+resultItem.setProperty("log_message", "Source content not defined or located.");
+return resultItem;]]></method_code>
+  <method_type>C#</method_type>
+  <name>wm_SourceLookupTemplate</name>
+ </Item>
+</AML>

@@ -1,0 +1,51 @@
+﻿<AML>
+ <Item type="Method" id="1ED8C8E86F334646B71C9E4C4B182FF4" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string feedType = this.getProperty("feed_type");
+if (string.Equals(feedType, "Discussion", StringComparison.OrdinalIgnoreCase))
+{
+	string reference = this.getProperty("reference");
+	if (string.Equals(reference, "this", StringComparison.OrdinalIgnoreCase))
+	{
+		Innovator innovator = this.getInnovator();
+		Item discussionFeedType = innovator.newItem("Value", "get");
+		discussionFeedType.setProperty("value", "Discussion");
+		discussionFeedType.setProperty("source_id", "98B065184A8C4CDCA0703C2F76B93A40");
+		discussionFeedType.setAttribute("select","label");
+		discussionFeedType = discussionFeedType.apply();
+		if (discussionFeedType.isError())
+			return discussionFeedType;
+		
+		string discussionFeedTypeLabel = discussionFeedType.getProperty("label");
+		string message = string.Format(CCO.ErrorLookup.Lookup("SSVC_ReferencePropertyToThisForSpecificProperty"), this.getAttribute("type"), "feed_type", discussionFeedTypeLabel);
+		throw new ArgumentException(message);
+	}
+	
+	string historyEvents = this.getProperty("history_events");
+	if (!string.IsNullOrEmpty(historyEvents))
+	{
+		throw new ArgumentException(CCO.ErrorLookup.Lookup("SSVC_DiscusscionFeedHistoryEventsAndOrFS"));
+	}
+	
+	string fileSelectorsXPath = "Relationships/Item[@type='FileSelectorTemplate' or @type='FileSelector']";
+	Item fileSelector = this.getItemsByXPath(fileSelectorsXPath);
+	if (fileSelector.getItemCount() == 0)
+	{
+		Item query = this.newItem(this.getAttribute("type"), "get");
+		query.setID(this.getID());
+		query.setAttribute("levels", "1");
+		query.setAttribute("config_path", ".|FileSelectorTemplate|FileSelector");
+		query.setAttribute("select", "id|id|id");
+		query = query.apply();
+		fileSelector = query.getItemsByXPath(fileSelectorsXPath);
+		if (fileSelector.getItemCount() > 0)
+		{
+			throw new ArgumentException(CCO.ErrorLookup.Lookup("SSVC_DiscusscionFeedHistoryEventsAndOrFS"));
+		}
+	}
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_FeedValidation</name>
+ </Item>
+</AML>

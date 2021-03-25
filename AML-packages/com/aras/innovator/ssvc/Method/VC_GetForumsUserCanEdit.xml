@@ -1,0 +1,116 @@
+﻿<AML>
+ <Item type="Method" id="00AFD158F5FA4A7EB42C9E160B91D955" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*
+userId (string)
+include_my_bookmarks (bool)
+*/
+string userId = this.getID();
+string errorPrefix = CCO.ErrorLookup.Lookup("SSVC_FailedGetForumsUserCanEdit");
+if (String.IsNullOrEmpty(userId))
+{
+	throw new Exception(String.Format(CultureInfo.InvariantCulture, errorPrefix, CCO.ErrorLookup.Lookup("SSVC_ForumNoUserId")));
+}
+bool includeBookmarks = true;
+string includeBookmarksStr = this.getProperty("include_my_bookmarks", "true");
+if (!Boolean.TryParse(includeBookmarksStr, out includeBookmarks))
+{
+	includeBookmarks = Convert.ToBoolean(Convert.ToInt32(includeBookmarksStr));
+}
+
+if (IsUserAdmin(userId))
+{
+	Item forums = GetForumsForUser(userId);
+	if (forums.isError())
+	{
+		throw new Exception(String.Format(CultureInfo.InvariantCulture, errorPrefix, forums.getErrorString()));
+	}
+	
+	if (!includeBookmarks)
+	{
+		Item regular = forums.getItemsByXPath("/*/*/Result/Item[@type='Forum'][forum_type!='MyBookmarks']");
+		Item result = this.getInnovator().newResult("");
+		XmlNode resultNode = result.dom.SelectSingleNode("/*/*/Result");
+		for (int i = 0, count = regular.getItemCount(); i < count; i++)
+		{
+			Item current = regular.getItemByIndex(i);
+			XmlNode newNode = result.dom.ImportNode(current.node, true);
+			resultNode.AppendChild(newNode);
+		}
+		return result;
+	}
+	return forums;
+}
+else
+{
+	List<string> userIdentities = GetAllUserIdentities(userId);
+	if (userIdentities.Count < 1)
+	{
+		throw new Exception(String.Format(CultureInfo.InvariantCulture, errorPrefix, CCO.ErrorLookup.Lookup("SSVC_NoUserIdentities")));
+	}
+	Item result = GetForumsOwnedByUser(userIdentities, includeBookmarks);
+	if (result.isError())
+	{
+		throw new Exception(String.Format(CultureInfo.InvariantCulture, errorPrefix, result.getErrorString()));
+	}
+	return result;
+}
+}
+
+private Item GetForumsForUser(string userId)
+{
+	Item forums = this.newItem("User", "VC_GetForumsForUser");
+	forums.setID(userId);
+	return forums.apply();
+}
+
+private Item GetForumsOwnedByUser(List<string> userIdentities, bool includeBookmarks)
+{
+	Item forums = this.newItem("Forum", "get");
+	Item and = forums.newAND();
+	and.setProperty("state", "Active");
+	and.setPropertyAttribute("forum_type", "condition", "in");
+	and.setProperty("forum_type", GetForumTypeCondition(includeBookmarks));
+	and.setPropertyAttribute("owned_by_id", "condition", "in");
+	and.setProperty("owned_by_id", String.Join(", ", userIdentities.ToArray()));
+	return forums.apply();
+}
+
+private string GetForumTypeCondition(bool includeBookmarks)
+{
+	if (includeBookmarks)
+	{
+		return "'Regular', 'MyBookmarks'";
+	}
+	else
+	{
+		return "'Regular'";
+	}
+}
+
+private List<string> GetAllUserIdentities(string userId)
+{
+	Item identitiesIds = this.newItem("user", "VC_GetAllUserIdentities");
+	identitiesIds.setID(userId);
+	identitiesIds = identitiesIds.apply();
+	return identitiesIds.getResult().Split('|').ToList();
+}
+
+private bool IsUserAdmin(string userId)
+{
+	Item req = this.newItem("User", "VC_IsUserAdmin");
+	req.setID(userId);
+	req = req.apply();
+	string result = req.getResult();
+	if (string.Equals(result, "true", StringComparison.OrdinalIgnoreCase))
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_GetForumsUserCanEdit</name>
+ </Item>
+</AML>

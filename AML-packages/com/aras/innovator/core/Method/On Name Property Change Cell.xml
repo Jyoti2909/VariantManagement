@@ -1,0 +1,48 @@
+﻿<AML>
+ <Item type="Method" id="631C4070A10C4EB881D8289EC1B6E6C3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*version:6*/
+
+var name = getRelationshipProperty(relationshipID, 'name');
+if (name === '') {
+	return false;
+}
+var newLabelName = name;
+
+var newName = name.replace(/ /g, '_').toLowerCase();
+var re = /^[a-z_][a-z0-9_]*$/;
+
+if (!re.test(newName)) {
+	alert(aras.getResource('', 'imports_core.property_name_error'));
+	setRelationshipProperty(relationshipID, 'name', '');
+	return false;
+}
+
+if (newName.search(/^select$|^update$|^delete$|^drop$|^from$|^where$|^set$|^alter$|^table$|^constraint$|^add$|^or$|^as$|^on$|^grant$|^file$|^and$/i) === 0) {
+	alert(aras.getResource('', 'imports_core.restricted_property_name'));
+	setRelationshipProperty(relationshipID, 'name', '');
+	return false;
+}
+
+if (newName.search(/\s/) > -1) {
+	alert(aras.getResource('', 'imports_core.property_name_error_remove_whitespaces'));
+	setRelationshipProperty(relationshipID,'name', '');
+	return false;
+}
+
+// make label
+var label = getRelationshipProperty(relationshipID, 'label');
+
+if (name != newName) {
+	setRelationshipProperty(relationshipID, 'name', newName);
+}
+if (label != newLabelName) {
+	setRelationshipProperty(relationshipID, 'label', newLabelName);
+}
+
+return true;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>On Name Property Change Cell</name>
+ </Item>
+</AML>

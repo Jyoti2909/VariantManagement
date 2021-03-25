@@ -1,0 +1,91 @@
+﻿<AML>
+ <Item type="Method" id="973606A06A07472EA8C051CEC697CB1B" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=ConflictDetectionLocalRuleCSharp.version:1;
+
+public class $(clsname) : LocalConflictDetectionRule
+{
+	Aras.Server.Core.CallContext CCO;
+
+	public $(clsname)(IServerConnection serverConnection, String name)
+		: base(serverConnection, name)
+	{
+		this.CCO = ((Aras.Server.Core.IOMConnection)serverConnection).CCO;
+	}
+
+	public override IList<ConflictDetectionResult> Execute(Item configuration)
+	{
+		List<ConflictDetectionResult> ConflictList = new List<ConflictDetectionResult>();
+		List<string> types = new List<string>();
+		Item items = configuration.getItemsByXPath("//Item[@action='update' or @action='version']");
+		int itemsCount = items.getItemCount();
+
+		for (int itemIndex = 0; itemIndex < itemsCount; itemIndex++)
+		{
+			Item item4Check = items.getItemByIndex(itemIndex);
+			if (!IsGenerationTheLast(item4Check))
+			{
+				ConflictDetectionResult conflictResult = this.CreateConflict(item4Check, "Trying to update not the last items generation!");
+				ConflictList.Add(conflictResult);
+			}
+		}
+
+		Item itemsWithEdit = configuration.getItemsByXPath("//Item[@action='edit']");
+		itemsCount = itemsWithEdit.getItemCount();
+		for (int itemIndex = 0; itemIndex < itemsCount; itemIndex++)
+		{
+			Item itemForCheck = itemsWithEdit.getItemByIndex(itemIndex);
+			ConflictList.Add(this.CreateConflict(itemForCheck, "Action \"edit\" isn't supported in checkin configuration and was ignored during check for conflicts."));
+		}
+
+		return ConflictList;
+	}
+
+	private bool IsGenerationTheLast(Item itemForCheck)
+	{
+		string configId = GetItemConfigId(itemForCheck);
+		string type = itemForCheck.getType();
+		string itemId = itemForCheck.getID();
+		string currentGeneration = itemForCheck.getProperty("generation");
+
+		Item checker = this.Innovator.newItem(type, "get");
+		checker.setAttribute("select", "generation");
+		checker.setProperty("config_id", configId);
+
+		Item result = checker.apply();
+		if (result.isError())
+		{
+			throw new Aras.IOME.ItemErrorException(result);
+		}
+
+		return String.Equals(itemId, result.getID(), StringComparison.InvariantCulture);
+	}
+
+	private string GetItemConfigId(Item itemForCheck)
+	{
+		string configId = itemForCheck.getProperty("config_id");
+		if (!String.IsNullOrEmpty(configId))
+		{
+			return configId;
+		}
+		else
+		{
+			string type = itemForCheck.getType();
+			string id = itemForCheck.getID();
+			Item request = this.Innovator.newItem(type, "get");
+			request.setAttribute("id", id);
+			request.setAttribute("select", "config_id");
+
+			Item result = request.apply();
+			if (result.isError())
+			{
+				throw new Aras.IOME.ItemErrorException(result);
+			}
+			return result.getProperty("config_id");
+		}
+	}
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>ConflictDetection_NOT_LATEST</name>
+ </Item>
+</AML>

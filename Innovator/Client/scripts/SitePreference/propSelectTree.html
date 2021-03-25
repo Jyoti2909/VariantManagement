@@ -1,0 +1,114 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<!-- (c) Copyright by Aras Corporation, 2005-2013. -->
+<html>
+<head>
+<title>Property Selection Dialog</title>
+<style type="text/css">
+	@import "../../javascript/dojo/resources/dojo.css";
+	@import "../../javascript/dijit/themes/claro/claro.css";
+	@import "../../javascript/dojox/grid/resources/claroGrid.css";
+	@import "../../javascript/include.aspx?classes=common.css";
+	html, body {
+		overflow: hidden;
+		width: 100%;
+		height: 100%;
+		margin: 0px;
+		padding: 0px;
+	}
+</style>
+<script>
+	window.dialogArguments = window.frameElement.dialogArguments;
+	var aras = a = dialogArguments.aras;
+</script>
+<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: true, parseOnLoad: false, baseUrl:'../../javascript/dojo'"></script>
+<script type="text/javascript" src="../../javascript/include.aspx?classes=XmlDocument"></script>
+<script type="text/javascript" src="../../javascript/dialog.js"></script>
+<script type="text/javascript">
+var propsDom = dialogArguments.propsDom,
+	resDoc;
+
+clientControlsFactory.createControl("Aras.Client.Controls.Public.TreeGridContainer", {connectId: "gridTD",  canEdit: canEditCell}, function(control) {
+	treeGrid = control;
+	treeGrid.setMultiselect(false);
+	clientControlsFactory.on(treeGrid, {
+		"gridDoubleClick": dblClickHandler
+	});
+	loadExcelTable();
+});
+
+function canEditCell() {
+	return false;
+}
+
+function loadExcelTable() // XML load to excel applet
+{
+  var tableGrid = { value : "" };
+  tableGrid.add = function (val) {this.value += val}
+  tableGrid.addChildRows = function (propItem, level) {
+    var propItems = propItem.selectNodes("Relationships/Item[@type='Property']");
+    for (var i = 0; i < propItems.length; i++) {
+      var propItm = propItems[i];
+      var id = propItm.getAttribute("id");
+      var name = a.getItemProperty(propItm, "name", "");
+      this.add('<tr id="'+id+'" level="' + level + '"><td>' + name + '</td></tr>');
+    }
+  }
+  tableGrid.addRootRow = function (parItem, level, childItem) {
+    if (!parItem) return;
+    var id = parItem.getAttribute("id");
+    var name = a.getItemProperty(parItem, "name", "");
+    this.add('<tr id="'+id+'" level="' + level + '"><td>' + name + '</td>');
+    if (childItem) {
+      var nextLevelItemInChild = childItem.selectSingleNode("Relationships/Item[@type='RelationshipType']/relationship_id/Item");
+      tableGrid.addRootRow(childItem, level + 1, nextLevelItemInChild);
+    }
+      var nextLevelItem = parItem.selectSingleNode("Relationships/Item[@type='RelationshipType']/relationship_id/Item");
+      var next2LevelItem = parItem.selectSingleNode("Relationships/Item[@type='RelationshipType']/related_id/Item");
+      tableGrid.addRootRow(nextLevelItem, level + 1, next2LevelItem);
+      this.addChildRows(parItem, level + 1);
+    this.add('</tr>');
+  }
+  
+  tableGrid.add('<?xml version="1.0" encoding="utf-8"?> ' +
+  '<table font="Microsoft Sans Serif-8" sel_bgColor="steelbue" sel_TextColor="white" header_BgColor="buttonface" expandroot="true" expandall="false" treelines="1" editable="false" draw_grid="true" multiselect="false" column_draggable="false" enableHtml="false" enterAsTab="false" bgInvert="true" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:aras="http://www.aras.com" xmlns:usr="urn:the-xml-files:xslt">' +
+  '<thead>' +
+  '  <th align="c">' + a.getResource("", "gridlayout.property") + '</th>' +
+  '</thead>' +
+  '<columns>' +
+  '  <column order="0" width="100%" align="left" edit="NOEDIT" />' +
+  '</columns>');
+  
+  var rootItem = propsDom.selectNodes("/Item");
+  var level = 0;
+  for (var i = 0; i < rootItem.length; i++) {
+    var parItem = rootItem[i];
+    tableGrid.addRootRow(parItem, level);
+  }
+  tableGrid.add('</table>');
+  treeGrid.InitXML(tableGrid.value);
+}
+
+function dblClickHandler(id)
+{
+  var propNd = propsDom.selectSingleNode("//Item[@type='Property'][@id='" + id + "']");
+  if(!propNd) return;
+  
+  var propName = a.getItemProperty(propNd,"name");
+  var itNode = propNd.selectSingleNode("ancestor::Item[@type='ItemType'][1]");
+  var itName = a.getItemProperty(itNode,"name");
+
+	dialogArguments.dialog.close(itName + "/" + propName);
+}
+</script>
+
+</head>
+<body class="claro">
+	<table style="width: 100%; height: 100%;" cellspacing="0" cellpadding="0">
+		<tbody>
+			<tr style="vertical-align: top;">
+				<td id="gridTD" style="height: 100%;" valign="top" />
+			</tr>
+		</tbody>
+	</table>
+</body>
+</html>

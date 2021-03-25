@@ -1,0 +1,70 @@
+﻿@model Models.FieldRenderModel
+
+@{
+	var fieldId = Model.FieldNode.Id;
+	var funcName = "system_" + fieldId + "_checked";
+	var fieldNm = Model.FieldNode.Name;
+	var propNm = !Model.PropertyNode.IsNull ? Model.PropertyNode.Name : "";
+	var tabIndex = Model.FieldNode.TabStop ? "tabindex = '" + Model.FieldNode.TabIndex.Value + "'" : "tabindex = '-1'";
+	var onpropertychange = !String.IsNullOrEmpty(propNm) ? "if (window.handleItemChange) {\r\n" +
+		"		var cbValue = new Array('', '0', '1');\r\n" +
+		"		handleItemChange('"+propNm+"', cbValue[this.value]);\r\n" +
+		"	}" : "";   
+}
+
+<img id="@(fieldId)" name="@(fieldNm)" class="@(fieldNm)" src = "../images/checkbox-unchecked.svg" value = "0" @Html.Raw(tabIndex) onclick = "this.value = (this.value + 1) % 3;" onpropertychange="@Html.Raw(onpropertychange)" /> 
+
+<script type="text/javascript">
+	function @(funcName)(event) {
+		if (!event) {
+			event = window.event;
+			if (!event.srcElement) {
+				event.srcElement = event.target;
+				if (event.propertyName != "value") {
+					return true;
+				}
+				var ctrlElem = event.srcElement;
+				if (!ctrlElem) {
+					 return true;
+				}
+				var checkbox=document.getElementById("@(fieldId)");
+				if (!checkbox) {
+					return true;
+				}
+
+				if (checkbox.i_value == ctrlElem.value) {
+					return true;
+				}
+				var val=ctrlElem.value;
+				checkbox.i_value=val;
+
+				if (val == "0") {
+					checkbox.src = "../images/checkbox-unchecked.svg";
+					checkbox.value = 1;
+				}
+				else if (val == "1") {
+					checkbox.src = "../images/checkbox-checked.svg";
+					checkbox.value = 2;
+				} 
+				else {
+					checkbox.src = "../images/checkbox-requirement-checked.svg";
+					checkbox.value = 0;
+				}
+				return true;
+			}
+			return false;
+		}
+		return false;
+	}
+	@{
+		if (!Model.PropertyNode.IsNull)
+		{
+			<text>
+				if (observersHash.getElementById("@(propNm)_system"))
+				{
+					observersHash.getElementById("@(propNm)_system").attachEvent("onpropertychange", @(funcName));
+				}
+			</text>
+		}
+	}
+</script>

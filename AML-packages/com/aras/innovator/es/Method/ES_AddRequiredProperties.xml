@@ -1,0 +1,61 @@
+﻿<AML>
+ <Item type="Method" id="A27185CA1E484F72BF2346153A59C7C3" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[    Innovator inn = this.getInnovator();
+    
+    //Initialize configuration properties
+    ConfigurationProperty[] configurationProperties = new ConfigurationProperty[11]
+    {
+        new ConfigurationProperty("config_id", false, false, false, true),
+        new ConfigurationProperty("is_current", false, true, false, false),
+        new ConfigurationProperty("is_released", false, true, false, false),
+        new ConfigurationProperty("keyed_name", true, false, true, false),
+        new ConfigurationProperty("modified_on", false, false, true, false),
+        new ConfigurationProperty("modified_by_id", false, true, false, false),
+        new ConfigurationProperty("major_rev", false, false, true, false),
+        new ConfigurationProperty("generation", false, false, true, false),
+        new ConfigurationProperty("state", false, true, false, false),
+        new ConfigurationProperty("created_on", false, false, true, false),
+        new ConfigurationProperty("created_by_id", false, true, false, false)
+    };
+    
+    //Add configuration properties if they are missing
+    foreach (ConfigurationProperty confProperty in configurationProperties)
+    {
+        Item indexedPropertyItms = this.getItemsByXPath(String.Format(CultureInfo.InvariantCulture, "Relationships/Item[@type='ES_IndexedProperty' and property_name='{0}']", confProperty.Property));
+        if (indexedPropertyItms.getItemCount() == 0)
+        {
+            Item indexedPropertyItm = inn.newItem("ES_IndexedProperty", "add");
+            indexedPropertyItm.setProperty("property_name", confProperty.Property);
+            indexedPropertyItm.setProperty("is_search", confProperty.IsSearch ? "1" : "0");
+            indexedPropertyItm.setProperty("is_facet", confProperty.IsFacet ? "1" : "0");
+            indexedPropertyItm.setProperty("is_ui", confProperty.IsUI ? "1" : "0");
+            
+            this.addRelationship(indexedPropertyItm);
+        }
+    }
+    
+    return this;
+}
+
+private struct ConfigurationProperty
+{
+    public ConfigurationProperty(string property, bool isSearch, bool isFacet, bool isUI, bool isStoreOnly)
+    {
+        this.Property = property;
+        this.IsSearch = isSearch;
+        this.IsFacet = isFacet;
+        this.IsUI = isUI;
+        this.IsStoreOnly = isStoreOnly;
+    }
+    
+    public string Property;
+    public bool IsSearch;
+    public bool IsFacet;
+    public bool IsUI;
+    public bool IsStoreOnly;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>ES_AddRequiredProperties</name>
+ </Item>
+</AML>

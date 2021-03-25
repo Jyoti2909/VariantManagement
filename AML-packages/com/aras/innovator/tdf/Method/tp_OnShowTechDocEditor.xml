@@ -1,0 +1,55 @@
+﻿<AML>
+ <Item type="Method" id="DD3F0618FD104C369DBC4C3CCB407E14" action="add">
+  <comments>Loads TechDoc editor</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[return ModulesManager.using(['aras.innovator.core.ItemWindow/DefaultItemWindowView', 'aras.innovator.core.ItemWindow/DefaultItemWindowCreator'],
+	function(DefaultItemWindowView, Creator) {
+		function TechDocItemWindowView(inDom, inArgs) {
+			DefaultItemWindowView.call(this, inDom, inArgs);
+		}
+		TechDocItemWindowView.prototype = new DefaultItemWindowView();
+		TechDocItemWindowView.prototype.getViewUrl = function() {
+			return '/Modules/aras.innovator.TDF/TechDocContainerView';
+		};
+		TechDocItemWindowView.prototype.getWindowArguments = function() {
+			var baseArgs = DefaultItemWindowView.prototype.getWindowArguments.call(this);
+			var tdfSettings = {
+				// flag that is used in editor to toggle core and non-core (customer-specific) functionality
+				// can be accesed with StructuredDocument.getAdditionalData('isCoreTDF') call
+				isCoreTDF: true,
+				// server method name that extacts required data from the item and prepare TDF document xml
+				contentBuilderMethod: 'tp_DocumentGet',
+				// server method that returns list of option families as string in JSON format
+				// {"familyName1": ["value1","value2",..], "familyName2":["value3","value4",..]}
+				optionFamiliesBuilderMethod: 'tp_GetOptionFamilies'
+				// option families also can be passed from here with following parameter
+				//optionFamilies: {firstFamily: ["value1,value2,.."], secondFamily:["value3","value4",..]}
+				// reference relationship names can be passed as parameters
+				/*
+				referenceRelationshipNames: {
+					documentReference: 'tp_BlockReference',
+					itemReference: 'tp_ItemReference',
+					imageReference: 'tp_ImageReference',
+					linkReference: 'tp_LinkReference'
+				}
+				*/
+
+			};
+
+			baseArgs.reserveSpaceForSidebar = true;
+
+			// later can be replaced by more common method of parameter sharing, if it will be implemented
+			baseArgs.item.setAttribute('TDFSettings', JSON.stringify(tdfSettings));
+
+			return baseArgs;
+		};
+
+		var view = new TechDocItemWindowView(inDom,inArgs);
+		var creator = new Creator(view);
+		return creator.ShowView();
+	});
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>tp_OnShowTechDocEditor</name>
+ </Item>
+</AML>

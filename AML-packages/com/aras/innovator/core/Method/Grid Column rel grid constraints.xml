@@ -1,0 +1,53 @@
+﻿<AML>
+ <Item type="Method" id="70512B7E579948C39BF826B6E71A8710" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*version:1*/
+/*
+This method implements logical constraints for "Grid Column" tab of Grid instance
+window according to the specification:
+"The user interface must be programmatically constrained to allow only one of these
+to be selected: xpath or method, and also allow only one in: select query, select method."
+*/
+var propNm  = propertyName;
+var propVal = getRelationshipProperty(relationshipID, propertyName);
+if (propVal === '') {
+	return true;
+}
+
+function getExclusionsSet(propNm) {
+	var set1 = {'select_query': 1, 'select_method': 1};
+
+	function isInSet(set) {
+		for (var p in set) {
+			if (p == propNm) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	if (isInSet(set1)) {
+		return set1;
+	}
+
+	return null;
+}
+
+var exclusionsSet = getExclusionsSet(propNm);
+if (!exclusionsSet) {
+	return true;
+}
+
+delete exclusionsSet[propNm];
+
+//empty all excluded properties
+for (var pN in exclusionsSet) {
+	setRelationshipProperty(relationshipID, pN, '');
+}
+
+return true;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Grid Column rel grid constraints</name>
+ </Item>
+</AML>

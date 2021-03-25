@@ -1,0 +1,36 @@
+﻿<AML>
+ <Item type="Method" id="3081A77208C8446C872FAF69ADF88E69" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[    var reportId = this.getID();
+	if (string.IsNullOrEmpty(reportId))
+	{
+		return this.getInnovator().newError("Report Id should not be empty");
+	}
+
+	Item runReport = HandleRunReportByUser(reportId, "get", null);
+	if (runReport.isError())
+	{
+		return HandleRunReportByUser(reportId, "add", this.getNewID());
+	}
+	else
+	{
+		return HandleRunReportByUser(reportId, "edit", runReport.getID());
+	}
+}
+
+private Item HandleRunReportByUser(string reportId, string action, string runReportId)
+{
+	var inn = this.getInnovator();
+	var currentUserId = inn.getUserID();
+	Item runReport = this.newItem("RunReportByUser", action);
+	if (!string.IsNullOrEmpty(runReportId))
+	{
+		runReport.setID(runReportId);
+	}
+	runReport.setProperty("related_id", currentUserId);
+	runReport.setProperty("source_id", reportId);
+	return runReport.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>AddOrEditRunReportByUser</name>
+ </Item>
+</AML>

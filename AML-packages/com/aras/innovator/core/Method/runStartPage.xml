@@ -1,0 +1,62 @@
+﻿<AML>
+ <Item type="Method" id="93927AA41EC14ED1839D3AF846C4B8F5" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var itemID = inArgs.itemID;
+var itemTypeName = inArgs.itemTypeName;
+var itemVersionModificator = inArgs.versionModificator;
+var getItemByModificator = {
+	default: function(itemID, itemTypeName) {
+		return aras.getItemById(itemTypeName, itemID);
+	},
+	released: function(itemID, itemTypeName) {
+		var itemAml = aras.newIOMItem(itemTypeName, 'get');
+		itemAml.setAttribute('queryType', 'Released');
+		itemAml.setAttribute('queryDate', ArasModules.intl.date.toIS0Format(new Date()));
+		itemAml.setProperty('config_id', itemID);
+		var result = itemAml.apply();
+		return result.node;
+	},
+	current: function(itemID, itemTypeName) {
+		var itemAml = aras.newIOMItem(itemTypeName, 'get');
+		itemAml.setAttribute('queryType', 'Latest');
+		itemAml.setProperty('config_id', itemID);
+		var result = itemAml.apply();
+		return result.node;
+	}
+};
+
+var gottenItem;
+if (getItemByModificator[itemVersionModificator]) {
+	gottenItem = getItemByModificator[itemVersionModificator](itemID, itemTypeName);
+} else {
+	gottenItem = getItemByModificator.default(itemID, itemTypeName);
+}
+
+if (!gottenItem) {
+	return Promise.reject(aras.getResource('', 'deep_link.error_open_item'));
+}
+
+itemID = aras.getItemProperty(gottenItem, 'id');
+var keyedName = aras.getItemProperty(gottenItem, 'keyed_name');
+if (aras.uiFindWindowEx(itemID)) {
+	return Promise.resolve(aras.getResource('', 'deep_link.item_alredy_is_opened', itemTypeName + ' ' + keyedName));
+}
+
+var result = aras.uiShowItemEx(gottenItem, 'tab view', !Boolean(window.arasTabs));
+
+if (!result || !result.then) {
+	return Promise.reject(aras.getResource('', 'deep_link.error_open_item'));
+}
+
+return new Promise(function(resolve) {
+	//result is AsyncResult (not Promise). AsyncResult don't support 'catch' method
+	result.then(function() {
+		aras.uiFindAndSetFocusWindowEx(itemID);
+		return resolve(aras.getResource('', 'deep_link.item_is_opened', itemTypeName + ' ' + keyedName));
+	});
+});
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>runStartPage</name>
+ </Item>
+</AML>

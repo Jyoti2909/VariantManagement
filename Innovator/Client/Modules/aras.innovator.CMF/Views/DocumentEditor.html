@@ -1,0 +1,131 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<link rel="stylesheet" href="../../../javascript/dijit/themes/claro/claro.css" media="screen">
+	<style type="text/css">
+		@import "../ThirdParty/dgrid/css/dgrid.css";
+		@import "../ThirdParty/dgrid/css/skins/claro.css";
+		@import "../Styles/cmfStyle.css";
+	</style>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=arasStub/dojo.js" data-dojo-config="async: false, isDebug: false, baseUrl:'../../../javascript/dojo',
+		packages: [ { name: 'dgrid', location: '../../Modules/aras.innovator.CMF/ThirdParty/dgrid' },
+					{ name: 'dstore', location: '../../Modules/aras.innovator.CMF/ThirdParty/dstore' },
+					{ name: 'put-selector', location: '../../Modules/aras.innovator.CMF/ThirdParty/put-selector' },
+					{ name: 'xstyle', location: '../../Modules/aras.innovator.CMF/ThirdParty/xstyle' }]"></script>
+	<script type="text/javascript" src="../Scripts/Utils.js"></script>
+	<script type="text/javascript" src="../Scripts/Menu/Modules/ReferenceMenu.js")"></script>
+	<script type="text/javascript" src="../Scripts/Menu/Modules/PermissionMenu.js")"></script>
+	<script>
+		var isMacOs = /mac/i.test(navigator.platform),
+			documentEditor = null,
+			btnCodeZ = 90,
+			btnCodeY = 89,
+			btnCodeT = 84;
+
+		window.loadQPDocument = function (globalData, spreadSheetViewId, actionStore, dataStore, findControl) {
+			actionStore.setDocumentTypeId(globalData.docTypeId);
+
+			if (!documentEditor) {
+				require(["CMF/Scripts/DocumentEditor"], function (DocumentEditor) {
+					window.documentEditor = documentEditor = new DocumentEditor(findControl, parent.aras);
+					documentEditor.load(globalData, spreadSheetViewId, actionStore, dataStore);
+				});
+			} else {
+				documentEditor.load(globalData, spreadSheetViewId, actionStore, dataStore);
+			}
+
+			var resizeEvent = document.createEvent("UIEvents");
+			function doResizeEvent(win) {
+				resizeEvent.initUIEvent("resize", true, false, win, 0);
+				win.dispatchEvent(resizeEvent);
+			}
+
+			doResizeEvent(window.parent);
+		}
+
+		window.onLockCommand = function (globalData, itemObj) {
+			documentEditor.reload(globalData, itemObj);
+		}
+
+		window.onUnlockCommand = function (globalData, itemObj) {
+			documentEditor.reload(globalData, itemObj);
+		}
+
+		window.onRefreshCommand = function (globalData, itemObj) {
+			documentEditor.reload(globalData, itemObj);
+		}
+
+		window.onSaveCommand = function (globalData, itemObj) {
+			documentEditor.reload(globalData, itemObj);
+		}
+
+		window.destroySpreadsheet = function () {
+			documentEditor.destroySpreadsheet();
+			var element = document.createElement("div");
+			element.setAttribute("id", "divTree");
+			document.getElementById("contentPaneDiv").appendChild(element);
+		}
+
+
+		function keyPress(e) {
+			var evt = window.event ? event : e;
+			var isCtrlPressed = isMacOs ? evt.metaKey : evt.ctrlKey;
+
+			if (evt.keyCode === btnCodeZ && isCtrlPressed) {
+				documentEditor.undo();
+			}
+
+			if (evt.keyCode === btnCodeY && isCtrlPressed) {
+				documentEditor.redu();
+			}
+
+			if (evt.keyCode === btnCodeT && isCtrlPressed) {
+				documentEditor.recalculateComputedColumns();
+			}
+		}
+
+		document.onkeydown = keyPress;
+	</script>
+</head>
+	<body class="claro" style="margin: 0;">
+		<div id="appLayout"
+		     data-dojo-type="dijit/layout/BorderContainer"
+		     data-dojo-props="design: 'headline', gutters: false">
+			<div style="width: 250px; padding-right: 2px" id="contentPaneDiv"
+			     data-dojo-type="dijit/layout/ContentPane"
+			     data-dojo-props="region: 'left', splitter: true">
+				<div id="divTree"></div>
+			</div>
+			<div id="centerLayout" data-dojo-type="dijit/layout/LayoutContainer"
+			     data-dojo-props="region: 'center'">
+				<div id="grid"></div>
+			</div>
+		</div>
+		<script>
+			require(["dojo/ready", "dojo/parser", "dojo/aspect", "dijit/registry", "dojo/on"], function (ready, parser, aspect, registry, on) {
+				ready(function () {
+					document.getElementById("appLayout").addEventListener("contextmenu", function (menuEvent) {
+						menuEvent.preventDefault();
+						menuEvent.stopPropagation();
+					});
+
+					var fireEventAtParent = function (event) {
+						if (parent) {
+							on.emit(parent.document.body, event.type, event);
+						}
+					};
+					var suppressHotkeys = function (event) {
+						var isCtrlPressed = isMacOs ? event.metaKey : event.ctrlKey;
+						var btnCodeS = 83;
+						var btnCodeL = 76;
+						if (isCtrlPressed && (event.keyCode === btnCodeS || event.keyCode === btnCodeL)) {
+							event.preventDefault();
+						}
+					};
+					document.addEventListener("keydown", fireEventAtParent);
+					document.addEventListener("keydown", suppressHotkeys);
+				});
+			});
+		</script>
+	</body>
+</html>

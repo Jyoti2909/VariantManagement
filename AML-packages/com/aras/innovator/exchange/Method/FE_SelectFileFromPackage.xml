@@ -1,0 +1,36 @@
+﻿<AML>
+ <Item type="Method" id="DADA34A8D8944FDABE42D2849654190D" action="add">
+  <comments>Display dilaog for add file from instance of fileExchangePackage</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!inArgs) {
+	return;
+}
+
+var params = aras.newObject();
+params.aras = inArgs.aras;
+params.itemId = inArgs.itemId;
+params.multiselect = inArgs.multiselect;
+params.title = aras.getResource('', 'fe.select_file_from_package');
+params.requestedPropertiesLabels = aras.newArray
+(
+	aras.getResource('', 'fe.package'),
+	aras.getResource('', 'fe.file')
+);
+params.requestedPropertiesColumnsWidth = aras.newArray('30', '70');
+params.requestedPropertiesColumnsAligns = aras.newArray('left', 'left');
+
+var form = aras.getItemByName('Form', 'FE_SelectFileFromPackage', 0);
+var width = aras.getItemProperty(form, 'width', 600);
+var height = aras.getItemProperty(form, 'height', 500);
+
+params.formId = aras.getItemProperty(form, 'id');
+params.dialogWidth = width;
+params.dialogHeight = height;
+params.content = 'ShowFormAsADialog.html';
+
+return ArasModules.Dialog.show('iframe', params).promise;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>FE_SelectFileFromPackage</name>
+ </Item>
+</AML>

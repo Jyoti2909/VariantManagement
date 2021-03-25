@@ -1,0 +1,192 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<title></title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" type="text/css" href="../styles/default.css" />
+	<script>
+		window.dialogArguments = window.frameElement.dialogArguments;
+		var aras = dialogArguments.aras;
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules,ClassReferencesStructure,TearOffMenuController,ClassStructure"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<script type="text/javascript">
+		document.title = dialogArguments.title;
+	</script>
+	<style type="text/css">
+		@import "../javascript/include.aspx?classes=arasClaro.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/common.min.css";
+		#top {
+			height: 55px;
+		}
+		.aras-class-structure {
+			overflow: auto;
+			height: calc(100% - 55px);
+			display: block;
+		}
+	</style>
+	<!--
+			dialog arguments:
+			aras  - aras object
+			title - string to be used as title of the window
+			class_structure - string with class structure
+			dialogType - string ('class_path','class_structure','classification')
+			isEditMode - true or false (is used only if dialogType=='class_structure')
+			item - current item
+		-->
+	<script type="text/javascript">
+		dojo.require("Aras.Client.Controls.Experimental.MainMenu");
+
+		var saved = false;
+		var solution = new Solution("core");
+		var rm = new ResourceManager(solution, "ui_resources.xml", aras.getSessionContextLanguageCode());
+
+		function onExpandAllCommand() {
+			classStructure.expandTree();
+		}
+
+		function onCollapseAllCommand() {
+			classStructure.collapseTree();
+		}
+
+		function onSaveAndCloseCommand() {
+			if (saved) {
+				return;
+			}
+
+			const selectedItemKey = classStructure.selectedItemKey;
+
+			const dialogType = classStructure.Settings.DialogType;
+			if (dialogType === "classification" || dialogType === "class_path") {
+				const selectedItem = classStructure.data.get(selectedItemKey);
+				if (!selectedItem || !selectedItem.enabled) {
+					return;
+				}
+
+				if (classStructure.Settings.SelectLeafOnly && !classStructure.IsSelectedItemLeaf()) {
+					aras.AlertError(aras.getResource("", "classstructure.you_may_select_leaf_nodes_only"), "", "", window);
+					return;
+				}
+
+				onCloseCommand(classStructure.GetClassPath());
+			} else {
+				const classNodes = classStructure.StructureDom.selectNodes("//class[@isTemp]");
+				for (let i = 0; i < classNodes.length; i++) {
+					const classNode = classNodes[i];
+					classNode.removeAttribute("isTemp");
+				}
+
+				const item = classStructure.Settings.Item;
+				if (!(item.getAttribute("action") == "add" && item.getAttribute("isTemp") == "1"))
+					aras.uiReShowItemEx(aras.getItemProperty(item, "id"), item);
+
+				onCloseCommand(classStructure.StructureDom.xml);
+			}
+		}
+
+		function onUndoCommand() {
+			window.tearOffMenuController.setControlEnabled("undo", false);
+			InitializeClassStructure();
+		}
+
+		function onSetNothingCommand() {
+			onCloseCommand("");
+		}
+
+		function onCloseCommand(value) {
+			saved = true;
+			dialogArguments.dialog.close(value);
+		}
+
+		window.onbeforeunload = function() {
+			if (!saved && classStructure.IsModified()) {
+				onSaveAndCloseCommand();
+			}
+		};
+
+		onload = function onload_handler() {
+			tearOffMenuController = new TearOffMenuController({view: "classStructure", aras: aras, searchForMenu: false, window: window});
+
+			tearOffMenuController.requireToolbar();
+			tearOffMenuController.when('ToolbarLoaded').then(function(control) {
+				tearOffMenuController.initToolbar(control, 'ClassStructureDialogToolbar', /com.aras.innovator.cui_default.twt_/g, '%all_grouped_by_classification%');
+			});
+
+			tearOffMenuController.requireMainMenu();
+			tearOffMenuController.when('MainMenuLoaded').then(function(control) {
+				tearOffMenuController.initMainMenu(control, 'ClassStructureDialogMenu');
+			});
+
+			tearOffMenuController.initController();
+
+			const infernoFlags = ArasModules.utils.infernoFlags;
+			const nav = document.createElement('aras-class-structure');
+
+			nav.className = 'aras-class-structure';
+			document.body.appendChild(nav);
+
+			const eventHandlerProvider = new ClassStructureEventHandlerProvider('structure');
+			eventHandlerProvider.OnLoad(nav);
+
+			if(!classStructure.Settings.IsEditMode) {
+				nav.dom.classList.add('aras-nav_non-editable');
+			}
+
+			nav.contexMenu = new ArasModules.ContextMenu(document.body);
+
+			nav.contexMenu.on('click', function(command, e) {
+				eventHandlerProvider.OnMenuClick(command, nav.data.get(nav.selected));
+				nav.render();
+			});
+
+			nav.on('contextmenu', function(targetElementKey, event) {
+				if (nav.selected !== targetElementKey) {
+					nav.editedItemKey = null;
+					nav.select(targetElementKey);
+				}
+
+				const selectedItem = nav.data.get(targetElementKey);
+				if(eventHandlerProvider.OnMenuShow(selectedItem)) {
+					nav.contexMenu.show({
+						x: event.clientX,
+						y: event.clientY
+					});
+				}
+				event.preventDefault();
+			});
+
+			nav.on('dblclick', function(targetElementKey, event) {
+				nav.editedItemKey = null;
+				const selectedItem = nav.data.get(targetElementKey);
+				if(!selectedItem || !selectedItem.enabled) {
+					return;
+				}
+
+				eventHandlerProvider.OnDbClick(targetElementKey);
+			});
+
+			nav.on('focusout', function(targetElementKey, event) {
+				if (!nav.editedItemKey || event.target.tagName !== 'INPUT') {
+					return;
+				}
+
+				const inputElement = event.target;
+				const editItem = nav.data.get(nav.editedItemKey);
+				const newName = inputElement.value;
+				nav.editedItemKey = null;
+
+				eventHandlerProvider.OnNameEdit(editItem, newName);
+				nav.render();
+			});
+
+
+		};
+	</script>
+</head>
+<body class="claro">
+	<div id="top"></div>
+</body>
+</html>

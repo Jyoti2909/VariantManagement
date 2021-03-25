@@ -1,0 +1,65 @@
+﻿<TestCase author='apetrovsky@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>
+		<![CDATA[
+			Create a Parts with each Mechanical Part classifications as a cad designer.
+			Created within 33702 bug
+		]]>
+	</Description>
+	<Request runAs='cadTestUser1:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with CAD-Designer identity
+			When:
+				The user tries to create a parts with each Mechanical Part classifications as cad designer.
+			Then:
+				Parts should be created.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='2D0831195650401CA3C893B68827FB68' doGetItem='0'>
+					<classification>Mechanical Part/Assembly</classification>
+					<name>Assembly</name>
+				</Item>
+				<Item type='Part' action='add' id='2068D2532A7B46B2B5CF48F7FB4C84F6' doGetItem='0'>
+					<classification>Mechanical Part/Component</classification>
+					<name>Component</name>
+				</Item>
+				<Item type='Part' action='add' id='ACED83CD51EE4B1CB67A111A092692FA' doGetItem='0'>
+					<classification>Mechanical Part/MBOM only Part</classification>
+					<name>MBOM only Part</name>
+				</Item>
+				<Item type='Part' action='add' id='720B9BE5539840E3B77E52AA1AFE8D38' doGetItem='0'>
+					<classification>Mechanical Part/M-Phantom</classification>
+					<name>M-Phantom</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='2D0831195650401CA3C893B68827FB68' />
+						<Item type='Part' id='2068D2532A7B46B2B5CF48F7FB4C84F6' />
+						<Item type='Part' id='ACED83CD51EE4B1CB67A111A092692FA' />
+						<Item type='Part' id='720B9BE5539840E3B77E52AA1AFE8D38' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='Part' idlist='2D0831195650401CA3C893B68827FB68,2068D2532A7B46B2B5CF48F7FB4C84F6,ACED83CD51EE4B1CB67A111A092692FA,51CA766F2FCA4419A8A46896D43AE98E,720B9BE5539840E3B77E52AA1AFE8D38,C23B1357AC8C49DABAFEDDE341C8244F' action='delete' />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

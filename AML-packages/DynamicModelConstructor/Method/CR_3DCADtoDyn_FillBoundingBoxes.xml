@@ -1,0 +1,76 @@
+﻿<AML>
+ <Item type="Method" id="AB9AB47B795440B68DE595117170EB24" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[		Innovator inn = this.getInnovator();
+		string itemID = this.getProperty("cad_id");
+		string shatteredXmlId = this.getProperty("shattered_xml_id");
+		string masterXmlUrl = inn.getFileUrl(shatteredXmlId, Aras.IOM.UrlType.SecurityToken);
+
+		XmlDocument doc = new XmlDocument();
+		doc.Load(masterXmlUrl);
+		doc.PreserveWhitespace = true;
+
+		Parser.ProcessDoc(inn, doc.DocumentElement, itemID);
+
+		return inn.newResult("OK");
+	}
+}
+
+
+public static class Parser
+{
+
+	public static void ProcessDoc(Innovator inn, XmlNode rootnode, string itemId)
+	{
+		if (inn != null && rootnode != null && !string.IsNullOrEmpty(itemId))
+		{ 
+			XmlNode bBoxNode = rootnode.SelectSingleNode("/Root/ModelFile/ProductOccurence/BoundingBox");
+			if (bBoxNode != null)
+			{
+				Item cad = inn.newItem("CAD", "update");
+				cad.setID(itemId);
+			
+				PopulateBoundingBoxProperties (cad, getAttribute(bBoxNode, "Min"), getAttribute(bBoxNode, "Max"));
+				cad.apply();
+			}
+		}
+	}
+
+	static private string getAttribute(XmlNode node, string attrName)
+	{
+		string attrVal = "";
+		if (node != null)
+		{
+			XmlAttribute attr = node.Attributes[attrName];
+			if (attr != null)
+				attrVal = attr.Value;
+		}
+
+		return (attrVal.Trim());
+	}
+
+	static public void PopulateBoundingBoxProperties (Item cad, String bBoxMin, String bBoxMax) 
+	{
+		if (cad != null && !string.IsNullOrEmpty(bBoxMin))
+		{
+			String[] bMin = bBoxMin.Split(' ');
+			if (bMin.Length == 3) {
+				cad.setProperty("x_min", bMin[0]);
+				cad.setProperty("y_min", bMin[1]);
+				cad.setProperty("z_min", bMin[2]);
+			}
+		}
+
+		if (cad != null && !string.IsNullOrEmpty(bBoxMax))
+		{
+			String[] bMax = bBoxMax.Split(' ');
+			if (bMax.Length == 3) {
+				cad.setProperty("x_max", bMax[0]);
+				cad.setProperty("y_max", bMax[1]);
+				cad.setProperty("z_max", bMax[2]);
+			}
+		}]]></method_code>
+  <method_type>C#</method_type>
+  <name>CR_3DCADtoDyn_FillBoundingBoxes</name>
+ </Item>
+</AML>

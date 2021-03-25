@@ -1,0 +1,72 @@
+﻿<AML>
+ <Item type="Method" id="8570623B7E4943869470DB2FF7B1AB59" action="add">
+  <comments>Method to transfer data from ARAS to SAP</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const innovator = this.getInnovator();
+
+const userID = innovator.getUserID();
+const partID = this.getID();
+const currentRevision = this.getProperty('major_rev');
+
+let queryItem = innovator.newItem('GAG_SAPTransferLog', 'get');
+queryItem.setAttribute(
+	'select',
+	'gag_material_number,gag_revision,current_state'
+);
+queryItem.setProperty('gag_sap_status', 'Pending');
+queryItem = queryItem.apply();
+
+const lifeCycleState = this.getProperty('current_state');
+const lifeCycleItem = innovator.getItemById('Life Cycle State', lifeCycleState);
+const lifeCycleName = lifeCycleItem.getProperty('name');
+
+if (lifeCycleName !== '30' && lifeCycleName !== '50') {
+	top.aras.AlertError('LifeCycle state should be 30 or 50');
+	return;
+}
+
+if (!queryItem.isError()) {
+	for (let i = 0; i < queryItem.getItemCount(); ++i) {
+		const item = queryItem.getItemByIndex(i);
+		const part = item.getProperty('gag_material_number');
+		const revision = item.getProperty('gag_revision');
+		if (partID === part && revision === currentRevision) {
+			top.aras.AlertError('Part Already present in log');
+			return;
+		}
+	}
+}
+
+const currentDate = new Date();
+const transferDate = dateFormat(currentDate);
+
+let material = innovator.newItem('Part', 'get');
+material.setAttribute('select', 'major_rev');
+material.setID(this.getID());
+material = material.apply();
+
+let transferlogItem = innovator.newItem('GAG_SAPTransferLog', 'add');
+transferlogItem.setProperty('gag_sap_status', 'Pending');
+transferlogItem.setProperty('gag_transfer_date', transferDate);
+transferlogItem.setProperty(
+	'gag_revision',
+	material.getProperty('major_rev', '')
+);
+transferlogItem.setProperty('gag_sap_user', userID);
+transferlogItem.setProperty('gag_material_number', partID);
+transferlogItem = transferlogItem.apply();
+
+if (transferlogItem.isError()) {
+	top.aras.AlertError(resultItem.getErrorDetail());
+} else {
+	top.aras.AlertSuccess('Transferred to SAP log');
+}
+
+function dateFormat(inputDate) {
+	return inputDate.toISOString().slice(0, -5);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_TransferToSAP</name>
+ </Item>
+</AML>

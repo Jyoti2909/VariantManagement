@@ -1,0 +1,178 @@
+﻿<AML>
+ <Item type="Method" id="B54B696631B543D4BA2483F20961A104" action="add">
+  <comments>Implementation of EID_VerifyConnection functionality for LDAP provider</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+	return businessLogic.Run(this);
+}
+
+//[PartialPath("BusinessLogic/BusinessLogic")]
+	internal class BusinessLogic
+	{
+		private readonly IDataAccessLayer dal;
+		private readonly IDictionary<string, string> inpParamsD;
+
+		public BusinessLogic(IDataAccessLayer dataAccessLayer)
+		{
+			dal = dataAccessLayer;
+			inpParamsD = new Dictionary<string, string>();
+		}
+
+		public Item Run(Item contextItem)
+		{
+			bool isCollectSuccess = collectInputParams(contextItem, out StringBuilder collectErrMess);
+			if (!isCollectSuccess)
+			{
+				return dal.NewError(collectErrMess != null ?
+					collectErrMess.ToString() : "Undefined parameters collection error");
+			}
+			if (collectErrMess != null)
+			{
+				return dal.NewResult(collectErrMess.ToString());
+			}
+			bool isVerifySuccess = verifyConnection(out StringBuilder verifyErrMess);
+			if (!isVerifySuccess)
+			{
+				return dal.NewResult(verifyErrMess != null ?
+					verifyErrMess.ToString() : "Undefined verification error");
+			}
+			return dal.NewResult("OK");
+		}
+
+		private bool collectInputParams(Item contextItem, out StringBuilder errMess)
+		{
+			errMess = null;
+			XmlNode paramsNd = contextItem.node.SelectSingleNode("params");
+			if (paramsNd == null)
+			{
+				errMess = new StringBuilder("No parameters are provided by client.");
+				return false;
+			}
+			foreach (XmlNode parNd in paramsNd)
+			{
+				if (parNd.NodeType != XmlNodeType.Element)
+				{
+					continue;
+				}
+				if (parNd.FirstChild.NodeType == XmlNodeType.Text)
+				{
+					inpParamsD.Add(parNd.Name, parNd.FirstChild.Value);
+				} else 
+				{
+					if (errMess == null)
+					{
+						 errMess = new StringBuilder("Invalid parameters: ");
+					} else
+					{
+						errMess.Append(", ");
+					}
+					errMess.Append(parNd.Name);
+				}
+			}
+			return true;	
+		}
+
+		private bool verifyConnection(out StringBuilder errMess)
+		{
+			errMess = null;
+			string eidConnectionString = null, eidUserName = null, eidPasswordKey = null;
+			if (!inpParamsD.TryGetValue("eid_connection_string", out eidConnectionString)
+				|| !inpParamsD.TryGetValue("eid_user_name", out eidUserName)
+				|| !inpParamsD.TryGetValue("eid_password_key", out eidPasswordKey))
+			{
+				errMess = new StringBuilder("Missing parameters:");
+				if (string.IsNullOrEmpty(eidConnectionString))
+				{
+					errMess.Append(" eid_connection_string");
+				}
+				if(string.IsNullOrEmpty(eidUserName))
+				{
+					errMess.Append(" eid_user_name");
+				}
+				if(string.IsNullOrEmpty(eidPasswordKey))
+				{
+					errMess.Append(" eid_password_key");
+				}
+			}
+			if (errMess != null)
+			{
+				return false;
+			}
+
+			System.DirectoryServices.Protocols.LdapDirectoryIdentifier ldapDirectoryIdentifier =
+				new System.DirectoryServices.Protocols.LdapDirectoryIdentifier(
+				eidConnectionString, true, false);
+
+			System.DirectoryServices.Protocols.LdapConnection ldapConnection =
+				new System.DirectoryServices.Protocols.LdapConnection(ldapDirectoryIdentifier);
+			ldapConnection.SessionOptions.ProtocolVersion = 3;
+			ldapConnection.AuthType = System.DirectoryServices.Protocols.AuthType.Basic;
+			NetworkCredential nc = new NetworkCredential(eidUserName, eidPasswordKey);
+			try
+			{
+				ldapConnection.Bind(nc);				
+			} catch (ObjectDisposedException odEx)
+			{
+				errMess = new StringBuilder(typeof(ObjectDisposedException).Name);
+				errMess.Append(Environment.NewLine).Append('"').Append(odEx.Message).Append('"');
+			} catch (System.DirectoryServices.Protocols.LdapException ldEx)
+			{
+				errMess = new StringBuilder(typeof(System.DirectoryServices.Protocols.LdapException).Name);
+				errMess.Append(Environment.NewLine).Append('"').Append(ldEx.Message).Append('"');
+				if (!string.IsNullOrEmpty(ldEx.ServerErrorMessage))
+				{
+					int sensibleInfoInd = ldEx.ServerErrorMessage.IndexOf("Cannot ", 
+						StringComparison.InvariantCultureIgnoreCase);
+					if (sensibleInfoInd >= 0)
+					{
+						errMess.Append(Environment.NewLine).Append(
+							ldEx.ServerErrorMessage.Substring(sensibleInfoInd));
+					}
+				}
+			} catch (InvalidOperationException invEx)
+			{
+				errMess = new StringBuilder(typeof(InvalidOperationException).Name);
+				errMess.Append(Environment.NewLine).Append('"').Append(invEx.Message).Append('"');
+			}
+			finally
+			{
+				ldapConnection.Dispose();
+			}
+			return errMess == null;
+		}
+	}
+
+//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+	internal interface IDataAccessLayer
+	{
+		Item NewResult(string textMessage);
+		Item NewError(string errorMessage);
+	}
+
+//[PartialPath("DataAccessLayer/DataAccessLayer")]
+	internal class DataAccessLayer : IDataAccessLayer
+	{
+		private Innovator innovator;
+
+		internal DataAccessLayer(Innovator innovator)
+		{
+			this.innovator = innovator;
+		}
+
+		public Item NewResult(string textMessage)
+		{
+			return innovator.newResult(textMessage);
+		}
+
+		public Item NewError(string errorMessage)
+		{
+			return innovator.newError(errorMessage);
+		}
+	//}
+
+		]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_VerifyConnectionLDAP</name>
+ </Item>
+</AML>

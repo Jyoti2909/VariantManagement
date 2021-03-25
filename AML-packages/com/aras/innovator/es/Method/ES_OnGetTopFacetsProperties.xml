@@ -1,0 +1,16 @@
+﻿<AML>
+ <Item type="Method" id="BF92AAA34CD84AA2A87009DE08BF5943" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = this.getInnovator();
+string requestedIdsAsString = this.getProperty("id", "");
+
+List<string> requestedIds = new List<string>();
+if (!string.IsNullOrEmpty(requestedIdsAsString)) {
+	requestedIds = requestedIdsAsString.Replace("'", string.Empty).Split(',').ToList();
+}
+
+return Aras.ES.ServerMethods.GetFacetProperties(innovator, requestedIds);]]></method_code>
+  <method_type>C#</method_type>
+  <name>ES_OnGetTopFacetsProperties</name>
+ </Item>
+</AML>

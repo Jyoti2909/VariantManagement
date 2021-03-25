@@ -1,0 +1,38 @@
+﻿<AML>
+ <Item type="Method" id="BBC4D82D3E4C413796895421EF29AC66" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = this.getInnovator();
+
+var derivedRelationshipId = this.getProperty("dr_relationship_id");
+var derivedRelationship = this.newItem("dr_Relationship", "get");
+derivedRelationship.setAttribute("select", "destination_itemtype_id");
+derivedRelationship.setID(derivedRelationshipId);
+derivedRelationship = derivedRelationship.apply();
+if (derivedRelationship.isError()) {
+	return derivedRelationship;
+}
+
+var destinationItemTypeId = derivedRelationship.getProperty("destination_itemtype_id");
+var destinationItemType = this.newItem("ItemType", "get");
+destinationItemType.setID(destinationItemTypeId);
+destinationItemType.setAttribute("select", "use_src_access, name");
+destinationItemType = destinationItemType.apply();
+if (destinationItemType.isError()) {
+	return destinationItemType;
+}
+
+string destinationItemTypeName = destinationItemType.getProperty("name");
+if (string.Equals(destinationItemTypeName, "File", StringComparison.Ordinal)) {
+	string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("dac_NotSupportedItemType"), destinationItemTypeName);
+	return innovator.newError(message);
+}
+if (string.Equals(destinationItemType.getProperty("use_src_access"), "1", StringComparison.Ordinal)) {
+	string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("dac_NotSupportedItemTypeWithUseSrcAccess"), destinationItemTypeName);
+	return innovator.newError(message);
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dac_ValidateAllowedItemTypes</name>
+ </Item>
+</AML>

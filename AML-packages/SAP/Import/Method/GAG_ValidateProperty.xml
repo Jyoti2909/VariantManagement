@@ -1,0 +1,65 @@
+﻿<AML>
+ <Item type="Method" id="53943D23CD1447FB87D473A5D6C8F9B2" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				contextItem.fetchRelationships("GAG_Tool Property");
+				Item relationships = contextItem.getRelationships("GAG_Tool Property");
+				if (relationships.getItemCount() > 0)
+				{
+					List<string> cadAttributelist = new List<string>();
+					foreach (Item toolProperty in relationships.Enumerate())
+					{
+						cadAttributelist.Add(toolProperty.getProperty("gag_cad_attribute"));
+					}
+
+					IEnumerable<string> duplicateProperty = cadAttributelist.GroupBy(x => x).Where(g => g.Count() > 1).Select(x => x.Key);
+					foreach (var duplicate in duplicateProperty)
+					{
+						List<string> orderList = new List<string>();
+						foreach (Item toolProperty in relationships.Enumerate())
+						{
+							if (duplicate == toolProperty.getProperty("gag_cad_attribute"))
+							{
+								string order = toolProperty.getProperty("gag_order");
+								if (String.IsNullOrEmpty(order))
+								{
+									return _dal.NewError($"Fill order for {duplicate}");
+								}
+								orderList.Add(order);
+							}
+						}
+
+						IEnumerable<string> duplicateOrder = orderList.GroupBy(x => x).Where(g => g.Count() > 1).Select(x => x.Key);
+						if (duplicateOrder.Any())
+						{
+							return _dal.NewError($"Duplicate order for {duplicate}");
+						}
+					}
+				}
+				else
+				{
+					return _dal.NewError("Please add Property in Tool Property relationship TAB");
+				}
+				return contextItem;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_ValidateProperty</name>
+ </Item>
+</AML>

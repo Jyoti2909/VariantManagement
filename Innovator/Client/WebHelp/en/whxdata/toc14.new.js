@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Viewer Toolbar","type":"item","url":"Viewer.htm"},{"name":"Markup Toolbar","type":"item","url":"Markup_Messages.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

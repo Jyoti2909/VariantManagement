@@ -1,0 +1,104 @@
+﻿<AML>
+ <Item type="SQL" id="F72FFC218A6C4C74ACA3C745C0822DBF" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>show_project_status</old_name>
+  <sqlserver_body><![CDATA[/* name: show_project_status.sql
+   purpose: show project status at db level in a way that is
+easy to save and compare. This is an important debugging
+routine.
+   Created: 29-SEP-2005 George J. Carrette
+*/
+
+create procedure show_project_status(@PROJECT_ID CHAR(32)) AS
+BEGIN
+ DECLARE @WBS_ID CHAR(32)
+ DECLARE @ACTIVITIES TABLE(ID CHAR(32) COLLATE database_default primary key)
+ DECLARE @WBS_ELEMENTS TABLE(ID CHAR(32) COLLATE database_default primary key,level integer,ord integer)
+ DECLARE @LINES TABLE(LINE VARCHAR(1024) COLLATE database_default)
+ DECLARE @S VARCHAR(10)
+ SET @S = ' : '
+
+ SET @WBS_ID = (SELECT WBS_ID FROM [PROJECT] WHERE ID = @PROJECT_ID)
+ INSERT @WBS_ELEMENTS SELECT id,level,ord FROM SELECT_WBS_ELEMENTS(@WBS_ID)
+ INSERT @ACTIVITIES SELECT ID FROM SELECT_ACTIVITIES(@WBS_ID)
+
+ INSERT @LINES
+  SELECT 'NAME:DATE_START_SCHED:DATE_DUE_SCHED'
+
+ INSERT @LINES
+ select SUBSTRING(name,1,20) + @S +
+        CONVERT(CHAR(10),DATE_START_SCHED,101) + @S +
+        CONVERT(CHAR(10),DATE_DUE_SCHED,101)
+ FROM [PROJECT] WHERE ID = @PROJECT_ID
+
+ INSERT @LINES
+  SELECT 'Status1:%:Status2:%:Status3:%'
+
+ INSERT @LINES
+ select isnull(status_1,'NULL') + @S + convert(char(3),isnull(percent_compl_1,0)) + @S +
+        isnull(status_2,'NULL') + @S + convert(char(3),isnull(percent_compl_2,0)) + @S +
+        isnull(status_3,'NULL') + @S + convert(char(3),isnull(percent_compl_3,0))
+ FROM [PROJECT] WHERE ID = @PROJECT_ID
+
+
+ INSERT @LINES SELECT 'WBS_NAME:LEVEL:STATUS:%COMP:DURATION:START:DUE'
+
+ INSERT @LINES
+ SELECT w1.NAME + @S + CONVERT(CHAR(1),w2.LEVEL) + ',' +
+                        CONVERT(CHAR(1),w2.ORD) + @S +
+        isnull(w1.rollup_status,'NULL') + @S +
+        convert(char(3),isnull(w1.rollup_percent_compl,0)) + @S +
+        convert(varchar(10),isnull(rollup_duration,0)) + @S +
+        ISNULL(CONVERT(CHAR(10),ROLLUP_DATE_SCHED_START,101),'') + @S +
+        ISNULL(CONVERT(CHAR(10),ROLLUP_DATE_SCHED_DUE,101),'')
+ from wbs_element w1,@wbs_elements w2
+ where w1.id = w2.id
+ order by w2.level asc, w2.ord asc
+
+ INSERT @LINES
+  SELECT 'NAME:DATE_START_SCHED:DATE_DUE_SCHED:STATUS:STATE:%COMP:DURATION'
+
+ INSERT @LINES
+
+ SELECT 
+     SUBSTRING(NAME,1,20) + @S +
+     ISNULL(CONVERT(CHAR(10),DATE_START_SCHED,101),'') + @S +
+     ISNULL(CONVERT(CHAR(10),DATE_DUE_SCHED,101),'') + @S +
+     ISNULL(STATUS,'') + @S +
+     ISNULL(STATE,'') + @S +
+     CONVERT(CHAR(3),ISNULL(PERCENT_COMPL,0)) + @S +
+     convert(varchar(10),expected_duration)
+FROM [ACTIVITY2]
+WHERE ID IN (SELECT ID FROM @ACTIVITIES)
+ORDER BY DATE_START_SCHED ASC,
+         DATE_DUE_SCHED ASC,
+         NAME ASC
+
+ INSERT @LINES
+  SELECT 'NAME:DATE_ES:DATE_EF:DATE_LS:DATE_LF'
+
+ insert @lines
+
+ SELECT 
+     SUBSTRING(NAME,1,20)  + @S +
+     ISNULL(CONVERT(CHAR(10),DATE_ES,101),'')  + @S +
+     ISNULL(CONVERT(CHAR(10),DATE_EF,101),'')  + @S +
+     ISNULL(CONVERT(CHAR(10),DATE_LS,101),'')  + @S +
+     ISNULL(CONVERT(CHAR(10),DATE_LF,101),'') 
+FROM [ACTIVITY2]
+WHERE ID IN (SELECT ID FROM @ACTIVITIES)
+ORDER BY DATE_START_SCHED ASC,
+         DATE_DUE_SCHED ASC,
+         NAME ASC
+
+select line from @lines
+
+END
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>show_project_status</name>
+ </Item>
+</AML>

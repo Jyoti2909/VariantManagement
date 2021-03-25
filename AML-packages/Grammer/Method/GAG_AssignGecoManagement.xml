@@ -1,0 +1,283 @@
+﻿<AML>
+ <Item type="Method" id="6F6A8FDEC3964509A29822822ED22F2C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				try
+				{
+					Main(contextItem);
+
+					return contextItem;
+				}
+				catch (ItemException e)
+				{
+					return e.ErrorItem;
+				}
+			}
+
+			private void Main(Item contextItem)
+			{
+				Item geco = GetGecoByActivityId(contextItem.getID());
+				ClearActivityAssigments(geco.getID(), contextItem.getID());
+				string gecoClassification = GetGECOClassification(geco.getID());
+				AssignmentsProvider provider = GetAssignmentsProvider(gecoClassification);
+				IEnumerable<Item> assignments = provider.GetAssignments(contextItem.getProperty("name", string.Empty), geco);
+				CreateActivityAssigment(assignments, contextItem.getID());
+			}
+
+			private AssignmentsProvider GetAssignmentsProvider(string gecoClassififcation)
+			{
+				switch (gecoClassififcation)
+				{
+					case "Pre-Release & Change/CAD Document":
+						return new CADPreReleaseAssignmentsProvider(_dal);
+					case "Release & Change/CAD Document":
+						return new CADReleaseAssignmentsProvider(_dal);
+					case "Pre-Release & Change/Mechanical Part":
+						return new MechanicalPartPreReleaseProvider(_dal);
+					case "Release & Change/Mechanical Part":
+						return new MechanicalPartReleaseProvider(_dal);
+					default:
+						throw new ItemException(_dal.NewError($"Unknown {gecoClassififcation} classififcation of GECO."));
+				}
+			}
+
+			private Item GetGecoByActivityId(string activityId)
+			{
+				Item geco = _dal.NewItem("Activity", "GAG_GetGecoByActivity");
+				geco.setID(activityId);
+				geco.setProperty("additional_properties", "gag_master_data_review_team");
+				geco = _dal.ApplyItem(geco);
+
+				return geco.isError() ? throw new ItemException(geco) : geco;
+			}
+
+			private string GetGECOClassification(string gecoId)
+			{
+				Item geco = _dal.NewItem("GAG_EngineeringChangeObject", "get");
+				geco.setID(gecoId);
+				geco.setAttribute("select", "classification");
+				geco = _dal.ApplyItem(geco);
+
+				Contract.ThrowIfError(geco);
+
+				return geco.getProperty("classification");
+			}
+
+			private void CreateActivityAssigment(IEnumerable<Item> assignments, string activityId)
+			{
+				var query = new StringBuilder();
+				foreach (Item assignment in assignments)
+				{
+					Item activityAssigment = _dal.NewItem("Activity Assignment", "add");
+					activityAssigment.setAttribute("doGetItem", "0");
+					activityAssigment.setProperty("related_id", assignment.getID());
+					activityAssigment.setProperty("source_id", activityId);
+					query.AppendLine(activityAssigment.dom.OuterXml);
+				}
+
+				if (query.Length > 0)
+				{
+					Item result = _dal.ApplyAmlWithGrantIdentity($"<AML>{query}</AML>", "Administrators");
+					Contract.ThrowIfError(result);
+				}
+			}
+
+			private void ClearActivityAssigments(string gecoId, string activityId)
+			{
+				string[] ids = GetClearActivityAssigmentsId(gecoId, activityId);
+				if (ids.Length == 0)
+				{
+					return;
+				}
+
+				Item request = _dal.NewItem("Activity Assignment", "delete");
+				request.setAttribute("idlist", string.Join(",", ids));
+				request = _dal.ApplyItemWithGrantIdentity(request, "Administrators");
+
+				Contract.ThrowIfError(request);
+			}
+
+			private string[] GetClearActivityAssigmentsId(string gecoId, string activityId)
+			{
+				Item itemWF = _dal.NewItem("Workflow", "get");
+				itemWF.setProperty("source_id", gecoId);
+				itemWF.setAttribute("select", "related_id");
+
+				Item itemWFP = itemWF.createRelatedItem("Workflow Process", "get");
+				itemWFP.setAttribute("select", "id");
+
+				Item itemWFPA = itemWFP.createRelationship("Workflow Process Activity", "get");
+				itemWFPA.setAttribute("select", "related_id");
+
+				Item itemActivity = itemWFPA.createRelatedItem("Activity", "get");
+				itemActivity.setAttribute("select", "id");
+				itemActivity.setID(activityId);
+
+				Item itemActivityAssigment = itemActivity.createRelationship("Activity Assignment", "get");
+				itemActivityAssigment.setAttribute("select", "id");
+
+				itemWF = _dal.ApplyItem(itemWF);
+
+				XmlNodeList activityAssigments = itemWF.dom.GetElementsByTagName("Item");
+				return activityAssigments
+					.Cast<XmlNode>()
+					.Where(a => a.Attributes["type"].Value == "Activity Assignment")
+					.Select(a => a.Attributes["id"].Value)
+					.ToArray();
+			}
+		}
+
+		//[PartialPath("AssignmentsProviders/AssignmentsProvider")]
+		internal abstract class AssignmentsProvider
+		{
+			protected IDataAccessLayer Dal { get; }
+
+			public AssignmentsProvider(IDataAccessLayer dal)
+			{
+				Dal = dal;
+			}
+
+			public abstract IEnumerable<Item> GetAssignments(string activityName, Item geco);
+
+			protected IEnumerable<Item> GetIdentitiesFromCorrespondingRelationships(string relationshipTypeName, string gecoId)
+			{
+				Item assignments = Dal.NewItem(relationshipTypeName, "get");
+				assignments.setProperty("source_id", gecoId);
+				assignments = Dal.ApplyItem(assignments);
+
+				IEnumerable<Item> result = assignments.isError()
+					? throw new ItemException(assignments)
+					: assignments.Enumerate();
+
+				return result.Select(x => x.getRelatedItem());
+			}
+		}
+
+		//[PartialPath("AssignmentsProviders/CADPreReleaseAssignmentsProvider")]
+		internal class CADPreReleaseAssignmentsProvider : AssignmentsProvider
+		{
+			public CADPreReleaseAssignmentsProvider(IDataAccessLayer dal)
+				: base(dal) { }
+
+			public override IEnumerable<Item> GetAssignments(string activityName, Item geco)
+			{
+				string relationshipTypeName;
+				switch (activityName)
+				{
+					case "CAD Task":
+						relationshipTypeName = "GAG_GECO CADDesigner";
+						break;
+					case "Development Release":
+						relationshipTypeName = "GAG_GECO DevReleaseApprover";
+						break;
+					default:
+						throw new ItemException(Dal.NewError("This activity has no corresponding GECO Relationships with Identities."));
+				}
+
+				return GetIdentitiesFromCorrespondingRelationships(relationshipTypeName, geco.getID());
+			}
+		}
+
+		//[PartialPath("AssignmentsProviders/CADReleaseAssignmentsProvider")]
+		internal class CADReleaseAssignmentsProvider : AssignmentsProvider
+		{
+			public CADReleaseAssignmentsProvider(IDataAccessLayer dal)
+				: base(dal) { }
+
+			public override IEnumerable<Item> GetAssignments(string activityName, Item geco)
+			{
+				string relationshipTypeName;
+				switch (activityName)
+				{
+					case "Rework":
+					case "CAD Task":
+						relationshipTypeName = "GAG_GECO CADDesigner";
+						break;
+					case "Development Release":
+						relationshipTypeName = "GAG_GECO DevReleaseApprover";
+						break;
+					case "Technology Review":
+						relationshipTypeName = "GAG_GECO TechReviewApprover";
+						break;
+					default:
+						throw new ItemException(Dal.NewError("This activity has no corresponding GECO Relationships with Identities."));
+				}
+
+				return GetIdentitiesFromCorrespondingRelationships(relationshipTypeName, geco.getID());
+			}
+		}
+
+		//[PartialPath("AssignmentsProviders/MechanicalPartPreReleaseProvider")]
+		internal class MechanicalPartPreReleaseProvider : AssignmentsProvider
+		{
+			public MechanicalPartPreReleaseProvider(IDataAccessLayer dal)
+				: base(dal) { }
+
+			public override IEnumerable<Item> GetAssignments(string activityName, Item geco)
+			{
+				if (activityName != "Master Data Review")
+				{
+					throw new ItemException(Dal.NewError("This activity has no corresponding GECO Relationships with Identities."));
+				}
+
+				string id = geco.getProperty("gag_master_data_review_team");
+				if (string.IsNullOrWhiteSpace(id))
+				{
+					throw new ItemException(Dal.NewError("Master Data Review Team is not defined."));
+				}
+
+				Item assignment = Dal.NewItem("Identity", "get");
+				assignment.setID(id);
+				assignment = Dal.ApplyItem(assignment);
+
+				return assignment.isError()
+					? throw new ItemException(assignment)
+					: assignment.Enumerate();
+			}
+		}
+
+		//[PartialPath("AssignmentsProviders/MechanicalPartReleaseProvider")]
+		internal class MechanicalPartReleaseProvider : MechanicalPartPreReleaseProvider
+		{
+			public MechanicalPartReleaseProvider(IDataAccessLayer dal)
+				: base(dal) { }
+
+			public override IEnumerable<Item> GetAssignments(string activityName, Item geco)
+			{
+				string relationshipName;
+				switch (activityName)
+				{
+					case "Master Data Review":
+						return base.GetAssignments(activityName, geco);
+					case "Internal review":
+						relationshipName = "GAG_GECO IntReviewApprover";
+						break;
+					case "External Review":
+						relationshipName = "GAG_GECO ExtReviewApprover";
+						break;
+					default:
+						throw new ItemException(Dal.NewError("This activity has no corresponding GECO Relationships with Identities."));
+				}
+
+				return GetIdentitiesFromCorrespondingRelationships(relationshipName, geco.getID());
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_AssignGecoManagement</name>
+ </Item>
+</AML>

@@ -1,0 +1,43 @@
+﻿<AML>
+ <Item type="Method" id="A4553254CA8F444894C432D1FB799753" action="add">
+  <comments>Method to verify SAP credentials on Form load</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const inn = aras.IomInnovator;
+const userID = inn.getUserID();
+
+let userDetails = inn.newItem('User', 'get');
+userDetails.setAttribute('select', 'login_name,gag_sap_password');
+userDetails.setID(userID);
+userDetails = userDetails.apply();
+const loginName = userDetails.getProperty('login_name', '');
+const sapPassword = userDetails.getProperty('gag_sap_password', '');
+document
+	.getElementsByName('username')[0]
+	.getElementsByTagName('input')[0].value = loginName;
+document
+	.getElementsByName('username')[0]
+	.getElementsByTagName('input')[0].disabled = true;
+document
+	.getElementsByName('sapPassword')[0]
+	.getElementsByTagName('input')[0].value = sapPassword;
+
+const body =
+	'<user_name>' +
+	loginName +
+	'</user_name><user_password>' +
+	sapPassword +
+	'</user_password>';
+const result = inn.applyMethod('GAG_CheckSAP', body);
+
+if (result.getResult() == 'Connection Successful') {
+	aras.AlertSuccess(result.getResult());
+	document.getElementById('Success').style.visibility = 'visible';
+} else {
+	aras.AlertError(result.getErrorString());
+	document.getElementById('Failure').style.visibility = 'visible';
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_SAPFormLoad</name>
+ </Item>
+</AML>

@@ -1,0 +1,71 @@
+﻿<AML>
+ <Item type="Method" id="9926F705D70E45E280EB1B4377077E87" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//First of all check if reference is AML
+string reference = this.getProperty("reference");
+if (String.IsNullOrEmpty(reference))
+{
+	return this;
+}
+var regex = new System.Text.RegularExpressions.Regex("(?:<Item(.*)action=(\'|\").*(\'|\"))");
+if (regex.IsMatch(reference))
+{
+	// List of allowed 'get' actions
+	var defaultActions = new List<string>(){"get", "getAffectedItems", "getItemAllVersions", "GetItemAllVersions","getItemLastVersion", "GetItemLastVersion", "getItemWhereUsed", "getItemRelationships", "GetItemConfig", "GetItemRepeatConfig"};
+	
+	//Check root <Item> node action attribute
+	string unknownError = CCO.ErrorLookup.Lookup("SSVC_ReferenceValidation");
+	string badAction = CCO.ErrorLookup.Lookup("SSVC_ReferenceValidationNotAllowedAction");
+	
+	try
+	{
+		Item referenceItem = this.newItem();
+		referenceItem.loadAML(reference);
+		string action = referenceItem.getAttribute("action");
+		
+		if (string.IsNullOrEmpty(action))
+		{
+			return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_ReferenceValidationRootAction"));
+		}
+		
+		if (!defaultActions.Contains(action))
+		{
+			Item methodExistItem = this.newItem("Method", "get");
+			methodExistItem.setProperty("name", action);
+			methodExistItem = methodExistItem.apply();
+			if (methodExistItem.isError())
+			{
+				if (methodExistItem.getErrorCode() == "0")
+				{
+					return this.getInnovator().newError(string.Format(CultureInfo.InvariantCulture, badAction, "'" + action + "'"));
+				}
+				return this.getInnovator().newError(string.Format(CultureInfo.InvariantCulture, unknownError, methodExistItem.getErrorString()));
+			}
+		}
+		
+		//Check non-root <Item> node action attribute
+		if (referenceItem.dom.HasChildNodes)
+		{
+			var allItemsNodes = referenceItem.dom.GetElementsByTagName("Item");
+			for (var i = 1; i < allItemsNodes.Count; i++)
+			{
+				action = ((XmlElement)allItemsNodes[i]).GetAttribute("action");
+				//Only action="get" allowed on non-root level
+				if (!string.IsNullOrEmpty(action) && string.Compare(action, "get", StringComparison.InvariantCultureIgnoreCase) != 0)
+				{
+					return this.getInnovator().newError(string.Format(CultureInfo.InvariantCulture, badAction, "'" + action + "'"));
+				}
+			}
+		}
+	}
+	catch (Exception ex)
+	{
+		throw new Exception(string.Format(CultureInfo.InvariantCulture, unknownError, ex.Message));
+	}
+	
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_AMLReferenceValidation</name>
+ </Item>
+</AML>

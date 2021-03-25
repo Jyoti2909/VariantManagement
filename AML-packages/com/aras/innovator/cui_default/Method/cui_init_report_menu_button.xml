@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="F4FD1A40EA0144898DB308DE45A3C5B5" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var hidden = true;
+if (inArgs.control && inArgs.control.additionalData) {
+	var additionalData = JSON.parse(inArgs.control.additionalData);
+	switch (additionalData.reportType || additionalData.separatorType) {
+		case 'ssr':
+		case 'itemtype':
+			if (inArgs.itemTypeId) {
+				hidden = false;
+			}
+			break;
+		case 'item':
+			if (inArgs.itemId) {
+				hidden = false;
+			}
+			break;
+		default:
+			break;
+	}
+}
+
+return {'cui_invisible': hidden};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_init_report_menu_button</name>
+ </Item>
+</AML>

@@ -1,0 +1,94 @@
+﻿<AML>
+ <Item type="Report" id="4E6FF9B601FD49919410EE0FC2A9B13D" action="add">
+  <location>server</location>
+  <method keyed_name="Identity Membership Report" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>Identity Membership Report</name>
+   </Item>
+  </method>
+  <report_query><![CDATA[<Item type="" action="get" select=""/>
+]]></report_query>
+  <target>one window</target>
+  <type>itemtype</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" 
+     xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+     xmlns:msxsl="urn:schemas-microsoft-com:xslt" 
+     xmlns:user="urn:user-scripts" 
+     xmlns:aras="http://www.aras.com"
+     >
+ <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes" cdata-section-elements="script msxsl:script"/>
+  
+ <xsl:key name="idents" match="Item" use="@id"/>
+
+ <xsl:template match="/">
+  <html>
+   <head>
+    <title>Identity Membership Report</title>
+    <style>
+     <![CDATA[
+           span.title{font-family:Verdana; font-size:16pt; font-color: red;}
+           td {font-family:Arial; font-size:8pt; padding-left:5px; padding-right:5px; border-width:1;}
+           td.headLabel {font-weight:bold; text-align:right; vertical-align:bottom;}
+           td.headValue {font-size:11pt; padding-5px:10px; padding-right:15px;}
+           td.label {font-weight:bold; text-align:center;}
+           td.value {border-style:solid;}
+           td.section {font-size:11pt; background-color:#dddddd;}
+           table {width: 750px}
+           table.border {empty-cells:show; border-collapse:collapse; border-style:solid; border-width:1}
+           table.noborder {empty-cells:show; border-collapse:collapse; border-width:0}
+           th {font-family:Arial; font-size:8pt; border-style:solid; border-width:1; padding-right:5px; padding-left:5px; text-align:center;}
+
+     ]]]]><![CDATA[> 
+    </style>
+   </head>
+   <body>
+    <span class="title">Identity Membership Report</span>
+    <br/>
+    <br/>
+    <table class="border">
+     <tr><td class="section" colspan="2"><b>Alias Membership</b></td></tr>
+     <tr>
+      <th>Alias</th>
+      <th>Member Of</th>
+     </tr>
+     <xsl:apply-templates mode="alias" select="//Item[@type='Identity'][is_alias='1'][count(.|key('idents',@id)[1])=1]">
+      <xsl:sort select="name"/>
+     </xsl:apply-templates>
+     <tr><td class="section" colspan="2"><b>Identity Structure</b></td></tr>
+     <xsl:apply-templates mode="tree" select="*[local-name()='Envelope']/*[local-name()='Body']/Result/Item|/Item"/>
+    </table>
+   </body>
+  </html>
+ </xsl:template>
+ 
+ <xsl:template mode="alias" match="Item[@type='Identity'][is_alias='1']">
+  <xsl:variable name="myId" select="@id"/>
+  <tr>
+   <td class="value" width="15%"><xsl:value-of select="name"/></td>
+   <td class="value">
+    <xsl:apply-templates mode="list" select="//Item[@type='Identity'][count(.//Item[@id=$myId])>0][count(.|key('idents',@id)[1])=1]"/>
+   </td>
+  </tr>
+ </xsl:template>
+
+ <xsl:template mode="list" match="Item[@type='Identity']">
+  <xsl:if test="position()>1"><xsl:text>, </xsl:text></xsl:if><xsl:value-of select="name"/>
+ </xsl:template>
+ 
+ <xsl:template mode="tree" match="Item[@type='Identity']">
+  <xsl:variable name="indent"><xsl:for-each select="ancestor::Item[@type='Identity']">&#160;&#160;</xsl:for-each></xsl:variable>
+  <tr>
+   <td class="value" colspan="2">
+    <xsl:attribute name="style">
+     <xsl:if test="is_alias='1'">font-style: italic;</xsl:if>
+    </xsl:attribute>
+    <xsl:value-of select="concat($indent,name)"/>
+   </td>
+  </tr>
+  <xsl:apply-templates mode="tree" select="Relationships/Item/related_id/Item"/>
+ </xsl:template>
+
+</xsl:stylesheet>]]></xsl_stylesheet>
+  <name>Identity Membership</name>
+ </Item>
+</AML>

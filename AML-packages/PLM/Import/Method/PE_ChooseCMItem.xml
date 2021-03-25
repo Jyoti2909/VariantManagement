@@ -1,0 +1,92 @@
+﻿<AML>
+ <Item type="Method" id="32ED42A6F53948418BB4D732ABE115DB" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!inArgs || !inArgs.results || !inArgs.results.getItemByIndex(0))
+{
+  return;
+}
+
+var formNd = aras.getItemByName("Form", "PE_AddToChange", 0);
+
+if (formNd)
+{
+  var param = new Object();
+  param.title = "Choose Change Item";
+  param.formId = formNd.getAttribute("id");
+  param.aras = aras;
+  param.itemTypeName = inArgs.results.getItemByIndex(0).getType();
+  param.item = inArgs.results.getItemByIndex(0);
+  param.isEditMode = true;
+
+  var width = aras.getItemProperty(formNd, "width");
+  var height = aras.getItemProperty(formNd, "height");
+
+  var options = {
+      dialogWidth: width,
+      dialogHeight: height
+    };
+	var callback = {
+		oncancel: function (dialogWrapper) {
+			var result = dialogWrapper.result;
+			if(!result)
+			{
+				return;
+			}
+			  
+			switch(result.action)
+			{
+			case "create":
+				//results.type
+				inArgs.results.getItemByIndex(0).setAttribute("ChangeItem",result.type);
+				aras.evalMethod("PE_AddChangeItem",inArgs.results.dom.xml);
+				break;
+			case "open":
+				inArgs.results.getItemByIndex(0).setAttribute("ChangeItem",result.type);
+				inArgs.results.getItemByIndex(0).setAttribute("ChangeItemName",result.name);
+				aras.evalMethod("PE_AddChangeItem",inArgs.results.dom.xml);
+				break;
+			case "search":
+				var param = { aras: aras, itemtypeName: result.type, multiselect: false };
+				if (param.itemtypeName === 'GAG_EngineeringChangeObject') {
+					param.sourceItemTypeName = param.itemtypeName;
+					param.sourcePropertyName = 'id';
+				}
+				var searchedItem;
+			
+				var options = { dialogHeight:450, dialogWidth:700, resizable:true};
+			
+				param.callback =  function(dlgRes){
+					if(!dlgRes)
+					{
+						return;
+					}
+				
+					searchedItem = dlgRes.item;
+					if(!searchedItem)
+					{
+						return;
+					}
+					
+					inArgs.results.getItemByIndex(0).setAttribute("ChangeItem",result.type);
+					var keyed_name = aras.getKeyedNameEx(searchedItem);
+					inArgs.results.getItemByIndex(0).setAttribute("ChangeItemName",keyed_name);
+					
+					aras.evalMethod("PE_AddChangeItem",inArgs.results.dom.xml);
+				};
+				var wnd = aras.getMainWindow();
+				var topWnd = aras.getMostTopWindowWithAras(window);
+				wnd = wnd === topWnd ? wnd.main : topWnd;
+				aras.modalDialogHelper.show('SearchDialog', wnd, param);
+				break;   
+			}
+		}
+	  };
+	var wnd = aras.getMainWindow();
+	var topWnd = aras.getMostTopWindowWithAras(window);
+	wnd = wnd === topWnd ? wnd.main : topWnd;
+    aras.modalDialogHelper.show('DefaultPopup', wnd, param, options, 'ShowFormAsADialog.html', callback);
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PE_ChooseCMItem</name>
+ </Item>
+</AML>

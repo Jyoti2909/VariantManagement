@@ -1,0 +1,62 @@
+﻿<AML>
+ <Item type="Method" id="F0E476F0471B42D5944833C4B9A6E4A3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// Update the label field after selecting new master_item_type
+// On calling from field event it has access to all of the current window and document properties and the srcElement variable
+// On calling from grid event the method receive the following arguments:
+//  relationshipID = ID for the Relationship Item. This is also the selected row ID in the Grid control
+//  relatedID = the ID for the related Item. (Blank for null relationships)
+//  gridApplet = handle to the Grid control
+//  propertyName = name of the Property for the currently selected cell
+//  colNumber = zero based column position number in the grid of the current cell
+try
+{
+  var itemType = parent.item.getAttribute('type');
+  var calledFromGrid = itemType == 'MSO_CommonSettings';
+  var relshipItem = null;
+  if(calledFromGrid)
+  {
+    propName = propertyName;
+    relshipItem = parent.thisItem.getItemsByXPath("Relationships/Item[@id='" + relationshipID + "']");
+  }
+  else
+  {
+    propName = srcElement.name;
+    relshipItem = document.thisItem;
+  }
+  if (relshipItem && relshipItem.node)
+  {
+    var propName_value = relshipItem.getProperty(propName,"");
+    if(calledFromGrid)
+    {
+      var propName_oldvalue = relshipItem.getPropertyAttribute(propName, "oldvalue", "");
+      if(propName_value == propName_oldvalue) {return;}
+      relshipItem.setPropertyAttribute(propName, "oldvalue", propName_value);
+    }
+    var doc_item_type_label = "";
+    if(propName_value !== "")
+    {
+  	  var master_item_type = top.aras.getItemById("ItemType", propName_value);
+	  if(master_item_type)
+        {doc_item_type_label = top.aras.getItemProperty(master_item_type, "label", "");}
+    }
+    top.aras.setItemProperty(relshipItem.node, "document_type", "", true);
+    top.aras.setItemProperty(relshipItem.node, 'label', doc_item_type_label, true);
+    if (!calledFromGrid)
+    {
+	  handleItemChange("document_type", "");
+	  handleItemChange('label', doc_item_type_label);
+	}
+	else
+      {updateRow(relshipItem.node);}
+  }
+}
+catch(e)
+{
+  top.aras.AlertError(e.Message);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>MSO_OnChangeMasterItemType</name>
+ </Item>
+</AML>

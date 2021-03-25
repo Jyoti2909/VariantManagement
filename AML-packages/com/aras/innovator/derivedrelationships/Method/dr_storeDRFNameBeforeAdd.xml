@@ -1,0 +1,21 @@
+﻿<AML>
+ <Item type="Method" id="A1CA199269034DB4A735AB20797F16BE" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var relationshipFamily = this.newItem("dr_RelationshipFamily", "get");
+relationshipFamily.setAttribute("select", "name");
+relationshipFamily.setID(this.getProperty("source_id"));
+relationshipFamily = relationshipFamily.apply();
+if (relationshipFamily.isError()) {
+	return relationshipFamily;
+}
+var relationshipFamilyName = relationshipFamily.getProperty("name");
+if (RequestState.Contains("drfName")) {
+	RequestState["drfName"] = relationshipFamilyName;
+} else {
+	RequestState.Add("drfName", relationshipFamilyName);
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_storeDRFNameBeforeAdd</name>
+ </Item>
+</AML>

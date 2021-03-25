@@ -1,0 +1,17 @@
+﻿<AML>
+ <Item type="Method" id="6F81C0C41EA1469CBF39637939FEA29A" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' name: ShowProjectInternals
+' purpose: for debugging, shows the project internals in a raw database report
+'          useful for study and text file differencing.
+Dim callframe as Item = me.newitem("SQL","SQL PROCESS")
+callframe.setproperty("name","show_project_status")
+callframe.setproperty("PROCESS","CALL")
+callframe.setproperty("ARG1",me.getid())
+dim resultframe as Item = callframe.apply()
+return(resultframe)
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>ShowProjectInternals</name>
+ </Item>
+</AML>

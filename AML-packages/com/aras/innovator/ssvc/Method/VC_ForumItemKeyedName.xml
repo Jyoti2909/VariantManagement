@@ -1,0 +1,140 @@
+﻿<AML>
+ <Item type="Method" id="DCB5BB4FEFC34F2FA40D7EBF9C17ADFB" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[if (this.isCollection())
+{
+	for (int i = 0, count = this.getItemCount(); i < count; i++)
+	{
+		Item current = this.getItemByIndex(i);
+		SetItemKeyedName(current, CCO);
+	}
+}
+else
+{
+	SetItemKeyedName(this, CCO);
+}
+return this;
+}
+
+private Item getItemByConfigIdAsAdmin(string type, string configId)
+{
+	Item result;
+	Aras.Server.Security.Identity admin = null;
+	bool permsWasSet = false;
+	try
+	{
+		admin = Aras.Server.Security.Identity.GetByName("Super User");
+		permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(admin);
+		result = GetItemByConfigId(type, configId);
+	}
+	finally
+	{
+		if (permsWasSet)
+		{
+			Aras.Server.Security.Permissions.RevokeIdentity(admin);
+		}
+	}
+	return result;
+}
+
+private Item GetItemByConfigId(string type, string configId)
+{
+	Item itm = this.newItem(type, "get");
+	itm.setProperty("is_current", "1");
+	itm.setProperty("config_id",configId);
+	itm = itm.apply();
+	if (itm.isError() || itm.getAttribute("discover_only") == "1")
+	{
+		itm = GetLatestNotCurrent(type, configId);
+	}
+	return itm;
+}
+
+private Item GetLatestNotCurrent(string type, string configId)
+{
+	Item items = this.newItem(type, "get");
+	items.setAttribute("orderBy", "generation");
+	items.setProperty("config_id",configId);
+	items.setProperty("generation", "0");
+	items.setPropertyCondition("generation", "ge");
+	items = items.apply();
+	if (items.isError())
+	{
+		return items;
+	}
+	else
+	{
+		Item item = null;
+		for (int i = 0; i < items.getItemCount(); i++)
+		{
+			item = items.getItemByIndex(i);
+			if (item.getAttribute("discover_only") != "1") {
+				break;
+			}
+		}
+		return item;
+	}
+}
+
+private Item GetItem(string type,string id)
+{
+	Item itm = this.newItem(type, "get");
+	itm.setID(id);
+	return itm.apply();
+}
+
+private void SetItemKeyedName(Item item, Aras.Server.Core.CallContext CCO)
+{
+	string type = item.getProperty("item_type");
+	string configId = item.getProperty("item_config_id");
+	if (String.IsNullOrEmpty(type) || String.IsNullOrEmpty(configId))
+	{
+		Item context = GetItem(item.getType(), item.getID());
+		string keyedName = context.getProperty("item_keyed_name");
+		if (String.IsNullOrEmpty(keyedName))
+		{
+			item.setProperty("item_keyed_name", "");
+			item.setPropertyAttribute("item_keyed_name", "is_null", "1");
+		}
+		else
+		{
+			item.setProperty("item_keyed_name", context.getProperty("item_keyed_name"));
+		}
+	}
+	else
+	{
+		Item itm = GetItemByConfigId(type, configId);
+		if (itm.isError())
+		{
+			//check if item was removed or user doesn't have permission
+			itm = getItemByConfigIdAsAdmin(type, configId);
+			if (!itm.isError())
+			{
+				//no get access
+				item.setProperty("item_keyed_name", "");
+				item.setPropertyAttribute("item_keyed_name", "is_null", "1");
+			}
+			else
+			{
+				//item was removed
+				item.setProperty("item_keyed_name", String.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_DeletedIT"), type, configId));
+			}
+		}
+		else
+		{
+			if (itm.getAttribute("discover_only") == "1")
+			{
+				//no get access
+				item.setProperty("item_keyed_name", "");
+				item.setPropertyAttribute("item_keyed_name", "is_null", "1");
+			}
+			else
+			{
+				item.setProperty("item_keyed_name", itm.getProperty("keyed_name"));
+			}
+		}
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_ForumItemKeyedName</name>
+ </Item>
+</AML>

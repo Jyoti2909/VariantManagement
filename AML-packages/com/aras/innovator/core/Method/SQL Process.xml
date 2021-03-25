@@ -1,0 +1,466 @@
+﻿<AML>
+ <Item type="Method" id="02C0EEA10C084E14AA5D104CB35D3227" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA['MethodTemplateName=VBScriptMain;
+' name: SQL Process
+' created: 5-OCT-2005 George J. Carrette
+' purpose: Perform all SQL item work. All other methods called by events
+'          or actions funnel into this one method.
+'          -- error checking on the object name.
+'          -- keep track of the name under which the sql was
+'             executed, for possible dropping before giving any new definition.
+'          -- execute the sql as needed, either immediate or manual.
+'          -- TODO -- macro substitutions.
+
+''' *** START OF BOILER-PLATE TO DEAL WITH EVENT CONTEXT ISSUES ***
+
+Dim db_item As XmlElement
+Dim item_id As String
+Dim item_type As String
+
+Sub Main(ByVal inDom As XmlDocument, _
+   ByVal outDom As XmlDocument, _
+   ByVal Iob As Object, _
+   ByVal Svr As Object, _
+   ByVal Ses As Object)
+
+	Dim docElement As XmlElement = inDom.DocumentElement
+	If  Not docElement.Name = "Item" Then
+		docElement = docElement.selectSingleNode("//Item")
+  End If
+	item_id = docElement.GetAttribute("id") 
+	item_type = docElement.GetAttribute("type")
+
+	Dim op As String = CCO.XML.GetItemProperty(docElement, "PROCESS")
+	Dim current_indom As XmlDocument = CCO.XML.CreateXMLDocument("<Item/>")
+	Dim current_item As XmlElement = current_indom.DocumentElement
+	Dim current_outdom As XmlDocument = CCO.XML.CreateXMLDocument()
+	If String.IsNullOrEmpty(item_id) Then
+		Dim item_name As String = CCO.XML.GetItemProperty(docElement, "name")
+		If String.IsNullOrEmpty(item_name) Then
+			CCO.XML.SetErrorMessage(outDom, 999, "must have id or name of sql item in request")
+			Exit Sub
+		End If
+		CCO.XML.SetItemProperty(current_item, "name", item_name)
+	Else
+		current_item.SetAttribute("id", item_id)
+	End If
+
+	current_item.SetAttribute("type", item_type)
+	current_item.SetAttribute("action", "get")
+
+	If String.Equals(op, "CALL", StringComparison.Ordinal) Then
+		db_item = docElement
+	Else
+		CCO.ApplyItem.ApplyItem(current_indom, current_outdom)
+		db_item = CCO.XML.GetResponseItem(current_outdom)
+		Dim ignore_missing_db_item As Boolean
+		If op = "onAfterDelete" Then
+			ignore_missing_db_item = True
+		Else
+			ignore_missing_db_item = False
+		End If
+		If CCO.XML.HasFault(current_outdom, ignore_missing_db_item) Then
+			If CCO.XML.HasFault(current_outdom, True) Then
+				outDom.RemoveAll()
+				outDom.AppendChild(outDom.ImportNode(current_outdom.DocumentElement, True))
+			ElseIf CCO.XML.HasFault(current_outdom, False) Then
+				CCO.XML.SetErrorMessage(outDom, 999, "One must save the SQL item first")
+			End If
+
+			Return
+		End If
+	End If
+
+	If op = "onBeforeDelete" Then
+		CCO.XML.SetItemProperty(docElement, "name", CCO.XML.GetItemProperty(db_item, "name"))
+		CCO.XML.SetItemProperty(docElement, "old_name", CCO.XML.GetItemProperty(db_item, "old_name"))
+	End If
+	CCO.Startup.debuglog("SQL Process inDom", inDom)
+	CCO.Startup.debuglog("SQL Process db_item", db_item)
+
+	If op = "onAfterDelete" Then
+		onAfterDelete(inDom, outDom)
+	ElseIf op = "onAfterUpdate" Then
+		onafterupdate(inDom, outDom)
+	ElseIf op = "onAfterAdd" Then
+		onafteradd(inDom, outDom)
+	ElseIf op = "execute" Then
+		execute(inDom, outDom)
+	ElseIf op = "execute_if_needed" Then
+		execute_if_needed(inDom, outDom)
+	ElseIf op = "onBeforeUpdate" Or op = "onBeforeDelete" Then
+		Exit Sub
+	ElseIf op = "CALL" Then
+		procedure_call(inDom, outDom)
+	Else
+		CCO.XML.SetErrorMessage(outDom, 999, "Invalid SQL Process Operation: " + op)
+	End If
+	CCO.Startup.debuglog("SQL Process outDom", outDom)
+End Sub
+
+'End of Boiler-Plate and start of actual business logic.
+'Well, not quite yet. First we have to either include copy/pasted utility functions
+'from the core, or define api entry points into them.
+
+Function ReservedWords() As System.Text.RegularExpressions.Regex
+	Return CType(CCO.PropertyValidator.PropertyNameValidationByReservedWordsRegex, System.Text.RegularExpressions.Regex)
+End Function
+
+' Now***, we get into some real business logic for this SQL item type.
+
+Function badnamecheck(ByVal outdom As XmlDocument) As Boolean
+	'Note: name has already passed the regular expression check
+	'defined in the property definition.
+	Dim isbad As Boolean = False
+	Dim itemtype As XmlElement = CCO.Cache.GetItemTypeFromCache("ItemType", "name")
+	Dim tablename As String = _
+	 CCO.DB.InnDatabase.GetTableName(itemtype.GetAttribute("instance_data"))
+
+	Dim name As String = CCO.XML.GetItemProperty(db_item, "name")
+	Dim sql As String = _
+	 "SELECT [ID] FROM " + tablename + " WHERE [NAME]='" + _
+	  CCO.DB.InnDatabase.QuoteValue(name) + "' OR [INSTANCE_DATA]='" + _
+	  CCO.DB.InnDatabase.QuoteValue(name) + "' /*(IR-012350) SQL Process marker*/"
+
+	If CCO.XML.GetItemProperty(db_item, "transform_first") <> "1" Then
+		' Usurp this flag to mean to error check the name against
+		' existing Innovator entity model items.
+		Dim rs As Aras.Server.Core.InnovatorDataSet = _
+		 CCO.DB.InnDatabase.ExecuteSelect(sql)
+		If Not rs.Eof() Then
+			CCO.XML.SetErrorMessage(outdom, 999, _
+			 "name conflicts with an existing itemtype: " + name)
+			Return True
+		End If
+	End If
+
+	If isbad Then Return isbad
+
+	Dim words As System.Text.RegularExpressions.Regex = ReservedWords()
+	If (Not IsNothing(words)) AndAlso words.IsMatch(name) Then
+		CCO.XML.SetErrorMessage(outdom, 999, _
+		 "name conflicts with a reserved word: " + name)
+		Return True
+	End If
+
+	Dim objtype As String = CCO.XML.GetItemProperty(db_item, "type")
+	If objtype <> "block" Then
+		sql = CCO.XML.GetItemProperty(db_item, "sqlserver_body")
+		If IsNothing(sql) Then Return isbad
+		Dim pat As String = "create\W+(?:UNIQUE\W+|CLUSTERED\W+|NONCLUSTERED\W+)*([a-z]+)\W+([a-z0-9_.]+)"
+		Dim re As New System.Text.RegularExpressions.Regex(pat, _
+		 System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+		Dim m As System.Text.RegularExpressions.Match = re.Match(sql)
+		If m.Success Then
+			Dim g0 As System.Text.RegularExpressions.Group = m.Groups(1)
+			Dim g1 As System.Text.RegularExpressions.Group = m.Groups(2)
+			Dim defined_objtype As String = g0.Value
+			Dim defined_name_long As String = g1.Value
+			Dim defined_name_parts() As String = defined_name_long.Split(CType(".", Char))
+			Dim defined_name As String = defined_name_parts(defined_name_parts.Length - 1)
+			CCO.Startup.debuglog("defining type", defined_objtype)
+			CCO.Startup.debuglog("defining name", defined_name)
+			If objtype <> defined_objtype.ToLower() Then
+				CCO.XML.SetErrorMessage(outdom, 999, _
+				 "type of SQL item '" + objtype + "' is not consistent with type in SQL '" + _
+				 defined_objtype + "'")
+				Return True
+			End If
+			If defined_name.ToLower() <> name.ToLower() Then
+				CCO.XML.SetErrorMessage(outdom, 999, _
+				 "name of SQL item '" + name + "' is not consistent with name in SQL '" + _
+				 defined_name + "'")
+				Return True
+			End If
+		End If
+	End If
+	Return False
+End Function
+
+' Now, back to defining some more convenient api tools
+
+Sub update_item(ByVal dbitem As XmlElement, ByVal values As Hashtable)
+	Dim itemtype As XmlElement = CCO.Cache.GetItemTypeFromCache(dbitem.GetAttribute("type"), "name")
+	Dim id As String = CCO.DB.InnDatabase.QuoteValue(dbitem.GetAttribute("id"))
+	CCO.DB.InnDatabase.UpdateOneRow(itemtype.GetAttribute("instance_data"), " WHERE id='" & id & "'", values)
+	CCO.Cache.ClearCachedItemById(itemtype.GetAttribute("keyed_name"), id)
+End Sub
+
+Function dosqlrs(ByVal sql As String, ByVal tp As String) As XmlDocument
+	'This "does" sql, returning a single result set.
+	'But for this to really be effective we should go a couple levels
+	'lower, past the Aras InnovatorDataSet and the Microsoft DataSet
+	'and gather all the info that the OSQL command would obtain,
+	'including multiple result sets and also messages.
+	Dim result As XmlDocument = CCO.XML.CreateXMLDocument("<Result/>")
+	Dim resultelement As XmlElement = result.DocumentElement
+	Dim rs As Aras.Server.Core.InnovatorDataSet = _
+	  CCO.DB.InnDatabase.ExecuteSelect(sql)
+	While Not rs.Eof
+		Dim row As XmlElement = CType(resultelement.AppendChild(result.CreateElement("Item")), XmlElement)
+		If Not IsNothing(tp) Then
+			row.SetAttribute("type", tp)
+		End If
+		Dim iter As Integer
+		For iter = 0 To rs.FieldCount() - 1
+			Dim name As String = Replace(rs.GetName(iter), " ", "_").ToLower()
+			If Not (rs.IsNull(iter)) Then
+				Dim fieldTag As XmlNode = row.AppendChild(result.CreateElement(name))
+				Dim value As String = CStr(rs.Value(iter))
+				fieldTag.InnerText = value
+				If name = "id" Or name = "type" Then
+					row.SetAttribute(name, value)
+				End If
+			End If
+		Next
+		rs.MoveNext()
+	End While
+	Return result
+End Function
+
+Function dosql(ByVal sql As String, ByVal rsp As Boolean) As XmlDocument
+	' unfortunately the InnovatorDateSet is buggy in that it will not
+	' handle a null defined set, hence we must declare a-priori if we
+	' expect a result set or not.
+	If rsp Then
+		Return dosqlrs(sql, Nothing)
+	Else
+		Dim resultcode As Integer = CCO.DB.InnDatabase.ExecuteSQL(sql)
+		Dim result As XmlDocument = CCO.XML.CreateXMLDocument("<Result/>")
+		Dim resultelement As XmlElement = result.DocumentElement
+		resultelement.InnerText = CStr(resultcode)
+		Return result
+	End If
+End Function
+
+Function dosqlmsg(ByVal msg As String, ByVal sql As String, ByVal rsp As Boolean) As XmlDocument
+	CCO.Startup.debuglog(msg, sql)
+	Dim result As XmlDocument = dosql(sql, rsp)
+	CCO.Startup.debuglog(msg, result)
+	Return result
+End Function
+
+'' back to business logic
+
+Function sqldefinedas(ByVal name As String) As XmlDocument
+	Dim sql As String = _
+	" SELECT type AS [type], NULL AS [index_id], NULL AS [table]" + _
+	" FROM sysobjects" + _
+	" WHERE  sysobjects.name = '" + CCO.DB.InnDatabase.QuoteValue(name) + "' AND  sysobjects.uid  = schema_id()" + _
+	" UNION" + _
+	" SELECT 'INDEX' AS [type], sysindexes.indid AS [index_id], sysobjects.name AS [table] " + _
+	" FROM sysindexes" + _
+	" INNER JOIN sysobjects ON sysobjects.id = sysindexes.id AND sysobjects.uid = schema_id()" + _
+	" WHERE sysindexes.indid > 0 AND sysindexes.name = '" + CCO.DB.InnDatabase.QuoteValue(name) + "' /*(IR-012350) SQL Process marker*/"
+	Return dosql(sql, True)
+End Function
+
+Sub deletesqldefinitions(ByVal name As String)
+	Dim defs As XmlDocument = sqldefinedas(name)
+	CCO.Startup.debuglog("definitions to delete", defs)
+	Dim d As XmlElement
+	For Each d In defs.SelectNodes("//Item")
+		Dim objtype As String = CCO.XML.GetItemProperty(d, "type")
+		Dim objdrop As String = Nothing
+		If objtype = "P " Then
+			objdrop = "PROCEDURE"
+		ElseIf objtype = "FN" OrElse objtype = "TF" OrElse objtype = "IF" Then
+			objdrop = "FUNCTION"
+		ElseIf objtype = "U " Then
+			objdrop = "TABLE"
+		ElseIf objtype = "V " Then
+			objdrop = "VIEW"
+		ElseIf objtype = "TR" Then
+			objdrop = "TRIGGER"
+		ElseIf objtype = "INDEX" Then
+			objdrop = "INDEX"
+		End If
+		'' TODO: Need code to DROP INDEX [TABLENAME].INDEXNAME
+		''       But that doesn't show up in sysobjects. It shows up in sysindexes
+		'' Note: index isn't really handled very well in the namecheck() either.
+		If Not IsNothing(objdrop) Then
+
+			Dim sql As String = "DROP " + objdrop + " " + CCO.DB.InnDatabase.QuoteName(name)
+
+			If objdrop = "INDEX" Then
+				sql = sql + " ON " + CCO.DB.InnDatabase.QuoteName(CCO.XML.GetItemProperty(d, "table"))
+			End If
+
+			dosqlmsg("deleting", sql, False)
+
+		End If
+	Next
+End Sub
+
+Sub onAfterDelete(ByVal indom As XmlDocument, ByVal outdom As XmlDocument)
+	Dim name As String = CCO.XML.GetItemProperty(indom.DocumentElement, "name")
+	Dim old_name As String = CCO.XML.GetItemProperty(indom.DocumentElement, "old_name")
+	deletesqldefinitions(name)
+	deletesqldefinitions(old_name)
+End Sub
+
+Sub onafteradd(ByVal indom As XmlDocument, ByVal outdom As XmlDocument)
+	If badnamecheck(outdom) Then Exit Sub
+	Dim values As Hashtable = New Hashtable
+	values.Add("execution_count", "0")
+	values.Add("stale", "1")
+	update_item(db_item, values)
+	If CCO.XML.GetItemProperty(db_item, "execution_flag") = "manual" Then
+		CCO.XML.SetResult(outdom, "manual execution")
+		Exit Sub
+	End If
+	execute_db_item(outdom)
+End Sub
+
+Sub onafterupdate(ByVal indom As XmlDocument, ByVal outdom As XmlDocument)
+	If badnamecheck(outdom) Then Exit Sub
+	Dim values As Hashtable = New Hashtable
+	values.Add("stale", "1")
+	update_item(db_item, values)
+	If CCO.XML.GetItemProperty(db_item, "execution_flag") = "manual" Then
+		CCO.XML.SetResult(outdom, "manual execution")
+		Exit Sub
+	End If
+	execute_db_item(outdom)
+End Sub
+
+Sub procedure_call(ByVal indom As XmlDocument, ByVal outdom As XmlDocument)
+	Dim ie As XmlElement = CCO.XML.GetRequestItem(indom)
+	' Now, we would like to have any entry point into the DBCLASSES.VB that
+	' would let us pass parameters to a stored procedure. But, not having that yet,
+	' we will just construct a call to EXEC with parameters quoted and escaped.
+	Dim sql As String = "exec " + CCO.DB.InnDatabase.QuoteName(CCO.XML.GetItemProperty(db_item, "name"))
+	Dim k As Integer = 1
+	Dim arg_name As String
+	Dim arg_value As String
+	Dim sep As String = " "
+	Do
+		arg_name = "ARG" & k
+		arg_value = CCO.XML.GetItemProperty(ie, arg_name)
+		If Not IsNothing(arg_value) Then
+			sql = sql + sep + "'" + CCO.DB.InnDatabase.QuoteValue(arg_value) + "'"
+		End If
+		k = k + 1
+		sep = ","
+	Loop Until IsNothing(arg_value)
+	Dim rtype As String = CCO.XML.GetItemProperty(ie, "TYPE")
+	Dim result As XmlDocument = dosqlrs(sql, rtype)
+	Dim outbody As XmlNode = GetEnvelopeBody(outdom)
+	Dim outresult As XmlNode = outbody.SelectSingleNode("Result")
+	outbody.ReplaceChild(outdom.ImportNode(result.DocumentElement, True), outresult)
+End Sub
+
+Sub execute(ByVal indom As XmlDocument, ByVal outdom As XmlDocument)
+	Dim locked_by_id As String = CCO.XML.GetItemProperty(db_item, "locked_by_id")
+	If (Not IsNothing(locked_by_id)) And locked_by_id <> "" Then
+		'If the item is not locked then what the client may be sending me
+		'could be dirty and not saved to the database, which could cause
+		'considerable confusion on the part of the developer.
+		'So force him to unlock it first.
+		CCO.XML.SetErrorMessage(outdom, 999, "One is not allowed to execute a locked SQL")
+		Exit Sub
+	End If
+	execute_db_item(outdom)
+End Sub
+
+' execution_count, not the stale flag is the criteria used here.
+' this forces the developer to manually execute when objects
+' are being changed.
+
+Sub execute_if_needed(ByVal indom As XmlDocument, ByVal outdom As XmlDocument)
+	If CInt(CCO.XML.GetItemProperty(db_item, "execution_count")) > 0 Then
+		CCO.XML.SetResult(outdom, "OK")
+	Else
+		execute(indom, outdom)
+	End If
+End Sub
+
+Sub execute_db_item(ByVal outdom As XmlDocument)
+	If CInt(CCO.XML.GetItemProperty(db_item, "execution_count")) = 0 Then
+		If execute_db_item_dependencies(outdom) Then
+			Exit Sub
+		End If
+	End If
+
+	deletesqldefinitions(CCO.XML.GetItemProperty(db_item, "old_name"))
+	deletesqldefinitions(CCO.XML.GetItemProperty(db_item, "name"))
+
+	Dim objtype As String = CCO.XML.GetItemProperty(db_item, "type")
+	Dim sql As String = CCO.XML.GetItemProperty(db_item, "sqlserver_body")
+	If IsNothing(sql) OrElse sql = "" Then
+		CCO.XML.SetResult(outdom, "NOSQL")
+		Exit Sub
+	End If
+	Dim rsp As Boolean = False
+	If objtype = "block" Then
+		rsp = True
+	End If
+	Dim result As XmlDocument = dosqlmsg("SQL PROCESS EXECUTION", sql, rsp)
+	Dim outbody As XmlNode = GetEnvelopeBody(outdom)
+	Dim outresult As XmlNode = outbody.SelectSingleNode("Result")
+	outbody.ReplaceChild(outdom.ImportNode(result.DocumentElement, True), outresult)
+	set_executed_name()
+End Sub
+
+
+Sub set_executed_name()
+	Dim values As Hashtable = New Hashtable
+	Dim ecount As Integer = CInt(CCO.XML.GetItemProperty(db_item, "execution_count")) + 1
+	values.Add("old_name", CCO.XML.GetItemProperty(db_item, "name"))
+	values.Add("execution_count", ecount)
+	values.Add("stale", "0")
+	update_item(db_item, values)
+End Sub
+
+' Questions: if the body of an SQL item has changed, do we want
+'            to set its execution_count back to 0?
+'            Maybe yes, maybe no. The previous definition of the
+'            object still exists at the database level, even though
+'            it may be stale. We could use a stale flag.
+'            But this SQL-level stuff is not for the casual developer.
+'            Remember that the main motivation for this SQL item
+'            is to organize SQL so that it can be used
+'            from the Business Ready Solutions packages.
+'
+'            To that end we are already done. If all items have
+'            immediate execution mode, *and* if the package loader
+'            is forced to load items only after the dependant items
+'            have been loaded, then everything works like a charm.
+
+
+Function execute_db_item_dependencies(ByVal outdom As XmlDocument) As Boolean
+	Dim depsql As String = _
+	 "SELECT [RELATED_ID] AS [ID] FROM " + CCO.DB.InnDatabase.GetTableName("SQL_DEPENDENCIES") + ", " + CCO.DB.InnDatabase.GetTableName("SQL") + _
+	 " WHERE [SOURCE_ID]='" + CCO.DB.InnDatabase.QuoteValue(db_item.GetAttribute("id")) + "' AND " + _
+	 "[RELATED_ID]=" + CCO.DB.InnDatabase.GetTableName("SQL") + ".[ID] AND " + _
+	 CCO.DB.InnDatabase.GetTableName("SQL") + ".[EXECUTION_COUNT]=0 /*(IR-012350) SQL Process marker*/"
+	Dim deps As XmlDocument = dosqlmsg("DEPENDENCIES", depsql, True)
+	Dim dep As XmlElement
+	For Each dep In deps.SelectNodes("//Item")
+		Dim recindom As XmlDocument = _
+		 CCO.XML.CreateXMLDocument("<Item type='SQL' action='SQL Execute'/>")
+		Dim recitem As XmlElement = recindom.DocumentElement
+		recitem.SetAttribute("id", dep.GetAttribute("id"))
+		CCO.ApplyItem.ApplyItem(recindom, outdom)
+		If CCO.XML.HasFault(outdom, False) Then
+			Return True
+		End If
+	Next
+	Return False
+End Function
+
+Private Shared Function GetEnvelopeBody(ByVal dom As XmlDocument) As XmlNode
+	Const SoapEnvUri As String = "http://schemas.xmlsoap.org/soap/envelope/"
+	Const SoapNamespaceCheck As String = "namespace-uri()='" + SoapEnvUri + "' or namespace-uri()=''"
+	Const EnvelopeXPath As String = "*[local-name()='Envelope' and (" + SoapNamespaceCheck + ")]"
+	Const BodyXPath As String = "*[local-name()='Body' and (" + SoapNamespaceCheck + ")]"
+	Const EnvelopeBodyXPath As String = EnvelopeXPath + "/" + BodyXPath
+
+	Return dom.SelectSingleNode("/" + EnvelopeBodyXPath)
+End Function
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>SQL Process</name>
+ </Item>
+</AML>

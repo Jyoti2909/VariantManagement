@@ -1,0 +1,585 @@
+﻿<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+	<xs:element name="TestCase" type="TestCase"/>
+	<xs:complexType name="TestCase">
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="Description" minOccurs="0" maxOccurs="1">
+				<xs:simpleType>
+					<xs:restriction base="xs:string"/>
+				</xs:simpleType>
+			</xs:element>
+			<xs:element name="Request" type="Request" minOccurs="0" />
+			<xs:element name="TestCaseCleanUp" maxOccurs="unbounded" type="TestCaseCleanUp" />
+		</xs:choice>
+		<xs:attribute name="issue" type="xs:string" use="optional" />
+		<xs:attribute name="author" use="required">
+			<xs:simpleType>
+				<xs:union memberTypes="Attribute_Author_ListOfValues Attribute_Pattern"/>
+			</xs:simpleType>
+		</xs:attribute>
+
+	</xs:complexType>
+	<xs:simpleType name="Comparison_Ignore_Xpath_pattern">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="^Baseline/.*"></xs:pattern>
+			<xs:pattern value="^Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/.*"></xs:pattern>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Comparison_Ignore_Xpath_restriction">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/created_on/text()" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/modified_on/text()" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/release_date/text()" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/effective_date/text()" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:exception" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_detail" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:exception/@message" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/faultstring" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Variables_XPath_pattern">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="^AML.*"/>
+			<xs:pattern value="^Query/AML.*"/>
+			<xs:pattern value="^Query/Item.*"/>
+			<xs:pattern value="^Baseline/qwerty:string*"/>
+			<xs:pattern value="^Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/.*"/>
+			<xs:pattern value="^Query/SOAP-ENV:Envelope/SOAP-ENV:Body/.*"/>
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Variables_XPath_restriction">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="AML/Item" />
+			<xs:enumeration value="Query/Item/" />
+			<xs:enumeration value="Query/AML/Item" />
+			<xs:enumeration value="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/" />
+			<xs:enumeration value="Query/SOAP-ENV:Envelope/SOAP-ENV:Body/" />
+			<xs:enumeration value="Query/WebMethodArgs/arg" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:complexType name="Item">
+		<xs:choice maxOccurs="unbounded" minOccurs="0">
+			<xs:any processContents="skip"/>
+		</xs:choice>
+		<xs:attribute name="doGetItem" type="xs:byte" use="optional"/>
+		<xs:attribute name="type" use="optional">
+			<xs:simpleType>
+				<xs:union memberTypes="Attribute_Type_ListOfValues Attribute_Pattern"/>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="action" use="optional">
+			<xs:simpleType>
+				<xs:union memberTypes="Attribute_Action_ListOfValues Attribute_Pattern" />
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="select" type="xs:string" use="optional"/>
+		<xs:attribute name="id" type="xs:string" use="optional"/>
+		<xs:attribute name="idlist" type="xs:string" use="optional"/>
+		<xs:attribute name="where" type="xs:string" use="optional"/>
+		<xs:attribute name="orderBy" type="xs:string" use="optional" />
+		<xs:attribute name="page" type="xs:integer" use="optional"/>
+		<xs:attribute name="pagesize" type="xs:integer" use="optional"/>
+		<xs:attribute name="serverEvents" type="xs:boolean" use="optional"/>
+		<xs:anyAttribute processContents="skip"/>
+	</xs:complexType>
+	<xs:complexType name="SQL">
+		<xs:simpleContent>
+			<xs:extension base="xs:string"/>
+		</xs:simpleContent>
+	</xs:complexType>
+	<xs:complexType name="RequestTemplate" abstract="true">
+		<xs:attribute name="SOAPAction" type="xs:string" use="optional" />
+		<xs:attribute name="runAs" type="xs:string" use="optional"/>
+		<xs:attribute name="locale" type="xs:string" use="optional"/>
+		<xs:attribute name="login" type="xs:string" use="optional"/>
+		<xs:attribute name="password" type="xs:string" use="optional"/>
+		<xs:attribute name="timeZone" type="xs:string" use="optional"/>
+		<xs:attribute name="WebService" use="optional">
+			<xs:simpleType>
+				<xs:union memberTypes="Attribute_WebServiceListOfValues  Attribute_Pattern" />
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="WebMethod" use="optional">
+			<xs:simpleType>
+				<xs:union memberTypes="Attribute_WebMethodListOfValues  Attribute_Pattern" />
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="position" type="xs:integer" use="optional"/>
+	</xs:complexType>
+	<xs:complexType name="Request">
+		<xs:complexContent>
+			<xs:extension base="RequestTemplate">
+				<xs:sequence>
+					<xs:element name="Comments" type="xs:string" minOccurs="1" maxOccurs="1" />
+					<xs:element name="Variables" type="Variables"  minOccurs="0" maxOccurs="1" />
+					<xs:element name="Query" type="Query" minOccurs="1" maxOccurs="1" />
+					<xs:element name="Baseline" type="Baseline" minOccurs="1" maxOccurs="1" />
+					<xs:element name="Comparison" type="Comparison" minOccurs="0" maxOccurs="1" />
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="Variables">
+		<xs:sequence>
+			<xs:element maxOccurs="unbounded" name="Variable">
+				<xs:complexType>
+					<xs:attribute name="id" type="xs:string" use="required" />
+					<xs:attribute name="action" use="required">
+						<xs:simpleType>
+							<xs:restriction base="xs:string">
+								<xs:enumeration value="apply"/>
+								<xs:enumeration value="set"/>
+							</xs:restriction>
+						</xs:simpleType>
+					</xs:attribute>
+					<xs:attribute name="xpath" use="required">
+						<xs:simpleType>
+							<xs:union memberTypes="Variables_XPath_pattern Variables_XPath_restriction"/>
+						</xs:simpleType>
+					</xs:attribute>
+					<xs:attribute name="namespace" use="optional" />
+					<xs:attribute name="regex" type="xs:string" use="optional" />
+					<xs:attribute name="useInnerXML" type="xs:boolean" use="optional" />
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Query">
+		<xs:choice>
+			<xs:element name="AML" type="AML" minOccurs="0" maxOccurs="1" />
+			<xs:element name="SQL" type="SQL" minOccurs="0" maxOccurs="1" />
+			<xs:element name="Item" type="Item" minOccurs="0" maxOccurs="1" />
+			<xs:element name="Logoff" minOccurs="0" maxOccurs="1"/>
+			<xs:element name="WebMethodArgs" type="WebMethodArgs" minOccurs="0" maxOccurs="1" />
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="Baseline">
+		<xs:sequence>
+			<xs:any processContents="skip"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="Comparison">
+		<xs:sequence>
+			<xs:element name="Ignore" minOccurs="0" maxOccurs="unbounded">
+				<xs:complexType>
+					<xs:attribute name="xpath" use="required">
+						<xs:simpleType>
+							<xs:union memberTypes="Comparison_Ignore_Xpath_pattern Comparison_Ignore_Xpath_restriction"/>
+						</xs:simpleType>
+					</xs:attribute>
+					<xs:attribute name="namespace" use="optional" />
+				</xs:complexType>
+			</xs:element>
+		</xs:sequence>
+		<xs:attribute name="strategy" type="xs:string" use="optional"/>
+		<xs:attribute name="strategyAlias" use="optional">
+			<xs:simpleType>
+				<xs:union memberTypes="Attribute_StrategyAlias Attribute_Pattern" />
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+	<xs:complexType name="WebMethodArgs">
+		<xs:sequence>
+			<xs:element name="arg" type="WebMethodArgs_type" minOccurs="1" maxOccurs="unbounded" />
+		</xs:sequence>
+	</xs:complexType>
+	<xs:complexType name="WebMethodArgs_type">
+		<xs:choice maxOccurs="unbounded" minOccurs="0">
+			<xs:any processContents="skip"/>
+		</xs:choice>
+		<xs:attribute name="name" type="xs:string" />
+		<xs:attribute name="doEncrypt" type="xs:boolean" />
+		<xs:attribute name="useInQueryString" type="xs:boolean" />
+	</xs:complexType>
+	<xs:complexType name="AML">
+		<xs:choice maxOccurs="unbounded" minOccurs="0">
+			<xs:element name="Item" type="Item" />
+			<xs:element name="GetAssignedTasks" />
+			<xs:element name="Envelope" />
+		</xs:choice>
+	</xs:complexType>
+	<xs:complexType name="TestCaseCleanUp">
+		<xs:complexContent>
+			<xs:extension base="RequestTemplate">
+				<xs:sequence>
+					<xs:element name="Comments" type="xs:string" minOccurs="0" maxOccurs="1" />
+					<xs:element name="Variables" type="Variables"  minOccurs="0" maxOccurs="1" />
+					<xs:element name="Query" type="Query" minOccurs="1" maxOccurs="1" />
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:simpleType name="Attribute_WebServiceListOfValues">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Licensing.asmx" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Attribute_WebMethodListOfValues">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="GetFeatureTree" />
+			<xs:enumeration value="UpdateFeatureTree" />
+			<xs:enumeration value="ImportFeatureLicense" />
+			<xs:enumeration value="ConsumeLicense" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Attribute_StrategyAlias">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="MinimalBaselineComparer" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Attribute_Type_ListOfValues">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Access" />
+			<xs:enumeration value="Action" />
+			<xs:enumeration value="Activity" />
+			<xs:enumeration value="Activity Assignment" />
+			<xs:enumeration value="Activity EMail" />
+			<xs:enumeration value="Activity Method" />
+			<xs:enumeration value="Activity Task" />
+			<xs:enumeration value="Activity Task Value" />
+			<xs:enumeration value="Activity Template" />
+			<xs:enumeration value="Activity Template Assignment" />
+			<xs:enumeration value="Activity Template EMail" />
+			<xs:enumeration value="Activity Template Method" />
+			<xs:enumeration value="Activity Template Task" />
+			<xs:enumeration value="Activity Template Transition" />
+			<xs:enumeration value="Activity Template Variable" />
+			<xs:enumeration value="Activity Transition" />
+			<xs:enumeration value="Activity Variable" />
+			<xs:enumeration value="Activity Variable Value" />
+			<xs:enumeration value="Activity2" />
+			<xs:enumeration value="Activity2 Assignment" />
+			<xs:enumeration value="Activity2 Comments" />
+			<xs:enumeration value="Activity2 Deliverable" />
+			<xs:enumeration value="Activity2 Task" />
+			<xs:enumeration value="Affected Item" />
+			<xs:enumeration value="Affected Item Property" />
+			<xs:enumeration value="Affected Item Relationship" />
+			<xs:enumeration value="Affected Relationship" />
+			<xs:enumeration value="Affected Relationship Property" />
+			<xs:enumeration value="Alias" />
+			<xs:enumeration value="Allowed Permission" />
+			<xs:enumeration value="Allowed Workflow" />
+			<xs:enumeration value="Applied Updates" />
+			<xs:enumeration value="Board" />
+			<xs:enumeration value="Body" />
+			<xs:enumeration value="BOM Instance" />
+			<xs:enumeration value="BOM Substitute" />
+			<xs:enumeration value="Business Calendar Exception" />
+			<xs:enumeration value="Business Calendar Year" />
+			<xs:enumeration value="CAD" />
+			<xs:enumeration value="CAD Changes" />
+			<xs:enumeration value="CAD Instance" />
+			<xs:enumeration value="CAD Parent" />
+			<xs:enumeration value="CAD Part" />
+			<xs:enumeration value="CAD Structure" />
+			<xs:enumeration value="Can Add" />
+			<xs:enumeration value="Change Controlled Item" />
+			<xs:enumeration value="Change Controlled Relationship" />
+			<xs:enumeration value="Chart" />
+			<xs:enumeration value="Chart Series" />
+			<xs:enumeration value="Client Event" />
+			<xs:enumeration value="Column Event" />
+			<xs:enumeration value="Configurable Grid Event" />
+			<xs:enumeration value="Configuration" />
+			<xs:enumeration value="ConversionRule" />
+			<xs:enumeration value="ConversionRuleEventHandler" />
+			<xs:enumeration value="ConversionRuleEventTemplate" />
+			<xs:enumeration value="ConversionRuleFileType" />
+			<xs:enumeration value="ConversionServer" />
+			<xs:enumeration value="ConversionServerConverterType" />
+			<xs:enumeration value="ConversionServerPriority" />
+			<xs:enumeration value="ConversionTask" />
+			<xs:enumeration value="ConversionTaskDependency" />
+			<xs:enumeration value="ConversionTaskEventHandler" />
+			<xs:enumeration value="ConversionTaskHandlerError" />
+			<xs:enumeration value="ConversionTaskResult" />
+			<xs:enumeration value="ConverterType" />
+			<xs:enumeration value="Core_GlobalLayout" />
+			<xs:enumeration value="Core_ItemGridLayout" />
+			<xs:enumeration value="Core_RelGridLayout" />
+			<xs:enumeration value="Customer" />
+			<xs:enumeration value="Dashboard" />
+			<xs:enumeration value="Dashboard Chart" />
+			<xs:enumeration value="DatabaseUpgrade" />
+			<xs:enumeration value="DatabaseUpgradePatch" />
+			<xs:enumeration value="Deliverable" />
+			<xs:enumeration value="Design to Goal" />
+			<xs:enumeration value="Desktop" />
+			<xs:enumeration value="Discussion" />
+			<xs:enumeration value="DiscussionDefinition" />
+			<xs:enumeration value="DiscussionDefinitionView" />
+			<xs:enumeration value="DiscussionTemplate" />
+			<xs:enumeration value="DiscussionTemplateView" />
+			<xs:enumeration value="Document" />
+			<xs:enumeration value="Document Changes" />
+			<xs:enumeration value="Document File" />
+			<xs:enumeration value="ECN" />
+			<xs:enumeration value="ECN Affected Item" />
+			<xs:enumeration value="ECN ECR" />
+			<xs:enumeration value="ECN File" />
+			<xs:enumeration value="ECR" />
+			<xs:enumeration value="ECR Affected Item" />
+			<xs:enumeration value="ECR File" />
+			<xs:enumeration value="ECR PR" />
+			<xs:enumeration value="EMail Message" />
+			<xs:enumeration value="Engineering Efficiency" />
+			<xs:enumeration value="Engineering Optimization" />
+			<xs:enumeration value="Exclusion" />
+			<xs:enumeration value="Express DCO" />
+			<xs:enumeration value="Express DCO Affected Item" />
+			<xs:enumeration value="Express DCO File" />
+			<xs:enumeration value="Express DCO Signoff" />
+			<xs:enumeration value="Express ECO" />
+			<xs:enumeration value="Express ECO Affected Item" />
+			<xs:enumeration value="Express ECO File" />
+			<xs:enumeration value="Express ECO Impact Matrix" />
+			<xs:enumeration value="Express ECO Signoff" />
+			<xs:enumeration value="Feature License" />
+			<xs:enumeration value="Feed" />
+			<xs:enumeration value="FeedTemplate" />
+			<xs:enumeration value="Field" />
+			<xs:enumeration value="Field Event" />
+			<xs:enumeration value="File" />
+			<xs:enumeration value="FileContainerItems" />
+			<xs:enumeration value="FileContainerLocator" />
+			<xs:enumeration value="FileExchangePackage" />
+			<xs:enumeration value="FileExchangePackageFile" />
+			<xs:enumeration value="FileExchangeTxn" />
+			<xs:enumeration value="FileExchangeTxnState" />
+			<xs:enumeration value="FileSelector" />
+			<xs:enumeration value="FileSelectorTemplate" />
+			<xs:enumeration value="FileType" />
+			<xs:enumeration value="Filter Value" />
+			<xs:enumeration value="FMEA Task" />
+			<xs:enumeration value="Form" />
+			<xs:enumeration value="Form Event" />
+			<xs:enumeration value="Forum" />
+			<xs:enumeration value="ForumItem" />
+			<xs:enumeration value="ForumMessageGroup" />
+			<xs:enumeration value="ForumMustViewBy" />
+			<xs:enumeration value="ForumSearch" />
+			<xs:enumeration value="ForumSharedWith" />
+			<xs:enumeration value="ForumWantViewBy" />
+			<xs:enumeration value="Frame" />
+			<xs:enumeration value="Frameset" />
+			<xs:enumeration value="Grid" />
+			<xs:enumeration value="Grid Column" />
+			<xs:enumeration value="Grid Event" />
+			<xs:enumeration value="Help" />
+			<xs:enumeration value="Help See Also" />
+			<xs:enumeration value="Hide In" />
+			<xs:enumeration value="Hide Related In" />
+			<xs:enumeration value="History" />
+			<xs:enumeration value="History Action" />
+			<xs:enumeration value="History Container" />
+			<xs:enumeration value="History Template" />
+			<xs:enumeration value="History Template Action" />
+			<xs:enumeration value="History Template Where Used" />
+			<xs:enumeration value="HistorySecureMessage" />
+			<xs:enumeration value="Identity" />
+			<xs:enumeration value="IdentityToTruCoreUser" />
+			<xs:enumeration value="InBasket Task" />
+			<xs:enumeration value="Item Action" />
+			<xs:enumeration value="Item Report" />
+			<xs:enumeration value="ItemType" />
+			<xs:enumeration value="ItemType Life Cycle" />
+			<xs:enumeration value="ITPresentationConfiguration" />
+			<xs:enumeration value="Language" />
+			<xs:enumeration value="Life Cycle Map" />
+			<xs:enumeration value="Life Cycle State" />
+			<xs:enumeration value="Life Cycle Transition" />
+			<xs:enumeration value="List" />
+			<xs:enumeration value="Locale" />
+			<xs:enumeration value="Located" />
+			<xs:enumeration value="LockedItems" />
+			<xs:enumeration value="Manufacturer" />
+			<xs:enumeration value="Manufacturer Manf Part" />
+			<xs:enumeration value="Manufacturer Part" />
+			<xs:enumeration value="Manufacturer Part File" />
+			<xs:enumeration value="Manufacturer Part Part" />
+			<xs:enumeration value="Member" />
+			<xs:enumeration value="Message" />
+			<xs:enumeration value="Message Acknowledgement" />
+			<xs:enumeration value="Method" />
+			<xs:enumeration value="Metric" />
+			<xs:enumeration value="Metric Value" />
+			<xs:enumeration value="Model" />
+			<xs:enumeration value="Morphae" />
+			<xs:enumeration value="Old Password" />
+			<xs:enumeration value="PackageDefinition" />
+			<xs:enumeration value="PackageDependsOn" />
+			<xs:enumeration value="PackageElement" />
+			<xs:enumeration value="PackageGroup" />
+			<xs:enumeration value="PackageReferencedElement" />
+			<xs:enumeration value="Part" />
+			<xs:enumeration value="Part Alternate" />
+			<xs:enumeration value="Part AML" />
+			<xs:enumeration value="Part BOM" />
+			<xs:enumeration value="Part CAD" />
+			<xs:enumeration value="Part Changes" />
+			<xs:enumeration value="Part Document" />
+			<xs:enumeration value="Part Goal" />
+			<xs:enumeration value="Part MultiLevel BOM" />
+			<xs:enumeration value="Part PSW" />
+			<xs:enumeration value="Part Submission Warrant" />
+			<xs:enumeration value="PE_MainPreferences" />
+			<xs:enumeration value="Permission" />
+			<xs:enumeration value="PM_ProjectColorMap" />
+			<xs:enumeration value="PM_ProjectColorPeriod" />
+			<xs:enumeration value="PM_ProjectColumnDescription" />
+			<xs:enumeration value="PM_ProjectGridLayout" />
+			<xs:enumeration value="PPAP Package" />
+			<xs:enumeration value="PR" />
+			<xs:enumeration value="PR File" />
+			<xs:enumeration value="Predecessor" />
+			<xs:enumeration value="Preference" />
+			<xs:enumeration value="PreferenceTabTypes" />
+			<xs:enumeration value="PreferenceTypes" />
+			<xs:enumeration value="PresentationConfiguration" />
+			<xs:enumeration value="Product" />
+			<xs:enumeration value="Product Innovation" />
+			<xs:enumeration value="Program" />
+			<xs:enumeration value="Program Project" />
+			<xs:enumeration value="Project" />
+			<xs:enumeration value="Project Docs" />
+			<xs:enumeration value="Project Part" />
+			<xs:enumeration value="Project Task" />
+			<xs:enumeration value="Project Team" />
+			<xs:enumeration value="Project Template" />
+			<xs:enumeration value="Project Template Docs" />
+			<xs:enumeration value="Project Template Tree" />
+			<xs:enumeration value="Project Tree" />
+			<xs:enumeration value="Property" />
+			<xs:enumeration value="ReadPriority" />
+			<xs:enumeration value="Relationship Grid Event" />
+			<xs:enumeration value="Relationship View" />
+			<xs:enumeration value="RelationshipType" />
+			<xs:enumeration value="ReplicationRule" />
+			<xs:enumeration value="ReplicationRuleFileType" />
+			<xs:enumeration value="ReplicationRuleTargetVault" />
+			<xs:enumeration value="ReplicationTxn" />
+			<xs:enumeration value="ReplicationTxnLog" />
+			<xs:enumeration value="Report" />
+			<xs:enumeration value="Revision" />
+			<xs:enumeration value="SavedSearch" />
+			<xs:enumeration value="Scheduled Task" />
+			<xs:enumeration value="Search" />
+			<xs:enumeration value="Search Center" />
+			<xs:enumeration value="Search Criteria" />
+			<xs:enumeration value="SearchMode" />
+			<xs:enumeration value="SecureMessage" />
+			<xs:enumeration value="SecureMessageAudio" />
+			<xs:enumeration value="SecureMessageFlaggedBy" />
+			<xs:enumeration value="SecureMessageMarkup" />
+			<xs:enumeration value="SecureMessageVideo" />
+			<xs:enumeration value="SecureMessageViewTemplate" />
+			<xs:enumeration value="Sequence" />
+			<xs:enumeration value="Server Event" />
+			<xs:enumeration value="ServiceProvider" />
+			<xs:enumeration value="Simple ECO" />
+			<xs:enumeration value="Simple ECO Affected Item" />
+			<xs:enumeration value="Simple ECO File" />
+			<xs:enumeration value="Simple ECO Signoff" />
+			<xs:enumeration value="Simple MCO" />
+			<xs:enumeration value="Simple MCO File" />
+			<xs:enumeration value="Simple MCO Part" />
+			<xs:enumeration value="Simple MCO Signoff" />
+			<xs:enumeration value="SPDocumentLibraryDefinition" />
+			<xs:enumeration value="SPField" />
+			<xs:enumeration value="SQL" />
+			<xs:enumeration value="SQL Dependencies" />
+			<xs:enumeration value="SSVC_Preferences" />
+			<xs:enumeration value="SSVCItems" />
+			<xs:enumeration value="SSVCPresentationConfiguration" />
+			<xs:enumeration value="State Distribution" />
+			<xs:enumeration value="State EMail" />
+			<xs:enumeration value="State Notification" />
+			<xs:enumeration value="StoredSecureMessage" />
+			<xs:enumeration value="Sub WBS" />
+			<xs:enumeration value="SystemEvent" />
+			<xs:enumeration value="SystemEventHandler" />
+			<xs:enumeration value="SystemEventLog" />
+			<xs:enumeration value="SystemEventLogDescriptor" />
+			<xs:enumeration value="SystemFileContainer" />
+			<xs:enumeration value="Team" />
+			<xs:enumeration value="Team Identity" />
+			<xs:enumeration value="Time Record" />
+			<xs:enumeration value="Time to Manufacturing" />
+			<xs:enumeration value="TOC Access" />
+			<xs:enumeration value="TOC View" />
+			<xs:enumeration value="Transition Distribution" />
+			<xs:enumeration value="Transition EMail" />
+			<xs:enumeration value="User" />
+			<xs:enumeration value="UserMessage" />
+			<xs:enumeration value="Value" />
+			<xs:enumeration value="Variable" />
+			<xs:enumeration value="Vault" />
+			<xs:enumeration value="Vendor" />
+			<xs:enumeration value="Vendor Part" />
+			<xs:enumeration value="View" />
+			<xs:enumeration value="View With" />
+			<xs:enumeration value="Viewer" />
+			<xs:enumeration value="WBS Activity2" />
+			<xs:enumeration value="WBS Deliverable" />
+			<xs:enumeration value="WBS Element" />
+			<xs:enumeration value="Workflow" />
+			<xs:enumeration value="Workflow Map" />
+			<xs:enumeration value="Workflow Map Activity" />
+			<xs:enumeration value="Workflow Map Path" />
+			<xs:enumeration value="Workflow Map Path Post" />
+			<xs:enumeration value="Workflow Map Path Pre" />
+			<xs:enumeration value="Workflow Map Variable" />
+			<xs:enumeration value="Workflow Process" />
+			<xs:enumeration value="Workflow Process Activity" />
+			<xs:enumeration value="Workflow Process Path" />
+			<xs:enumeration value="Workflow Process Path Post" />
+			<xs:enumeration value="Workflow Process Path Pre" />
+			<xs:enumeration value="Workflow Process Variable" />
+			<xs:enumeration value="Workflow Task" />
+			<xs:enumeration value="WSConfiguration" />
+			<xs:enumeration value="WSType" />
+			<xs:enumeration value="WSTypeAction" />
+			<xs:enumeration value="WSTypeAssociate" />
+			<xs:enumeration value="WSTypeProperty" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Attribute_Action_ListOfValues">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="get" />
+			<xs:enumeration value="add" />
+			<xs:enumeration value="create" />
+			<xs:enumeration value="lock" />
+			<xs:enumeration value="update" />
+			<xs:enumeration value="edit" />
+			<xs:enumeration value="merge" />
+			<xs:enumeration value="delete" />
+			<xs:enumeration value="purge" />
+			<xs:enumeration value="PromoteItem" />
+			<xs:enumeration value="AddHistory" />
+			<xs:enumeration value="resetLifecycle" />
+			<xs:enumeration value="getItemNextStates" />
+			<xs:enumeration value="copy" />
+			<xs:enumeration value="copyAsNew" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Attribute_Author_ListOfValues">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="Vasil Marachkovski" />
+			<xs:enumeration value="Aliaksandra Panaryna" />
+			<xs:enumeration value="Valentin Shapovalov" />
+			<xs:enumeration value="Anton Shchekota" />
+			<xs:enumeration value="Andrey Samsonov" />
+			<xs:enumeration value="Strelchik Stanislav" />
+			<xs:enumeration value="Andrei Yanukevich" />
+		</xs:restriction>
+	</xs:simpleType>
+	<xs:simpleType name="Attribute_Pattern">
+		<xs:restriction base="xs:string">
+			<xs:pattern value="^.*$"/>
+		</xs:restriction>
+	</xs:simpleType>
+</xs:schema>

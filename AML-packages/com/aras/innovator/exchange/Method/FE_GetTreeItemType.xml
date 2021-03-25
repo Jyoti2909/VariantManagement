@@ -1,0 +1,231 @@
+﻿<AML>
+ <Item type="Method" id="C235CB08FD5C4444931849969337B1ED" action="add">
+  <comments>Get xml for create tree of itemtype</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!inArgs.itemtype) {
+	return;
+}
+
+var itemtypeId = inArgs.itemtypeId;
+
+var DEPTH = 4;
+var pathList = {};
+var pathListArray = [];
+var itemtype = inArgs.itemtype;
+
+populateXPathList(itemtype);
+getFileProperties();
+
+return ({aml: createAML(), configuration: pathListArray});
+
+function populateXPathList(parentName, parentPath, currDepth) {
+	if (!parentName) {
+		return;
+	}
+	if (!parentPath || !pathList[parentPath]) {
+		parentPath = parentName;
+		pathList[parentPath] = 'Item[@type=\'' + parentName + '\']';
+		pathListArray.push({
+			index: parentPath,
+			value: pathList[parentPath],
+			type: parentName,
+			fileProps: []
+		});
+	}
+	if (!currDepth) {
+		currDepth = 1;
+	}
+
+	if (currDepth < DEPTH) {
+		currDepth++;
+		var currItemType = aras.getItemTypeForClient(parentName, 'name').node;
+
+		var rels = currItemType.selectNodes('Relationships/Item[@type=\'RelationshipType\']');
+
+		for (var i = 0; i < rels.length; i++) {
+			var rel = rels[i];
+			if (checkRelationship(rel)) {
+				var relshipId = aras.getItemProperty(rel, 'relationship_id');
+				var relshipName = rel.selectSingleNode('relationship_id').getAttribute('name');
+				var newPath = parentPath + '/Relationships/' + relshipName;
+				if (!pathList[newPath]) {
+					if (isExistFilePropertyCount(relshipName)) {
+						pathList[newPath] = pathList[parentPath] + '/Relationships/Item[@type=\'' + relshipName + '\']';
+						pathListArray.push({index: newPath, value: pathList[newPath], type: relshipName, fileProps: [], id: relshipId});
+					}
+				}
+				if (aras.getItemTypeForClient(relshipName, 'name').node.selectNodes('Relationships/Item[@type=\'RelationshipType\']').length > 0) {
+					if (pathList[newPath] === undefined) {
+						pathList[newPath] = pathList[parentPath] + '/Relationships/Item[@type=\'' + relshipName + '\']';
+						pathListArray.push({index: newPath, value: pathList[newPath], type: relshipName, fileProps: [], id: relshipId});
+					}
+					populateXPathList(relshipName, newPath, currDepth);
+				}
+			}
+		}
+	}
+}
+
+function checkRelationship(relShipNode) {
+	return (aras.getItemProperty(relShipNode, 'max_occurs') !== '0');
+}
+
+function isExistFilePropertyCount(itemTypeName) {
+	var itemType = aras.getItemTypeDictionary(itemTypeName, 'name');
+	if (!itemType || !itemType.node) {
+		return false;
+	}
+	var propNodes = itemType.node.selectNodes('Relationships/Item[@type=\'Property\' and (name!=\'id\')]');
+	for (var i = 0; i < propNodes.length; i++) {
+		var prop = propNodes[i];
+		if (aras.getItemPropertyAttribute(prop, 'data_source', 'keyed_name') == 'File') {
+			return true;
+		}
+	}
+	return false;
+}
+
+function getFileProperties() {
+	for (var i = 0; i < pathListArray.length; i++) {
+		var itemType = aras.getItemTypeDictionary(pathListArray[i].type, 'name');
+		var propNodes = itemType.node.selectNodes('Relationships/Item[@type=\'Property\' and (name!=\'id\')]');
+		var fileProperties = [];
+
+		for (var j = 0; j < propNodes.length; j++) {
+			var prop = propNodes[j];
+			var propDataSource  = aras.getItemPropertyAttribute(prop, 'data_source', 'keyed_name');
+
+			if (propDataSource == 'File') {
+				fileProperties.push({name: aras.getItemProperty(prop, 'name'), id: aras.getItemProperty(prop, 'id')});
+			}
+		}
+		pathListArray[i].fileProps = fileProperties;
+	}
+}
+
+function createAML() {
+	var doc = aras.createXMLDocument();
+	for (var j = 0; j < pathListArray.length; j++) {
+		var nd = pathListArray[j];
+		var array = getXPathByPath(nd.index);
+		var xpath = array.join('/');
+
+		var element = doc.createElement('Item');
+		element.setAttribute('typeName', nd.type);
+		if (j === 0) {
+			element.setAttribute('type', 'ItemType');
+			doc.appendChild(element);
+		} else {
+			element.setAttribute('type', 'RelationshipType');
+			element.setAttribute('id', nd.id);
+			doc.selectSingleNode(xpath).appendChild(element);
+
+		}
+		array.push('Item[@typeName=\'' + nd.type + '\']');
+		xpath = array.join('/');
+
+		element = doc.createElement('name');
+		element.text = nd.type;
+		doc.selectSingleNode(xpath).appendChild(element);
+
+		for (var i = 0; i < nd.fileProps.length; i++) {
+			element = doc.createElement('Item');
+			element.setAttribute('type', 'Property');
+			element.setAttribute('typeName', nd.fileProps[i].name);
+			element.setAttribute('id', nd.fileProps[i].id);
+			doc.selectSingleNode(xpath).appendChild(element);
+
+			element = doc.createElement('name');
+			element.text = nd.fileProps[i].name;
+			doc.selectSingleNode(xpath + '/Item[@typeName=\'' + nd.fileProps[i].name + '\']').appendChild(element);
+
+			if (itemtypeId !== undefined) {
+				var fileName = nd.fileProps[i].name;
+				var res = createQuery(nd.index.split('/'), fileName, itemtypeId);
+				var query = new Item();
+				query.loadAML(res.aml);
+				var result = query.apply();
+
+				var nodes = (fileName == 'related_id') ? result.dom.selectNodes('//' + res['string_path'] + '/' +
+					fileName + '/Item[@type=\'File\']/id') : result.dom.selectNodes('//' + res['string_path'] + '/' + fileName);
+				for (var t = 0; t < nodes.length; t++) {
+					var node = nodes[t];
+					if (node.getAttribute('keyed_name') !== null) {
+						if (!aras.getItemById('File', node.text, 0)) {
+							continue;
+						}
+
+						element = doc.createElement('Item');
+						element.setAttribute('type', 'File');
+						element.setAttribute('id', node.text);
+						doc.selectSingleNode(xpath + '/Item[@typeName=\'' + nd.fileProps[i].name + '\']').appendChild(element);
+
+						element = doc.createElement('name');
+						element.text = node.getAttribute('keyed_name');
+						doc.selectSingleNode(xpath + '/Item[@typeName=\'' + nd.fileProps[i].name + '\']/Item[@id=\'' + node.text + '\']').appendChild(element);
+					}
+				}
+
+			}
+		}
+		if (j != pathListArray.length - 1) {
+			element = doc.createElement('Relationships');
+			doc.selectSingleNode(xpath).appendChild(element);
+		}
+	}
+	return doc;
+}
+
+function createQuery(nodeName, propName, itemId) {
+	var pathArray = [];
+	var xml = aras.createXMLDocument();
+	var element;
+	for (var j = 0; j < nodeName.length; j++) {
+		var node = nodeName[j];
+
+		if (node == 'Relationships' || node == 'related_id') {
+			element = xml.createElement(node);
+			xml.selectSingleNode(pathArray.join('/')).appendChild(element);
+			pathArray.push(node);
+		} else {
+			element = xml.createElement('Item');
+			element.setAttribute('type', node);
+			element.setAttribute('action', 'get');
+			if (j === 0) {
+				element.setAttribute('id', itemId);
+			}
+			if (j == nodeName.length - 1) {
+				element.setAttribute('select', propName + ', id');
+			}
+			if (nodeName[j + 1] == 'related_id') {
+				element.setAttribute('select', 'id, related_id');
+			}
+
+			if (pathArray.length !== 0) {
+				xml.selectSingleNode(pathArray.join('/')).appendChild(element);
+			} else {
+				xml.appendChild(element);
+			}
+			pathArray.push('Item');
+		}
+	}
+	return ({aml: xml.xml, 'string_path': pathArray.join('/')});
+}
+
+function getXPathByPath(path) {
+	var paths = path.split('/');
+	var xpath = [];
+	for (var i = 0; i < paths.length - 1; i++) {
+		if (paths[i] != 'Relationships') {
+			xpath.push('Item[@typeName=\'' + paths[i] + '\']');
+		} else {
+			xpath.push(paths[i]);
+		}
+	}
+	return xpath;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>FE_GetTreeItemType</name>
+ </Item>
+</AML>

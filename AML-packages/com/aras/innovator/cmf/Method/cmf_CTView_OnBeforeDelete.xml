@@ -1,0 +1,19 @@
+﻿<AML>
+ <Item type="Method" id="A223A209B32B43DCBD94F39ACB9523AE" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+var contentTypeViewId = this.getAttribute("id");
+var amlQuery = String.Format("<AML><Item type='cmf_ContentTypeView' action='get' select='related_id' id='{0}'/></AML>", System.Security.SecurityElement.Escape(contentTypeViewId));
+Item result = inn.applyAML(amlQuery);
+if(result.isError()){
+    return result;
+}
+result.getPropertyItem("related_id").apply("delete");
+if(result.isError()){
+    return result;
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_CTView_OnBeforeDelete</name>
+ </Item>
+</AML>

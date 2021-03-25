@@ -1,0 +1,91 @@
+﻿<AML>
+ <Item type="Method" id="8BBFCA2C65054F22B9092C7E252A8C62" action="add">
+  <comments>Method to Create SAP Number</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const innovator = aras.IomInnovator;
+const materialType = 'ZCHN';
+const startDate = new Date();
+const startTime = dateFormat(startDate);
+
+const partNumber = document.thisItem.GetProperty('item_number');
+
+if (partNumber !== 'Server Assigned') {
+	if (
+		!aras.confirm(
+			'Existing number will be overwritten. Do you want to continue?'
+		)
+	) {
+		return;
+	}
+}
+
+const userID = innovator.getUserID();
+let userDetails = innovator.newItem('User', 'get');
+userDetails.setAttribute('select', 'login_name,gag_sap_password');
+userDetails.setID(userID);
+userDetails = userDetails.apply();
+const loginName = userDetails.getProperty('login_name', '');
+const sapPassword = userDetails.getProperty('gag_sap_password', '');
+const body =
+	'<user_name>' +
+	loginName +
+	'</user_name><user_password>' +
+	sapPassword +
+	'</user_password><material_type>' +
+	materialType +
+	'</material_type>';
+const result = innovator.applyMethod('GAG_SAPMaterialNumber', body);
+
+const logItem = innovator.newItem('GAG_SAPNumberLog', 'add');
+logItem.setProperty('gag_sap_job', 'SAP Number Creation');
+logItem.setProperty('gag_start_date', startTime);
+logItem.setProperty('gag_sap_user', userID);
+
+if (!result.isError()) {
+	const partNumber = result.getResult().split(' ');
+	const sapNumber = partNumber[2].substring(11, 18);
+	document
+		.getElementsByName('item_number')[0]
+		.getElementsByTagName('input')[0].value = sapNumber;
+	document.thisItem.setProperty('item_number', sapNumber);
+	logItem.setProperty('gag_sap_status', 'Completed');
+	logItem.setProperty('gag_sap_material', sapNumber);
+	const endDate = new Date();
+	const endTime = dateFormat(endDate);
+	logItem.setProperty('gag_end_date', endTime);
+	const resultItem = logItem.apply();
+	if (resultItem.isError()) {
+		top.aras.AlertError(resultItem.getErrorDetail());
+		return;
+	}
+} else {
+	aras.AlertError(result.getErrorString());
+	logItem.setProperty('gag_sap_status', 'Failed');
+	if (result.getErrorString().includes('SAP Username or Password')) {
+		logItem.setProperty(
+			'gag_sap_reason',
+			'Incorrect SAP UserName or Password'
+		);
+	} else if (result.getErrorString().includes('Server communication error')) {
+		logItem.setProperty('gag_sap_reason', 'SAP Server communication error');
+	} else if (result.getErrorString().includes('Authorization')) {
+		logItem.setProperty('gag_sap_reason', 'SAP Authorization');
+	}
+	const endDate = new Date();
+	const endTime = dateFormat(endDate);
+	logItem.setProperty('gag_end_date', endTime);
+	const resultItem = logItem.apply();
+	if (resultItem.isError()) {
+		top.aras.AlertError(resultItem.getErrorDetail());
+		return;
+	}
+}
+
+function dateFormat(inputDate) {
+	return inputDate.toISOString().slice(0, -5);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_CreateSAPNumber</name>
+ </Item>
+</AML>

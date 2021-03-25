@@ -1,0 +1,138 @@
+﻿<AML>
+ <Item type="Report" id="4550BA2BB2054BF8A08F187E37FCB625" action="add">
+  <description />
+  <location>server</location>
+  <report_query><![CDATA[<Item type="Vendor" action="get" select="name,address,address_state,zip_code,city,country,contact_name,main_phone,main_fax,web_site">
+ <state>Approved</state>
+</Item>]]></report_query>
+  <target>one window</target>
+  <type>itemtype</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:user="urn:user-scripts" xmlns:aras="http://www.aras-corp.com">
+ <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes"></xsl:output>
+ <xsl:template match="/">
+  <html>
+   <head></head>
+   <body topmargin="50" leftmargin="50">
+    <div class="print_button_wrapper">
+     <img id="print_button" src="../images/Print.svg" onclick="printReport(window);" />
+     <a href="#" onclick="printReport(window); return false;">Print</a>
+    </div>
+    <div class="table_wrapper">
+     <div class="report_name">
+      Approved Vendor Report
+     </div>
+     <div class="report_generation_time"></div>
+     <table border="0" cellspacing="0" cellpadding="0">
+         <tr>
+          <th>Name</th>
+          <th>Address</th>
+          <th>City</th>
+          <th>State</th>
+          <th>ZIP Code</th>
+          <th>Country</th>
+          <th>Contact Name</th>
+          <th>Telephone</th>
+          <th>Fax Number</th>
+          <th>Web Site</th>
+         </tr>
+         <xsl:for-each select="//Item">
+          <xsl:sort select="name" order="ascending" case-order="upper-first" data-type="text"></xsl:sort>
+          <tr valign="center">
+           <td>
+            <xsl:value-of select="name"></xsl:value-of>
+            <xsl:if test="name=''">
+             <xsl:text>&#160;</xsl:text>
+            </xsl:if>
+           </td>
+           <td>
+            <xsl:value-of select="address"></xsl:value-of>
+            <xsl:if test="address='' or not(address)">
+             <xsl:text>&#160;</xsl:text>
+            </xsl:if>
+           </td>
+           <td>
+            <xsl:value-of select="city"></xsl:value-of>
+            <xsl:if test="city='' or not(city)">
+             <xsl:text>&#160;</xsl:text>
+            </xsl:if>
+           </td>
+           <td>
+            <xsl:value-of select="address_state"></xsl:value-of>
+            <xsl:if test="address_state='' or not(address_state)">
+             <xsl:text>&#160;</xsl:text>
+            </xsl:if>
+           </td>
+           <td>
+            <xsl:value-of select="zip_code"></xsl:value-of>
+            <xsl:if test="zip_code='' or not(zip_code)">
+             <xsl:text>&#160;</xsl:text>
+            </xsl:if>
+           </td>
+           <td>
+            <xsl:value-of select="country"></xsl:value-of>
+            <xsl:if test="country='' or not(country)">
+             <xsl:text>&#160;</xsl:text>
+            </xsl:if>
+           </td>
+           <td>
+            <xsl:value-of select="contact_name"></xsl:value-of>
+            <xsl:if test="contact_name='' or not(contact_name)">
+             <xsl:text>&#160;</xsl:text>
+            </xsl:if>
+           </td>
+           <td>
+            <xsl:value-of select="main_phone"></xsl:value-of>
+            <xsl:if test="main_phone='' or not(main_phone)">
+             <xsl:text>&#160;</xsl:text>
+            </xsl:if>
+           </td>
+           <td>
+            <xsl:value-of select="main_fax"></xsl:value-of>
+            <xsl:if test="main_fax='' or not(main_fax)">
+             <xsl:text>&#160;</xsl:text>
+            </xsl:if>
+           </td>
+           <td>
+            <xsl:choose>
+             <xsl:when test="web_site='' or not(web_site)">
+              <xsl:text>&#160;</xsl:text>
+             </xsl:when>
+             <xsl:otherwise>
+              <a>
+               <xsl:attribute name="href">
+                <xsl:value-of select="web_site"></xsl:value-of>
+               </xsl:attribute>
+               <xsl:value-of select="web_site"></xsl:value-of>
+              </a>
+             </xsl:otherwise>
+            </xsl:choose>
+           </td>
+          </tr>
+         </xsl:for-each>
+     </table>
+    </div>
+   </body>
+   <script>
+    function loadScript(url)
+    {
+     const loadedJS = document.createElement('script');
+     loadedJS.src = url;
+     document.getElementsByTagName('head')[0].appendChild(loadedJS);
+    }
+    function loadStyle(url)
+    {
+     const link = document.createElement('link');
+     link.setAttribute('rel', 'stylesheet');
+     link.setAttribute('href', url);
+     document.getElementsByTagName('head')[0].appendChild(link)
+    }
+    loadScript(parent.aras.getBaseURL('/Solutions/PLM/javascript/report.js'));
+    loadStyle(parent.aras.getBaseURL('/Solutions/PLM/styles/report.css'));
+   </script>
+  </html>
+ </xsl:template>
+</xsl:stylesheet>
+]]></xsl_stylesheet>
+  <name>Approved Vendors Report</name>
+ </Item>
+</AML>

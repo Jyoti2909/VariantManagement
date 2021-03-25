@@ -1,0 +1,34 @@
+﻿<AML>
+ <Item type="Method" id="ECE50E4043EA4F94A4B21DFFF24B52B2" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var thisItem = this.newItem("dr_RelationshipFamily", "get");
+thisItem.setID(this.getID());
+thisItem.setAttribute("idlist", this.getAttribute("idlist"));
+thisItem.setAttribute("select", "id");
+thisItem = thisItem.apply();
+
+thisItem.fetchRelationships("dr_FamilyElement");
+var familyElements = thisItem.getRelationships("dr_FamilyElement");
+for (var i = 0; i < familyElements.getItemCount(); i++) {
+	var familyElement = familyElements.getItemByIndex(i);
+	
+	familyElement.fetchRelationships("dr_FamilyElement qry_QueryItem");
+	var familyElementQueryItems = familyElement.getRelationships("dr_FamilyElement qry_QueryItem");
+	for (var j= 0; j < familyElementQueryItems.getItemCount(); j++) {
+		var familyElementQueryItem = familyElementQueryItems.getItemByIndex(j);
+		familyElementQueryItem.setAction("dr_validateDestinationIT");
+		familyElementQueryItem = familyElementQueryItem.apply();
+		if (familyElementQueryItem.isError()) {
+			return familyElementQueryItem;
+		}
+	}
+	var familyElementValidationResult = familyElement.apply("dr_validateDepartureIT");
+	if (familyElementValidationResult.isError()) {
+		return familyElementValidationResult;
+	}
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_ValidateDrRelationshipFamily</name>
+ </Item>
+</AML>

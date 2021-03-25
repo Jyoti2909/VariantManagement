@@ -1,0 +1,67 @@
+﻿<AML>
+ <Item type="Method" id="7B7A53F3E44B4296BAB1AA5EBB6E7B92" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const typeID = 'D3C9D14A1B744938AE7DE00E2FF4DEC4';
+const innovator = this.getInnovator();
+const documentID = this.getID();
+
+const classification = this.getProperty('classification');
+if (classification !== 'Mechanical/Drawing') {
+	aras.AlertError('Convert To 2D is applicable only for Drawing');
+	return;
+}
+
+let queryBackgroundJobType = innovator.newItem('GAG_BackgroundJobType', 'get');
+queryBackgroundJobType.setID(typeID);
+queryBackgroundJobType = queryBackgroundJobType.apply();
+if (queryBackgroundJobType.isError()) {
+	aras.AlertError('Background Job Type Not Found');
+	return;
+}
+
+const existItem = getBackgroundLogItem();
+if (!existItem.isError()) {
+	for (let i = 0; i < existItem.getItemCount(); ++i) {
+		const item = existItem.getItemByIndex(i);
+		const dependencyID = item.getProperty('gag_dependency_id');
+		if (documentID === dependencyID) {
+			aras.AlertError('CAD Document Already present in log');
+			return;
+		}
+	}
+}
+
+let dependencyItem = innovator.newItem('ItemType', 'get');
+dependencyItem.setProperty('name', this.GetType());
+dependencyItem = dependencyItem.apply();
+
+const newBackgroundLogItem = createBackgroundLogItem(
+	dependencyItem.getID(),
+	documentID
+);
+if (newBackgroundLogItem.isError()) {
+	aras.AlertError(newBackgroundLogItem.getErrorDetail());
+} else {
+	aras.AlertSuccess('Transferred to Background Job log');
+}
+
+function getBackgroundLogItem() {
+	const queryItem = innovator.newItem('GAG_BackgroundJobLog', 'get');
+	queryItem.setAttribute('select', 'gag_dependency_id');
+	queryItem.setProperty('gag_status', 'Pending');
+	return queryItem.apply();
+}
+
+function createBackgroundLogItem(dependencyItemID, documentId) {
+	const backgroundLogItem = innovator.newItem('GAG_BackgroundJobLog', 'add');
+	backgroundLogItem.setProperty('gag_dependency_type', dependencyItemID);
+	backgroundLogItem.setProperty('gag_dependency_id', documentId);
+	backgroundLogItem.setProperty('gag_type', typeID);
+	backgroundLogItem.setProperty('gag_status', 'Pending');
+	return backgroundLogItem.apply();
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_ConvertTo2D</name>
+ </Item>
+</AML>

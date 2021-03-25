@@ -1,0 +1,277 @@
+﻿<AML>
+ <Item type="Method" id="A2CB44420F694A3385AE080F0261B083" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[		string idOfChangeSourceQueryDefinition = GetQueryParameterValueByName(this, ResolutionConfigurationParameterName);
+		if (string.IsNullOrWhiteSpace(idOfChangeSourceQueryDefinition))
+		{
+			return this;
+		}
+
+		IEnumerable<string> idsOfQueryItemToMerge = GetQueryDefinitionItemById(this.getID(), "id", new Item[] { this.newItem("qry_QueryItem") })
+			.getItemsByXPath(string.Format(
+				CultureInfo.InvariantCulture,
+				"Relationships/Item[@type='qry_QueryItem' and filter_xml[contains(text(), '{0}')]]",
+				ResolutionConfigurationParameterNameWithQdPrefix))
+			.Enumerate()
+			.Select(item => item.getID());
+
+		if (!idsOfQueryItemToMerge.Any())
+		{
+			return this;
+		}
+
+		Item changeSourceQueryDefinitionItem = GetQueryDefinitionItemById(
+			idOfChangeSourceQueryDefinition,
+			"id",
+			new Item[] { this.newItem("qry_QueryItem"), this.newItem("qry_QueryReference"), this.newItem("qry_QueryParameter") });
+		if (changeSourceQueryDefinitionItem.isEmpty())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(
+				string.Format(CultureInfo.InvariantCulture, "The specified query definition cannot be found by id '{0}'", idOfChangeSourceQueryDefinition));
+		}
+
+		Item topLevelQueryReferenceInChangeSourceQd = changeSourceQueryDefinitionItem.getItemsByXPath(
+			"Relationships/Item[@type='qry_QueryReference' and not(parent_ref_id)]");
+
+		Item topLevelQueryItemInChangeSourceQd = changeSourceQueryDefinitionItem.getItemsByXPath(
+			string.Format(
+				CultureInfo.InvariantCulture,
+				"Relationships/Item[@type='qry_QueryItem' and ref_id='{0}']",
+				topLevelQueryReferenceInChangeSourceQd.getProperty("child_ref_id")));
+
+		Item targetMergeableQueryItems = this.getItemsByXPath(string.Format(
+			CultureInfo.InvariantCulture,
+			"Relationships/Item[@type='qry_QueryItem' and ({0})]",
+			string.Join(" or ", idsOfQueryItemToMerge.Select(id => string.Format(CultureInfo.InvariantCulture, "id='{0}'", id)))));
+
+		SupplementQueryItemFilterCondition(
+			targetMergeableQueryItems,
+			topLevelQueryItemInChangeSourceQd.getProperty("item_type"),
+			topLevelQueryItemInChangeSourceQd.getProperty("filter_xml"));
+
+		Item queryParameterItemsToMerge = GetDiffQueryParameterItems(this, changeSourceQueryDefinitionItem);
+		this.addRelationships(queryParameterItemsToMerge);
+
+		Item queryItemItemsToMerge = GetDiffQueryItemItems(changeSourceQueryDefinitionItem);
+		queryItemItemsToMerge.removeItem(topLevelQueryItemInChangeSourceQd);
+		this.addRelationships(queryItemItemsToMerge);
+
+		Item queryReferenceItemsToMerge = GetDiffQueryReferenceItems(changeSourceQueryDefinitionItem);
+		queryReferenceItemsToMerge.removeItem(topLevelQueryReferenceInChangeSourceQd);
+		foreach (Item singleTargetMergeableQueryItem in targetMergeableQueryItems.Enumerate())
+		{
+			queryReferenceItemsToMerge.setPropertyAcrossNestedItems(
+				"parent_ref_id",
+				singleTargetMergeableQueryItem.getProperty("ref_id"));
+			this.addRelationships(queryReferenceItemsToMerge);
+		}
+
+		return this;
+	}
+
+	private const string QueryDefinitionParameterPrefix = "$";
+	private const string ResolutionConfigurationParameterName = "EffectivityResolutionConfigurationQueryDefinitionId";
+	private const string ResolutionConfigurationParameterNameWithQdPrefix = QueryDefinitionParameterPrefix + ResolutionConfigurationParameterName;
+
+	private static Innovator innovator;
+	private Innovator Inn
+	{
+		get
+		{
+			if (innovator == null)
+			{
+				innovator = this.getInnovator();
+			}
+
+			return innovator;
+		}
+	}
+
+	internal virtual Item GetQueryDefinitionItemById(
+		string queryDefinitionId,
+		string selectAttribute = null,
+		IEnumerable<Item> relationshipRequestItems = null)
+	{
+		Item queryDefinition = this.newItem("qry_QueryDefinition", "get");
+		queryDefinition.setID(queryDefinitionId);
+		queryDefinition.setAttribute("related_expand", "0");
+
+		if (!string.IsNullOrWhiteSpace(selectAttribute))
+		{
+			queryDefinition.setAttribute("select", selectAttribute);
+		}
+
+		if (relationshipRequestItems != null)
+		{
+			foreach (Item relationshipItem in relationshipRequestItems)
+			{
+				queryDefinition.addRelationship(relationshipItem);
+			}
+		}
+
+		queryDefinition = queryDefinition.apply();
+
+		if (queryDefinition.isError() && !queryDefinition.isEmpty())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(queryDefinition.dom);
+		}
+
+		return queryDefinition;
+	}
+
+	internal virtual string GetQueryParameterValueByName(Item queryDefinition, string queryParameterName)
+	{
+		Item queryParameterItem = GetQueryParameterItemByName(queryDefinition, queryParameterName);
+		if (queryParameterItem.getItemCount() == 0)
+		{
+			return null;
+		}
+
+		//QD doesn't support multiple parameters with the same name, so it's expected here
+		return queryParameterItem.getProperty("value");
+	}
+
+	internal virtual Item GetQueryParameterItemByName(Item queryDefinition, string queryParameterName)
+	{
+		return queryDefinition.getItemsByXPath(string.Format(CultureInfo.InvariantCulture, "Relationships/Item[@type='qry_QueryParameter' and name='{0}']", queryParameterName));
+	}
+
+	internal virtual XmlNode MergeConditionalNodes(string leftConditionalNodeAsString, string rightConditionalNodeAsString)
+	{
+		return MergeConditionalNodes(
+			!string.IsNullOrWhiteSpace(leftConditionalNodeAsString) ? CreateXmlDocument(leftConditionalNodeAsString).DocumentElement : null,
+			!string.IsNullOrWhiteSpace(rightConditionalNodeAsString) ? CreateXmlDocument(rightConditionalNodeAsString).DocumentElement : null);
+	}
+
+	internal virtual XmlNode MergeConditionalNodes(XmlNode leftConditionalNode, XmlNode rightConditionalNode)
+	{
+		if (leftConditionalNode == null && rightConditionalNode == null)
+		{
+			return null;
+		}
+
+		if (leftConditionalNode == null)
+		{
+			return rightConditionalNode;
+		}
+
+		if (rightConditionalNode == null)
+		{
+			return leftConditionalNode;
+		}
+
+		string andLogicalOperatorName = "and";
+
+		XmlNode topLogicalContainerOfLeftConditionalNode = leftConditionalNode.FirstChild;
+		XmlNode topLogicalContainerOfRightConditionalNode = rightConditionalNode.FirstChild;
+
+		XmlNode andContainerNode;
+		if (andLogicalOperatorName.Equals(topLogicalContainerOfLeftConditionalNode.LocalName, StringComparison.OrdinalIgnoreCase))
+		{
+			andContainerNode = topLogicalContainerOfLeftConditionalNode.CloneNode(true);
+			andContainerNode.AppendChild(andContainerNode.OwnerDocument.ImportNode(topLogicalContainerOfRightConditionalNode, true));
+		}
+		else if (andLogicalOperatorName.Equals(topLogicalContainerOfRightConditionalNode.LocalName, StringComparison.OrdinalIgnoreCase))
+		{
+			andContainerNode = topLogicalContainerOfRightConditionalNode.CloneNode(true);
+			andContainerNode.AppendChild(andContainerNode.OwnerDocument.ImportNode(topLogicalContainerOfLeftConditionalNode, true));
+		}
+		else
+		{
+			XmlDocument leftConditionalXmlDocument = leftConditionalNode.OwnerDocument;
+
+			andContainerNode = leftConditionalXmlDocument.CreateElement(andLogicalOperatorName);
+			andContainerNode.AppendChild(leftConditionalXmlDocument.ImportNode(topLogicalContainerOfLeftConditionalNode, true));
+			andContainerNode.AppendChild(leftConditionalXmlDocument.ImportNode(topLogicalContainerOfRightConditionalNode, true));
+		}
+
+		XmlNode newConditionalNode = leftConditionalNode.CloneNode(false);
+		newConditionalNode.AppendChild(newConditionalNode.OwnerDocument.ImportNode(andContainerNode, true));
+
+		return newConditionalNode;
+	}
+
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "qryQueryItem")]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "Mergeable")]
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Naming", "CA2204:Literals should be spelled correctly", MessageId = "ItemTypes")]
+	internal virtual void SupplementQueryItemFilterCondition(Item queryItemItems, string acceptableQueryItemItemTypeToProcess, string additionalFilterCondition)
+	{
+		foreach (Item queryItem in queryItemItems.Enumerate())
+		{
+			if (!string.Equals(queryItem.getProperty("item_type"), acceptableQueryItemItemTypeToProcess))
+			{
+				throw new Aras.Server.Core.InnovatorServerException("Mergeable 'qry_QueryItem' items have different source ItemTypes and cannot be merged");
+			}
+
+			XmlNode mergedQueryItemConditionalNode = MergeConditionalNodes(queryItem.getProperty("filter_xml"), additionalFilterCondition);
+
+			if (mergedQueryItemConditionalNode != null)
+			{
+				queryItem.setProperty("filter_xml", mergedQueryItemConditionalNode.OuterXml);
+			}
+		}
+	}
+
+	internal virtual Item GetDiffQueryParameterItems(Item targetQueryDefinition, Item sourceQueryDefinition)
+	{
+		IEnumerable<string> existingQueryParameterNames = targetQueryDefinition.node
+			.SelectNodes("Relationships/Item[@type='qry_QueryParameter']/name/text()").Cast<XmlText>().Select(text => text.Value);
+		bool isAnyQueryParameterNameExists = existingQueryParameterNames.Any();
+
+		return sourceQueryDefinition.getItemsByXPath(
+			string.Format(
+				CultureInfo.InvariantCulture,
+				"Relationships/Item[@type='qry_QueryParameter'{0}{1}{2}]",
+				isAnyQueryParameterNameExists ? " and not(" : string.Empty,
+				string.Join(" or ", existingQueryParameterNames.Select(name => string.Format(CultureInfo.InvariantCulture, "name='{0}'", name))),
+				isAnyQueryParameterNameExists ? ")" : string.Empty));
+	}
+
+	internal virtual Item GetDiffQueryItemItems(Item sourceQueryDefinition)
+	{
+		return sourceQueryDefinition.getItemsByXPath("Relationships/Item[@type='qry_QueryItem']");
+	}
+
+	internal virtual Item GetDiffQueryReferenceItems(Item sourceQueryDefinition)
+	{
+		return sourceQueryDefinition.getItemsByXPath("Relationships/Item[@type='qry_QueryReference']");
+	}
+
+	internal virtual XmlDocument CreateXmlDocument(string xml)
+	{
+		XmlDocument xmlDocument = Inn.newXMLDocument();
+		xmlDocument.PreserveWhitespace = false;
+		xmlDocument.LoadXml(xml);
+
+		return xmlDocument;
+	}
+}
+
+internal static class ItemExtensions
+{
+	internal static IEnumerable<Item> Enumerate(this Item item)
+	{
+		for (int i = 0, itemCount = item.getItemCount(); i < itemCount; i++)
+		{
+			yield return item.getItemByIndex(i);
+		}
+	}
+
+	internal static void addRelationships(this Item targetItem, Item itemsToAdd)
+	{
+		foreach (Item itemToAdd in itemsToAdd.Enumerate())
+		{
+			targetItem.addRelationship(itemToAdd);
+		}
+	}
+
+	internal static void setPropertyAcrossNestedItems(this Item itemCollection, string propertyName, string propertyValue)
+	{
+		foreach (Item item in itemCollection.Enumerate())
+		{
+			item.setProperty(propertyName, propertyValue);
+		}]]></method_code>
+  <method_type>C#</method_type>
+  <name>effs_mergeQueryDefinition</name>
+ </Item>
+</AML>

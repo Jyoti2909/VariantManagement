@@ -1,0 +1,77 @@
+﻿<AML>
+ <Item type="Method" id="24423E1E496C4BD0B428820168F67293" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var maxCheck = 30;
+function disableTabs() {
+	if (!(parent.document.frames && parent.document.frames.relationships) || !parent.document.frames.relationships.currTabID) {
+		if (--maxCheck === 0) { return; }
+		setTimeout(disableTabs, 50);
+		return;
+	}
+
+	if (!document.item) {
+		return;
+	}
+	var identityId = aras.getItemProperty(document.item, 'identity_id');
+	var identityNode = aras.getItemById('Identity', identityId);
+	var identityName = aras.getItemProperty(identityNode, 'name');
+
+	var allowedType = 2; // User
+	if (identityName == 'World') {
+		allowedType = 1; // Site
+	}
+
+	var appl = parent.relationships.relTabbar;
+
+	var qry = aras.newQryItem('PreferenceTypes');
+	qry.setLevels(1);
+	var res = qry.execute();
+	if (!res) {
+		return;
+	}
+
+	var prefTabTypes = res.selectNodes('//Item[@type=\'PreferenceTabTypes\']');
+
+	for (var i = 0; i < prefTabTypes.length; i++) {
+		var prefTabType = prefTabTypes[i];
+
+		var prefType = aras.getItemProperty(prefTabType, 'preference_tab_type');
+		var prefITName = aras.getItemProperty(prefTabType, 'preference_tab');
+
+		prefType = parseInt(prefType);
+		if (isNaN(prefType) || prefType > 3 || prefType < 1) {
+			prefType = 3;
+		}
+
+		if ((prefType & allowedType) === 0) {
+			var xml = '' +
+			'<Item type=\'RelationshipType\' action=\'get\' select=\'label\'>' +
+				'<relationship_id>' +
+					'<Item type=\'ItemType\' select=\'id\'>' +
+						'<name>' + prefITName + '</name>' +
+					'</Item>' +
+				'</relationship_id>' +
+			'</Item>';
+			res = aras.applyItem(xml);
+			if (typeof (res) != 'string' && res !== '') {
+				continue;
+			}
+			var tmpDom = aras.createXMLDocument();
+			tmpDom.loadXML(res);
+			var labelNode = tmpDom.selectSingleNode('//label');
+			if (!labelNode) {
+				continue;
+			}
+			var label = labelNode.text;
+			appl.removeTabByLabel(labelNode.text);
+		}
+	}
+
+}
+
+disableTabs();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>onload_preference</name>
+ </Item>
+</AML>

@@ -1,0 +1,205 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ArasCadConverter</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.ConversionFramework.Converter.Hoops.HoopsConverter">
+            <summary>
+            The class demos implementation of a custom converter through implementation of the low level <c>IConverter</c> interface.
+            Note that typically this is required ONLY when the custom converter needs to do some special\"not standard" actions
+            in order to bring together all physical files required for executing the actual conversion of the file associated with the
+            conversion task being processed. If such "special" processing is not required and all required files are just downloaded
+            from Innovator vault(s) it's recommended to derive your class from the base class <c>VaultFileConverter</c>
+            </summary>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.#ctor">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.SetConverterSectionName(System.String)">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="P:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.CurrentContext">
+            <summary>
+            A wrapper for <see cref="P:Aras.ConversionFramework.Converter.VaultFileConverter.Context" /> to allow overrides in the tests.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.Convert(System.Collections.Generic.IDictionary{System.String,System.IO.FileInfo})">
+            <summary>
+            This the implementation of the main (and the only) method of the <c>IConverter</c> interface. The method must:
+              a. bring all the files required for the actual conversion together so that they are available for the converter
+                 program
+              b. execute the actual conversion (typically it's done by calling an external executable that does the conversion)
+              c. submit results of the conversion (typically it's "viewable" and\or "thumbnail" files but not limited to this set)
+                 to vault(s) so that resulting files will be available for the <c>onAfterConvert</c> event handler that will be
+                 executed on Innovator server after that.
+            NOTE: when you derive your class from the base class <c>VaultFileConverter</c> (see "SimpleCustomConverter" class
+            implementation as an example) you need to implement b) only as the <c>VaultFileConverter</c> class takes care about
+            checking out all required files from vaults and submitting results back to vaults.
+            </summary>
+            <param name="filePaths">Paths to files to convert</param>
+            <returns>
+            List of results where each result difines the resulting file ID and its kind; e.g "5AF48..." - "thumbnail"
+            </returns>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.Dispose(System.Boolean)">
+             <summary>
+            
+             </summary>
+             <param name="disposing"></param>
+        </member>
+        <member name="P:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.Configuration">
+            <summary>
+            Load configuration settings from the Conversion Server web.config
+            </summary>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.CreateInspector(System.String)">
+             <summary>
+            
+             </summary>
+             <param name="logPath"></param>
+             <returns></returns>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.CallNativeConverterAndGetListOfResultFiles(System.String,System.String)">
+            <summary>
+            The code that does actual file conversion must be placed in the method (typically it's a call to an external executable
+            that does the conversion).
+            </summary>
+            <param name="fileName"></param>
+            <param name="fileExtension"></param>
+            <returns>List of files that are produced by the actual conversion process</returns>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.HandleConversionError(System.Int32,System.String,System.String)">
+            <summary>
+            Forms Exception message from log file and throws it.
+            </summary>
+            <param name="exitCode"></param>
+            <param name="commandArguments"></param>
+            /// <param name="hoopsConverterOutput"></param>
+            <returns>Exit code</returns>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.GetFileKind(System.IO.FileInfo)">
+            <summary>
+            The method returns the passed file "kind" - e.g. "thumbnail". Note that the returned value could be anything; the only
+            requirement is that it must be understood by the corresponding 'onAfterConvert' event handler for the custom converter.
+            </summary>
+            <param name="file">Reference to the result file</param>
+            <returns>The file "kind"</returns>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.GetFileTypeId(System.IO.FileInfo)">
+             <summary>
+            
+             </summary>
+             <param name="file"></param>
+             <returns></returns>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverter.GetFileIds">
+            <summary>
+            This method is used to get the necessary files for the conversion from the UserData field of the Conversion Task
+            </summary>
+            <returns>List of all necessary file IDs that should be downloaded</returns>
+        </member>
+        <member name="T:Aras.ConversionFramework.Converter.Hoops.HoopsConverterPrc">
+            <summary>
+            The class demos implementation of a custom converter through implementation of the low level <c>IConverter</c> interface.
+            Note that typically this is required ONLY when the custom converter needs to do some special\"not standard" actions
+            in order to bring together all physical files required for executing the actual conversion of the file associated with the
+            conversion task being processed. If such "special" processing is not required and all required files are just downloaded
+            from Innovator vault(s) it's recommended to derive your class from the base class <c>VaultFileConverter</c>
+            </summary>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsConverterPrc.#ctor">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="T:Aras.ConversionFramework.Converter.Hoops.HoopsManager">
+            <summary>
+            Provides functionality to run conversion using Hoops converter.
+            </summary>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.HoopsManager.RunConversion(System.String,System.String,Aras.ConversionFramework.Converter.Hoops.Inspector.ISubscriptionInspector,System.Text.StringBuilder)">
+            <summary>
+            Starts conversion process.
+            </summary>
+            <param name="convPath"></param>
+            <param name="commandArgs"></param>
+            <param name="conn"></param>
+            <param name="output"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.ConversionFramework.Converter.Hoops.Inspector.ISubscriptionInspector">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.Inspector.ISubscriptionInspector.ValidateSubscription">
+             <summary>
+            
+             </summary>
+             <returns></returns>
+        </member>
+        <member name="T:Aras.ConversionFramework.Converter.Hoops.Inspector.ISubscriptionStructure">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="P:Aras.ConversionFramework.Converter.Hoops.Inspector.ISubscriptionStructure.IsValidSubscription">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="P:Aras.ConversionFramework.Converter.Hoops.Inspector.ISubscriptionStructure.License">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="P:Aras.ConversionFramework.Converter.Hoops.Inspector.ISubscriptionStructure.Key">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="T:Aras.ConversionFramework.Converter.Hoops.Inspector.SubscriptionInspector">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.Inspector.SubscriptionInspector.ConsumeLicense">
+             <summary>
+            
+             </summary>
+             <returns></returns>
+        </member>
+        <member name="M:Aras.ConversionFramework.Converter.Hoops.Inspector.SubscriptionInspector.ValidateSubscription">
+             <summary>
+            
+             </summary>
+             <returns></returns>
+        </member>
+        <member name="T:Aras.ConversionFramework.Converter.Hoops.Inspector.SubscriptionStructure">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="P:Aras.ConversionFramework.Converter.Hoops.Inspector.SubscriptionStructure.IsValidSubscription">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="P:Aras.ConversionFramework.Converter.Hoops.Inspector.SubscriptionStructure.License">
+             <summary>
+            
+             </summary>
+        </member>
+        <member name="P:Aras.ConversionFramework.Converter.Hoops.Inspector.SubscriptionStructure.Key">
+             <summary>
+            
+             </summary>
+        </member>
+    </members>
+</doc>

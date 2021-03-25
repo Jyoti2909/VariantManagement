@@ -1,0 +1,400 @@
+﻿<AML>
+ <Item type="Method" id="32F42AFDCD284BFAA9966809CABD488B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[		Aras.ConversionFramework.Models.ConversionTask task = new Aras.ConversionFramework.Models.ConversionTask()
+		{
+		  Item = this
+		};
+		InputItem dependancyHelper = new InputItem(this);
+		Item resultTask = dependancyHelper.GetDependencyItem(task);
+
+		return resultTask;
+	}
+}
+
+
+class InputItem
+{
+
+	private Innovator inn;
+	private Item item;
+	
+	public InputItem(Item item)
+	{
+		inn = item.getInnovator();
+		this.item = item;
+	}
+
+	public Item GetDependencyItem(Aras.ConversionFramework.Models.ConversionTask task)
+	{
+		/*to the cads, that will be selected here, will
+		be added result of conversion.*/
+		Item rootDependancy = GetRootDependancyByUserDataOrFileID(task);
+		if(rootDependancy.isError())
+		{
+			return rootDependancy;
+		}
+		task.AddDependency(rootDependancy);
+		
+		/*set all options, specified in Rule to variables*/
+		Options options = GetRuleOptions(task.Rule.Item, task.FileType);
+
+		/*sets list of file ids that will be selected for conversion to UserData property*/
+		task.UserData = GetUserData(rootDependancy, options, task.UserData);
+		
+		return task.Item;
+	}
+		
+	private Item GetRootDependancyByUserDataOrFileID(Aras.ConversionFramework.Models.ConversionTask task)
+	{
+		if (!string.IsNullOrEmpty(task.UserData))
+		{
+			XmlDocument xmlUserData = new XmlDocument();
+			xmlUserData.LoadXml(task.UserData);
+			XmlNode contextCadIdNode = xmlUserData.SelectSingleNode("/Data/ContextCadId");
+
+			if (contextCadIdNode != null && !string.IsNullOrEmpty(contextCadIdNode.InnerText))
+			{
+				Item cad = inn.newItem("CAD", "get");
+				cad.setID(contextCadIdNode.InnerText);
+				cad.setAttribute("select", "id, native_file");
+				return cad.apply();
+			}
+		}
+
+		return GetRootDependancy(task.FileID);
+	}
+
+	/// <summary>
+	/// Extracts rule options
+	/// </summary>
+	private Options GetRuleOptions(Item rule, string fileType)
+	{
+		Item Rule = rule;
+		Options options = new Options();
+		
+		String optionsSelector = "//Item/rule_id/Item/Relationships/Item[@type='ConversionRuleFileType' and related_id/Item/@id='"+fileType+"']/options/text()";
+		XmlDocument optionsXml = new XmlDocument();
+
+		if (Rule.dom.SelectSingleNode(optionsSelector) == null)
+		{
+			options.resolution = "AsSaved";
+			options.repeatTimes = "0";
+			options.classification.Add("All");
+			options.fileProperties.Add("native_file");
+			return options;
+			
+		}
+		else
+		{
+			optionsXml.LoadXml(Rule.dom.SelectSingleNode(optionsSelector).InnerText);
+		}
+		
+		ValidateOptions(optionsXml);
+		
+	    /* Example of xml structure of options:
+		<options>
+			<cad_structure_classes>
+				<class>Drawing</class>
+				<class>Variant</class>
+			</cad_structure_classes>
+			<resolution>AsSaved</resolution>
+			<repeat_times>0</repeat_times>
+			<file_properties>
+				<property>native_file</property>
+				<property>viewable_file</property>
+			</file_properties>
+		</options>*/
+		
+		options.resolution = optionsXml.SelectSingleNode("//options/resolution/text()") == null ? "AsSaved": optionsXml.SelectSingleNode("//options/resolution/text()").Value;
+		options.repeatTimes = optionsXml.SelectSingleNode("//options/repeat_times/text()") == null ? "0": optionsXml.SelectSingleNode("//options/repeat_times/text()").Value;
+		
+		XmlNode classificationNode = optionsXml.SelectSingleNode("//options/cad_structure_classes");
+		options.classification = GetListOfProperties(classificationNode, "All");
+		
+		XmlNode properties = optionsXml.SelectSingleNode("//options/file_properties");
+		options.fileProperties = GetListOfProperties(properties, "native_file");
+		
+		return options;
+	}
+	
+	/// <summary>
+	/// forms child nodes of parentNode as list of string
+	/// if there is no parent node, returns List with default value
+	/// </summary>
+	private List<string> GetListOfProperties(XmlNode parentNode, string defaultValue)
+	{
+		List<string> result = new List<string>();
+		
+		if (parentNode != null && parentNode.ChildNodes.Count != 0)
+		{
+			foreach (XmlNode node in parentNode.ChildNodes)
+			{
+				result.Add(node.InnerText);
+			}
+		}
+		else
+		{
+			result.Add(defaultValue);
+		}
+		return result;
+	}
+	
+	/// <summary>
+	/// returns ids of files, that must be converted with root file
+	/// separated by ','
+	/// </summary>
+	private XmlDocument GetRelatedFilesIds(string rootCadId, Options options)
+	{
+		/*request for cad structure according to selected options*/
+		String request = FormFullRequest(rootCadId, options);
+		Item cadStructure = inn.applyAML(request);
+		
+		XmlDocument result = new XmlDocument();
+		result.LoadXml("<Data><FilesToLoad/></Data>");
+		XmlNode filesToLoad = result.SelectSingleNode("//Data/FilesToLoad");
+		
+		List<string> ids = new List<string>();
+		List<string> selectors = new List<string>();
+		
+		//selects all fileIds that must be added to conversion
+		//according to properties, that were set in options
+		foreach(string property in options.fileProperties)
+		{
+			selectors.Add("//Item[@type='CAD']/"+property+"[@type='File']/text()");
+		}
+
+		foreach(string selector in selectors)
+		{
+			foreach(XmlNode s in cadStructure.dom.SelectNodes(selector))
+			{
+				if (!ids.Contains(s.Value))
+				{
+					XmlElement file = result.CreateElement("file");
+					file.InnerText = s.Value;
+					filesToLoad.AppendChild(file);
+					ids.Add(s.Value);
+				}
+			}
+		}
+
+		return result;
+	}
+	
+	private string GetUserData(Item rootCad, Options options, string userData)
+	{
+	    string rootCadId = rootCad.getProperty("id");
+		XmlDocument result = GetRelatedFilesIds(rootCadId, options);
+		if (!String.IsNullOrEmpty(userData))
+		{
+			XmlNode dataNd = result.DocumentElement;
+			XmlDocument tmpDoc = new XmlDocument();
+			tmpDoc.LoadXml(userData);
+			XmlNode convertToTypesNd = tmpDoc.SelectSingleNode("/Data/ConvertToTypes");
+			if (convertToTypesNd != null)
+			{
+				convertToTypesNd = result.ImportNode(convertToTypesNd, true);
+				dataNd.AppendChild(convertToTypesNd);
+			}
+		}
+		
+		// Adds nativeFileId to user data for creating FileRepresentation NativeFile->SCS
+		string nativeFileId = rootCad.getProperty("native_file");
+
+		XmlElement dataNode = result.DocumentElement;
+		XmlElement nativeFileIdElement = result.CreateElement("NativeFileId");
+		nativeFileIdElement.InnerText = nativeFileId;
+		dataNode.AppendChild(nativeFileIdElement);
+		
+		return result.InnerXml;
+	}
+	
+	/// <summary>
+	/// validates options' structure and values from conversion rule.
+	/// </summary>
+	private void ValidateOptions(XmlDocument xmlToValidate)
+	{
+		//prepate namespace in xml for correct validation
+		xmlToValidate.DocumentElement.SetAttribute("xmlns", "http://www.w3.org/2001/XMLSchema");
+		XmlDocument options = new XmlDocument();
+		options.LoadXml(xmlToValidate.InnerXml);
+		
+		string xsMarkup =
+			@"<schema xmlns='http://www.w3.org/2001/XMLSchema' targetNamespace='http://www.w3.org/2001/XMLSchema' attributeFormDefault='unqualified' elementFormDefault='qualified'>
+
+			<element name='options' type='option'/>
+			
+			<complexType name='option'>
+				<all>
+					<element name='cad_structure_classes' minOccurs='0' type='class'/>
+					<element name='resolution' minOccurs='0' type='resolution'/>
+					<element name='repeat_times' minOccurs='0' type='decimal'/>
+					<element name='file_properties' minOccurs='0' type='property'/>
+				</all>
+			</complexType>
+
+			<complexType name='property'>
+				<sequence>
+					<element name='property' minOccurs='0' maxOccurs='unbounded' type='string'/>
+				</sequence>
+			</complexType>
+			
+			<complexType name='class'>
+				<sequence>
+					<element name='class' minOccurs='0' maxOccurs='unbounded' type='structure'/>
+				</sequence>
+			</complexType>
+
+			<simpleType name='resolution'>
+				<restriction base='string'>
+					<enumeration value='AsSaved'/>
+					<enumeration value='Released'/>
+					<enumeration value='Current'/>
+				</restriction>
+			</simpleType>
+
+			<simpleType name='structure'>
+				<restriction base='string'>
+					<enumeration value='All'/>
+					{0}
+				</restriction>
+			</simpleType>
+		</schema>";
+		
+		string structureValidator = "";
+		List<string> classes = GetSructureClasses();
+		foreach(string className in classes)
+		{
+			structureValidator += string.Format("<enumeration value='{0}'/>", className);
+		}
+		
+		System.Xml.Schema.XmlSchema schema = new System.Xml.Schema.XmlSchema();
+		schema = System.Xml.Schema.XmlSchema.Read(new StringReader(string.Format(xsMarkup, structureValidator)), null);
+		options.Schemas.Add(schema);
+		options.Validate(null);
+	}
+	
+	/// <summary>
+	/// gets list of possible values of Cad Structure classification
+	/// used for correct validation of options in conversion rule
+	/// </summary>
+	private List<string> GetSructureClasses()
+	{
+		List<string> result = new List<string>();
+		
+		Item CADStructure = inn.newItem("ItemType", "get");
+		CADStructure.setProperty("name", "CAD Structure");
+		CADStructure.setAttribute("select", "class_structure");
+		CADStructure =  CADStructure.apply();
+		if(CADStructure.isError())
+		{
+			throw new Exception(CADStructure.getErrorDetail());
+		}
+		String structure = CADStructure.dom.SelectSingleNode("//Result/Item/class_structure/text()").Value;
+		XmlDocument structureXml = new XmlDocument();
+		structureXml.LoadXml(structure);
+		foreach(XmlNode node in structureXml.DocumentElement.ChildNodes)
+		{
+			result.Add(node.Attributes["name"].Value);
+		}
+		return result;
+	}
+
+	
+	/// <summary>
+	/// returns cads that must be set as dependancy
+	/// result of conversion will be added to this cads
+	/// </summary>
+	private Item GetRootDependancy(string FileId)
+	{
+		const string CadItemTypeId = "CCF205347C814DD1AF056875E0A880AC";
+
+		Item fileContainerLocator = inn.newItem("FileContainerLocator");
+		fileContainerLocator.setProperty("file_id", FileId);
+		fileContainerLocator.setProperty("container_type_id", CadItemTypeId);
+		fileContainerLocator.setProperty("container_property_name", "native_file");
+
+		Item Cad = inn.newItem("CAD","get");
+		Cad.setAttribute("select", "id, native_file");
+		Cad.setPropertyItem("id", fileContainerLocator);
+		Cad.setPropertyCondition("id", "in");
+		Cad.setPropertyAttribute("id", "by", "container_id");
+		Cad.setProperty("is_current", "1");
+		return Cad.apply();
+	}
+	
+	/// <summary>
+	/// returns aml for request for cad structure
+	/// </summary>
+	private string FormFullRequest(string rootId, Options options)
+	{
+		String request = @"<AML>
+		<Item type='CAD' action='GetItemRepeatConfig' id='{0}' resolution='{1}'>
+			<Relationships>
+				<Item type='CAD Structure' repeatTimes='{2}' select='related_id, classification' repeatProp='related_id'>";
+	
+					request+=FormClassificationCriteria(options);
+		
+					request += @"<related_id>
+						<Item type='CAD' select='{3}'/>
+					</related_id>
+				</Item>
+			</Relationships>";
+		
+		request += @"</Item></AML>";
+		
+		return string.Format(request, rootId, options.resolution, options.repeatTimes, string.Join(",", options.fileProperties.ToArray()));
+	}
+	
+	private string FormClassificationCriteria(Options options)
+	{
+		if (!options.ContainsClassificationAll())
+		{
+			XmlDocument calssificationXml = new XmlDocument();
+			calssificationXml.LoadXml("<OR/>");
+			
+			XmlNode parentNode = calssificationXml.SelectSingleNode("//OR");
+			
+			foreach (string c in options.classification)
+			{
+				XmlElement calssElement = calssificationXml.CreateElement("classification");
+				calssElement.InnerText = c;
+				parentNode.AppendChild(calssElement);
+			}
+			return calssificationXml.InnerXml;
+		}
+		else return "";
+	}
+
+}
+
+/// <summary>
+/// Contains rule options
+/// </summary>
+internal class Options
+{
+	internal string resolution {get; set;}
+	internal string repeatTimes {get; set;}
+	internal List<string> classification {get; set;}
+	internal List<string> fileProperties;
+	
+	internal bool ContainsClassificationAll()
+	{
+		if (classification.Contains("All"))
+			return true;
+		else return false;
+	}
+	
+	/// <summary>
+	/// Constructor. Create empty prototype.
+	/// </summary>
+	internal Options()
+	{
+		fileProperties = new List<string>();
+		classification = new List<string>();
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>CR_3DCADtoPDF_SetUserData</name>
+ </Item>
+</AML>

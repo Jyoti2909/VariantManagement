@@ -1,0 +1,48 @@
+﻿<AML>
+ <Item type="Method" id="2FB4B1324F044679BDFDCAA5F597957C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[require(['MacPolicy/Scripts/Configurator/MacPolicyFormHelper'],
+function(MacPolicyFormHelper) {
+	function getFieldId(fieldName) {
+		var field = getFieldByName(fieldName);
+		var fieldId = field.id.replace('span', '');
+		return 'field' + fieldId + 'Component';
+	}
+	var accessRightFields = [
+		'can_delete',
+		'can_discover',
+		'can_get',
+		'can_update',
+		'show_permissions_warning'
+	];
+	MacPolicyFormHelper = new MacPolicyFormHelper(this.aras);
+	var conditions = MacPolicyFormHelper.getMacConditions(this.document.thisItem);
+	var conditionsCount = conditions.getItemCount();
+	var list = [{label: '', value: ''}];
+	for (var i = 0; i < conditionsCount; i++) {
+		var condition = conditions.getItemByIndex(i);
+		if (condition.getAction() !== 'delete') {
+			list.push({
+				label: condition.getProperty('name'),
+				value: condition.getProperty('ref_id')
+			});
+		}
+	}
+	var disabledField = (!document.isEditMode) || (list.length < 2);
+	accessRightFields
+		.map(function(field) { return getFieldId(field); })
+		.forEach(function(fieldId) {
+			var oldVal = window[fieldId].getValue();
+			if (!oldVal) {
+				window[fieldId].setValue(list[0].value);
+			}
+			window[fieldId].setDisabled(disabledField);
+			window[fieldId].component.state.list = list;
+			window[fieldId].component.render();
+		});
+});
+return;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>mp_FormDropdownInit</name>
+ </Item>
+</AML>

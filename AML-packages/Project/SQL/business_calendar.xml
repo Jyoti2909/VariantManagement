@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="SQL" id="28D40AFB7AA94CBD9D7CFCE96BEB0E77" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>business_calendar</old_name>
+  <sqlserver_body><![CDATA[/* name: business_calendar
+   Created: 10-JAN-2006 George J. Carrette
+   Note: the overhead of an innovator defined table is about 1kbyte per row, 
+         which would negatively impact runtime performance.
+         The table defined here doesn't really need an ID column given
+         how it is used by the rest of the code, but the ID column does
+         help the dbdiff utility we use to understand what is going on
+         with the data.
+*/
+BEGIN
+ CREATE TABLE BUSINESS_CALENDAR (DAY_DATE SMALLDATETIME NOT NULL PRIMARY KEY,
+                                 DAY_NUMBER INTEGER NOT NULL,
+                                 ID CHAR(32) NOT NULL)
+ CREATE INDEX [I0] ON BUSINESS_CALENDAR (DAY_NUMBER)
+ CREATE UNIQUE INDEX [I1] ON BUSINESS_CALENDAR (ID)
+END
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>table</type>
+  <name>business_calendar</name>
+ </Item>
+</AML>

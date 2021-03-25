@@ -1,0 +1,27 @@
+﻿<AML>
+ <Item type="Method" id="EDA1A309D8D24CA382A35064D831635C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[return {
+	GetTreeName: function(/*WrappedObject*/ schemaElement, /*Object*/ elementState) {
+		var viewmodel = this.factory._viewmodel;
+		return viewmodel.GetRequirementTitle(schemaElement);
+	},
+	GetTreeStyle: function(schemaElement, elementState) {
+		return {backgroundImage: 'url("../../Solutions/RE/Images/Requirement.svg?req=1")'};
+	},
+	RenderHtml: function(/*WrappedObject*/ schemaElement, /*Object*/ parentState) {
+		var out = '';
+		if (schemaElement.Display()) {
+		var elementState = this.prepareElementState(schemaElement, parentState);
+
+		out += this.RenderStartHtmlElement(schemaElement, elementState) +
+			(elementState.isBlocked ? this.ResourceString('contentIsBlocked') : this.RenderInnerContent(schemaElement, elementState)) +
+			this.RenderEndHtmlElement(schemaElement, elementState);
+		}
+		return out;
+	}
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>re_RootElementRenderer</name>
+ </Item>
+</AML>

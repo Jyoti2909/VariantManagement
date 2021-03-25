@@ -1,0 +1,111 @@
+<project name="EnvironmentDiagnostics">
+	<script language="C#" prefix="aras">
+		<references>
+			<include name="System.dll" />
+		</references>
+		<imports>
+			<import namespace="System.Text.RegularExpressions" />
+		</imports>
+		<code>
+			<![CDATA[
+				[Function("version-is-equal-or-greater")]
+				public static bool VersionIsEqualOrGreater(string required, string actual)
+				{
+					Regex rgx = new Regex(@"\d+.\d+(.\d+){0,2}");
+					actual = rgx.Match(actual).Value;
+
+					Version requiredVersion = new Version(required);
+					Version actualVersion = new Version(actual);
+					return (actualVersion >= requiredVersion);
+				}
+			]]>
+		</code>
+	</script>
+
+	<target name="Environment.Diagnostics">
+		<!-- Check if the node exists -->
+		<property name="Retrieve.Version.Command" value="node --version" />
+		<property name="Required.Version" value="8.9.4" />
+		<property name="Not.Installed.Message" value="ERROR! Node.js version ${Required.Version} or higher is not installed. You can download it from https://nodejs.org/en/ It's desirable to use latest LTS version." />
+		<call target="Check.Program.Version" />
+		<echo message="Version of Node.js is ${Actual.Version}" />
+
+		<!--MSBuild version validation-->
+		<property name="Retrieve.Version.Command" value='"${MSBuild.exe}" /nologo /version' />
+		<property name="Required.Version" value="16.0" />
+		<property name="Not.Installed.Message" value="ERROR! MSBuild version ${Required.Version} is not installed." />
+		<call target="Check.Program.Version" />
+		<echo message="Version of MSBuild is ${Actual.Version}" />
+
+		<!-- Windows version validation -->
+		<property name="Retrieve.Version.Command" value="ver" />
+		<property name="Required.Version" value="7.0" />
+		<property name="Not.Installed.Message" value="ERROR! Unsupported Windows version." />
+		<call target="Check.Program.Version" />
+		<echo message="Version of Windows is ${Actual.Version}" />
+
+		<!-- Git client existence validation -->
+		<property name="Retrieve.Version.Command" value="git --version" />
+		<property name="Not.Installed.Message" value="ERROR! Git client is not installed." />
+		<call target="Get.Program.Version" />
+		<echo message="Version of Git client is ${Actual.Version}" />
+
+		<!-- ASP.NET Core version validation -->
+		<property name="Retrieve.Version.Command" value="powershell $(dotnet --list-runtimes)[-1]" />
+		<property name="Required.Version" value="2.1" />
+		<property name="Not.Installed.Message" value="ERROR! ASP.NET Core runtime version ${Required.Version} is not installed." />
+		<call target="Check.Program.Version" />
+		<echo message="Version of ASP.NET Core runtime is ${Actual.Version}" />
+
+		<!-- ASP.NET Core hosting bundle validation -->
+		<property name="Path.To.AppCmd" value="C:\Windows\System32\inetsrv\appcmd.exe" />
+		<choose>
+			<when test="${file::exists(Path.To.AppCmd)}">
+				<exec program="cmd.exe"
+					  commandline="/C ${Path.To.AppCmd} list modules /name:AspNetCoreModule"
+					  failonerror="false"
+					  resultproperty="Program.Invocation.Result"/>
+				<fail if="${Program.Invocation.Result != '0'}"
+					  message="ERROR! ASP.NET Core hosting bundle is not installed" />
+				<echo message="ASP.NET Core hosting bundle is installed" />
+			</when>
+			<otherwise>
+				<echo message="There is no IIS installed." />
+			</otherwise>
+		</choose>
+	</target>
+
+	<!--
+		Target takes several parameters:
+		1) Retrieve.Version.Command - the command line which returns program version.
+		2) Required.Version - minimal required version of the program.
+		3) Not.Installed.Message - the message that will be displayed if program is not installed.
+	-->
+	<target name="Check.Program.Version">
+		<call target="Get.Program.Version" />
+
+		<if test="${not aras::version-is-equal-or-greater(Required.Version, Actual.Version)}">
+			<fail message="${Not.Installed.Message}" />
+		</if>
+	</target>
+
+	<!--
+		Target takes several parameters:
+		1) Retrieve.Version.Command - the command line which returns program version.
+		2) Not.Installed.Message - the message that will be displayed if program is not installed.
+	-->
+	<target name="Get.Program.Version">
+		<property name="Actual.Version" value="${path::combine(Path.To.Automated.Procedures.Temp, 'Program.Version.log')}" />
+		<!-- Check if program exists -->
+		<exec program="cmd.exe"
+			  commandline="/C ${Retrieve.Version.Command}"
+			  output="${Actual.Version}"
+			  failonerror="false"
+			  resultproperty="Program.Invocation.Result"/>
+		<fail if="${Program.Invocation.Result != '0'}"
+			  message="${Not.Installed.Message}" />
+
+		<loadfile file="${Actual.Version}" property="Actual.Version" />
+		<property name="Actual.Version" value="${string::trim(Actual.Version)}" />
+	</target>
+</project>

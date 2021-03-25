@@ -1,0 +1,301 @@
+﻿<AML>
+ <Item type="Method" id="9A1E7CB8FEDA4956807ECEFCEA1D670A" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="EID_External Identity Configurator" type="Identity">5400BE2B4462465F820166CED8DA03CB</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.Ark.Logger;
+			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer, logger);
+			Item result = businessLogic.Run(this);
+			if (result.isError())
+			{
+				this.setProperty("eid_sync_error", "1");
+				return this;
+			}
+			return result;
+}
+
+		//[PartialPath("BLL/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private const string UnhandledErrorMessage = "Unhandled error";
+
+			private const string Prop_SelectedUsersId = "gag_selected_users_id";
+			private readonly IDataAccessLayer dal;
+			private readonly ILogger logger;
+
+			public BusinessLogic(IDataAccessLayer iomdal, ILogger logger)
+			{
+				dal = iomdal;
+				this.logger = logger;
+			}
+
+			/// <summary>
+			/// 
+			/// </summary>
+			/// <param name="contextItem"></param>
+			/// <returns></returns>
+			public Item Run(Item contextItem)
+			{
+				Item result;
+				string definitionId = null;
+				bool isError;
+				try
+				{
+					result = Main(contextItem, out definitionId);
+					isError = result.isError() && !result.isEmpty();
+				}
+				catch (ItemException ex)
+				{
+					result = ex.ErrorItem;
+					logger.Fatal($"{UnhandledErrorMessage}: {result.getErrorString()}");
+					isError = true;
+				}
+				catch (Exception ex)
+				{
+					result = dal.NewError(ex.Message);
+					logger.Fatal(UnhandledErrorMessage, ex);
+					isError = true;
+				}
+
+				AttachLoggingSession(definitionId, isError ? Helper.FAILURE : Helper.SUCCESS);
+				return result;
+			}
+
+			private Item Main(Item contextItem, out string definitionId)
+			{
+				string extUniqueId = contextItem.getProperty("eid_unique_id");
+				string method = string.IsNullOrEmpty(extUniqueId) ? "eid_getallusers" : "eid_getuser";
+				Item eidDefinition = GetEidDefinition(contextItem, method);
+				definitionId = eidDefinition.getID();
+
+				if (eidDefinition.isError())
+				{
+					logger.Error(eidDefinition.getErrorString());
+					return eidDefinition;
+				}
+
+				if (string.Equals(eidDefinition.getProperty("eid_enable"), "0", StringComparison.Ordinal))
+				{
+					string msgError = $"{eidDefinition.getProperty("eid_name")} is disabled.";
+					logger.Error(msgError);
+					return dal.NewError(msgError);
+				}
+
+				logger.Information($"Method {method}s: is running");
+
+				Item externalUsers = GetAllExternalUsers(eidDefinition, extUniqueId, contextItem.getProperty(Prop_SelectedUsersId));
+				if (externalUsers.isError())
+				{
+					logger.Error(externalUsers.getErrorString());
+					return externalUsers;
+				}
+
+				Item mergeMethod = GetMergeMethod(externalUsers, definitionId, extUniqueId, contextItem.getProperty(Prop_SelectedUsersId));
+				Item result = dal.ApplyItem(mergeMethod);
+				if (result.isError())
+				{
+					logger.Error(result.getErrorString());
+					return result;
+				}
+
+				logger.Information($"Method {method}: finished");
+				return result;
+			}
+			/// <summary>
+			/// providerId and login enable properties will be set as default when adding new user
+			/// </summary>
+			/// <param name="externalUsers"></param>
+			/// <param name="definitionId"></param>
+			/// <param name="extUniqueId"></param>
+			/// <returns></returns>
+			private Item GetMergeMethod(Item externalUsers, string definitionId, string extUniqueId, string selectedUsersId)
+			{
+				Item mergeMethod = dal.NewItem("Method", "EID_Merge_Users");
+
+				mergeMethod.setProperty("eid_definition_id", definitionId);
+				mergeMethod.setProperty("eid_results", externalUsers.getProperty("eid_results"));
+				mergeMethod.setProperty(Prop_SelectedUsersId, selectedUsersId);
+				if (!string.IsNullOrEmpty(extUniqueId))
+					mergeMethod.setProperty("eid_unique_id", extUniqueId);
+				return mergeMethod;
+			}
+
+			private Item GetAllExternalUsers(Item eidDefinition, string extUniqueId, string selectedUsersId)
+			{
+				Item itmProvider = eidDefinition.getPropertyItem("eid_provider");
+				if (itmProvider == null)
+				{
+					return dal.NewError("cannot find external identity provider");
+				}
+
+				string method = string.IsNullOrEmpty(extUniqueId) ? "eid_getallusers" : "eid_getuser";
+				string methodName = itmProvider.getPropertyAttribute(method, "keyed_name");
+				Item itmMethod = dal.NewItem("Method", methodName);
+				itmMethod.setProperty("eid_provider_id", itmProvider.getID());
+				itmMethod.setProperty(Prop_SelectedUsersId, selectedUsersId);
+				SetMethodProperties(itmMethod, eidDefinition, itmProvider, extUniqueId);
+				return dal.ApplyItem(itmMethod);
+			}
+
+			private void AttachLoggingSession(string definitionId, string stateColor)
+			{
+				if (string.IsNullOrWhiteSpace(definitionId))
+				{
+					throw new ItemException(dal.NewError($"Cannot attach logging {logger.SessionId} because definition id is unknown."));
+				}
+
+				Item itmSyncStatus = dal.NewItem("EID_Sync Status", "add");
+				itmSyncStatus.setAttribute("doGetItem", "0");
+				itmSyncStatus.setProperty("eid_state", stateColor);
+				itmSyncStatus.setProperty("gag_logging_session", logger.SessionId);
+				itmSyncStatus.setProperty("source_id", definitionId);
+				itmSyncStatus = dal.ApplyItem(itmSyncStatus);
+				Contract.ThrowIfError(itmSyncStatus);
+			}
+
+			private static void SetMethodProperties(Item itmMethod, Item eidDefinition, Item eidProvider, string extUniqueId)
+			{
+				SetMethodProperty(itmMethod, eidDefinition, "eid_connection_string");
+				SetMethodProperty(itmMethod, eidDefinition, "eid_user_name");
+				SetMethodProperty(itmMethod, eidDefinition, "eid_password_key");
+
+				itmMethod.setProperty("eid_attributes", GetExtAttributes(eidDefinition.getRelationships()));
+
+				SetMethodProperty(itmMethod, eidProvider, "eid_filter");
+				if (!string.IsNullOrEmpty(extUniqueId))
+					itmMethod.setProperty("eid_unique_id", extUniqueId);
+			}
+
+			private static string GetExtAttributes(Item relationshipMaps)
+			{
+				var maps = Helper.ConvertItemToCollection(relationshipMaps);
+				var attrs = maps.Select(c => c.getProperty("eid_ext_user_attribute")).ToList();
+				attrs.Add("unique_id");
+				attrs.Add("enabled");
+				return string.Join(",", attrs.Distinct());
+			}
+
+			private static void SetMethodProperty(Item method, Item sourceItem, string property)
+			{
+				method.setProperty(property, sourceItem.getProperty(property));
+			}
+			/// <summary>
+			/// 
+			/// </summary>
+			/// <param name="contextItem"></param>
+			/// <param name="methodName"></param>
+			/// <returns>EID definition item with mapped properties and GetAllUsers method name</returns>
+			private Item GetEidDefinition(Item contextItem, string methodName)
+			{
+				Item eidDef = dal.NewItem(Helper.ItmEidDefination, "get");
+				eidDef.setProperty("eid_enable", "1");
+
+				string eidDefinitionId = contextItem.getProperty("eid_definition_id");
+				if (string.Equals(contextItem.getType(), Helper.ItmEidDefination, StringComparison.OrdinalIgnoreCase))
+				{
+					eidDefinitionId = contextItem.getID();
+				}
+				if (!string.IsNullOrEmpty(eidDefinitionId))
+				{
+					eidDef.setID(eidDefinitionId);
+				}
+
+				Item eidUserMapping = dal.NewItem("EID_User Property Mapping", "get");
+				eidUserMapping.setAttribute("select", "eid_ext_user_attribute,eid_user_property");
+				eidDef.addRelationship(eidUserMapping);
+				string select = $"eid_connection_string,eid_user_name,eid_password_key,eid_enable,eid_name,eid_provider({methodName},eid_filter)";
+				eidDef.setAttribute("select", select);
+
+				Item result = dal.ApplyItem(eidDef);
+				if (result.isError())
+				{
+					return result;
+				}
+				return result.getItemByIndex(0);
+			}
+		}
+
+		//[PartialPath("Helpers/Helper")]
+		internal static class Helper
+		{
+			internal const string SUCCESS = "#00FF00";
+			internal const string FAILURE = "#FF0000";
+
+			internal const string ItmEidDefination = "EID_External Identity Def";
+
+			internal static IEnumerable<Item> ConvertItemToCollection(Item item)
+			{
+				int count = item.getItemCount();
+				for (int i = 0; i < count; i++)
+				{
+					yield return item.getItemByIndex(i);
+				}
+			}
+
+			internal static void InsertAsRelationship(Item parent, Item children, string relationshipName, string propertyName)
+			{
+				foreach (Item child in ConvertItemToCollection(children))
+				{
+					Item relationship = parent.newItem(relationshipName);
+					relationship.setPropertyItem(propertyName, child);
+					parent.addRelationship(relationship);
+				}
+			}
+		}
+		//[PartialPath("DAL/IDataAccessLayer")]
+		internal interface IDataAccessLayer
+		{
+			Item NewItem(string type = null, string action = null);
+			Item ApplyItem(Item item);
+			Item ApplyAML(string aml);
+			Item NewResult(string textMessage);
+			Item NewError(string errorMessage);
+		}
+
+		//[PartialPath("DAL/DataAccessLayer")]
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this.innovator = innovator;
+			}
+
+			public Item NewItem(string type = null, string action = null)
+			{
+				if (string.IsNullOrEmpty(type))
+				{
+					return innovator.newItem();
+				}
+				if (string.IsNullOrEmpty(action))
+				{
+					return innovator.newItem(type);
+				}
+
+				return innovator.newItem(type, action);
+			}
+
+			public Item NewResult(string textMessage)
+			{
+				return innovator.newResult(textMessage);
+			}
+
+			public Item NewError(string errorMessage)
+			{
+				return innovator.newError(errorMessage);
+			}
+
+			public Item ApplyItem(Item item)
+			{
+				return item.apply();
+			}
+
+			public Item ApplyAML(string aml)
+			{
+				return innovator.applyAML(aml);
+            }]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_Sync_External_Users</name>
+ </Item>
+</AML>

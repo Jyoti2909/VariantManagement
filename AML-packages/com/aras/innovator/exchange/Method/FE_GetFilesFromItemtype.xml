@@ -1,0 +1,72 @@
+﻿<AML>
+ <Item type="Method" id="D55AD62507124803BEBC3246ABB42071" action="add">
+  <comments>Method for getting all files for instances of itemtype</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[XmlDocument doc = new XmlDocument();
+doc.XmlResolver = null;
+string data = this.node.InnerXml;
+if (string.IsNullOrEmpty(data))
+	return this;
+doc.LoadXml(data);
+
+string idlist = doc.SelectSingleNode("//body/idlist").Attributes["ids"].Value;
+string itemType = doc.SelectSingleNode("//body/item").Attributes["itemtype"].Value;
+
+List<string> paths = new List<string>();
+XmlNodeList nodeListPath = doc.SelectNodes("//body/configuration");
+if (nodeListPath.Count == 0)
+{
+	Item query = this.newItem(itemType, "get");
+	query.setAttribute("idlist", idlist);
+	return query.apply();
+}
+
+for (int i = 0; i < nodeListPath.Count; i++)
+{
+	string path = nodeListPath[i].Attributes["path"].Value; 
+	paths.Add(path);
+}
+
+string aml = "<AML>";
+for (int i = 0; i < paths.Count(); i++)
+{
+	string path = paths[i];
+	List<string> nodeNames = path.Split('/').ToList();
+	string filePropertyName = nodeNames[nodeNames.Count - 1];
+	nodeNames.GetRange(1, nodeNames.Count - 1).Reverse();
+	
+	for (int j = 0; j < nodeNames.Count - 1; j++)
+	{
+		string node = nodeNames[j];
+		if (node == "Relationships" || node == "related_id")
+		{
+			aml += "<" + node + ">";
+		}
+		else
+		{
+			aml += "<Item type='" + System.Security.SecurityElement.Escape(node) + "' action='get'";
+			if (j == 0)
+				aml += " idlist='" + System.Security.SecurityElement.Escape(idlist) + "'";
+			if (j == nodeNames.Count - 2 && filePropertyName != "related_id")
+				aml += " select='id, " + System.Security.SecurityElement.Escape(filePropertyName) + "' ";
+			if (nodeNames[j + 1] == "related_id")	
+				aml += " select='id, related_id'";
+			aml += ">";
+		}
+	}
+	for (int j = nodeNames.Count - 2; j >= 0; j--)
+	{
+		string node = nodeNames[j];
+		if (node == "Relationships" || node == "related_id")
+			aml += "</" + node + ">";			
+		else
+			aml += "</Item>";
+	}
+}
+aml += "</AML>";
+Innovator innovator = this.getInnovator();
+return innovator.applyAML(aml);]]></method_code>
+  <method_type>C#</method_type>
+  <name>FE_GetFilesFromItemtype</name>
+ </Item>
+</AML>

@@ -1,0 +1,222 @@
+﻿<AML>
+ <Item type="Method" id="C50D9B14DB9C4FF180F73208D8D8909F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Dim projectTeamId As String = Me.getAttribute("id")
+If (String.IsNullOrEmpty(projectTeamId)) Then
+  projectTeamId = Me.getPropertyAttribute("Item", "id")
+End If
+
+Dim tmpInn As Innovator = Me.getInnovator()
+Dim q As Item = tmpInn.newItem()
+q.loadAML( _
+  "<Item type='Project Team' action='get' " + _
+  "select='id,source_id(wbs_id),related_id(id),role' />")
+q.setID(projectTeamId)
+
+Dim r As Item = q.apply()
+If r.isEmpty() Then
+  Return tmpInn.newError("Cannot get Project Team item.")
+End If
+
+If r.isError() Then
+  Return r
+End If
+
+If r.getItemCount() > 1 Then
+  Return tmpInn.newError("Cannot get Project Team item.")
+End If
+
+Dim curItm As Item = r
+Dim role As String = curItm.getProperty("role")
+If String.IsNullOrEmpty(role) Then
+  Return tmpInn.newResult("Role is empty. Thus the project activities are not updated.")
+End If
+'Now we know that the role on this Project Actrivity is not empty
+
+Dim tmpNd As XmlElement = curItm.node.selectSingleNode("source_id/Item/wbs_id")
+If tmpNd Is Nothing Then
+  Return tmpInn.newError("Source wbs_id is not found")
+End If
+
+Dim wbsId As String = tmpNd.InnerText
+
+Dim relatedId As String = curItm.getProperty("related_id")
+Dim relatedIdCond4Asmnts As String
+Dim relatedIdCond4Acts As String
+If String.IsNullOrEmpty(relatedId) Then
+  relatedIdCond4Asmnts = "[ACTIVITY2_ASSIGNMENT].related_id IS NOT NULL"
+  relatedIdCond4Acts = "[ACTIVITY2].managed_by_id IS NOT NULL"
+Else
+  relatedIdCond4Asmnts = String.Format( _
+    "[ACTIVITY2_ASSIGNMENT].related_id != '{0}' OR [ACTIVITY2_ASSIGNMENT].related_id IS NULL", _
+    relatedId.Replace("'", "''"))
+  relatedIdCond4Acts = String.Format( _
+    "[ACTIVITY2].managed_by_id != '{0}' OR [ACTIVITY2].managed_by_id IS NULL", _
+    relatedId.Replace("'", "''"))
+End If
+
+'++++++ handle related_id in the Activity2 Assignments +++++++
+Dim activityId As String = Me.getProperty("activity_id")
+If String.IsNullOrEmpty(activityId) Then
+  Dim tmpIt As Item = Me.getItemsByXPath("Item")
+  If tmpIt.getItemCount() > 0 Then
+    activityId = tmpIt.getItemByIndex(0).getProperty("activity_id")
+  End If
+End If
+Dim criteriaForActivityAssignmentId As String
+If String.IsNullOrEmpty(activityId) Then
+  criteriaForActivityAssignmentId = String.Format( _
+    "a2.id IN (SELECT id " + _
+              "FROM innovator.select_activities('{0}'))", _
+    wbsId.Replace("'", "''"))
+Else
+  criteriaForActivityAssignmentId = String.Format( _
+    "a2.id='{0}'", _
+    activityId.Replace("'", "''"))
+End If
+
+Dim amlBldr As StringBuilder
+
+Dim curUsrId As String = tmpInn.getUserId().Replace("'", "''")
+Dim roleEscaped As String = role.Replace("'", "''")
+Dim xml As String = String.Format( _
+  "<Item type='Activity2 Assignment' action='get' select='id,locked_by_id,source_id' " + _
+        "where=""" + _ 
+               "[ACTIVITY2_ASSIGNMENT].source_id IN (" + _
+                 "SELECT a2.id " + _
+                 "FROM [ACTIVITY2] a2 " + _
+                 "INNER JOIN [ACTIVITY2_ASSIGNMENT] a2a " + _
+                 "ON a2a.source_id=a2.id " + _
+                 "WHERE ({0}) " + _
+                   "AND (a2.locked_by_id IS NULL OR a2.locked_by_id='{1}') " + _
+                   "AND (a2.state IS NULL OR a2.state='Pending' OR (a2.state='Active' AND a2a.related_id IS NULL))" + _
+                 ") " + _
+               "AND ([ACTIVITY2_ASSIGNMENT].role='{2}') " + _
+               "AND ({3})" + _
+               """/>", _
+  System.Security.SecurityElement.Escape(criteriaForActivityAssignmentId), System.Security.SecurityElement.Escape(curUsrId), System.Security.SecurityElement.Escape(roleEscaped), System.Security.SecurityElement.Escape(relatedIdCond4Asmnts))
+q.loadAML(xml)
+r = q.apply()
+
+If Not r.isEmpty() Then
+  If r.isError() Then
+    Return r
+  End If
+  
+  q.loadAML("<Item type='Activity2 Assignment' doGetItem='0'/>")
+  q.setProperty("related_id", relatedId)
+  
+  Dim updatedActs As New ArrayList()
+  amlBldr  = New StringBuilder("<AML>")
+  Dim sqlBldr As New StringBuilder("SELECT id,locked_by_id FROM [ACTIVITY2] WHERE id IN (")
+  Dim i As Integer
+  For i=0 To r.getItemCount() - 1
+    curItm = r.getItemByIndex(i)
+    Dim action As String
+    If String.IsNullOrEmpty(curItm.getProperty("locked_by_id")) Then
+      action = "edit"
+    Else
+      action = "update"
+    End If
+
+    q.setAction(action)
+    q.setID(curItm.getAttribute("id"))
+    
+    Dim source_id As String = curItm.getProperty("source_id")
+    If Not updatedActs.Contains(source_id) Then
+      updatedActs.Add(source_id)
+      sqlBldr.Append("'")
+      sqlBldr.Append(source_id.Replace("'", "''"))
+      sqlBldr.Append("',")
+    End If
+
+    amlBldr.Append(q.node.OuterXml)
+  Next i
+  amlBldr.Append("</AML>")
+  sqlBldr.Remove(sqlBldr.Length-1, 1)'remove the last comma
+  sqlBldr.Append(")")
+  r = tmpInn.applyAML(amlBldr.ToString())
+  If r.isError() Then
+    Return r
+  End If
+
+  '+++ Simulate the Activity2 items update +++
+  q.loadAML("<Item type='Activity2' doGetItem='0'/>")
+  Dim sql As String = sqlBldr.toString()
+  Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+  Dim rs As Aras.Server.Core.InnovatorDataSet = conn.ExecuteSelect(sql)
+  amlBldr = New StringBuilder("<AML>")
+  While Not rs.Eof()
+  	q.setID(CStr(rs.Value("id")))
+  	Dim action As String
+  	If String.IsNullOrEmpty(CStr(rs.Value("locked_by_id", Nothing))) Then
+  	  action = "edit"
+  	Else
+  	  action = "update"
+    End If
+    q.setAction(action)
+
+  	amlBldr.Append(q.node.OuterXml)
+    rs.MoveNext()
+  End While
+
+  amlBldr.Append("</AML>")
+  r = tmpInn.applyAML(amlBldr.ToString())
+  If r.isError() Then
+    Return r
+  End If
+  '--- Simulate the Activity2 items update ---
+End If
+'------ handle related_id in the Activity2 Assignments ------
+
+'++++++ handle managed_by_id in the project activities +++++++
+wbsId = If(string.IsNullOrEmpty(wbsId), wbsId, wbsId.Replace("'", "''"))
+xml = String.Format( _
+  "<Item type='Activity2' action='get' select='id,locked_by_id' " + _
+        "where=""" + _ 
+               "[ACTIVITY2].id IN (" + _
+                 "SELECT id " + _
+                 "FROM innovator.select_activities('{0}')) " + _
+               "AND ([ACTIVITY2].locked_by_id IS NULL OR [ACTIVITY2].locked_by_id='{3}') " + _
+               "AND ([ACTIVITY2].lead_role='{1}') " + _
+               "AND ({2}) " + _
+               "AND ([ACTIVITY2].state='Pending' OR ([ACTIVITY2].state='Active' AND [ACTIVITY2].managed_by_id is NULL))" + _
+               """/>", System.Security.SecurityElement.Escape(wbsId), System.Security.SecurityElement.Escape(roleEscaped), System.Security.SecurityElement.Escape(relatedIdCond4Acts), System.Security.SecurityElement.Escape(curUsrId))
+q.loadAML(xml)
+r = q.apply()
+If r.isEmpty() Then
+  Return Nothing
+End If
+
+If r.isError() Then
+  Return r
+End If
+
+q.loadAML("<Item type='Activity2' doGetItem='0'/>")
+q.setProperty("managed_by_id", relatedId)
+amlBldr = New StringBuilder("<AML>")
+Dim j As Integer
+For j=0 To r.getItemCount() - 1
+  curItm = r.getItemByIndex(j)
+  Dim action As String
+  If String.IsNullOrEmpty(curItm.getProperty("locked_by_id")) Then
+    action = "edit"
+  Else
+    action = "update"
+  End If
+  q.setAction(action)
+  q.setID(curItm.getAttribute("id"))
+
+  amlBldr.Append(q.node.OuterXml)
+Next
+amlBldr.Append("</AML>")
+r = tmpInn.applyAML(amlBldr.ToString())
+If r.isError() Then
+  Return r
+End If
+'------ handle managed_by_id in the project activities -------
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>PM_updateAssigneesPerRole</name>
+ </Item>
+</AML>

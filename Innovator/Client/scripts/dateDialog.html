@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<title></title>
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<style type="text/css">
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/include.aspx?classes=common.css";
+
+		html, body {
+			text-align:center;
+			overflow: hidden;
+			margin: 0px;
+			padding: 0px;
+		}
+
+		.claro .dijitCalendar{
+			border: none;
+			border-radius: 0px;
+			background-color: #dde7f5;
+			background-image: none;
+			width: 100%;
+		}
+
+		.claro .dijitCalendar:hover{
+			border: none;
+			background-color: #dde7f5;
+		}
+
+		.claro .dijitButton .dijitButtonNode{
+			border: none;
+			border-radius: 0px;
+			background-image: none;
+			background-color:#3668b1;
+			color: #fff;
+		}
+
+		.claro .dijitButton .dijitButtonNode:hover{
+			background-color: #5789d0;
+		}
+
+		.claro .dijitCalendarCurrentDate {
+			text-decoration:underline;
+			color:blue;
+		}
+	</style>
+	<script type="text/javascript">
+		var tmpDialogArguments = window.dialogArguments || window.frameElement.dialogArguments;
+		var aras = tmpDialogArguments.aras;
+		document.title = aras.getResource("", "datedialog.title");
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript">
+		var escapeKeyCode = 27;
+
+		function processKey(event){
+			if((window.event ? window.event : event).keyCode == escapeKeyCode){
+				closeWindow();
+			}
+		}
+
+		function closeWindow(value) {
+			// this logic is required because the html file appears in modal window and in popup dialog
+			if (tmpDialogArguments.dialog) {
+				tmpDialogArguments.dialog.close(value);
+			} else {
+				window.returnValue = value;
+				window.close();
+			}
+		}
+
+		onload = function(){
+			var caledar = clientControlsFactory.createControl("Aras.Client.Controls.Experimental.Calendar", tmpDialogArguments);
+			document.body.onkeypress = processKey;
+		}
+	</script>
+</head>
+<body class="claro">
+</body>
+</html>

@@ -1,0 +1,69 @@
+﻿<AML>
+ <Item type="Method" id="CCF16B9A927D4D22A23ECEAC7372A704" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[    if (!GetBoolFromRequestState(RequestState, ShouldCalculateQtyKey))
+    {
+        return this;
+    }
+    
+    for (var i = 0; i < this.getItemCount(); i++) 
+    {
+        var item = this.getItemByIndex(i);
+        var failed = 0;
+        var promoted = 0;
+        
+        var records = GetRecords(item.getID());
+        
+        for (var j = 0; j < records.getItemCount(); j++)
+        {
+            var record = records.getItemByIndex(j);
+            var state = record.getProperty("status_error");
+            
+            if (string.Equals(state, "Complete", StringComparison.Ordinal)) {
+                promoted++;
+            } else {
+                failed++;
+            }
+        }
+        
+        if (GetBoolFromRequestState(RequestState, ShouldCalculateQtyTotalKey)) {
+            item.setProperty("qty_total", records.getItemCount().ToString(CultureInfo.InvariantCulture));
+        }
+        if (GetBoolFromRequestState(RequestState, ShouldCalculateQtyPromotedKey)) {
+            item.setProperty("qty_promoted", promoted.ToString(CultureInfo.InvariantCulture));
+        }
+        if (GetBoolFromRequestState(RequestState, ShouldCalculateQtyFailedKey)) {
+            item.setProperty("qty_failed", failed.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+    
+    return this;
+} 
+
+private const string ShouldCalculateQtyKey = "ShouldCalculateQty";
+private const string ShouldCalculateQtyTotalKey = "ShouldCalculateQtyTotal";
+private const string ShouldCalculateQtyPromotedKey = "ShouldCalculateQtyPromoted";
+private const string ShouldCalculateQtyFailedKey = "ShouldCalculateQtyFailed";
+
+private static bool GetBoolFromRequestState(Aras.Server.Core.IContextState requestState, string key)
+{
+    if (!requestState.Contains(key)) 
+    {
+        return false;
+    }
+    return requestState[key] as bool? ?? false;
+}
+
+private Item GetRecords(string massPromoteId)
+{
+    var records = this.newItem("mpo_MassPromotionRecord", "get");
+    records.setAttribute("select", "status_error");
+    records.setProperty("source_id", massPromoteId);
+    records.setPropertyAttribute("source_id", "condition", "eq");
+    
+    return records.apply();
+    ]]></method_code>
+  <method_type>C#</method_type>
+  <name>mpo_CalculateQty</name>
+ </Item>
+</AML>

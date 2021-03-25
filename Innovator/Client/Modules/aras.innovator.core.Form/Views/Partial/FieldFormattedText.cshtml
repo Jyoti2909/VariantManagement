@@ -1,0 +1,170 @@
+﻿@using System
+@using System.Linq
+@using System.Text
+@using Models.AML.Enums
+@using Models.AML.ItemTypes
+@using Models.Helpers
+@model Models.FieldRenderModel
+@{
+	var fieldId = Model.FieldNode.Id;
+	var fieldNm = Model.FieldNode.Name;
+	var propNm = String.Empty;
+	if (!Model.PropertyNode.IsNull)
+	{
+		propNm = Model.PropertyNode.Name;
+	}
+
+	var stOverflow = "auto";
+
+	var readOnlyProp = MethodsExUtils.UiIsFieldReadOnly(Model.FieldNode, Model.PropertyNode);
+	var assignedFieldEvents = String.Empty;
+	var onClickEvent = new StringBuilder();
+	var tabIndex = Model.FieldNode.TabStop ? Model.FieldNode.TabIndex.Value : "-1";
+
+	// Generated code
+	var userOnClick = String.Empty;
+
+	if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		if (Model.Mode != "search")
+		{
+			assignedFieldEvents = MethodsExUtils.AssignFieldEventEx(Model.FieldNode, "onclick, onchange", null);
+		}
+		var onclickMethodCode = MethodsExUtils.GetEventHandlerCode(Model.FieldNode, "onclick", true, "return true;\r\n");
+
+		if (onclickMethodCode != "return true;\r\n")
+		{
+			var funcName = "user_" + fieldId + "_onclick";
+			userOnClick = @"<script type=""text/javascript"">
+								function " + funcName + @"(event)
+								{
+								" 
+										   + onclickMethodCode
+								+ @"/*Fix for mistakes with missed closing comments brackets*/
+								}
+							</script>";
+			onClickEvent.AppendLine("var ures = " + funcName + @"(event);
+							if (ures)
+							{ ");
+		}
+
+		if (!String.IsNullOrEmpty(propNm) && !readOnlyProp)
+		{
+			onClickEvent.AppendLine(@"if (!window.document.isEditMode) return true;
+					var spanElem = window.document.getElementById('" + fieldId + @"');
+					if (spanElem.value == undefined) spanElem.value='';
+					var currVal = spanElem.original,
+						param = {
+						sHTML: currVal ? currVal : '',
+						aras: aras,
+						title: aras.getResource('', 'htmleditor.inn_formatted_text_editor')
+					  };
+					var topWnd = aras.getMostTopWindowWithAras(window);
+					param.type = 'HTMLEditorDialog';
+					(topWnd.main || topWnd).ArasModules.Dialog.show('iframe', param).promise.then(function (newCont) {
+					  if (undefined == newCont) return true;
+						if (window.handleItemChange) handleItemChange('" + propNm + @"', newCont);
+					});
+				");
+		}
+
+		if (onclickMethodCode != "return true;\r\n")
+		{
+			onClickEvent.AppendLine("}");
+		}
+	}
+}
+<table border="0" cellpadding="0" cellspacing="0" cols="1">
+	<tr>
+		<td>
+			<span id="@(fieldId)" name="@(fieldNm)" class="@(fieldNm)" style="word-wrap:break-word;display:block;padding:2px;overflow:@(stOverflow);cursor:pointer;border-style:inset !important;border-color:#E0DFE3;border-width:2px 1px 1px 2px;" @Html.Raw(assignedFieldEvents)
+				@if (!String.IsNullOrEmpty(onClickEvent.ToString()))
+				{
+					@:onclick="
+					@:@Html.Raw(onClickEvent.ToString())"
+				} tabindex="@(tabIndex)"></span>@Html.Raw(userOnClick)
+			
+			@{
+				if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+				{
+					<script type="text/javascript">
+						function system_@(fieldId)_value(event) 
+						{
+							if (event.propertyName != "value") return true;
+
+							var ctrlElem = event.target;
+							if (!ctrlElem) return true;
+
+							var spanElem = document.getElementById("@(fieldId)");
+							if (!spanElem) return true;
+
+							if (spanElem.value == ctrlElem.value) return true;
+							var val = ctrlElem.value;
+
+							@{
+								// Replace all vault-formatted urls in images sources to display images
+								// and save an original html to pass it to the sHTML editor.
+							}
+							
+							spanElem.original = val;
+							var substr = "vault:///?fileid=";
+							var fileIdpos = val.toLowerCase().indexOf(substr);
+							while (fileIdpos != -1) 
+							{
+								var vaultUrl = val.substring(fileIdpos, fileIdpos + substr.length + 32);
+								fileIdpos += substr.length;
+								var fileId = vaultUrl.replace(/vault:\/\/\/\?fileid\=/i,"");
+								var vaultUrlwithToken = aras.IomInnovator.getFileUrl(fileId, aras.Enums.UrlType.SecurityToken);
+								val = val.replace(vaultUrl, vaultUrlwithToken);
+								var fileIdpos = val.toLowerCase().indexOf(substr, fileIdpos + 32);
+							}
+							spanElem.value = val;
+							var bodyBgColorRes = /<body[^>]*style\s*=\s*['"].*[;]?background-color:\s*(#[\d\w]{6})[;'"][^>]*>/i.exec(val);
+							if (bodyBgColorRes) {
+								spanElem.style.backgroundColor = bodyBgColorRes[1];
+							}
+							spanElem.innerHTML = val;
+				   
+							@{
+								// Field event "onChange" corresponds to checkbox event "onpropertychange"
+								var onChange = Model.FieldNode.Relationships.Items.FirstOrDefault(item => item.Type == ItemNodeType.FieldEvent && ((FieldEvent)item).Event == "onchange");
+								if (onChange != null)
+								{
+									var onChangeMethodCode = ((FieldEvent)onChange).RelatedId.Item.MethodCode;
+									if (onChangeMethodCode != null)
+									{
+										@Html.Raw(MethodsExUtils.PrepareEventHandlerCode(null, onChangeMethodCode, false))
+									}
+								}
+							}
+							return true;
+						}
+
+						@if (!String.IsNullOrEmpty(propNm))
+						{
+							@:if (observersHash.getElementById("@(propNm)_system"))
+							@:	observersHash.getElementById("@(propNm)_system").attachEvent("onpropertychange", system_@(fieldId)_value);
+						}
+					</script>	
+				}
+
+
+				var textareaSizeInfo = MethodsExUtils.UiGetTextAreaSizeInfo(Model.FieldNode);
+				<textarea id="template_@(fieldId)" aria-labelledby="@(fieldId)_label" @Html.Raw(textareaSizeInfo.Attribute) style="position:absolute;top:0px;left:0px;visibility:hidden;overflow:auto;@(textareaSizeInfo.Style)"></textarea>
+
+
+					<script type="text/javascript">
+						function expression_@(fieldId)_setExpression()
+						{
+							var element = document.getElementById('@(fieldId)');
+							element.style['width'] = document.getElementById('template_@(fieldId)').offsetWidth + 'px';
+							element.style['height'] = document.getElementById('template_@(fieldId)').offsetHeight + 'px';
+						}
+
+						window.addEventListener("load", expression_@(fieldId)_setExpression);
+					</script>
+
+			}
+		</td>
+	</tr>
+</table>

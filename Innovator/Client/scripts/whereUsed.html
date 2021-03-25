@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html>
+<html>
+	<head>
+		<title></title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<link rel="stylesheet" type="text/css" href="../styles/common.css" />
+		<link rel="stylesheet" type="text/css" href="../styles/whereUsed.css" />
+		<link rel="stylesheet" type="text/css" href="../styles/itemProperties.css" />
+		<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules,WhereUsed&files=TopWindowHelper"></script>
+		<script>
+			var nativeClose = window.close;
+			var nativeFocus = window.focus;
+		</script>
+		<script>
+			var topWnd = TopWindowHelper.getMostTopWindowWithAras(opener);
+			var aras = topWnd.aras;
+			var soap = topWnd.ArasModules.soap;
+			const mainWindow = aras.getMainWindow();
+			const arasTabsObj = mainWindow.arasTabs;
+			var toolbar;
+			var close;
+			var focus;
+			const getTabbarByTabId = function getTabbarByTabId(tabId) {
+				const tabsContainer = aras.getMainWindow().mainLayout.tabsContainer;
+				return tabsContainer.getTabbarByTabId(tabId);
+			};
+			if(window.frameElement) {
+				window.windowType = 'whereUsed';
+				close = function(callback) {
+					if (!callback) {
+						const tabId = this.frameElement.id;
+						getTabbarByTabId(tabId).removeTab(tabId);
+					} else {
+						callback(true);
+					}
+				};
+				focus = function() {
+					const tabId = this.frameElement.id;
+					getTabbarByTabId(tabId).selectTab(tabId);
+				};
+			} else {
+				close = nativeClose;
+				focus = nativeFocus;
+			}
+		</script>
+		<script type="text/javascript">
+			var URLParams = new URLSearchParams(location.search.slice(1));
+			var itemId = URLParams.get('id') || '';
+			var itemTypeName = URLParams.get('type_name') || '';
+			itemTypeName = getItemTypeName(itemTypeName);
+
+			document.title = aras.getResource('', 'whereused.wu', aras.getKeyedName(itemId));
+
+			window.addEventListener("unload", function() {
+				window.aras.uiUnregWindowEx(itemId + '_whereUsed');
+			});
+
+			onload = function() {
+				if (arasTabsObj && window.frameElement) {
+					const itemTypeNd = aras.getItemTypeForClient(itemTypeName).node;
+					const itemTypeImgSrc = aras.getItemProperty(itemTypeNd, 'open_icon') || '../images/DefaultItemType.svg';
+					arasTabsObj.updateTitleTab(window.name, {label: document.title, image: itemTypeImgSrc});
+				}
+
+				WhereUsed(document.getElementById('grid'), itemTypeName, itemId)
+				.then(function() {
+					aras.browserHelper.toggleSpinner(document, false);
+				});
+			};
+
+			function getItemTypeName(itemTypeName) {
+				switch(itemTypeName) {
+					case "GAG_MechanicalPart":
+						return "Part";
+					default:
+						return itemTypeName;
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<div id="grid"></div>
+		<div id="dimmer_spinner">
+			<div class="aras-centered">
+				<div class="aras-spinner"></div>
+			</div>
+		</div>
+	</body>
+</html>

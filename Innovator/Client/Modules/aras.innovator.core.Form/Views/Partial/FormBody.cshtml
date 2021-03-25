@@ -1,0 +1,43 @@
+﻿@using System
+@using System.Web
+@model Models.AML.ItemTypes.Body
+
+@{
+	var css = Model.Css.Value;
+	if (css != null)
+	{
+		<!-- body CSS -->
+		<style type="text/css">
+			@Html.Raw(css);
+		</style>
+	}
+	<!-- legacy body CSS -->
+	<style type="text/css">
+		body
+		{
+			@{
+				var value = Model.BGColor.Value;
+				if (!String.IsNullOrEmpty(value))
+				{
+					if (value == "btnface")
+					{
+						value = "buttonface";
+					}
+					@:background-color:@(value);
+				}
+				if (!String.IsNullOrEmpty(Model.BGImage.Value))
+				{
+					@:background-image:url(@Uri.EscapeUriString(Model.BGImage.Value));
+				}
+				if (!String.IsNullOrEmpty(Model.BGRepeat.Value))
+				{
+					@:background-repeat:@(Model.BGRepeat.Value);
+				}
+				if (!String.IsNullOrEmpty(Model.BGAttach.Value))
+				{
+					@:background-attachment:@(Model.BGAttach.Value);
+				}
+			}
+		}
+	</style>
+}

@@ -1,0 +1,52 @@
+﻿<AML>
+ <Item type="Method" id="820E59EBFA924E18A6DF29938665A58F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[return ModulesManager.using(
+	['aras.innovator.core.ItemWindow/DefaultItemWindowView',
+	'aras.innovator.core.ItemWindow/DefaultItemWindowCreator'], function(View, Creator) {
+		var itemID = inDom.getAttribute('id');
+		var win = aras.uiFindAndSetFocusWindowEx(itemID);
+		var view;
+		var creator;
+
+		if (win !== null) {
+			return;
+		}
+
+		if (aras.isTempEx(inDom)) {
+			view = new View(inDom, inArgs);
+			creator = new Creator(view);
+			return creator.ShowView();
+		} else {
+			var fileTypeId = aras.getItemProperty(inDom, 'file_type');
+			var fileType = aras.getItemFromServerWithRels('FileType', fileTypeId, 'name', 'View With', 'client, application, related_id(viewer_url)', 1).node;
+			var viewer = (fileType) ? fileType.selectSingleNode('Relationships/Item[client=\'js\'][application/@is_null=\'1\']/related_id/Item/viewer_url') : null;
+
+			if (viewer) {
+				view = new View(inDom, inArgs);
+				creator = new Creator(view);
+				return creator.ShowView();
+			} else {
+				var fileURL;
+
+				try {
+					fileURL = aras.IomInnovator.getFileUrl(inDom.getAttribute('id'), aras.Enums.UrlType.SecurityToken);
+				}
+				catch(error) {
+					aras.AlertError(aras.getResource('', 'ui_methods_ex.failed_get_file'), aras.getResource('', 'ui_methods_ex.failed_to_open_file'),
+						aras.getResource('', 'common.client_side_err'));
+
+					return;
+				}
+				
+				const wnd = window.open('','', 'scrollbars=yes,resizable=yes,status=no');
+				wnd.opener = null;
+				wnd.location = fileURL;
+			}
+		}
+	});
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>OnShowFile</name>
+ </Item>
+</AML>

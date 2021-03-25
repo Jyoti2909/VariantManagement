@@ -1,0 +1,37 @@
+﻿<AML>
+ <Item type="Method" id="E40310CA12994622B05382F8C54EB0B5" action="add">
+  <comments>Displays some Rollup fields and hide corresponding non-Rollup fields if need</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var actItm = document.ActivityItem;
+if (!actItm) actItm = document.item;
+var doDisplayRollupFields = actItm.selectSingleNode("Relationships/Item[@type='Activity2 Assignment' and string(@action)!='delete']");
+if (!doDisplayRollupFields)
+{
+  var isFromTree = actItm.selectSingleNode("ancestor::Item[@type='Project' or @type='Project Template']");
+  if (!isFromTree)
+  {
+    var aml2send = "<Item type='Activity2 Assignment' action='get' select='id'><source_id>" + actItm.getAttribute("id") + "</source_id></Item>";
+    var r = top.aras.applyItem(aml2send);
+    if (r && r.indexOf("Item")>-1)
+    {
+      doDisplayRollupFields = true;
+    }
+  }
+}
+
+if (doDisplayRollupFields)
+{
+  var nms2rollupNms = {date_start_act:"rollup_date_start_act",  work_est:"rollup_work_est", percent_compl:"rollup_percent_compl"};
+  for (var nm in nms2rollupNms)
+  {
+    var rollupNm = nms2rollupNms[nm];
+    var spn = getFieldByName(nm);//this function is defined on a Form.
+    var rollupSpn = getFieldByName(rollupNm);
+    if (spn) spn.style.display = "none";
+    if (rollupSpn) rollupSpn.style.display = "inline";
+  }
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PM_DisplayRollupFieldsIfNeed</name>
+ </Item>
+</AML>

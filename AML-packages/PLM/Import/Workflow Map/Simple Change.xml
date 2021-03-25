@@ -1,0 +1,618 @@
+﻿<AML>
+ <Item type="Workflow Map" id="2482A63E43BD4E8784DA4D7350F2ACDF" action="add">
+  <description xml:lang="en">Workflow for Simple ECOs and MCOs</description>
+  <node_bg_color>       </node_bg_color>
+  <node_label1_color>       </node_label1_color>
+  <node_label1_font />
+  <node_label2_color>       </node_label2_color>
+  <node_label2_font />
+  <node_name_color>       </node_name_color>
+  <node_name_font />
+  <node_size />
+  <process_owner keyed_name="CM" type="Identity">F6624E9AE5504958A84E4B6A5831298B</process_owner>
+  <transition_line_color>       </transition_line_color>
+  <transition_name_color>       </transition_name_color>
+  <transition_name_font />
+  <name>Simple Change</name>
+  <Relationships>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Start" type="Activity Template">
+     <Item type="Activity Template" id="86ECC802774C4C72B33BB64429373BF6" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/WorkflowStart.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>0</is_end>
+      <is_start>1</is_start>
+      <message xml:lang="en">Workflow Start</message>
+      <priority>2</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>12</x>
+      <y>95</y>
+      <name>Start</name>
+      <Relationships>
+       <Item type="Workflow Map Path" id="1F641E6A278A40498E04E9FDA4FF265B" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>0</is_override>
+        <name>Begin</name>
+        <related_id>098E20E506704A37993AAE56E688F1FB</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Start" type="Activity Template">86ECC802774C4C72B33BB64429373BF6</source_id>
+        <x>30</x>
+        <y>-4</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Simple Change" type="Workflow Map">2482A63E43BD4E8784DA4D7350F2ACDF</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Draft Changes" type="Activity Template">
+     <Item type="Activity Template" id="29DB24C928874F3EBDA662CE7053BF05" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>1</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <escalate_to keyed_name="CM" type="Identity">F6624E9AE5504958A84E4B6A5831298B</escalate_to>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please implement the change</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>244</x>
+      <y>95</y>
+      <name>Draft Changes</name>
+      <Relationships>
+       <Item type="Activity Template EMail" id="DCE322EEAE2D44A494B11468DE1CBE56" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="CM Activity Notification" type="EMail Message">D7DED4DE50BA4CD4817B4B4638C1CD78</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+        <target>all_assignments</target>
+       </Item>
+       <Item type="Activity Template Method" id="E25493658B074C9FADAD9293CB9046C4" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="PE_DynamicWorkflowAssignments" type="Method">
+         <Item type="Method" action="get" select="id">
+          <name>PE_DynamicWorkflowAssignments</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+       </Item>
+       <Item type="Activity Template Task" id="3403E67F4CD346C6BB1190A74FD9351D" action="add">
+        <description xml:lang="en">Review the change form for details of the changes to be made</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="96B49CA9BC574D3E86E141AD374697FA" action="add">
+        <description xml:lang="en">Update your affected items to reflect the desired change</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="DE107C74A53A457883A13091B31A5974" action="add">
+        <description xml:lang="en">Vote Complete to indicate that your work is done</description>
+        <is_required>0</is_required>
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+        <sequence>3</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="1DF82769E68345DF87EB8B45D71B962A" action="add">
+        <controlled_itemtype keyed_name="Simple ECO" type="ItemType" name="Simple ECO">05C2AC1EB54742FF95CBB12FE12F5EDB</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="2EF5BFF8E2F942429A00D86B36628D72" type="Life Cycle Transition">2EF5BFF8E2F942429A00D86B36628D72</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+       </Item>
+       <Item type="Activity Template Transition" id="79C3B5C35E874332AAD72F4CAA39F1FE" action="add">
+        <controlled_itemtype keyed_name="Simple MCO" type="ItemType" name="Simple MCO">2826F2403689438295EDBF60BEAE7C74</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="DC2E4608DDA94C2DA47324BF1DEF0E7C" type="Life Cycle Transition">DC2E4608DDA94C2DA47324BF1DEF0E7C</related_id>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+       </Item>
+       <Item type="Activity Template Transition" id="3F1B9620C4E543608B5CFDBF0EF50642" action="add">
+        <controlled_itemtype keyed_name="Simple ECO" type="ItemType" name="Simple ECO">05C2AC1EB54742FF95CBB12FE12F5EDB</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="629940511600461DA35569E82202B2F5" type="Life Cycle Transition">629940511600461DA35569E82202B2F5</related_id>
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+       </Item>
+       <Item type="Activity Template Transition" id="ED226677EF2B4D34B88CCAC73E9D63BE" action="add">
+        <controlled_itemtype keyed_name="Simple MCO" type="ItemType" name="Simple MCO">2826F2403689438295EDBF60BEAE7C74</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="E8FC970061734C439CFBDF49F99C67AF" type="Life Cycle Transition">E8FC970061734C439CFBDF49F99C67AF</related_id>
+        <sort_order>512</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="55838B06DB904BAB835C680B3BE357FD" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>0</is_override>
+        <name>Complete</name>
+        <related_id>4A245C410B824715BA6A526A46E57816</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Draft Changes" type="Activity Template">29DB24C928874F3EBDA662CE7053BF05</source_id>
+        <x>25</x>
+        <y>-3</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Simple Change" type="Workflow Map">2482A63E43BD4E8784DA4D7350F2ACDF</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Review Changes" type="Activity Template">
+     <Item type="Activity Template" id="DBE076D5A2924045AC9FD236434B79B4" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>1</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <escalate_to keyed_name="CM" type="Identity">F6624E9AE5504958A84E4B6A5831298B</escalate_to>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please review the changes</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>488</x>
+      <y>95</y>
+      <name>Review Changes</name>
+      <Relationships>
+       <Item type="Activity Template EMail" id="BABE56FF6F06473EB5BE30678853A7BD" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="CM Activity Notification" type="EMail Message">D7DED4DE50BA4CD4817B4B4638C1CD78</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Changes" type="Activity Template">DBE076D5A2924045AC9FD236434B79B4</source_id>
+        <target>all_assignments</target>
+       </Item>
+       <Item type="Activity Template Method" id="67B0B9554A274F9EBEAF7E7FC1669A7B" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="PE_DynamicWorkflowAssignments" type="Method">
+         <Item type="Method" action="get" select="id">
+          <name>PE_DynamicWorkflowAssignments</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Changes" type="Activity Template">DBE076D5A2924045AC9FD236434B79B4</source_id>
+       </Item>
+       <Item type="Activity Template Task" id="9D31BDEAB23E4E53A1CC676054885432" action="add">
+        <description xml:lang="en">Review changes to the affected items and make sure they conform to the change description</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Changes" type="Activity Template">DBE076D5A2924045AC9FD236434B79B4</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="313412FE7CCB4C1BA80FB69B59D2105F" action="add">
+        <description xml:lang="en">Vote Reject to have updates made or Approve to send to CCB</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review Changes" type="Activity Template">DBE076D5A2924045AC9FD236434B79B4</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="611D83AE3015439C9EBD76BBCCB7276D" action="add">
+        <controlled_itemtype keyed_name="Simple ECO" type="ItemType" name="Simple ECO">05C2AC1EB54742FF95CBB12FE12F5EDB</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="7B8FF92513334DD7993313E251830E2C" type="Life Cycle Transition">7B8FF92513334DD7993313E251830E2C</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Changes" type="Activity Template">DBE076D5A2924045AC9FD236434B79B4</source_id>
+       </Item>
+       <Item type="Activity Template Transition" id="9B59BAD3CFE54D29A609138B0D52B0DE" action="add">
+        <controlled_itemtype keyed_name="Simple MCO" type="ItemType" name="Simple MCO">2826F2403689438295EDBF60BEAE7C74</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="7B8FF92513334DD7993313E251830E2C" type="Life Cycle Transition">7B8FF92513334DD7993313E251830E2C</related_id>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review Changes" type="Activity Template">DBE076D5A2924045AC9FD236434B79B4</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="E2B44785867F415398F79EFE81145E00" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Approve</name>
+        <related_id>B3EBD53FA2FF4DFFA30E32F612B45AF2</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Changes" type="Activity Template">DBE076D5A2924045AC9FD236434B79B4</source_id>
+        <x>25</x>
+        <y>-4</y>
+       </Item>
+       <Item type="Workflow Map Path" id="62F1E6D09B67466ABAE176060F9A0208" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>1</is_override>
+        <name>Reject</name>
+        <related_id>29DB24C928874F3EBDA662CE7053BF05</related_id>
+        <segments>500,172|256,172</segments>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review Changes" type="Activity Template">DBE076D5A2924045AC9FD236434B79B4</source_id>
+        <x>-140</x>
+        <y>80</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="Simple Change" type="Workflow Map">2482A63E43BD4E8784DA4D7350F2ACDF</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="CCB Review" type="Activity Template">
+     <Item type="Activity Template" id="B3EBD53FA2FF4DFFA30E32F612B45AF2" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <escalate_to keyed_name="CM" type="Identity">F6624E9AE5504958A84E4B6A5831298B</escalate_to>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please perform a CCB Review</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>594</x>
+      <y>95</y>
+      <name>CCB Review</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="C003CC3F82784F8F9A3E3AD790AA8730" action="add">
+        <related_id keyed_name="Change Control Board" type="Identity">84EE935EDD0848C7BD2BEAA13B0C6D31</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="CCB Review" type="Activity Template">B3EBD53FA2FF4DFFA30E32F612B45AF2</source_id>
+        <is_required>0</is_required>
+        <for_all_members>1</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template EMail" id="1BAC5B4BD2B04AA6B63E37B4245BDAFA" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="CM Activity Notification" type="EMail Message">D7DED4DE50BA4CD4817B4B4638C1CD78</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="CCB Review" type="Activity Template">B3EBD53FA2FF4DFFA30E32F612B45AF2</source_id>
+        <target>all_assignments</target>
+       </Item>
+       <Item type="Activity Template Task" id="542B33A44349401AAB3D28EF7E841A63" action="add">
+        <description xml:lang="en">Perform a CCB review of the changes</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="CCB Review" type="Activity Template">B3EBD53FA2FF4DFFA30E32F612B45AF2</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="8FD7371B2795432F9F861262173D23A4" action="add">
+        <description xml:lang="en">Vote Reject to send the change back for updates or Approve to release the change</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="CCB Review" type="Activity Template">B3EBD53FA2FF4DFFA30E32F612B45AF2</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Workflow Map Path" id="886FA7842C6C47A7BF3BACE5D1366550" action="add">
+        <authentication>password</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Approve</name>
+        <related_id>74F49945785B4DAF9F8A3354B153CBF0</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="CCB Review" type="Activity Template">B3EBD53FA2FF4DFFA30E32F612B45AF2</source_id>
+        <x>36</x>
+        <y>-4</y>
+       </Item>
+       <Item type="Workflow Map Path" id="574B42E92BE048A681840F945BA45ACB" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>1</is_override>
+        <name>Reject</name>
+        <related_id>29DB24C928874F3EBDA662CE7053BF05</related_id>
+        <segments>606,197|256,197</segments>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="CCB Review" type="Activity Template">B3EBD53FA2FF4DFFA30E32F612B45AF2</source_id>
+        <x>-179</x>
+        <y>105</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="Simple Change" type="Workflow Map">2482A63E43BD4E8784DA4D7350F2ACDF</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Initial Review" type="Activity Template">
+     <Item type="Activity Template" id="4A245C410B824715BA6A526A46E57816" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <escalate_to keyed_name="CM" type="Identity">F6624E9AE5504958A84E4B6A5831298B</escalate_to>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please perform an initial review of the change</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>363</x>
+      <y>95</y>
+      <name>Initial Review</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="A03076CD583741D7B47D491587608D51" action="add">
+        <related_id keyed_name="Manager" type="Identity">
+         <Item type="Identity" action="get" select="id">
+          <name>Manager</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template EMail" id="48D92173F1CE4CAF82214D9DF120C4F6" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="CM Activity Notification" type="EMail Message">D7DED4DE50BA4CD4817B4B4638C1CD78</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+        <target>all_assignments</target>
+       </Item>
+       <Item type="Activity Template Task" id="CE423606261B48E4ACFE285BAB63FBD9" action="add">
+        <description xml:lang="en">Review all changes to the affected items</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="DF326956D3F04E30A8CCB3E92BB51AD2" action="add">
+        <description xml:lang="en">If the changes do not match the requirements, vote Reject to have updates made</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="3071884D254846C78FB691AF164969B8" action="add">
+        <description xml:lang="en">If the changes meet the Fast Track criteria, vote Fast Track Approve</description>
+        <is_required>0</is_required>
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+        <sequence>3</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="24444146B2E946EDB15EDBFF7D6E813E" action="add">
+        <description xml:lang="en">For a detailed review, vote Full Review</description>
+        <is_required>0</is_required>
+        <sort_order>512</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+        <sequence>4</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="673C79EE073C40DDA1AFBAC62581479A" action="add">
+        <controlled_itemtype keyed_name="Simple ECO" type="ItemType" name="Simple ECO">05C2AC1EB54742FF95CBB12FE12F5EDB</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="7B8FF92513334DD7993313E251830E2C" type="Life Cycle Transition">7B8FF92513334DD7993313E251830E2C</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+       </Item>
+       <Item type="Activity Template Transition" id="FE82CB973F104FF99DC1E136FBB8015A" action="add">
+        <controlled_itemtype keyed_name="Simple MCO" type="ItemType" name="Simple MCO">2826F2403689438295EDBF60BEAE7C74</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="5B6A461639964B54A4A9C23DF4C910A4" type="Life Cycle Transition">5B6A461639964B54A4A9C23DF4C910A4</related_id>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="4562879529864C2F91B0413FA1E7129D" action="add">
+        <authentication>password</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Fast Track Approve</name>
+        <related_id>74F49945785B4DAF9F8A3354B153CBF0</related_id>
+        <segments>375,42|732,42</segments>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+        <x>128</x>
+        <y>-69</y>
+       </Item>
+       <Item type="Workflow Map Path" id="135CC77E20C244169D7B099161147667" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>0</is_override>
+        <name>Reject</name>
+        <related_id>29DB24C928874F3EBDA662CE7053BF05</related_id>
+        <segments>375,154|256,154</segments>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+        <x>-84</x>
+        <y>62</y>
+       </Item>
+       <Item type="Workflow Map Path" id="43DE8468729E496EAA057F2D632FCA3F" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Full Review</name>
+        <related_id>DBE076D5A2924045AC9FD236434B79B4</related_id>
+        <segments />
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Initial Review" type="Activity Template">4A245C410B824715BA6A526A46E57816</source_id>
+        <x>23</x>
+        <y>-4</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="Simple Change" type="Workflow Map">2482A63E43BD4E8784DA4D7350F2ACDF</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Prepare Change" type="Activity Template">
+     <Item type="Activity Template" id="098E20E506704A37993AAE56E688F1FB" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <escalate_to keyed_name="CM" type="Identity">F6624E9AE5504958A84E4B6A5831298B</escalate_to>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Prepare the change for submission</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>119</x>
+      <y>95</y>
+      <name>Prepare Change</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="61520D62B96342068470694D70641A5C" action="add">
+        <related_id keyed_name="Manager" type="Identity">
+         <Item type="Identity" action="get" select="id">
+          <name>Manager</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Prepare Change" type="Activity Template">098E20E506704A37993AAE56E688F1FB</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template EMail" id="5E4A8959DDEA420D8E756E34331E249C" action="add">
+        <event>on_activate</event>
+        <related_id keyed_name="CM Activity Notification" type="EMail Message">D7DED4DE50BA4CD4817B4B4638C1CD78</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Prepare Change" type="Activity Template">098E20E506704A37993AAE56E688F1FB</source_id>
+        <target>all_assignments</target>
+       </Item>
+       <Item type="Activity Template Task" id="CD7E1FF39FFD4B12A5A7E7D84F125DA2" action="add">
+        <description xml:lang="en">Fill out the change form and assign affected items</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Prepare Change" type="Activity Template">098E20E506704A37993AAE56E688F1FB</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="4B9A13403F2048A8804D792A111C4DDE" action="add">
+        <description xml:lang="en">Attach any supporting documentation on the Attachments tab</description>
+        <is_required>0</is_required>
+        <sort_order>512</sort_order>
+        <source_id keyed_name="Prepare Change" type="Activity Template">098E20E506704A37993AAE56E688F1FB</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="FA814926875E43438F291B2172DAAFCD" action="add">
+        <description xml:lang="en">Vote Submit to initiate the change or Cancel to reject the Change</description>
+        <is_required>0</is_required>
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Prepare Change" type="Activity Template">098E20E506704A37993AAE56E688F1FB</source_id>
+        <sequence>3</sequence>
+       </Item>
+       <Item type="Workflow Map Path" id="8F6A07BF14B242B785373D054C354606" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Submit</name>
+        <related_id>29DB24C928874F3EBDA662CE7053BF05</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Prepare Change" type="Activity Template">098E20E506704A37993AAE56E688F1FB</source_id>
+        <x>35</x>
+        <y>-3</y>
+       </Item>
+       <Item type="Workflow Map Path" id="1F4FA02B64A84EEA9B0052F62D45D4C1" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Cancel</name>
+        <related_id>459757A0806A4299B796D5B996AF9090</related_id>
+        <segments />
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Prepare Change" type="Activity Template">098E20E506704A37993AAE56E688F1FB</source_id>
+        <x>-42</x>
+        <y>57</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>768</sort_order>
+    <source_id keyed_name="Simple Change" type="Workflow Map">2482A63E43BD4E8784DA4D7350F2ACDF</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Cancel Change" type="Activity Template">
+     <Item type="Activity Template" id="459757A0806A4299B796D5B996AF9090" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Change Cancelled</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>119</x>
+      <y>183</y>
+      <name>Cancel Change</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="726DA27586E44845AD47A2F88774FF13" action="add">
+        <controlled_itemtype keyed_name="Simple MCO" type="ItemType" name="Simple MCO">2826F2403689438295EDBF60BEAE7C74</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="8A50DB38E85D4CD0BEECFAA90EE7BD8B" type="Life Cycle Transition">8A50DB38E85D4CD0BEECFAA90EE7BD8B</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Cancel Change" type="Activity Template">459757A0806A4299B796D5B996AF9090</source_id>
+       </Item>
+       <Item type="Activity Template Transition" id="00096E4D2A0C48D2926793F7F9C1B347" action="add">
+        <controlled_itemtype keyed_name="Simple ECO" type="ItemType" name="Simple ECO">05C2AC1EB54742FF95CBB12FE12F5EDB</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="7DF0BD6D0A8B492ABBB3121A066A2F7C" type="Life Cycle Transition">7DF0BD6D0A8B492ABBB3121A066A2F7C</related_id>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Cancel Change" type="Activity Template">459757A0806A4299B796D5B996AF9090</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>896</sort_order>
+    <source_id keyed_name="Simple Change" type="Workflow Map">2482A63E43BD4E8784DA4D7350F2ACDF</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Release Change" type="Activity Template">
+     <Item type="Activity Template" id="74F49945785B4DAF9F8A3354B153CBF0" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Change Released</message>
+      <priority>1</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>720</x>
+      <y>95</y>
+      <name>Release Change</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="89308ACBCF4B490597E9781C487DEDA5" action="add">
+        <controlled_itemtype keyed_name="Simple MCO" type="ItemType" name="Simple MCO">2826F2403689438295EDBF60BEAE7C74</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="E765E2A2F568417680EFE80E247B3202" type="Life Cycle Transition">E765E2A2F568417680EFE80E247B3202</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Release Change" type="Activity Template">74F49945785B4DAF9F8A3354B153CBF0</source_id>
+       </Item>
+       <Item type="Activity Template Transition" id="07FC8A17ABF64808B19F3021EF16EE68" action="add">
+        <controlled_itemtype keyed_name="Simple ECO" type="ItemType" name="Simple ECO">05C2AC1EB54742FF95CBB12FE12F5EDB</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="4EB08B4F87764C05A71CF769912F4951" type="Life Cycle Transition">4EB08B4F87764C05A71CF769912F4951</related_id>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Release Change" type="Activity Template">74F49945785B4DAF9F8A3354B153CBF0</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>1024</sort_order>
+    <source_id keyed_name="Simple Change" type="Workflow Map">2482A63E43BD4E8784DA4D7350F2ACDF</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

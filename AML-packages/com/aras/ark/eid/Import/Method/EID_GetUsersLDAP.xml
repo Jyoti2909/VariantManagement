@@ -1,0 +1,347 @@
+﻿<AML>
+ <Item type="Method" id="8A9001B22FEA471887861B6F8FC07628" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="EID_External Identity Configurator" type="Identity">5400BE2B4462465F820166CED8DA03CB</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+		}
+
+		internal class LdapDataWrapper
+		{
+			private Dictionary<string, string> AttributeDict;
+
+			public LdapDataWrapper(System.DirectoryServices.Protocols.SearchResultEntry entry, string[] entryAttributes)
+			{
+				Dictionary<string, string> attributeDict = new Dictionary<string, string>();
+				for (int i = 0; i < entryAttributes.Length; i++)
+				{
+					string entryAttribute = entryAttributes[i];
+					string attributeVal = "";
+					if (string.Equals(entryAttribute, "unique_id", StringComparison.Ordinal))
+					{
+						attributeVal = entry.DistinguishedName;
+					}
+					else if (string.Equals(entryAttribute, "enabled", StringComparison.Ordinal))
+					{
+						attributeVal = "1";
+					}
+					else if (entry.Attributes[entryAttribute] != null)
+					{
+						System.DirectoryServices.Protocols.DirectoryAttribute attribute = entry.Attributes[entryAttribute];
+						var values = new string[attribute.Count];
+						for (int j = 0; j < attribute.Count; j++)
+						{
+							values[j] = attribute[j].ToString();
+						}
+
+						attributeVal = string.Join(";", values);
+					}
+					attributeDict.Add(entryAttribute, attributeVal);
+				}
+				this.AttributeDict = attributeDict;
+			}
+
+			public Dictionary<string, string> getAttributeDict()
+			{
+				return this.AttributeDict;
+			}
+		}
+		internal class LdapService
+		{
+			private int searchPageSize;
+			private string searchBaseDN;
+			private string searchFilter;
+			private string[] attributesToLoad;
+			private List<System.DirectoryServices.Protocols.SearchResultEntryCollection> allUsers = new List<System.DirectoryServices.Protocols.SearchResultEntryCollection>();
+
+			public LdapService(string ldap, string adUser, string adPassword, string adFilter, int pageSize, string[] attributes, string uniqueId)
+			{
+				var ldapDirectoryIdentifier = new System.DirectoryServices.Protocols.LdapDirectoryIdentifier(
+					ldap,
+					true,
+					false);
+				this.searchBaseDN = uniqueId;
+
+				var networkCredential = new NetworkCredential(
+					adUser,
+					adPassword);
+
+				using (System.DirectoryServices.Protocols.LdapConnection ldapConnection = new System.DirectoryServices.Protocols.LdapConnection(ldapDirectoryIdentifier, networkCredential))
+				{
+					ldapConnection.SessionOptions.ProtocolVersion = 3;
+					ldapConnection.AuthType = System.DirectoryServices.Protocols.AuthType.Basic;
+
+					this.searchPageSize = pageSize;
+					this.searchFilter = IsMultipleFactors(adFilter) ? string.Format(CultureInfo.InvariantCulture, "(&{0})", adFilter) : adFilter;
+					this.attributesToLoad = attributes;
+
+					IEnumerable<System.DirectoryServices.Protocols.SearchResultEntryCollection> allReturnedUsers = this.GetUsers(ldapConnection);
+					foreach (System.DirectoryServices.Protocols.SearchResultEntryCollection userSearchResultCollection in allReturnedUsers)
+					{
+						this.allUsers.Add(userSearchResultCollection);
+					}
+				}
+			}
+
+			public List<System.DirectoryServices.Protocols.SearchResultEntryCollection> getAllUsers()
+			{
+				return this.allUsers;
+			}
+
+			private static bool IsMultipleFactors(string filter)
+			{
+				if (string.IsNullOrEmpty(filter) || filter[0] != '(')
+				{
+					return false;
+				}
+				int factorLevel = 0;
+				int rootFactorCount = 0;
+				for (int i = 0; i < filter.Length; i++)
+				{
+					if (filter[i] == '(')
+					{
+						factorLevel++;
+					}
+					else if (filter[i] == ')')
+					{
+						factorLevel--;
+						if (factorLevel == 0)
+						{
+							rootFactorCount++;
+						}
+					}
+				}
+				return rootFactorCount > 1;
+			}
+
+			public System.Collections.Generic.IEnumerable<System.DirectoryServices.Protocols.SearchResultEntryCollection> GetUsers(System.DirectoryServices.Protocols.LdapConnection ldapConnection)
+			{
+				System.DirectoryServices.Protocols.SearchRequest searchRequest = new System.DirectoryServices.Protocols.SearchRequest
+								(searchBaseDN,
+								searchFilter,
+								System.DirectoryServices.Protocols.SearchScope.Subtree,
+								this.attributesToLoad);
+
+				var pageResultRequestControl = new System.DirectoryServices.Protocols.PageResultRequestControl(this.searchPageSize);
+				searchRequest.Controls.Add(pageResultRequestControl);
+
+				while (true)
+				{
+					var searchResponse = (System.DirectoryServices.Protocols.SearchResponse)ldapConnection.SendRequest(searchRequest);
+					var pageResponse = (System.DirectoryServices.Protocols.PageResultResponseControl)searchResponse.Controls[0];
+
+					yield return searchResponse.Entries;
+					if (pageResponse.Cookie.Length == 0)
+					{
+						break;
+					}
+
+					pageResultRequestControl.Cookie = pageResponse.Cookie;
+				}
+			}
+		}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer dal;
+			private readonly string[] extraAttributes = new string[]
+			{
+				"userAccountControl",
+				"memberof",
+				"sAMAccountName"
+			};
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string server = contextItem.getProperty("eid_connection_string");
+				string username = contextItem.getProperty("eid_user_name");
+				string provider_id = contextItem.getProperty("eid_provider_id");
+				string password = contextItem.getProperty("eid_password_key");
+				string filter = contextItem.getProperty("eid_filter");
+				string[] attributes = AppendExtraAttributes(contextItem.getProperty("eid_attributes").Split(','));
+				string[] selectedUsersId = GetSelectedUsersId(contextItem.getProperty("gag_selected_users_id", null));
+				int pageSize = 1;
+				System.Web.Script.Serialization.JavaScriptSerializer serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+
+				List<Dictionary<string, string>> ldapResults;
+				try
+				{
+					ldapResults = dal.returnLdapDataDictionary(provider_id, server, username, password, filter, pageSize, attributes, selectedUsersId);
+				}
+				catch (System.DirectoryServices.Protocols.DirectoryOperationException ex)
+				when (ex.Response.ResultCode == System.DirectoryServices.Protocols.ResultCode.NoSuchObject)
+				{
+					return contextItem;
+				}
+				catch (Exception ex)
+				{
+					return dal.NewError(ex.Message);
+				}
+
+				string json = null;
+				if (ldapResults.Count > 0)
+				{
+					json = serializer.Serialize(ldapResults);
+				}
+				contextItem.setProperty("eid_results", json);
+				return contextItem;
+			}
+
+			private string[] AppendExtraAttributes(string[] attributes)
+			{
+				return attributes
+					.Concat(extraAttributes)
+					.Distinct()
+					.ToArray();
+			}
+
+			private static string[] GetSelectedUsersId(string selectedUsersIdJson)
+			{
+				if (string.IsNullOrWhiteSpace(selectedUsersIdJson))
+				{
+					return Array.Empty<string>();
+				}
+
+				System.Web.Script.Serialization.JavaScriptSerializer serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+				return serializer.Deserialize<string[]>(selectedUsersIdJson);
+			}
+		}
+
+		//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+		internal interface IDataAccessLayer
+		{
+			Item NewItem(string type = null, string action = null);
+			Item ApplyItem(Item item);
+			Item ApplyAML(string aml);
+			Item ApplySQL(string sql);
+			Item NewResult(string textMessage);
+			Item NewError(string errorMessage);
+
+			List<Dictionary<string, string>> returnLdapDataDictionary(string provider_id, string server, string username, string password, string filter, int pageSize, string[] attributes, string[] selectedUsersId);
+		}
+
+		//[PartialPath("DataAccessLayer/DataAccessLayer")]
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this.innovator = innovator;
+			}
+
+			public Item NewItem(string type = null, string action = null)
+			{
+				if (string.IsNullOrEmpty(type))
+				{
+					return innovator.newItem();
+				}
+				if (string.IsNullOrEmpty(action))
+				{
+					return innovator.newItem(type);
+				}
+				return innovator.newItem(type, action);
+			}
+
+			public Item NewResult(string textMessage)
+			{
+				return innovator.newResult(textMessage);
+			}
+
+			public Item NewError(string errorMessage)
+			{
+				return innovator.newError(errorMessage);
+			}
+
+			public Item ApplyItem(Item item)
+			{
+				return item.apply();
+			}
+
+			public Item ApplyAML(string aml)
+			{
+				return innovator.applyAML(aml);
+			}
+
+			public Item ApplySQL(string sql)
+			{
+				return innovator.applySQL(sql);
+			}
+
+			public List<Dictionary<string, string>> returnLdapDataDictionary(
+				string provider_id,
+				string server,
+				string username,
+				string password,
+				string filter,
+				int pageSize,
+				string[] attributes,
+				string[] selectedUsersId)
+			{
+				List<Dictionary<string, string>> ldapResults = new List<Dictionary<string, string>>();
+				Item provider = this.NewItem("eid_external identity provider", "get");
+				provider.setID(provider_id);
+				provider.setAttribute("select", "eid_ldap_base_dn");
+				provider = provider.apply();
+				if (provider.isError())
+				{
+					return ldapResults;
+				}
+
+				string uniqueId = provider.getProperty("eid_ldap_base_dn", "");
+				if (string.IsNullOrEmpty(uniqueId))
+				{
+					return ldapResults;
+				}
+
+				if (selectedUsersId.Length > 0)
+				{
+					filter = BuildFilterForSelectedUsers(filter, selectedUsersId);
+				}
+
+				LdapService ldap = new LdapService(server, username, password, filter, pageSize, attributes, uniqueId);
+				List<System.DirectoryServices.Protocols.SearchResultEntryCollection> allUsers = ldap.getAllUsers();
+				foreach (var userData in allUsers)
+				{
+					if (userData.Count == 0)
+					{
+						continue;
+					}
+
+					LdapDataWrapper ldapData = new LdapDataWrapper(userData[0], attributes);
+					ldapResults.Add(ldapData.getAttributeDict());
+				}
+				return ldapResults;
+			}
+
+			private string BuildFilterForSelectedUsers(string filter, string[] selectedUsersId)
+			{
+				if (selectedUsersId.Length == 0)
+				{
+					return filter;
+				}
+
+				Item users = NewItem("User", "get");
+				users.setAttribute("idlist", string.Join(",", selectedUsersId));
+				users.setAttribute("select", "login_name");
+				users = ApplyItem(users);
+				if (users.isError())
+				{
+					throw new ItemException(users);
+				}
+
+				IEnumerable<string> userLoginNameFiltes = users.Enumerate().Select(user => $"(sAMAccountName={user.getProperty("login_name")})");
+				string newFilter = string.Join(string.Empty, userLoginNameFiltes);
+				return $"(&{filter}{newFilter})";
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_GetUsersLDAP</name>
+ </Item>
+</AML>

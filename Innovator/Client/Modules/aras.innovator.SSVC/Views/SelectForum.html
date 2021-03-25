@@ -1,0 +1,146 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<script type="text/javascript" src="../../../javascript/dialog.js"></script>
+		<style type="text/css">
+			@import "../../../javascript/dojo/resources/dojo.css";
+			@import "../../../javascript/dijit/themes/claro/claro.css";
+			@import "../../../javascript/include.aspx?classes=common.css";
+			@import "../../../styles/default.css";
+		</style>
+		<style type="text/css">
+		html, body
+		{
+			padding: 0;
+			margin: 0;
+			text-align: center;
+			overflow: hidden;
+		}
+		#container
+		{
+			margin: 0 auto;
+			padding: 10px;
+		}
+		#buttonsRow
+		{
+			width: 100%;
+			padding: 10px;
+			text-align: center;
+		}
+		#selectionRow
+		{
+			width: 100%;
+		}
+		#mainLabel
+		{
+			width: 30px;
+		}
+		.sys_f_div_select
+		{
+			width: 170px;
+		}
+		.sys_f_select
+		{
+			width: 100%;
+		}
+		</style>
+		<script type="text/javascript">
+			var argsWindow = window.frameElement.dialogArguments;
+			var onCancelClick = argsWindow.dialog.close.bind(argsWindow.dialog);
+			var aras = argsWindow.aras;
+			var selectSpan;
+
+			function onSelectChange(select) {
+				selectSpan.innerHTML = select.options[select.selectedIndex].text;
+			}
+
+			function onOkClick() {
+				var select = document.getElementById("select");
+				var selectedValue = select.options[select.selectedIndex].value;
+				if (!selectedValue) {
+					aras.AlertError("Select forum, to which adding should be done.");
+				}
+				else if (selectedValue === "createNew") {
+					window.parent.ArasModules.Dialog.show("iframe", {
+							title: aras.getResource("", "ssvc.forum.dialog.create_new_forum"),
+							aras: aras,
+							dialogWidth: 302,
+							dialogHeight: 119,
+							resizable: false,
+							content: aras.getBaseURL() + "/Modules/aras.innovator.SSVC/Views/CreateForum.html"
+						}).promise.then(function (forum) {
+								if (forum) {
+									argsWindow.dialog.close(forum.id || forum)
+								}
+						});
+				} else {
+					argsWindow.dialog.close(selectedValue);
+				}
+			}
+
+			window.onload = function onLoadHandler() {
+				selectSpan = document.getElementById("selectSpan");
+				document.getElementById("mainLabel").textContent = aras.getResource("", "ssvc.forum.add_to");
+				document.getElementById("okBtn").value = aras.getResource("", "common.ok");
+				document.getElementById("cancelBtn").value = aras.getResource("", "common.cancel");
+				document.getElementById("createNewOption").text = aras.getResource("", "ssvc.forum.dialog.create_new_forum") + "...";
+				var includeMyBmrks = argsWindow.includeMyBookmarks !== undefined ? argsWindow.includeMyBookmarks : true;
+				setupSelection(includeMyBmrks);
+
+				function setupSelection(/*bool*/ includeMyBmrks) {
+					var forums = getForumsUserCanEdit(includeMyBmrks);
+					if (forums.isError())
+					{
+						var select = document.getElementById("select");
+						onSelectChange(select);
+						return;
+					}
+					addOptionsToSelect(forums);
+
+					function addOptionsToSelect(/*items*/ options) {
+						var select = document.getElementById("select");
+						for (var i = 0, count = options.getItemCount(); i < count; i++) {
+							var current = options.getItemByIndex(i);
+							var id = current.getID();
+							var label = current.getProperty("label") || current.getProperty("name");
+							var forumType = current.getProperty('forum_type');
+
+							if (forumType === 'MyBookmarks') {
+								select.add(new Option(label, id, true, true), 0);
+							} else {
+								select.add(new Option(label, id));
+							}
+						}
+						onSelectChange(select);
+					}
+
+					function getForumsUserCanEdit(/*bool*/ includeMyBmrks) {
+						var forums = aras.newIOMItem("User", "VC_GetForumsUserCanEdit");
+						forums.setID(aras.getUserID());
+						forums.setProperty("include_my_bookmarks", includeMyBmrks);
+						return forums.apply();
+					}
+				}
+			}
+		</script>
+	</head>
+	<body>
+		<div id="container">
+			<div id="selectionRow">
+				<label id="mainLabel"></label>
+				<div class="sys_f_div_select">
+					<select id="select" class="sys_f_select"  onchange="onSelectChange(this)">
+						<option id="createNewOption" value="createNew" selected></option>
+					</select>
+					<span id="selectSpan" class="sys_f_span_select"></span>
+				</div>
+			</div>
+			<div id="buttonsRow">
+				<input type="submit" class="btn" name="ok" id="okBtn"  onclick="onOkClick()"/>
+				<input type="submit" class="btn cancel_button" name="cancel" id="cancelBtn" onclick="onCancelClick()"/>
+			</div>
+		</div>
+	</body>
+</html>

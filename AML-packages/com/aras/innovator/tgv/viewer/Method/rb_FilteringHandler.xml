@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="C99BD41CCDF14D6F93D0C902B00C2445" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const tgvContext = inArgs.contextParams.tgvContext;
+const dialog = ArasModules.Dialog.show('iframe', {
+	title: aras.getResource('../Modules/aras.innovator.TreeGridView', 'filter-viewer_title'),
+	aras: aras,
+	sourceTgvdNode: aras.itemsCache.getItem(inArgs.contextItem.itemID),
+	changeableTgvdNode: inArgs.contextItem.item,
+	dialogWidth: 512,
+	dialogHeight: 448,
+	content: '../Modules/aras.innovator.TreeGridView/Views/FilterViewer.html'
+});
+
+dialog.contentNode.querySelector('iframe').contentWindow.addEventListener('load', function() {
+	this.document.querySelector('input').value = tgvContext.visibleChildrenMaxCount < 0 ? '' : tgvContext.visibleChildrenMaxCount;
+});
+dialog.promise
+.then(function(visibleChildrenMaxCount) {
+	if (!visibleChildrenMaxCount) {
+		return;
+	}
+	tgvContext.visibleChildrenMaxCount = visibleChildrenMaxCount || tgvContext.visibleChildrenMaxCount;
+	tgvContext.reload();
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>rb_FilteringHandler</name>
+ </Item>
+</AML>

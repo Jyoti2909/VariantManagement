@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <configSections>
+    <!-- Common converter service configuration -->
+    <section name="ConversionServer" type="Aras.ConversionFramework.ConversionServer.Configuration.ConversionServerConfigurationSection, Conversion.Base" />
+    <sectionGroup name="ConverterSettings">
+      <section name="ArasCadConverter" type="Aras.ConversionFramework.Converter.Hoops.Configuration.HoopsConverterConfiguration, ArasCadConverter">
+      </section>
+      <section name="ArasCadConverterPrc" type="Aras.ConversionFramework.Converter.Hoops.Configuration.HoopsConverterConfiguration, ArasCadConverter">
+      </section>
+    </sectionGroup>
+  </configSections>
+  <ConversionServer>
+    <InnovatorServer url="http://localhost/MSQ459LLG-GRAM-27763/Server/InnovatorServer.aspx" />
+    <Converters>
+      <Converter name="Aras CAD to PDF Converter" type="Aras.ConversionFramework.Converter.Hoops.HoopsConverter, ArasCadConverter" />
+      <Converter name="Aras PRC to SCS Converter" type="Aras.ConversionFramework.Converter.Hoops.HoopsConverterPrc, ArasCadConverter" />
+    </Converters>
+  </ConversionServer>
+  <ConverterSettings>
+    <!-- Place here configuration sections for converters -->
+    <ArasCadConverter>
+      <Application converterPath="C:\HOOPS Converter\bin\converter.exe" />
+      <Command arguments="--sc_compute_bounding_boxes 'All' --input_pdf_template_file 'C:\HOOPS Converter\templates\Blank_Template_L.pdf' --output_pdf '%filepath%\%filename%.pdf' --output_png '%filepath%\%filename%.png' --output_png_resolution '150x150' --output_scs '%filepath%\%filename%.scs' --output_xml_assemblytree '%filepath%\%filename%.xml' --output_prc '%filepath%\%filename%.prc' --background_color '1.0, 1.0, 1.0' --output_logfile '%filepath%\%filename%'" />
+      <Output>
+        <UploadToVault>
+          <File extension="prc" argsMarkers="--output_prc" />
+          <File extension="scs" argsMarkers="--output_scs" />
+          <File extension="pdf" argsMarkers="--output_pdf" />
+          <File extension="png" argsMarkers="--output_png" />
+          <File extension="stl" argsMarkers="--output_stl" />
+          <File extension="xml" argsMarkers="--output_xml_assemblytree" />
+        </UploadToVault>
+      </Output>
+      <AssemblyCommand dynamicEnabled="True" arguments="--input_pdf_template_file 'C:\HOOPS Converter\templates\Blank_Template_L.pdf' --output_pdf '%filepath%\%filename%.pdf' --output_png '%filepath%\%filename%.png' --output_png_resolution '150x150' --output_scs '%filepath%\%filename%.scs' --output_xml_assemblytree '%filepath%\%filename%.xml' --output_prc '%filepath%\%filename%.prc' --background_color '1.0, 1.0, 1.0' --output_logfile '%filepath%\%filename%'" />
+    </ArasCadConverter>
+    <ArasCadConverterPrc>
+      <Application converterPath="C:\HOOPS Converter\bin\converter.exe" />
+      <Command arguments="--output_scs '%filepath%\%filename%.scs' -output_xml_assemblytree '%filepath%\%filename%.xml' --output_logfile '%filepath%\%filename%.log'" />
+    </ArasCadConverterPrc>
+    <Output>
+      <UploadToVault>
+        <File extension="prc" argsMarkers="--output_prc" />
+        <File extension="scs" argsMarkers="--output_scs" />
+        <File extension="pdf" argsMarkers="--output_pdf" />
+        <File extension="png" argsMarkers="--output_png" />
+        <File extension="stl" argsMarkers="--output_stl" />
+        <File extension="xml" argsMarkers="--output_xml_assemblytree" />
+      </UploadToVault>
+    </Output>
+  </ConverterSettings>
+</configuration>

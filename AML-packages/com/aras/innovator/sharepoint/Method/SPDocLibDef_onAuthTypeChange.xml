@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="EB82412A246F49F98850469785CD4F28" action="add">
+  <comments>Handles changes in UI to enable/disable fields for dedicated user</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var isEditMode = document.isEditMode;
+var authList = this;
+var userField = document.forms.MainDataForm.elements['sp_user'];
+var passField = document.forms.MainDataForm.elements['sp_password'];
+var domainField = document.forms.MainDataForm.elements['sp_domain'];
+if (authList.options[authList.selectedIndex].value == 'WindowsAuthenticationOnly') {
+	userField.disabled = true;
+	passField.disabled = true;
+	domainField.disabled = true;
+	aras.setItemProperty(document.item, 'sp_user', '');
+	aras.setItemProperty(document.item, 'sp_password', '');
+	aras.setItemProperty(document.item, 'sp_domain', '');
+	handleItemChange('sp_user', '');
+	handleItemChange('sp_password', '');
+	handleItemChange('sp_domain', '');
+} else {
+	userField.disabled = !isEditMode;
+	passField.disabled = !isEditMode;
+	domainField.disabled = !isEditMode;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>SPDocLibDef_onAuthTypeChange</name>
+ </Item>
+</AML>

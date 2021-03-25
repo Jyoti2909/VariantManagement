@@ -1,0 +1,79 @@
+﻿<AML>
+ <Item type="SQL" id="C172915EA939400CBDCE5E2FBFCB3731" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>Business_DateAdd_scalar</old_name>
+  <sqlserver_body><![CDATA[/*Go back or forward a number of working days.*/
+CREATE FUNCTION [Business_DateAdd_scalar](@IN_DATE DATETIME,
+                                   @NUMBER  INT,
+                                   @TZ_NAME NVARCHAR(50) = NULL)
+RETURNS DATETIME
+AS
+  BEGIN
+      IF @IN_DATE IS NULL
+        RETURN NULL
+
+      SET @IN_DATE = (SELECT VALUE FROM [innovator].[Roundtomidnight](@IN_DATE, @TZ_NAME))
+
+      IF @NUMBER IS NULL
+        RETURN NULL
+
+      DECLARE @RET_DATE DATETIME
+      DECLARE @DAY_NUMBER INT
+
+      SET @DAY_NUMBER = (SELECT VALUE
+                         FROM   [innovator].[Business_day_number](@IN_DATE, @TZ_NAME))
+
+      IF NOT @DAY_NUMBER IS NULL
+        BEGIN
+            SET @DAY_NUMBER = Abs(@DAY_NUMBER) + @NUMBER
+            SET @RET_DATE = (SELECT VALUE
+                             FROM   [innovator].[Business_day_date](@DAY_NUMBER, @TZ_NAME))
+
+            IF NOT @RET_DATE IS NULL
+              BEGIN                                                                       
+                  RETURN @RET_DATE
+              END
+        END
+
+      -- Otherwise will fall into this slow Peano addition.   
+      DECLARE @RET_DAYS INT
+      DECLARE @INC_DAYS INT
+      DECLARE @WORKDAY INT
+
+      IF @NUMBER < 0
+        BEGIN
+            SET @RET_DAYS = -@NUMBER
+            SET @INC_DAYS = -1
+        END
+      ELSE
+        BEGIN
+            SET @RET_DAYS = @NUMBER
+            SET @INC_DAYS = 1
+        END
+
+      SET @RET_DATE = (SELECT value
+                       FROM   [innovator].[ConvertToLocal_Table](@IN_DATE, @TZ_NAME))
+      SET @WORKDAY = 1
+
+      WHILE @WORKDAY = 0
+             OR @RET_DAYS > 0
+        BEGIN
+            SET @RET_DATE = Dateadd(DAY, @INC_DAYS, @RET_DATE)
+            SET @WORKDAY = [innovator].[Business_workday](@RET_DATE, @TZ_NAME)
+
+            IF @WORKDAY = 1
+              SET @RET_DAYS = @RET_DAYS - 1
+        END
+
+      SET @RET_DATE = (SELECT value
+                       FROM   [innovator].[ConvertFromLocal_Table](@RET_DATE, @TZ_NAME))
+
+      RETURN @RET_DATE
+  END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>Business_DateAdd_scalar</name>
+ </Item>
+</AML>

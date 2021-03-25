@@ -1,0 +1,168 @@
+﻿<AML>
+ <Item type="Method" id="DB19769BB3BA4A359D345691414DACF4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/* Method that hndler for standart toolbar
+ * This method must return object with:
+ * onClick  - handler that execute buttons event onClick
+ * onSelect - handler that execute selection event onChangeSelect
+ * onStyled - handler that set foreach button class (use as toggle button)
+ * onShow   - handler that show/hide buttons and selections
+ * onInited  -  handler that call after init toolbar
+ *
+ * in this method income 2 arguments: viewmodel object and toolbar object
+ *
+ * Also this method is provided to use custom code for custom buttons or selections
+ */
+
+var ToolbarLinkDialogProvider = function(viewmodel, toolbar) {
+	this.viewmodel = viewmodel;
+	this.toolbar = toolbar;
+	this.toolbarActions = toolbar._toolbarActions; // the standart implemented actions
+};
+
+// The 'isEditable' argument is boolean flag that provide document locked state
+ToolbarLinkDialogProvider.prototype.onClick = function(buttonName, isEditable) {
+	var action = buttonName.replace('tp_', '');
+	var aras = this.viewmodel._aras;
+	switch (action) {
+		case 'apply':
+			var selectedItems = this.viewmodel.GetSelectedItems();
+			var linkType = this.getLinkType();
+
+			switch (linkType) {
+				case 'external_document':
+					if (selectedItems.length != 1) {
+						aras.AlertError(aras.getResource('../Modules/aras.innovator.TDF', 'includes.mustselectoneelement'));
+					} else {
+						var uid = this._GetUniqueElementId(selectedItems[0]);
+
+						if (uid) {
+							dlgArguments.dialog.close({linkType: linkType, linkData: {
+								blockId: this.viewmodel.GetCurrentBlockId(),
+								elementId: uid}
+							});
+						} else {
+							aras.AlertError(aras.getResource('../Modules/aras.innovator.TDF', 'includes.nouniqueelementid'));
+						}
+					}
+					break;
+				case 'url':
+					dlgArguments.dialog.close({linkType: linkType, linkData: {
+						url: this.viewmodel.getExternalUrl()}
+					});
+					break;
+			}
+			break;
+		case 'showowner':
+			this.viewmodel._InitializeStructureDocument(this.viewmodel.GetThisBlock());
+			break;
+		case 'deletelink':
+			dlgArguments.dialog.close({linkType: 'deleteLink'});
+			break;
+		case 'showtarget':
+			this.viewmodel._InitializeStructureDocument(dlgArguments.linkData.documentId);
+			window.selectDocumentElement(dlgArguments.linkData.elementId);
+			break;
+		default:
+			this.viewmodel._aras.AlertError(this.viewmodel._aras.getResource('../Modules/aras.innovator.TDF', 'includes.actionwasntimplemented'));
+	}
+};
+
+ToolbarLinkDialogProvider.prototype._GetUniqueElementId = function(item) {
+	while (item) {
+		if (item.is('XmlSchemaElement')) {
+			var uid = item.Uid();
+
+			if (uid) {
+				return uid;
+			}
+		}
+
+		item = item.Parent;
+	}
+};
+
+ToolbarLinkDialogProvider.prototype.GetOtherBlock = function(newItem) {
+	this.viewmodel._InitializeStructureDocument(newItem);
+};
+
+ToolbarLinkDialogProvider.prototype._SearchBlock = function(searchNames, searchCallback) {
+	var aras = this.viewmodel._aras;
+	var itemTypeName = this.viewmodel.getDocumentItem().getAttribute('type');
+	var param = {
+			aras: aras,
+			itemtypeName: itemTypeName,
+			multiselect: false,
+			sourceItemTypeName: itemTypeName,
+			sourcePropertyName: 'root_element_name',
+			itemContext: {item: this.viewmodel, searchNames: searchNames}
+		};
+
+	param.type = 'SearchDialog';
+	aras.getMostTopWindowWithAras(window).ArasModules.MaximazableDialog.show('iframe', param).promise.then(function(dlgRes) {
+		searchCallback({item: dlgRes.item});
+	});
+};
+
+// The 'selection' argument is selection object that change option
+// The 'isEditable' argument is boolean flag that provide document locked state
+ToolbarLinkDialogProvider.prototype.onSelect = function(selection, isEditable) {};
+
+ToolbarLinkDialogProvider.prototype.onStyled = function(sender, earg) {};
+
+// This event allow to select toolbar's buttons to show
+ToolbarLinkDialogProvider.prototype.onShow = function(sender, earg) {
+	var aras = this.viewmodel._aras;
+	var toolbar = this.toolbar;
+	var toolbarButton;
+	var linkType;
+
+	toolbar.ShowButton('tp_link_type');
+	linkType = toolbar.getItem('tp_link_type').getSelectedItem();
+
+	switch (linkType) {
+		case 'external_document':
+			var selectedElements = this.viewmodel.GetSelectedItems();
+			var isSingleSelection = selectedElements.length == 1;
+			var currentDocumentId = aras.getItemProperty(this.viewmodel.getDocumentItem(), 'id');
+			var ownerDocumentId = aras.getItemProperty(this.viewmodel.GetThisBlock(), 'id');
+			var targetDocumentId = dlgArguments.linkData && dlgArguments.linkData.documentId;
+			var targetElementId = dlgArguments.linkData && dlgArguments.linkData.elementId;
+
+			toolbar.ShowButton('tp_showowner');
+			toolbar.getItem('tp_showowner').setEnabled(currentDocumentId !== ownerDocumentId);
+
+			toolbar.ShowButton('tp_showtarget');
+			toolbar.getItem('tp_showtarget').setEnabled(targetDocumentId && (currentDocumentId !== targetDocumentId));
+
+			toolbar.ShowButton('tp_deletelink');
+			toolbar.getItem('tp_deletelink').setEnabled(targetDocumentId !== '');
+
+			toolbar.ShowButton('tp_apply');
+			toolbar.getItem('tp_apply').setEnabled(isSingleSelection && selectedElements[0].Uid() !== targetElementId);
+			break;
+		case 'url':
+			var externalUrl = this.viewmodel.getExternalUrl();
+			var initialUrl = this.viewmodel.getInitialUrl();
+
+			toolbar.ShowButton('tp_deletelink');
+			toolbar.getItem('tp_deletelink').setEnabled(Boolean(initialUrl));
+
+			toolbar.ShowButton('tp_apply');
+			toolbar.getItem('tp_apply').setEnabled(externalUrl && (externalUrl != initialUrl));
+			break;
+	}
+};
+
+ToolbarLinkDialogProvider.prototype.getLinkType = function() {
+	return toolbar.getItem('tp_link_type').getSelectedItem();
+};
+
+ToolbarLinkDialogProvider.prototype.onInited = function(action) {};
+
+return new ToolbarLinkDialogProvider(viewmodel, toolbar);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>tp_link_dialog</name>
+ </Item>
+</AML>

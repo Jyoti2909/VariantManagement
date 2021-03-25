@@ -1,0 +1,36 @@
+﻿<AML>
+ <Item type="Method" id="56CA20B04F734942BAF561B86D133F15" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+Item q = this.newItem(this.getType(), "get");
+q.setID(this.getID());
+q.setAttribute("select", "source_id");
+Item res = q.apply();
+if (res.isError() && !res.isEmpty()) {
+	return res;
+}
+
+for (int i=0; i < res.getItemCount(); i++) {
+	string sourceName = res.getItemByIndex(i).getPropertyAttribute("source_id", "keyed_name");
+	if (string.Equals(sourceName, "Forum", StringComparison.OrdinalIgnoreCase)) {
+		string action = this.getAction();
+		if (string.Equals(action, "add", StringComparison.OrdinalIgnoreCase))
+		{
+			return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_ForumCantHaveNonDefaultDT"));
+		}
+		else if (string.Equals(action, "edit", StringComparison.OrdinalIgnoreCase) || string.Equals(action, "update", StringComparison.OrdinalIgnoreCase))
+		{
+			return this;
+		}
+		else
+		{
+			return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_DefaultDTOfForumContBeRemoved"));
+		}
+	}
+}
+return this;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_ForumDiscussionNoChange</name>
+ </Item>
+</AML>

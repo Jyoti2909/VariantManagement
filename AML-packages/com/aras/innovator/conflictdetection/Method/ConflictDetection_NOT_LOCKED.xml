@@ -1,0 +1,93 @@
+﻿<AML>
+ <Item type="Method" id="73FDEE0100824246BFFEE508DEDC7E96" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=ConflictDetectionLocalRuleCSharp.version:1;
+public class $(clsname) : LocalConflictDetectionRule
+{
+	Aras.Server.Core.CallContext CCO;
+
+	public $(clsname)(IServerConnection serverConnection, String name)
+		: base(serverConnection, name)
+	{
+		this.CCO = ((Aras.Server.Core.IOMConnection)serverConnection).CCO;
+	}
+
+	public override IList<ConflictDetectionResult> Execute(Item configuration)
+	{
+		List<ConflictDetectionResult> ConflictList = new List<ConflictDetectionResult>();
+
+		Item itemsWithEdit = configuration.getItemsByXPath("//Item[@action='edit']");
+		for (int itemIndex = 0; itemIndex < itemsWithEdit.getItemCount(); itemIndex++)
+		{
+			Item itemForCheck = itemsWithEdit.getItemByIndex(itemIndex);
+			ConflictList.Add(this.CreateConflict(itemForCheck, "Action \"edit\" isn't supported in checkin configuration and was ignored during check for conflicts."));
+		}
+
+		Item itemsWithUpdateOrVersion = configuration.getItemsByXPath("//Item[@action='update' or @action='version']");
+
+		for (int itemIndex = 0; itemIndex < itemsWithUpdateOrVersion.getItemCount(); itemIndex++)
+		{
+			Item itemForCheck = itemsWithUpdateOrVersion.getItemByIndex(itemIndex);
+			String type = itemForCheck.getType();
+			String id = itemForCheck.getID();
+
+			int lockStatus = itemForCheck.fetchLockStatus();
+			
+			if (lockStatus == -1)
+			{
+				lockStatus = ProcessFetchStatusFailure(type, id);
+			}
+
+			if (lockStatus == 0 || lockStatus == 2) // not locked or locked by smb else
+			{
+				ConflictList.Add(CreateResult(itemForCheck, lockStatus, "Item is not locked, but in order to update or version it should be locked."));
+			}
+		}
+
+		Item itemsWithDelete = configuration.getItemsByXPath("//Item[@action='delete']");
+
+		for (int itemIndex = 0; itemIndex < itemsWithDelete.getItemCount(); itemIndex++)
+		{
+			Item itemForCheck = itemsWithDelete.getItemByIndex(itemIndex);
+			String type = itemForCheck.getType();
+			String id = itemForCheck.getID();
+
+			int lockStatus = itemForCheck.fetchLockStatus();
+			
+			if (lockStatus == -1)
+			{
+				lockStatus = ProcessFetchStatusFailure(type, id);
+			}
+			
+			if (lockStatus == 1 || lockStatus == 2) // locked or locked by smb else
+			{
+				ConflictList.Add(CreateResult(itemForCheck, lockStatus, "Item is locked, but in order to delete it should be unlocked."));
+			}
+		}
+		return ConflictList;
+	}
+
+	private int ProcessFetchStatusFailure(string type, string id)
+	{
+		Item queryItemForCheck = this.Innovator.newItem(type, "get");
+		queryItemForCheck.setID(id);
+		Item itemForCheckInDb = queryItemForCheck.apply();
+	  
+		if(itemForCheckInDb.isError())
+		{
+			throw new Aras.IOME.ItemErrorException(itemForCheckInDb);
+		}
+		return itemForCheckInDb.getLockStatus();
+	}
+	
+	private ConflictDetectionResult CreateResult(Item itemForCheck, int LockStatus, string message)
+	{
+		ConflictDetectionResult result = this.CreateConflict(itemForCheck, message);
+		result.UserData = LockStatus.ToString();
+		return result;
+	}
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>ConflictDetection_NOT_LOCKED</name>
+ </Item>
+</AML>

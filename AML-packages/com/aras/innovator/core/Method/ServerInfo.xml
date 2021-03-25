@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="027B5B9EB6884EED826FE6243BE7DACF" action="add">
+  <comments>Return info about the server for the benefit of test scripts</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' name: SQL Execute
+' created: 25-JAN-2006 George J. Carrette
+'MethodTemplateName=VBScriptMain;
+
+' An automatic diagnostic test wants to know the current logfile name
+' generated so that it can save the log. It also wants to know
+' assembly version info about the running innovator server.
+
+Sub Main(ByVal inDom As XmlDocument, ByVal outDom As XmlDocument, ByVal Iob As Object, ByVal Svr As Object, ByVal Ses As Object)
+  Dim res As XmlElement = CCO.XML.MakeBorders(outDom)
+  Dim info1 As XmlDocument = Aras.Server.Core.InnovatorApplication.ServerInfoXMLDom(CCO)
+  Dim info2 As XmlElement = res.OwnerDocument.CreateElement("UserInfo")
+  info2.SetAttribute("arasSESSID", CStr(CCO.Session("arasSESSID")))
+  info2.SetAttribute("logFilename", CStr(CCO.Session("logFilename")))
+  info2.SetAttribute("GetUserID", CCO.Variables.GetUserID())
+  info2.SetAttribute("GetAuthUserID", CCO.Variables.GetAuthUserID())
+  info2.SetAttribute("GetLoginName", CCO.Variables.GetLoginName())
+  res.AppendChild(res.OwnerDocument.ImportNode(info1.DocumentElement, True))
+  res.AppendChild(info2)
+End Sub
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>ServerInfo</name>
+ </Item>
+</AML>

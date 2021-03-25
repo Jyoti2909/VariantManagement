@@ -1,0 +1,119 @@
+﻿<AML>
+ <Item type="Method" id="BC74EDD7DFB7417BB537B9CF1C37D300" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var topWnd = aras.getMostTopWindowWithAras(window);
+	if(aras.isDirtyEx(inDom) || aras.isNew(inDom))
+	{
+		if(aras.confirm(aras.getResource("plm", "changeitem.saveit")))
+		{
+			var tmpOnSaveCommand;
+			if (topWnd.onSaveCommand) tmpOnSaveCommand = topWnd.onSaveCommand;
+			if (topWnd.main && topWnd.main.work && topWnd.main.work.onSaveCommand) tmpOnSaveCommand = topWnd.main.work.onSaveCommand;
+			tmpOnSaveCommand();
+		}
+		else
+		{
+			return;
+		}
+	}
+	// PE_GetSelectedItems
+	// Gets all the selected items, whether from a relationship grid, main grid or form and builds a
+	// collection for use in creating the change item
+	var thisType = this.getType();
+	var grid;
+	var idArray;
+	var sourceItemTypeName;
+	var isRelationship = false;
+
+	// Check whether the method is being called from a relationship grid, the main grid or on an
+	// individual item and build an array of item ids
+	var relTypeId = aras.getRelationshipTypeId(thisType);
+	if (relTypeId) {
+		isRelationship = true;
+
+		var relshipItemType = aras.getRelationshipType(relTypeId);
+		var sourceItemType = aras.getItemTypeDictionary(relshipItemType.getProperty("source_id"), "id");
+		sourceItemTypeName = sourceItemType.getProperty("name");
+	}
+
+	var hasDocumentFrameElements = (isRelationship) && document &&
+		document.frames["relationships"] && document.frames["relationships"].document.frames
+		&& (document.frames["relationships"].document.frames.length > 0);
+	var hasParentFrameElements = (isRelationship) && parent && parent.frames["relationships"] && (parent.frames.length > 0);
+	if (hasParentFrameElements || hasDocumentFrameElements) {
+		var frameElements = hasParentFrameElements ? parent.frames : document.frames["relationships"].document.frames;
+		for (var i = 0; i < frameElements.length; i++) {
+			var relshipsFrame = frameElements.frames[i];
+			if(relshipsFrame)  {
+				grid = relshipsFrame.grid;
+				if (grid && grid.getSelectedItemIds(",") && grid.getSelectedItemIds(",").length > 0) {
+					idArray = grid.getSelectedItemIds(",").split(",");
+				}
+			}
+		}
+	}
+	else if (topWnd.main && topWnd.main.work && topWnd.main.work.gridApplet) {
+		grid = topWnd.main.work.gridApplet;
+		idArray = grid.getSelectedItemIds(",").split(",");
+	}
+
+	if (!idArray) {
+		idArray = new Array();
+		for (var j = 0; j < this.getItemCount(); j++) {
+			idArray.push(this.getItemByIndex(j).getID());
+		}
+	}
+
+	// If this is the last item in the array then build an item collection to return
+	if (this.getID() == idArray[idArray.length - 1]) {
+		// Add a dummy item to start the result collection (removed later)
+		var resultItem = this.newItem("DeleteMe", "DeleteMe");
+		for (var k = 0; k < idArray.length; k++) {
+			var ccItem;
+
+			// When starting from a relationship, get the parent item from the cache and then retrieve the related item
+			if (isRelationship) {
+				var parentId = this.getProperty("source_id", "");
+				var parentItem = aras.getItemById(sourceItemTypeName, parentId, 0);
+				if (parentItem) {
+					ccItem = parentItem.selectSingleNode("Relationships/Item[@id='" + idArray[k] + "']");
+
+					//If item isn't cached, get 
+					if (!ccItem) {
+						ccItem = aras.getItemById(thisType, idArray[k], 0);
+					}
+
+					//get related Part
+					if (ccItem) {
+						ccItem = aras.getRelatedItem(ccItem);
+					}
+				}
+			}
+			else {
+				ccItem = aras.getItemById(thisType, idArray[k], 0);
+			}
+
+			// Add the item to the collection to be returned
+			if (ccItem) {
+				if (aras.isNew(ccItem)) {
+					aras.AlertError(aras.getResource("PLM", "affecteditem.add_not_saved_item", aras.getKeyedNameEx(ccItem)));
+					return;
+				}
+				var tempItem = this.newItem("", "");
+				tempItem.loadAML(ccItem.xml);
+				resultItem.appendItem(tempItem);
+			}
+		}
+		if (resultItem.getItemCount() < 2) { return; }
+
+		// Remove the dummy item
+		resultItem.removeItem(resultItem.getItemByIndex(0));
+
+		// Set the ChangeItem attribute for debugging purposes and return the results
+		resultItem.getItemByIndex(0).setAttribute("ChangeItem", "Pending");
+		return resultItem;
+	}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PE_GetSelectedItems</name>
+ </Item>
+</AML>

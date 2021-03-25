@@ -1,0 +1,21 @@
+﻿@{
+	Layout = "../../aras.innovator.core.ItemWindow/Views/Shared/_tabItemViewLayout.cshtml";
+
+	string state = Request.QueryString["state"];
+	string formHeight = String.IsNullOrEmpty(Request.QueryString["formHeight"]) ? "0px" : Request.QueryString["formHeight"] + "px";
+}
+
+@section instance
+{
+	<div id="formContentPane" style="@(state == "tabs off" ? Html.Raw("height: 100%;") : Html.Raw("height:" + formHeight))">
+		<div style="position:relative; height: 100%" id="formLayoutContainer">
+			<div id="placeHolderContentPane" style="height: 100%">
+				<div data-dojo-type="Controls/SimpleTabContainer" id="viewers" style="height: 100%">
+					<div data-dojo-type="Controls/Tab" data-dojo-props="selected:true" id="formTab">
+						<div data-dojo-type="Modules/aras.innovator.core.EffectivityServices/Scripts/Classes/FormInstance" data-dojo-props="aras: aras, isNew: isNew, item: item, isEditMode: isEditMode, formHeight: formHeight, formWidth: formWidth" baseClass="dijitContentPaneNoPadding" id="form" style="height:100%; width:100%;"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+}

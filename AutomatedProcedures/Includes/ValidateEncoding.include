@@ -1,0 +1,463 @@
+<project name="ValidateEncoding">
+	<target name="Initialize.Validate.Task" description="This target initializes task named validate">
+		<script language="C#" prefix="aras">
+			<references>
+				<include name="System.dll" />
+				<include name="System.Core.dll" />
+				<include name="tools\Microsoft.Experimental.IO\lib\NETFramework40\Microsoft.Experimental.IO.dll" />
+			</references>
+			<imports>
+				<import namespace="System" />
+				<import namespace="System.Collections.Generic" />
+				<import namespace="System.Collections" />
+				<import namespace="System.IO" />
+				<import namespace="System.Reflection" />
+				<import namespace="System.Linq" />
+				<import namespace="System.Text" />
+				<import namespace="System.Text.RegularExpressions" />
+				<import namespace="Microsoft.Experimental.IO" />
+			</imports>
+			<code>
+				<![CDATA[
+				[TaskName("validate")]
+				public class ReportNonUnicodeFiles:Task
+				{
+					public enum ReportNonUnicodeFilesError
+					{
+						NoError = 0,
+						InvalidArguments = 1,
+						BadFilesFound = 2
+					}
+
+					[Flags]
+					private enum SupportedEncoding
+					{
+						Utf8 = 0x01,
+						Utf16 = 0x02
+					}
+
+					private enum ArgumentsParseMode
+					{
+						None,
+						Encoding,
+						Extensions,
+						Path,
+						PassPath,
+						Deep,
+						IgnoreFile
+					}
+
+					private bool _deep;
+					private readonly IList<string> _extensions = new List<string>();
+					private readonly IList<string> _paths = new List<string>();
+					private HashSet<string> _passPaths = new HashSet<string>();
+					private List<string> _passRegexes = new List<string>();
+					readonly ArrayList _encodingsToCheck = new ArrayList(2);
+					private bool _doFixOfFileEncoding;
+					private string[] _arguments;
+					private int _invalidFilesCount = 0;
+					private int _validateFilesCount = 0;
+					private string _workingDirectory = Directory.GetCurrentDirectory();
+
+					[TaskAttribute("arguments", Required = true)]
+					public string Arguments 
+					{
+						get
+						{
+							return String.Join(" ", _arguments);
+						}
+						set
+						{
+							_arguments = Regex.Matches(value, "[^\\s\"']+|\"([^\"]*)\"|'([^']*)'").OfType<Match>().Select(x => x.Value).ToArray();
+							for(int i = 0; i<_arguments.Length; i++)
+							{
+								if(_arguments[i][0] == '\"')
+								{
+									_arguments[i] = _arguments[i].Replace("\"","");
+								}
+							}
+						}
+
+					}
+
+					[TaskAttribute("workingdir")]
+					public string WorkingDirectory
+					{
+						get
+						{
+							return _workingDirectory;
+						}
+						set
+						{
+							_workingDirectory = value;
+							Directory.SetCurrentDirectory(_workingDirectory);
+						}
+					}
+
+					protected override void ExecuteTask()
+					{
+						this.MyMain(_arguments);
+						if(_invalidFilesCount > 0)
+						{
+							throw new Exception(_invalidFilesCount + " files are invalid");
+						}
+						Console.WriteLine("{0} files were validated", _validateFilesCount);
+					}
+
+					/// <summary>
+					/// The main entry point for the application.
+					/// </summary>
+
+					[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity")]
+					private ReportNonUnicodeFilesError MyMain(string[] args)
+					{
+						_extensions.Add("txt");
+						_paths.Add(".");
+
+						#region parse arguments
+						var currentMode = ArgumentsParseMode.None;
+						var requestedEncoding = SupportedEncoding.Utf8;
+						for (var i = 0; i < args.Length; i++)
+						{
+							string arg = args[i];
+							switch (arg)
+							{
+								case "-encoding":
+									currentMode = ArgumentsParseMode.Encoding;
+									break;
+
+								case "-extensions":
+									currentMode = ArgumentsParseMode.Extensions;
+									_extensions.Clear();
+									break;
+
+								case "-deep":
+									currentMode = ArgumentsParseMode.Deep;
+									_deep = true;
+									break;
+
+								case "-path":
+									currentMode = ArgumentsParseMode.Path;
+									_paths.Clear();
+									break;
+
+								case "-passPath":
+									currentMode = ArgumentsParseMode.PassPath;
+									_passPaths.Clear();
+									break;
+
+								case "-fix":
+									_doFixOfFileEncoding = true;
+									break;
+
+								case "-ignoreFile":
+									currentMode = ArgumentsParseMode.IgnoreFile;
+									break;
+
+								default:
+									switch (currentMode)
+									{
+										case ArgumentsParseMode.Encoding:
+											if (string.Equals(arg, "utf8", StringComparison.OrdinalIgnoreCase))
+											{
+												requestedEncoding |= SupportedEncoding.Utf8;
+											}
+											else if (String.Equals(arg, "utf16", StringComparison.OrdinalIgnoreCase))
+											{
+												requestedEncoding |= SupportedEncoding.Utf16;
+											}
+											else
+											{
+												Log(Level.Error, "Invalid encoding value: {0}", arg);
+												return ReportNonUnicodeFilesError.InvalidArguments;
+											}
+											break;
+
+										case ArgumentsParseMode.Extensions:
+											_extensions.Add(arg);
+											break;
+
+										case ArgumentsParseMode.Path:
+											_paths.Add(arg);
+											break;
+
+										case ArgumentsParseMode.PassPath:
+											AddPassPath(arg);
+											break;
+										case ArgumentsParseMode.IgnoreFile:
+											ParseIgnoreFile(arg);
+											break;
+
+										default:
+											Log(Level.Error, "Invalid switch: {0}", arg);
+											return ReportNonUnicodeFilesError.InvalidArguments;
+									}
+									break;
+							}
+						}
+						#endregion
+
+						switch (requestedEncoding)
+						{
+							case SupportedEncoding.Utf8:
+								_encodingsToCheck.Add(new UTF8Encoding(true, true));
+								break;
+							case SupportedEncoding.Utf16:
+								_encodingsToCheck.Add(new UnicodeEncoding(false, true));
+								break;
+							case (SupportedEncoding.Utf16 | SupportedEncoding.Utf8):
+								_encodingsToCheck.Add(new UTF8Encoding(true, true));
+								_encodingsToCheck.Add(new UnicodeEncoding(false, true));
+								break;
+						}
+
+						bool res = true;
+						foreach (string path in _paths)
+						{
+							if (LongPathFile.Exists(path))
+							{
+								res &= ValidateContentAndEncodingOfFile(path);
+							}
+							else
+							{
+								res &= CheckDirectory(path);
+							}
+						}
+
+						if (!res) return ReportNonUnicodeFilesError.BadFilesFound;
+
+						return ReportNonUnicodeFilesError.NoError;
+					}
+
+					private void ParseIgnoreFile(string filePath)
+					{
+						using (StreamReader file = new StreamReader(filePath))
+						{
+							while (file.Peek() > 0)
+							{
+								string str = file.ReadLine();
+								if (Regex.IsMatch(str, "[*?]"))
+								{
+									AddPassWildcard(str);
+								}
+								else
+								{
+									if(LongPathDirectory.Exists(str) || LongPathFile.Exists(str))
+									{
+										AddPassPath(str);
+									}
+								}
+							}
+						}
+					}
+
+					private void AddPassPath(string path)
+					{
+						string pathToAdd = Path.GetFullPath(path).ToLower();
+						_passPaths.Add(pathToAdd);
+					}
+
+					private void AddPassWildcard(string wildcard)
+					{
+						_passRegexes.Add(WildcardToRegex(wildcard));
+					}
+
+					private string WildcardToRegex(string wildcard) {
+						string fullPathWildcard = Path.Combine(Directory.GetCurrentDirectory(), wildcard);
+						string[] tokens = Regex.Split(fullPathWildcard, "(\\*\\*)|(\\*)(\\?)");
+						for (int i = 0; i < tokens.Length; i++)
+						{
+							if (tokens[i].Equals("**"))
+							{
+								tokens[i] = "[\\w-. /\\\\]+";
+							}
+							else if (tokens[i].Equals("*"))
+							{
+								tokens[i] = "[\\w-. ]+";
+							}
+							else if (tokens[i].Equals("?"))
+							{
+								tokens[i] = "[\\w-. ]";
+							}
+							else
+							{
+								tokens[i] = Regex.Escape(tokens[i]);
+							}
+						}
+						return "^" + string.Concat(tokens) + "$";
+					}
+
+					private bool ValidateFileContent(string fileName, Encoding expectedEncoding)
+					{
+						bool fileContentCorrect = true;
+						using (FileStream fs = LongPathFile.Open(fileName, FileMode.Open, FileAccess.Read))
+						{
+							using (StreamReader sr = new StreamReader(fs, expectedEncoding, false))
+							{
+								try
+								{
+									sr.ReadToEnd();
+								}
+								catch (ArgumentException)
+								{
+									fileContentCorrect = false;
+								}
+							}
+						}
+
+						return fileContentCorrect;
+					}
+
+					private bool ValidateFilePreable(string fileName, Encoding expectedEncoding)
+					{
+						bool preambleCorrect;
+						byte[] preamble = expectedEncoding.GetPreamble();
+						byte[] filePreamble = new byte[preamble.Length];
+						using (FileStream fs = LongPathFile.Open(fileName, FileMode.Open, FileAccess.Read))
+						{
+							int len = fs.Read(filePreamble, 0, filePreamble.Length);
+							preambleCorrect = !(len < preamble.Length);
+						}
+						for (int i = 0; i < preamble.Length; i++)
+						{
+							preambleCorrect = (preamble[i] == filePreamble[i]);
+						}
+
+						return preambleCorrect;
+					}
+
+					private bool ValidateContentAndEncodingOfFile(string fileName)
+					{
+						if(IsInPassPaths(fileName) || IsMatchPassWildcard(fileName))
+						{
+							return true;
+						}
+						_validateFilesCount++;
+						bool preambleCorrect = true;
+						bool fileContentCorrect = true;
+						foreach (Encoding encoding in _encodingsToCheck)
+						{
+							preambleCorrect = ValidateFilePreable(fileName, encoding);
+							fileContentCorrect = ValidateFileContent(fileName, encoding);
+
+							if (preambleCorrect && fileContentCorrect)
+								break;
+						}
+
+						if (!preambleCorrect)
+						{
+							if (_doFixOfFileEncoding)
+							{
+								Encoding encodingToSet;
+								if (_encodingsToCheck.Contains(Encoding.UTF8))
+								{
+									encodingToSet = Encoding.UTF8;
+								}
+								else
+								{
+									encodingToSet = (Encoding)_encodingsToCheck[0];
+								}
+								FixFileIncodingIfInvalid(fileName, encodingToSet);
+							}
+
+							ReportInvalidFilePreamble(fileName);
+							return false;
+						}
+
+						if (!fileContentCorrect)
+						{
+							ReportInvalidFileContent(fileName);
+							return false;
+						}
+
+						return true;
+					}
+
+					private bool IsInPassPaths(string pathToCompare)
+					{
+						return _passPaths.Contains(pathToCompare.ToLower());
+					}
+
+					private bool IsMatchPassWildcard(string pathToCompare)
+					{
+						foreach (string passRegex in _passRegexes)
+						{
+							if (Regex.IsMatch(pathToCompare, passRegex, RegexOptions.IgnoreCase))
+							{
+								return true;
+							}
+						}
+						return false;
+					}
+
+					private void FixFileIncodingIfInvalid(string fileName, Encoding expectedEncoding)
+					{
+						if (ValidateFilePreable(fileName, expectedEncoding))
+						{
+							return;
+						}
+
+						string fileContent;
+						using (FileStream fs = LongPathFile.Open(fileName, FileMode.Open, FileAccess.Read))
+						{
+							using (StreamReader streamReader = new StreamReader(fs))
+							{
+								fileContent = streamReader.ReadToEnd();
+							}
+						}
+
+						using (FileStream fs = LongPathFile.Open(fileName, FileMode.Create, FileAccess.Write))
+						{
+							using (StreamWriter streamWriter = new StreamWriter(fs, expectedEncoding))
+							{
+								streamWriter.Write(fileContent);
+							}
+						}
+					}
+
+					private void ReportInvalidFilePreamble(string fileName)
+					{
+						Log(Level.Error, "Invalid file preamble: {0}", fileName);
+						_invalidFilesCount++;
+					}
+
+					private void ReportInvalidFileContent(string fileName)
+					{
+						Log(Level.Error, "Invalid file content: {0}", fileName);
+						_invalidFilesCount++;
+					}
+
+					private bool CheckDirectory(string directoryName)
+					{
+						var res = true;
+						if(IsInPassPaths(directoryName) || IsMatchPassWildcard(directoryName))
+						{
+							return true;
+						}
+
+						foreach (string fileExtension in _extensions)
+						{
+							IEnumerable<string> fileNames = LongPathDirectory.EnumerateFiles(directoryName, "*." + fileExtension);
+							foreach (string fileName in fileNames)
+							{
+								res &= ValidateContentAndEncodingOfFile(fileName);
+							}
+						}
+
+						if (_deep)
+						{
+							IEnumerable<string> subfolderNames = LongPathDirectory.EnumerateDirectories(directoryName);
+							foreach (string subfolderName in subfolderNames)
+							{
+								res &= CheckDirectory(subfolderName);
+							}
+						}
+
+						return res;
+					}
+				}
+				]]>
+			</code>
+		</script>
+	</target>
+</project>

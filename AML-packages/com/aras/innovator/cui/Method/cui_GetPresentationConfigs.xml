@@ -1,0 +1,82 @@
+﻿<AML>
+ <Item type="Method" id="38445BDE05C04E25BF775F229912B573" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string itemTypeID = this.getProperty("item_type_id");
+	string contextItemID = this.getProperty("item_id");
+	string clientType = this.getProperty("client");
+	Innovator innovator = this.getInnovator();
+	
+	ICollection<string> globalPresentationConfigurationIds = GetGlobalPresentationConfigurationIds(innovator, clientType);
+	ICollection<string> itemTypePresentationConfigurationIds = GetItemTypePresentationConfigurationIds(innovator, itemTypeID, clientType, CCO.DB.InnDatabase.QuoteValue);
+	ICollection<string> instancePresentationConfigurationIds = GetInstancePresentationConfigurationIds(innovator, contextItemID, itemTypeID, clientType);
+	
+	Item resultItem = this.newItem("PresentationConfigurationIds");
+	resultItem.setProperty("global", GetCommaSeparatedValues(globalPresentationConfigurationIds));
+	resultItem.setProperty("itemType", GetCommaSeparatedValues(itemTypePresentationConfigurationIds));
+	resultItem.setProperty("instance", GetCommaSeparatedValues(instancePresentationConfigurationIds));
+	return resultItem;
+}
+
+private static ICollection<string> GetItemTypePresentationConfigurationIds(Innovator innovator, string itemTypeId, string client, Func<string, string> quoteValueFunc)
+{
+	if (!string.IsNullOrEmpty(itemTypeId))
+	{
+		Item presentationConfigurations = innovator.applyAML(string.Format(CultureInfo.InvariantCulture, @"
+			<AML>
+				<Item type=""PresentationConfiguration"" select=""id,modified_on"" action=""get"" where=""PresentationConfiguration.id in (select related_id from ITPresentationConfiguration where source_id = '{0}' and client='{1}')"">
+				</Item>
+			</AML>", System.Security.SecurityElement.Escape(quoteValueFunc(itemTypeId)), System.Security.SecurityElement.Escape(quoteValueFunc(client))));
+
+		XmlNodeList nodes = presentationConfigurations.dom.SelectNodes("//id/text()");
+		return GetNodeValues(nodes);
+	}
+	return new List<string>();
+}
+
+private static ICollection<string> GetGlobalPresentationConfigurationIds(Innovator innovator, string client)
+{
+	Item globalConfigs = innovator.applyAML(string.Format(CultureInfo.InvariantCulture, @"
+	<AML>
+		<Item type=""GlobalPresentationConfig"" action=""get"" select=""presentation_id,modified_on"">
+			<client>{0}</client>
+			<presentation_id>
+				<Item type=""PresentationConfiguration"" action=""get"" select=""id,modified_on""/>
+			</presentation_id>
+		</Item>
+	</AML>", System.Security.SecurityElement.Escape(client)));
+
+	XmlNodeList nodes = globalConfigs.dom.SelectNodes("//presentation_id/Item/id/text()");
+	return GetNodeValues(nodes);
+}
+
+private static ICollection<string> GetInstancePresentationConfigurationIds(Innovator innovator, string itemId, string itemTypeId, string client)
+{
+	Item globalConfigs = innovator.applyAML(string.Format(CultureInfo.InvariantCulture, @"
+	<AML>
+		<Item type=""ItemPresentationConfiguration"" action=""get"" select=""id,presentation_config_id(id)"">
+			<item_id>{1}</item_id>
+			<item_type_id>{2}</item_type_id>
+			<client_type>{0}</client_type>
+			<presentation_config_id>
+				<Item type=""PresentationConfiguration"" action=""get"" select=""id""/>
+			</presentation_config_id>
+		</Item>
+	</AML>", System.Security.SecurityElement.Escape(client), System.Security.SecurityElement.Escape(itemId), System.Security.SecurityElement.Escape(itemTypeId)));
+
+	XmlNodeList nodes = globalConfigs.dom.SelectNodes("//presentation_config_id/Item/id/text()");
+	return GetNodeValues(nodes);
+}
+
+private static string GetCommaSeparatedValues(IEnumerable<string> nodes)
+{
+	return string.Join(",", nodes.Select(node => "'" + node + "'"));
+}
+
+private static ICollection<string> GetNodeValues(XmlNodeList nodes)
+{
+	return nodes.Cast<XmlNode>().Select(node => node.Value).ToList();
+	]]></method_code>
+  <method_type>C#</method_type>
+  <name>cui_GetPresentationConfigs</name>
+ </Item>
+</AML>

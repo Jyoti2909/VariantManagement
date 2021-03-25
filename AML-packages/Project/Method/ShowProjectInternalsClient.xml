@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="F275CFCA06A74C23AFE97AE186FDAAEC" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+
+var result = this.apply("ShowProjectInternals");
+var str = "";
+var lines = result.dom.selectNodes("//line");
+for (var j=0;j<lines.length;++j) str = str + "\n" + lines(j).text;
+
+return "<PRE>" + html_encode(str) + "</PRE>";
+
+function html_encode(str) {
+  var x = new ActiveXObject("microsoft.XMLDOM");
+  x.async = false;
+  x.loadXML("<X/>");
+  var n = x.selectSingleNode("X");
+  n.text = str;
+  var z = n.xml;
+  z = z.replace("<X>","");
+  z = z.replace("</X>","");
+  z = z.replace("<X/>","");
+  return(z);}
+
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ShowProjectInternalsClient</name>
+ </Item>
+</AML>

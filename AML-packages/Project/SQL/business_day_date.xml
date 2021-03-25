@@ -1,0 +1,23 @@
+﻿<AML>
+ <Item type="SQL" id="3CFC3BAACF5B47478F987980B407370C" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>Business_Day_Date</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION [Business_day_date](@DAY_NUMBER INT,
+                                    @TZ_NAME    NVARCHAR(50) = NULL)
+RETURNS TABLE
+AS
+    RETURN
+      SELECT VALUE = CASE
+                       WHEN @DAY_NUMBER IS NULL THEN NULL
+                       ELSE (SELECT value
+                             FROM   [innovator].[ConvertFromLocal_Table]((SELECT DAY_DATE
+                                                                    FROM   BUSINESS_CALENDAR
+                                                                    WHERE  DAY_NUMBER = Abs(@DAY_NUMBER)), @TZ_NAME))
+                     END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>Business_Day_Date</name>
+ </Item>
+</AML>

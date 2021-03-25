@@ -1,0 +1,45 @@
+﻿<AML>
+ <Item type="SQL" id="56739517CA444EFBB15EF982F44EDD7D" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>EvaluatePermissionExplicitDefine</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION EvaluatePermissionExplicitDefine
+(
+	@type VARCHAR(32),
+	@propdef_id CHAR(32),
+	@itemtype_id CHAR(32),
+	@identity_list VARCHAR(MAX)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+		SELECT MAX (CASE 
+                      WHEN ( (acs.can_define_explicitly = '1' OR define_permission_behavior = N'no_check')
+                             AND @type = 'can_define_explicitly' ) THEN 9 
+                      -- can_update permissions only  
+                      WHEN ( (acs.can_undefine_explicitly = '1' OR define_permission_behavior = N'no_check')
+                             AND @type = 'can_undefine_explicitly' ) THEN 9 
+                      -- can_delete permissions only  
+                      WHEN ( (acs.can_get_isdefined_explicitly = '1' OR define_permission_behavior = N'no_check')
+                             AND @type = 'can_get_isdefined_explicitly' ) THEN 9 
+                      -- can_change_access permissions only  
+                      ELSE 0 
+                    -- No permissions on specified for specified access right  
+                    END) p 
+        FROM   (SELECT acs.CAN_DEFINE_EXPLICITLY, 
+                       acs.CAN_UNDEFINE_EXPLICITLY,
+                       acs.CAN_GET_ISDEFINED_EXPLICITLY,
+                       define_permission_behavior 
+                FROM [ITEMTYPE_XPROPERTYDEFINITION] as it_xpd
+                LEFT OUTER JOIN [ACCESS_EXPLICITDEFINE] acs
+                    ON it_xpd.define_permission_behavior <> N'no_check' AND acs.SOURCE_ID = it_xpd.define_permission_id
+                WHERE it_xpd.[related_id] = @propdef_id AND it_xpd.[source_id] = @itemtype_id AND
+                       (it_xpd.define_permission_behavior = N'no_check' OR CHARINDEX(acs.[related_id] COLLATE Latin1_General_BIN2, @identity_list) > 0)
+               ) acs
+)]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>EvaluatePermissionExplicitDefine</name>
+ </Item>
+</AML>

@@ -1,0 +1,160 @@
+﻿@import (reference) '../core/variables';
+@import '../core/icons';
+
+@toggle-btn-size: 2.66rem;
+
+:host(.aras-accordion_collapsed) {
+	box-shadow: @shadow-b;
+
+	.aras-accordion__header {
+		background: @neutral-fb;
+	}
+	.aras-accordion__content {
+		height: 0;
+		padding: 0 12px;
+		visibility: hidden;
+	}
+}
+
+:host {
+	box-shadow: @shadow-c;
+	display: flex;
+	flex-direction: column;
+
+	.aras-accordion {
+		&__header {
+			background: @color-1;
+			display: flex;
+
+			&:hover {
+				background: @color-2;
+			}
+			&:active {
+				background: @color-3;
+			}
+
+			.aras-accordion__toggle-button {
+				display: inline-block;
+				flex-shrink: 0;
+				height: @toggle-btn-size;
+				vertical-align: top;
+				width: @toggle-btn-size;
+
+				&:hover {
+					background: @color-15;
+				}
+				&:active {
+					background: @color-20;
+				}
+				&.aras-icon-arrow {
+					&:before {
+						border: none;
+						border-left: 1px solid @neutral-7;
+						border-top: 1px solid @neutral-7;
+						height: 0.5rem;
+						width: 0.5rem;
+					}
+					&_up {
+						&:before {
+							margin-top: 0.25rem;
+							transform: rotate(45deg);
+						}
+					}
+					&_down {
+						&:before {
+							transform: rotate(225deg);
+						}
+					}
+					&:hover,
+					&:active {
+						&:before {
+							border-left-color: @white;
+							border-top-color: @white;
+						}
+					}
+				}
+			}
+		}
+
+		&__content {
+			background: @white;
+			box-sizing: border-box;
+			flex-grow: 1;
+			overflow: hidden;
+			padding: 12px;
+			position: relative;
+			transition: height 100ms ease-out;
+		}
+	}
+}
+
+.aras-acc-a-button {
+	display: block;
+	margin-left: auto;
+	padding: 0;
+	border: none;
+	background-color: inherit;
+	height: @toggle-btn-size;
+	width: @toggle-btn-size;
+	cursor: pointer;
+
+	&:hover,
+	&_maximized {
+		.aras-acc-a-button-icon {
+			&:before,
+			&:after {
+				border-color: @white;
+			}
+		}
+	}
+
+	&:hover {
+		background-color: @color-15;
+	}
+
+	&:active {
+		background-color: @color-20;
+
+		.aras-acc-a-button-icon {
+			&:before {
+				border-color: @white;
+			}
+		}
+	}
+
+	&_maximized {
+		background-color: @color-12;
+	}
+
+	&-icon {
+		height: calc(@icon-24 - 4px);
+		width: calc(@icon-24 - 4px);
+		padding: 6px;
+		background-color: inherit;
+
+		&:before,
+		&:after {
+			background-color: inherit;
+		}
+
+		&-minimize {
+			&::after {
+				height: 28%;
+				width: 28%;
+			}
+		}
+	}
+
+	.aras-tooltip {
+		background-color: inherit;
+
+		&:before {
+			display: none;
+		}
+		&:after {
+			transform: translate(-100%, 0);
+			top: 120%;
+			left: -25%;
+		}
+	}
+}

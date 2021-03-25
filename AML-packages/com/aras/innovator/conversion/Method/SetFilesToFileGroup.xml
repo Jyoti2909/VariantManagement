@@ -1,0 +1,149 @@
+﻿<AML>
+ <Item type="Method" id="4BBFC8B088844BABA3B85F6103B505D3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[    Innovator innovator = this.getInnovator();
+
+    IDataAccessLayer dataAccessLayer= new DataAccessLayer(innovator, CCO.DB.InnDatabase);
+    BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+
+    businessLogic.AttachConversionResultsToFileGroup(this);
+    return this;
+}
+
+private const string fileAdministratorsIdentityId = "4ACA79F318F7448A955AE595511AC789";
+private const int publishedFilesExpirationTimeout = 8;
+
+internal interface IDataAccessLayer
+{
+	Innovator Innovator { get; }
+	Item Apply(Item item);
+	Item ApplyAsFileAdministrator(Item item, string action);
+	string GetIdentitiesList(string userId);
+	DateTime GetUtcTime();
+}
+
+internal class DataAccessLayer : IDataAccessLayer
+{
+    private Aras.Server.Core.IInnovatorDatabase innDatabase;
+    public Innovator Innovator { get; private set; }
+
+    internal DataAccessLayer(Innovator innovator, Aras.Server.Core.IInnovatorDatabase innDatabase)
+	{
+		this.Innovator = innovator;
+		this.innDatabase = innDatabase;
+	}
+
+	public Item Apply(Item item)
+	{
+		return item.apply();
+	}
+
+	public Item ApplyAsFileAdministrator(Item item, string action)
+	{
+		Aras.Server.Security.Identity fileAdministratorsIdentity = Aras.Server.Security.Identity.GetById(fileAdministratorsIdentityId);
+		bool permissionWasSet = false;
+		try
+		{
+			permissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(fileAdministratorsIdentity);
+			return item.apply(action);
+		}
+		finally
+		{
+			if (permissionWasSet)
+			{
+				Aras.Server.Security.Permissions.RevokeIdentity(fileAdministratorsIdentity);
+			}
+		}
+	}
+
+	public string GetIdentitiesList(string userId)
+	{
+	    return Aras.Server.Security.Permissions.GetIdentitiesList(innDatabase, userId);
+	}
+
+	public DateTime GetUtcTime()
+	{
+		return DateTime.UtcNow;
+	}
+}
+
+internal class BusinessLogic
+{
+    private IDataAccessLayer dataAccessLayer;
+
+    internal BusinessLogic(IDataAccessLayer dataAccessLayer)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+	}
+
+	internal Item AttachConversionResultsToFileGroup(Item taskItem)
+	{
+	    Aras.ConversionFramework.Models.ConversionTask task = new Aras.ConversionFramework.Models.ConversionTask()
+        {
+            Item = taskItem
+        };
+	    string taskCreatorId = task.Item.getProperty("created_by_id");
+	    Item fileGroup = GetFileGroupByTaskCreatorId(taskCreatorId);
+	    return AttachResults(fileGroup, task);
+	}
+
+	private Item GetFileGroupByTaskCreatorId(string taskCreatorId)
+	{
+	    string identityList = dataAccessLayer.GetIdentitiesList(taskCreatorId);
+        Item aliasIdentity = dataAccessLayer.Innovator.newItem("Identity", "get");
+        aliasIdentity.setAttribute("maxRecords", "1");
+        aliasIdentity.setProperty("is_alias", "1");
+        aliasIdentity.setProperty("id", identityList);
+        aliasIdentity.setPropertyCondition("id", "in");
+        aliasIdentity = dataAccessLayer.Apply(aliasIdentity);
+        if (aliasIdentity.isError())
+        {
+            throw new Aras.Server.Core.InnovatorServerException(aliasIdentity.dom);
+        }
+
+        Item query = dataAccessLayer.Innovator.newItem("FileGroup", "get");
+        query.setProperty("owned_by_id", aliasIdentity.getID());
+        var fileGroupPermission = "05C2A70AB86F4DAAB2DF0C0C42EB632E";
+        query.setProperty("permission_id", fileGroupPermission);
+        Item fileGroup = dataAccessLayer.Apply(query);
+
+        if (fileGroup.isError())
+        {
+            if (fileGroup.getErrorCode() != "0")
+            {
+                throw new Aras.Server.Core.InnovatorServerException(fileGroup.dom);
+            }
+            else
+            {
+                fileGroup = dataAccessLayer.ApplyAsFileAdministrator(query, "add");
+            }
+        }
+        return fileGroup.isError() ? fileGroup : fileGroup.getItemByIndex(0);
+	}
+
+	private Item AttachResults(Item fileGroup, Aras.ConversionFramework.Models.ConversionTask task)
+	{
+	    Item results = task.Item.getItemsByXPath("Relationships/Item[@type='ConversionTaskResult']");
+        I18NSessionContext sessionContext = dataAccessLayer.Innovator.getI18NSessionContext();
+        for(int resIndex = 0; resIndex < results.getItemCount(); resIndex++)
+        {
+            Item result = results.getItemByIndex(resIndex);
+            Item relship = fileGroup.createRelationship("FileGroup File", "add");
+            relship.setProperty("related_id", result.getProperty("file_id"));
+            DateTime expirationDate = dataAccessLayer.GetUtcTime().AddHours(publishedFilesExpirationTimeout);
+            relship.setProperty("file_expiration_date", sessionContext.ConvertUtcDateTimeToNeutral(expirationDate.ToString(CultureInfo.InvariantCulture), String.Empty));
+        }
+
+        fileGroup = dataAccessLayer.ApplyAsFileAdministrator(fileGroup, "skip");
+
+        if (fileGroup.isError())
+        {
+            throw new Aras.Server.Core.InnovatorServerException(fileGroup.dom);
+        }
+        return fileGroup;
+	}
+//}]]></method_code>
+  <method_type>C#</method_type>
+  <name>SetFilesToFileGroup</name>
+ </Item>
+</AML>

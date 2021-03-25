@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="0E7CDA98427343C5AF1E4ADA1AAB9B94" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// Update the label field after selecting new master_item_type
+// On calling from grid event the method receive the following arguments:
+//  relationshipID = ID for the Relationship Item. This is also the selected row ID in the Grid control
+//  relatedID = the ID for the related Item. (Blank for null relationships)
+//  gridApplet = handle to the Grid control
+//  propertyName = name of the Property for the currently selected cell
+//  colNumber = zero based column position number in the grid of the current celltry
+try
+{
+  var itemType = parent.item.getAttribute('type');
+  var propName = propertyName;
+  var relshipItem = parent.thisItem.getItemsByXPath("Relationships/Item[@id='" + relationshipID + "']");
+  if (relshipItem  && relshipItem.node && propName!=="")
+  {
+    var propName_value = relshipItem.getProperty(propName,"");
+    if(propName_value && propName_value!=="")
+      {relshipItem.setPropertyAttribute(propName, "oldvalue", propName_value);}
+  }
+}
+catch(e)
+{
+  top.aras.AlertError(e.Message);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>MSO_KeepOldValue</name>
+ </Item>
+</AML>

@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project name="Utilities">
+	<target name="Create.Log.Package.Zip" description="Create archive with log files and test results">
+		<property name="Log.Package.Archive.Name" overwrite="false" value="Log-Package-From-${Last.Commit.Before.Current.Release}-${This.Script.Start.Time.As.Sortable.Date}.zip" />
+		<property name="Path.To.Log.Package.Zip" value="${path::combine(Path.To.Automated.Procedures.Output, Log.Package.Archive.Name)}" />
+
+		<property name="SevenZip.Comman.Line.Arguments" value='a "${Path.To.Log.Package.Zip}" "${Path.To.Automated.Procedures.Temp}"' />
+		<property name="SevenZip.Comman.Line.Arguments" value='${SevenZip.Comman.Line.Arguments} "${Path.To.Build.Output}"' if="${directory::exists(Path.To.Build.Output)}" />
+		<property name="SevenZip.Comman.Line.Arguments" value='${SevenZip.Comman.Line.Arguments} "${Path.To.Tests.Output}"' if="${directory::exists(Path.To.Tests.Output)}" />
+
+		<exec program="${Path.To.SevenZip}" commandline="${SevenZip.Comman.Line.Arguments}" verbose="true" workingdir="${Path.To.This.Git.Repository}" />
+	</target>
+
+	<target name="Clean.Up">
+		<call target="Remove.Used.Substitutions" />
+
+		<property name="Cleanup.Verb.Value" value="-t Cleanup" />
+		<property name="Cleanup.Verb.Value" value="cleanup" if="${version::get-major(fileversioninfo::get-file-version(fileversioninfo::get-version-info(Path.To.Deployment.Tool))) == 1}" />
+
+		<exec program="${Path.To.Deployment.Tool}" workingdir="${Path.To.Deployment.Tool.Dir}">
+			<arg value="${Cleanup.Verb.Value}" />
+			<arg value="-c ${Path.To.Instance.Setup.Config}" />
+		</exec>
+		<exec program="${Path.To.Deployment.Tool}">
+			<arg value="${Cleanup.Verb.Value}" />
+			<arg value="-c ${Path.To.Instance.Deploy.Config}" />
+		</exec>
+		<exec program="cmd.exe" commandline='/C rmdir "\\?\${Path.To.Installed.Innovator}" /S /Q' />
+	</target>
+
+	<target name="Remove.Used.Substitutions">
+		<exec program="powershell.exe" commandline='-Command "subst | Where-Object { $_ -match &apos;^[ST]&apos; } | Foreach-Object { subst $_.Substring(0, 2) /D }"' verbose="true" />
+	</target>
+
+	<target name="Create.New.Baseline" depends="SetupParameters.For.Deploy.Task">
+		<exec program="${Path.To.Deployment.Tool}" workingdir="${Path.To.Deployment.Tool.Dir}">
+			<arg value="-t Backup" />
+			<arg value="-c ${Path.To.Instance.Deploy.Config}" />
+		</exec>
+	</target>
+
+	<target name="Update.CRT.Version.Git.Tag">
+		<property name="CRT.Version.Git.Tag" value="R${Version.Of.Installed.Innovator}-${Project.Prefix}-${Original.CRT.Version}" />
+		<property name="CRT.Version.Git.Tag" value="${string::replace(CRT.Version.Git.Tag, '.', '-')}" />
+		<property name="CRT.Version.Git.Tag" value="${string::replace(CRT.Version.Git.Tag, ' ', '-')}" />
+
+		<echo>Check if tag ${CRT.Version.Git.Tag} exists in a repository. Path to the repository: ${Path.To.This.Git.Repository}</echo>
+		<exec program="git"
+					commandline="rev-parse --verify ${CRT.Version.Git.Tag}"
+					workingdir="${Path.To.This.Git.Repository}"
+					output="${Path.To.Pre.Deploy.Validations.Log.File}"
+					failonerror="false"
+					resultproperty="Commit.Found" />
+
+		<if test="${Commit.Found != '0'}">
+			<exec program="git" commandline='tag ${CRT.Version.Git.Tag} -m "Update CRT version to ${CRT.Version.Git.Tag}"' workingdir="${Path.To.This.Git.Repository}" />
+			<exec program="git" commandline="push origin ${CRT.Version.Git.Tag}" workingdir="${Path.To.This.Git.Repository}" />
+		</if>
+	</target>
+
+	<target name="Extract.Deleted.Delta" description="Prepares &quot;package&quot;, containing AMLs for items, which were deleted during release N development or during last &quot;Number&quot; of commits.">
+		<trycatch>
+			<try>
+				<exec program="cmd.exe" commandline='/C subst t: "${Path.To.This.Git.Repository}"' verbose='true' />
+				<property name="Path.To.Delta" value="${path::combine('t:', 'AutomatedProcedures\tools\Aras.DeltaExtraction.CommandLine\lib\DeltaExtractionCmd.exe')}" />
+				<property name="Path.To.AML.Packages" value="${path::combine(Path.To.This.Git.Repository, 'AML-packages')}" />
+				<property name="Path.To.Delta.Validations.Log.File" value="${path::combine(Path.To.Automated.Procedures.Temp, 'DeletedDeltaValidation.log')}" /> 
+				<property name="Path.To.Deleted.Items.Dir" value="${path::combine(Path.To.Automated.Procedures.Output, 'TemporaryDeletedItems')}" /> 
+				<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Deleted.Items.Dir}" /S /Q' if='${directory::exists(Path.To.Deleted.Items.Dir)}'/>
+
+				<property name="Deleted.Delta.Last.Commits.Number" overwrite="false" value="" />
+				<choose>
+					<when test="${Deleted.Delta.Last.Commits.Number == ''}">
+						<property name="Deleted.Delta.From.Commit" value="${Last.Commit.Before.Current.Release}" />
+						<echo>Start extracting deleted delta from ${Deleted.Delta.From.Commit} </echo>
+					</when>
+					<otherwise>
+						<property name="Deleted.Delta.From.Commit" value="HEAD~${Deleted.Delta.Last.Commits.Number}" />
+						<echo>Start extracting deleted delta for ${Deleted.Delta.Last.Commits.Number} last commit(s).</echo>
+					</otherwise>
+				</choose>
+
+				<echo>Check if commit ${Deleted.Delta.From.Commit} exists in a repository. Path to the repository: ${Path.To.This.Git.Repository}</echo>
+				<exec program="git"
+						commandline="rev-parse --verify ${Deleted.Delta.From.Commit}"
+						workingdir="${Path.To.This.Git.Repository}"
+						output="${Path.To.Delta.Validations.Log.File}"
+						failonerror="false"
+						resultproperty="Commit.Found" />
+				<fail if="${Commit.Found != '0'}" message="${Deleted.Delta.From.Commit} not found in the repository" />
+				<echo>OK</echo>
+
+				<exec 
+					program="${Path.To.Delta}"
+					commandline="Repository -p ${Path.To.AML.Packages} -f ${Deleted.Delta.From.Commit} -o ${Path.To.Deleted.Items.Dir} -c reverse"
+					workingdir="t:"
+					failonerror="true" />
+			</try>
+			<finally>
+				<call target="Remove.Used.Substitutions" />
+			</finally>
+		</trycatch>
+	</target>
+</project>

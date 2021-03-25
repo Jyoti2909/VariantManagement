@@ -1,0 +1,187 @@
+﻿<msxsl:script xmlns:msxsl="urn:schemas-microsoft-com:xslt" language="Jscript" implements-prefix="aras">
+
+function today() {
+  var DATE = new Date();
+  var Y=DATE.getFullYear();
+  var M=DATE.getMonth()+1;
+  var D=DATE.getDate();
+  var returnDate = M + '/' + D + '/' + Y;
+  return returnDate;
+}
+
+function selectMonth(i) {
+  var arrMonths = new Array("January","February","March","April","May","June","July","August","September","October","November","December");
+  return (arrMonths[i])
+}
+
+function compareDates(date1,date2,d1_offset,d2_offset) {
+  var d1_date = getDateFromString(date1);
+  d1_date = dayAdd(d1_date, d1_offset);
+  var d1 = d1_date.getTime();
+  var d2_date =getDateFromString(date2);
+  d2_date = dayAdd(d2_date, d2_offset);
+  var d2 = d2_date.getTime();
+
+  if (d1==0 || d2==0) {
+    return -1;
+  }
+  else if (d1 > d2 ) {
+    return 1;
+  }
+  return 0;
+}
+
+function stringDateAdd(str_date, numDays, numMonths, numYears) {
+  var date_obj = getDateFromString(str_date);
+  var DATE = dateAdd(date_obj, numDays, numMonths, numYears)
+  var Y=DATE.getFullYear();
+  var M=DATE.getMonth()+1;
+  var D=DATE.getDate();
+  var returnDate = M + '/' + D + '/' + Y;
+  return returnDate;
+}
+
+function dateAdd(startDate, numDays, numMonths, numYears){
+  var returnDate = new Date(startDate.getTime());
+  var yearsToAdd = numYears;
+  
+  var month = returnDate.getMonth() + numMonths;
+  if (month > 11) {
+    yearsToAdd = Math.floor((month+1)/12);
+    month -= 12*yearsToAdd;
+    yearsToAdd += numYears;
+  }
+
+  returnDate.setMonth(month);
+  returnDate.setFullYear(returnDate.getFullYear() + yearsToAdd);
+  returnDate.setTime(returnDate.getTime()+60000*60*24*numDays);
+  
+  return returnDate;
+}
+
+function yearAdd(startDate, numYears){
+  return dateAdd(startDate,0,0,numYears);
+}
+
+function monthAdd(startDate, numMonths){
+  return dateAdd(startDate,0,numMonths,0);
+}
+
+function dayAdd(startDate, numDays){
+  return dateAdd(startDate,numDays,0,0);
+}
+
+function getDateFromString(StringToDate) {
+  if (!StringToDate){
+    StringToDate = "xx/xx/xx"
+    return StringToDate;
+  }
+  if (StringToDate == ""){
+    StringToDate = "11/11/1111"
+    return StringToDate;
+  }
+
+  var strReturnDate;
+  var arrDate;
+  var arrMonths = new Array("January","February","March","April","May","June","July","August","September","October","November","December");
+  var strMONTH;
+  var Separator = "";
+
+  while(StringToDate.indexOf("st") &gt; -1){
+    StringToDate = StringToDate.replace("st","");
+  }
+
+  while(StringToDate.indexOf("nd") &gt; -1){
+    StringToDate = StringToDate.replace("nd","");
+  }
+
+  while(StringToDate.indexOf("rd") &gt; -1){
+    StringToDate = StringToDate.replace("rd","");
+  }
+
+  while(StringToDate.indexOf("th") &gt; -1){
+    StringToDate = StringToDate.replace("th","");
+  }
+
+  if(StringToDate.indexOf(".") &gt; -1){
+    Separator = ".";
+  }
+
+  if(StringToDate.indexOf("-") &gt; -1){
+    Separator = "-";
+  }
+
+  if(StringToDate.indexOf("/") &gt; -1){
+    Separator = "/";
+  }
+
+  if(StringToDate.indexOf(" ") &gt; -1){
+    Separator = " ";
+  }
+
+  arrDate = StringToDate.split(Separator);
+  StringToDate = "";
+  for(var iSD = 0;iSD &lt; arrDate.length;iSD++){
+    if(arrDate[iSD]!=""){
+    StringToDate += arrDate[iSD] + Separator;
+    }
+  }
+  StringToDate = StringToDate.substring(0,StringToDate.length-1);
+  arrDate = StringToDate.split(Separator);
+
+  if(arrDate.length &lt; 3){
+    return "";
+  }
+
+  // Initial Date Format Assumption is MM DD YY
+  var MONTH = arrDate[0];
+  var DAY = arrDate[1];
+  var YEAR = arrDate[2];
+
+  if(parseFloat(arrDate[0])  >  12){
+    DAY = arrDate[0];
+    MONTH = arrDate[1];
+  }
+  if(parseFloat(DAY) &amp;&amp;  DAY.toString().length==4){
+    YEAR = arrDate[0];
+    DAY = arrDate[2];
+    MONTH = arrDate[1];
+  }
+
+  for(var iSD = 0;iSD &lt; arrMonths.length;iSD++){
+  var ShortMonth = arrMonths[iSD].substring(0,3).toLowerCase();
+  var MonthPosition = StringToDate.indexOf(ShortMonth);
+    if(MonthPosition  &gt;  -1){
+      MONTH = iSD + 1;
+      if(MonthPosition == 0){
+        DAY = arrDate[1];
+        YEAR = arrDate[2];
+      }
+      break;
+    }
+  }
+
+  var strTemp = YEAR.toString();
+  if(strTemp.length==2){
+
+    if(parseFloat(YEAR) &gt; 40){
+      YEAR = "19" + YEAR;
+    }
+    else{
+      YEAR = "20" + YEAR;
+    }
+
+  }
+
+  if(parseInt(MONTH) &lt; 10 &amp;&amp;  MONTH.toString().length &lt; 2){
+    MONTH = "0" + MONTH;
+  }
+  if(parseInt(DAY) &lt; 10 &amp;&amp;  DAY.toString().length &lt; 2){
+    DAY = "0" + DAY;
+  }
+
+  var DATE = new Date(YEAR,MONTH,DAY,0,0,0);
+
+  return DATE;
+}
+</msxsl:script>

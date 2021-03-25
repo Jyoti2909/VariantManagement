@@ -1,0 +1,174 @@
+﻿<AML>
+ <Item type="Method" id="75233DE96E4A45E1AF4FE9C1F318B26C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string itemTypeId = this.getProperty("item_type_id");
+	Innovator inn = this.getInnovator();
+	IDataAccessLayer dataAccessLayer = new DataAccessLayer(inn);
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer, inn);
+	return businessLogic.GetReportsMenuButtons(itemTypeId);
+}
+
+internal class BusinessLogic
+{
+	private IDataAccessLayer dataAccessLayer;
+	private Innovator innovator;
+	public string ReportsClickMethodName = "cui_svicm_reports_click";
+	public string ReportsInitMethodName = "initReportsPopupItemInItemsGrid";
+	const string ReportsMenuId = "A7C73733CABE4B56A24DA9682E69558D";
+	private static string[] ReportTypes = {
+		"item",
+		"itemtype"
+	};
+
+	internal BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+		this.innovator = innovator;
+	}
+
+	public Item GetReportsMenuButtons(string itemTypeId)
+	{
+		Item items = null;
+
+		if (!string.IsNullOrEmpty(itemTypeId))
+		{
+			string clickMethodId = this.dataAccessLayer.GetMethodId(ReportsClickMethodName);
+			string initMethodId = this.dataAccessLayer.GetMethodId(ReportsInitMethodName);
+			Item reports = this.dataAccessLayer.GetReports(itemTypeId);
+			items = HandleMenuButtons(reports, clickMethodId, initMethodId, ReportsMenuId, itemTypeId);
+		}
+
+		return items ?? this.innovator.newResult("");
+	}
+
+	static private IDictionary<string, IList<Item>> SeparateReportsByType(Item reports)
+	{
+		Dictionary<string, IList<Item>> result = new Dictionary<string, IList<Item>>();
+
+		foreach (string reportType in ReportTypes)
+		{
+			result[reportType] = new List<Item>();
+		}
+
+		for (int i = 0; i < reports.getItemCount(); i++)
+		{
+			Item report = reports.getItemByIndex(i);
+			string reportType = report.getProperty("type");
+
+			if (ReportTypes.Contains(reportType))
+			{
+				result[reportType].Add(report);
+			}
+		}
+
+		return result;
+	}
+
+	private Item HandleMenuButtons(Item reports, string clickMethodId, string initMethodId, string reportsMenuId, string itemTypeId)
+	{
+		Item resultItems = this.innovator.newItem();
+
+		IDictionary<string, IList<Item>> reportsDictionary = SeparateReportsByType(reports);
+
+		foreach (string reportType in ReportTypes)
+		{
+			int reportsCount = reportsDictionary[reportType].Count;
+
+			if (reportsCount > 0)
+			{
+				Item separator = this.innovator.newItem("CommandBarMenuSeparator");
+				separator.setProperty("parent_menu", reportsMenuId);
+				separator.setProperty("name", "cui_reports_sep");
+				separator.setID("cui_reports_sep");
+				resultItems.appendItem(separator);
+
+				foreach (Item currentReport in reportsDictionary[reportType])
+				{
+					resultItems.appendItem(HandleMenuButton(currentReport, clickMethodId, initMethodId, ReportsMenuId, itemTypeId));
+				}
+			}
+		}
+
+		if (resultItems.getItemCount() == 1)
+		{
+			return null;
+		}
+		else
+		{
+			resultItems.removeItem(resultItems.getItemByIndex(0));
+			return resultItems;
+		}
+	}
+
+	private Item HandleMenuButton(Item report, string clickMethodId, string initMethodId, string parentMenuId, string itemTypeId)
+	{
+		string reportTemplate = "report:{0}:{1}";
+		Item reportButton = this.innovator.newItem("CommandBarMenuButton");
+		reportButton.setProperty("parent_menu", parentMenuId);
+		string reportId = report.getID();
+		string reportName = string.Format(CultureInfo.InvariantCulture, reportTemplate, reportId, itemTypeId);
+		string reportType = report.getProperty("type");
+		reportButton.setProperty("name", reportName);
+		reportButton.setProperty("label",
+			report.getProperty("label") ?? report.getProperty("name"));
+		reportButton.setProperty("on_click_handler", clickMethodId);
+		reportButton.setPropertyAttribute("on_click_handler", "keyed_name", ReportsClickMethodName);
+		reportButton.setPropertyAttribute("on_click_handler", "type", "Method");
+		reportButton.setProperty("additional_data", "{\"reportId\": \"" + reportId + "\", \"itemTypeId\": \"" + itemTypeId + "\", \"type\": \"report\", \"reportType\": \"" + reportType + "\"}");
+
+		reportButton.setProperty("on_init_handler", initMethodId);
+		reportButton.setPropertyAttribute("on_init_handler", "keyed_name", ReportsInitMethodName);
+		reportButton.setPropertyAttribute("on_init_handler", "type", "Method");
+
+		reportButton.setProperty("action", "Add");
+		reportButton.setID(reportId);
+		reportButton.removeAttribute("isNew");
+		reportButton.removeAttribute("isTemp");
+
+		return reportButton;
+	}
+}
+
+internal interface IDataAccessLayer
+{
+	string GetMethodId(string methodName);
+
+	Item GetReports(string itemTypeId);
+}
+
+internal class DataAccessLayer : IDataAccessLayer
+{
+	private Innovator innovator;
+
+	internal DataAccessLayer(Innovator innovator)
+	{
+		this.innovator = innovator;
+	}
+
+	public string GetMethodId(string methodName)
+	{
+		Item method = this.innovator.newItem("Method", "get");
+		method.setAttribute("select", "id");
+		method.setProperty("name", methodName);
+		method = method.apply();
+
+		return method.getID();
+	}
+
+	public Item GetReports(string itemTypeId)
+	{
+		Item itemReports = this.innovator.newItem("Item Report", "get");
+		itemReports.setProperty("source_id", itemTypeId);
+		Item relReports = this.innovator.newItem("Report", "get");
+		relReports.setAttribute("select", "name,label,location,type");
+		Item logicOr = relReports.newOR();
+		logicOr.setProperty("type", "itemtype");
+		logicOr.setProperty("type", "item");
+		itemReports.setRelatedItem(relReports);
+		itemReports = itemReports.apply();
+		return itemReports.getItemsByXPath(Item.XPathResultItem + "/related_id/Item");
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>CuiMainWindowContextMenuReports</name>
+ </Item>
+</AML>

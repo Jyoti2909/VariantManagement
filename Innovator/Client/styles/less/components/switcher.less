@@ -1,0 +1,42 @@
+﻿@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+.aras-switcher {
+	display: block;
+	position: relative;
+
+	&-pane {
+		position: absolute;
+
+		&_active {
+			animation: fade-in 200ms;
+			position: relative;
+		}
+
+		&:not(&_active) {
+			visibility: hidden;
+			/*
+				Workaround for Chrome browser to work with configurable grids properly
+
+				After migration to switcher component in relationship grid accordion,
+				which uses "visibility: hidden" technique to hide inactive tabs (dojo
+				ContentPanes used "display: none"), such tabs may takes space in active
+				page. Issue occured in Chrome, when focus was set to hidden frame, and
+				browser was not able to calculate position of current rel tab frame
+				correctly, which causes it to be shifted up.
+				This fix sets all inactive frames to have top-left position in
+				switcher and not to break layout.
+
+				Please, see "I-010534 Relationship Grid disappears after using Configurable Grid" for more details
+			*/
+			top: 0;
+			left: 0;
+		}
+	}
+}

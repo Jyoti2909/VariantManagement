@@ -1,0 +1,117 @@
+﻿<AML>
+ <Item type="Method" id="6E98938E4A3D4B1BA8F83BAE26D3A309" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly string[] _allowedStates = new[] { "In Planning", "In Review", "In Work" };
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				Item latest = GetLatestItem(contextItem);
+				IEnumerable<Item> changeControlledItems = GetChangeControlledItems(contextItem);
+				ApplyNewVersions(changeControlledItems, latest);
+				return contextItem;
+			}
+
+			private IEnumerable<Item> GetChangeControlledItems(Item contextItem)
+			{
+				Item related = _dal.NewItem(contextItem.getType(), "get");
+				related.setAttribute("select", "id");
+				related.setProperty("item_number", contextItem.getProperty("item_number"));
+				related.setPropertyCondition("item_number", "eq");
+				Item changeControlledItems = _dal.NewItem("GAG_GECO ChangeControlled", "get");
+				changeControlledItems.setPropertyItem("related_id", related);
+				changeControlledItems = _dal.ApplyItem(changeControlledItems);
+				if (changeControlledItems.isEmpty())
+				{
+					return Array.Empty<Item>();
+				}
+
+				return changeControlledItems.isError()
+					? throw new ItemException(changeControlledItems)
+					: changeControlledItems.Enumerate();
+			}
+
+			private void ApplyNewVersions(IEnumerable<Item> changeControlledItems, Item latest)
+			{
+				StringBuilder aml = new StringBuilder();
+				foreach (Item changeControlledItem in changeControlledItems)
+				{
+					string gecoState = GetGECOState(changeControlledItem);
+					if (!_allowedStates.Contains(gecoState))
+					{
+						continue;
+					}
+
+					string action = changeControlledItem.getProperty("gag_action");
+					string propertyForLatest;
+					switch (action)
+					{
+						case "Revise":
+							propertyForLatest = "gag_new_item";
+							break;
+						case "Release":
+							propertyForLatest = "related_id";
+							break;
+						case "None":
+							continue;
+						default:
+							throw new ItemException($"Unknown {action} action");
+					}
+
+					Item query = _dal.NewItem(changeControlledItem.getType(), "edit");
+					query.setID(changeControlledItem.getID());
+					query.setProperty(propertyForLatest, latest.getID());
+					aml.AppendLine(query.dom.OuterXml);
+				}
+
+				if (aml.Length > 0)
+				{
+					Item result = _dal.ApplyAmlWithGrantIdentity($"<AML>{aml}</AML>", "Aras PLM");
+					if (result.isError())
+					{
+						throw new ItemException(result);
+					}
+				}
+			}
+
+			private string GetGECOState(Item changeControlledItem)
+			{
+				Item geco = _dal.NewItem("GAG_EngineeringChangeObject", "get");
+				geco.setID(changeControlledItem.getProperty("source_id"));
+				geco.setAttribute("select", "state");
+				geco = _dal.ApplyItem(geco);
+
+				return geco.isError()
+					? throw new ItemException(geco)
+					: geco.getProperty("state");
+			}
+
+			private Item GetLatestItem(Item contextItem)
+			{
+				Item latest = _dal.NewItem(contextItem.getType(), "get");
+				latest.setProperty("item_number", contextItem.getProperty("item_number"));
+				latest.setPropertyCondition("item_number", "eq");
+				latest.setAttribute("select", "id");
+				latest = _dal.ApplyItem(latest);
+
+				return latest.isError()
+					? throw new ItemException(latest)
+					: latest;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_UpdateAffectedItemVersion</name>
+ </Item>
+</AML>

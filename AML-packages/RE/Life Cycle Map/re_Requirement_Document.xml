@@ -1,0 +1,179 @@
+﻿<AML>
+ <Item type="Life Cycle Map" id="A5A88ABB78E5430AA3BAFC130D89D7BA" action="add">
+  <description>Default Requirements Document Life Cycle</description>
+  <start_state keyed_name="Draft" type="Life Cycle State">1384991D4A7B4788887453CB5CA52896</start_state>
+  <name>re_Requirement_Document</name>
+  <Relationships>
+   <Item type="Life Cycle State" id="1384991D4A7B4788887453CB5CA52896" action="add">
+    <image>../Images/LifeCycleState.svg</image>
+    <item_behavior>float</item_behavior>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <state_permission_id keyed_name="RE Draft Requirements Document" type="Permission">FD57D7AA0A9D41F895C35C6985B497C4</state_permission_id>
+    <x>43</x>
+    <y>50</y>
+    <name>Draft</name>
+   </Item>
+   <Item type="Life Cycle State" id="A56A778BE03E4A1F97BA5715205435D0" action="add">
+    <image>../Images/LifeCycleState.svg</image>
+    <item_behavior>fixed</item_behavior>
+    <set_is_released>1</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <state_permission_id keyed_name="RE In Change Requirements Document" type="Permission">887D667E34934D4F831A3CCA76ED3B51</state_permission_id>
+    <x>376</x>
+    <y>49</y>
+    <name>In Change</name>
+   </Item>
+   <Item type="Life Cycle State" id="47CEF0ED6DA042ED972BA084743D238C" action="add">
+    <image>../Images/LifeCycleState.svg</image>
+    <item_behavior>float</item_behavior>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <state_permission_id keyed_name="RE In Review Requirements Document" type="Permission">BFD48B14B3714365830F9268150CA323</state_permission_id>
+    <x>151</x>
+    <y>50</y>
+    <name>In Review</name>
+   </Item>
+   <Item type="Life Cycle State" id="EC8E47B3B66D4B54B789A3AFA81466DD" action="add">
+    <image>../Images/LifeCycleState.svg</image>
+    <item_behavior>fixed</item_behavior>
+    <set_is_released>1</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <state_permission_id keyed_name="RE Released Requirements Document" type="Permission">08B81CCCA8324622AAEE7A908AB574D6</state_permission_id>
+    <x>253</x>
+    <y>50</y>
+    <name>Released</name>
+   </Item>
+   <Item type="Life Cycle State" id="A4A76CC72036439989BDA5F487DEDC07" action="add">
+    <image>../Images/LifeCycleState.svg</image>
+    <item_behavior>fixed</item_behavior>
+    <set_is_released>1</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <state_permission_id keyed_name="RE Superseded Requirements Document" type="Permission">3A4DAFFD55184D30B955CD288A1F7E8F</state_permission_id>
+    <x>483</x>
+    <y>50</y>
+    <name>Superseded</name>
+   </Item>
+   <Item type="Life Cycle Transition" id="D6E77B4D023347B49EEA1BCF783FFB14" action="add">
+    <from_state keyed_name="Draft" type="Life Cycle State">1384991D4A7B4788887453CB5CA52896</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="re_CheckLifeCyclesToInReview" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>re_CheckLifeCyclesToInReview</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Manager" type="Identity">
+     <Item type="Identity" action="get" select="id">
+      <name>Manager</name>
+     </Item>
+    </role>
+    <segments />
+    <sort_order>128</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <to_state keyed_name="In Review" type="Life Cycle State">47CEF0ED6DA042ED972BA084743D238C</to_state>
+    <x>5</x>
+    <y>50</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="B17ABD26CBEE4293A1F4BD11EA138A8C" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">47CEF0ED6DA042ED972BA084743D238C</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="re_CheckLifeCyclesToReleased" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>re_CheckLifeCyclesToReleased</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Manager" type="Identity">
+     <Item type="Identity" action="get" select="id">
+      <name>Manager</name>
+     </Item>
+    </role>
+    <segments />
+    <sort_order>256</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <to_state keyed_name="Released" type="Life Cycle State">EC8E47B3B66D4B54B789A3AFA81466DD</to_state>
+    <x>-1</x>
+    <y>-1</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="DC234C4E5EF44A3793E6111FA86DD018" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">47CEF0ED6DA042ED972BA084743D238C</from_state>
+    <get_comment>0</get_comment>
+    <role keyed_name="Manager" type="Identity">
+     <Item type="Identity" action="get" select="id">
+      <name>Manager</name>
+     </Item>
+    </role>
+    <segments>105,31</segments>
+    <sort_order>1152</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <to_state keyed_name="Draft" type="Life Cycle State">1384991D4A7B4788887453CB5CA52896</to_state>
+    <x>-66</x>
+    <y>-38</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="8BC5F26281214330BA8A9B84C0C55E11" action="add">
+    <from_state keyed_name="In Change" type="Life Cycle State">A56A778BE03E4A1F97BA5715205435D0</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="re_CheckLifeCyclesToReleased" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>re_CheckLifeCyclesToReleased</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Manager" type="Identity">
+     <Item type="Identity" action="get" select="id">
+      <name>Manager</name>
+     </Item>
+    </role>
+    <segments>333,20</segments>
+    <sort_order>1280</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <to_state keyed_name="Released" type="Life Cycle State">EC8E47B3B66D4B54B789A3AFA81466DD</to_state>
+    <x>-136</x>
+    <y>-32</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="DDFF2BE7D2AE4E2E9CCEF0662F6FF9E6" action="add">
+    <from_state keyed_name="In Change" type="Life Cycle State">A56A778BE03E4A1F97BA5715205435D0</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="re_CheckLifeCyclesToSuperseded" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>re_CheckLifeCyclesToSuperseded</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Manager" type="Identity">
+     <Item type="Identity" action="get" select="id">
+      <name>Manager</name>
+     </Item>
+    </role>
+    <segments />
+    <sort_order>1024</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <to_state keyed_name="Superseded" type="Life Cycle State">A4A76CC72036439989BDA5F487DEDC07</to_state>
+    <x>26</x>
+    <y>12</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="94D804C33C974351950AB0E65A68F729" action="add">
+    <from_state keyed_name="Released" type="Life Cycle State">EC8E47B3B66D4B54B789A3AFA81466DD</from_state>
+    <get_comment>0</get_comment>
+    <role keyed_name="Manager" type="Identity">
+     <Item type="Identity" action="get" select="id">
+      <name>Manager</name>
+     </Item>
+    </role>
+    <segments>326,61</segments>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="re_Requirement_Document" type="Life Cycle Map">A5A88ABB78E5430AA3BAFC130D89D7BA</source_id>
+    <to_state keyed_name="In Change" type="Life Cycle State">A56A778BE03E4A1F97BA5715205435D0</to_state>
+    <x>-1</x>
+    <y>-1</y>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

@@ -1,0 +1,321 @@
+﻿<TestCase author="vsmirnov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../TestCase.xsd">
+	<Description>Generic test for any classification of the GECO that checks affected items versions on leaving planning state.</Description>
+	<Request
+		runAs="testUser:1"
+		srcName="Create.Part.And.Cad.Items"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="1"
+	/>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Promote.Part.And.Cad.Items"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="2"
+	/>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Create.GECO"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="3"
+	/>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Get.InBasket.Task"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="4"
+	/>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Assign.Activity.Variables"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="5"
+		/>
+
+	<Request runAs="testUser:1" position="6">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Error is returned because affected items have incorrect actions
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Workflow.Path" action="apply" xpath="Query/AML/Item/Paths/Path" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query
+			srcName="Evaluate.Activity"
+			srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"/>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring><![CDATA[CAD 10 can have only these actions: None, Release. CAD 30 can have only these actions: None, Revise. CAD 50 can have only these actions: None. CAD Other can have only these actions: None. Part 10 can have only these actions: None. ]]></faultstring>
+						<detail>
+							<af:legacy_detail></af:legacy_detail>
+							<af:exception message="" type="Aras.Ark.Common.ItemException" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_detail" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:exception/@message" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Change.Active.10.Action"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="7"
+	/>
+
+	<Request runAs="testUser:1" position="8">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Error is returned because affected items have incorrect actions
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Workflow.Path" action="apply" xpath="Query/AML/Item/Paths/Path" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query
+			srcName="Evaluate.Activity"
+			srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"/>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring><![CDATA[CAD 30 can have only these actions: None, Revise. CAD 50 can have only these actions: None. CAD Other can have only these actions: None. Part 10 can have only these actions: None. ]]></faultstring>
+						<detail>
+							<af:legacy_detail></af:legacy_detail>
+							<af:exception message="" type="Aras.Ark.Common.ItemException" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_detail" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:exception/@message" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Change.Active.30.Action"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="9"
+	/>
+
+	<Request runAs="testUser:1" position="10">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Error is returned because affected items have incorrect actions
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Workflow.Path" action="apply" xpath="Query/AML/Item/Paths/Path" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query
+			srcName="Evaluate.Activity"
+			srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"/>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring><![CDATA[CAD 50 can have only these actions: None. CAD Other can have only these actions: None. Part 10 can have only these actions: None. ]]></faultstring>
+						<detail>
+							<af:legacy_detail></af:legacy_detail>
+							<af:exception message="" type="Aras.Ark.Common.ItemException" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_detail" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:exception/@message" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Change.Active.50.Action"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="11"
+	/>
+
+	<Request runAs="testUser:1" position="12">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Error is returned because affected items have incorrect actions
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Workflow.Path" action="apply" xpath="Query/AML/Item/Paths/Path" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query
+			srcName="Evaluate.Activity"
+			srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"/>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring><![CDATA[CAD Other can have only these actions: None. Part 10 can have only these actions: None. ]]></faultstring>
+						<detail>
+							<af:legacy_detail></af:legacy_detail>
+							<af:exception message="" type="Aras.Ark.Common.ItemException" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_detail" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:exception/@message" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Change.Active.Other.Action"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="13"
+	/>
+
+	<Request runAs="testUser:1" position="14">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Error is returned because affected items have incorrect actions
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Workflow.Path" action="apply" xpath="Query/AML/Item/Paths/Path" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query
+			srcName="Evaluate.Activity"
+			srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"/>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring><![CDATA[Part 10 can have only these actions: None. ]]></faultstring>
+						<detail>
+							<af:legacy_detail></af:legacy_detail>
+							<af:exception message="" type="Aras.Ark.Common.ItemException" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_detail" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:exception/@message" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Change.Inactive.10.Action"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="15"
+	/>
+
+	<Request
+		runAs="testUser:1"
+		srcName="Evaluate.Activity.Successfully"
+		srcFile="TestCases\Grammer\GECO\AffectedItemActions\_Common.xml"
+		position="16"
+	/>
+
+	<TestCaseCleanUp runAs="root:innovator">
+		<Query>
+			<AML>
+				<Item type='GAG_SAPTransferLog' action='delete' where="[GAG_SAPTransferLog].created_by_id = 'C6E54EF530F04E6CAAACB52C52869060'" />
+				<Item type="GAG_EngineeringChangeObject" id="A8241D6C0D0741D9A267C1CE3790FCB3" action="delete" />
+				<Item type="Workflow Process" action="delete" where="[WORKFLOW_PROCESS].created_by_id = 'C6E54EF530F04E6CAAACB52C52869060'" />
+				<Item type='CAD' idlist='89015AF461B94AD49B19B8C0485EF376,663621837F7A404995323535D47DB37A,1509EE8C94E143738D922E5F74130B7E,F582A8CEEFF84DCEACF1329F3193E219' action='delete' />
+				<Item type='Part' idlist='5D1FBBE6BE274BF08B32A8DB83FBEB8F,53FCD6264AA545BAA26A26EFAA61E871,DC8166EBBEFE4BA6A9BA501397814694,610958C356AA48C8837B2BC33BFF992A' action='delete' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name="ids_modified" value="1C16D4DADAC44A659DF90262DF9E70E8" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

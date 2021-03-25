@@ -1,0 +1,22 @@
+﻿<AML>
+ <Item type="SQL" id="2778060B48214BCF95163B47603AC135" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_work_est_for_rollup</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION innovator.Select_work_est_for_rollup(@work_est          INTEGER,
+                                                     @act_duration      INTEGER,
+                                                     @work_day_duration INTEGER)
+RETURNS INTEGER
+AS
+  BEGIN
+      RETURN Isnull(@work_est, ( CASE
+                                   WHEN @act_duration > 0 THEN @act_duration
+                                   ELSE 0
+                                 END ) * @work_day_duration)
+  END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_work_est_for_rollup</name>
+ </Item>
+</AML>

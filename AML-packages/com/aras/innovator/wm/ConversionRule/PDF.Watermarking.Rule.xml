@@ -1,0 +1,45 @@
+﻿<AML>
+ <Item type="ConversionRule" id="97484718BF9F4E5D9A9F08D49277C351" action="add">
+  <converter_type keyed_name="PDF.Watermarking" type="ConverterType">7BAAFAE6E1544AB2B8AF3C83376C7087</converter_type>
+  <cutoff>24</cutoff>
+  <delay>5</delay>
+  <enabled>1</enabled>
+  <timeout>60</timeout>
+  <name>PDF.Watermarking.Rule</name>
+  <Relationships>
+   <Item type="ConversionRuleEventTemplate" id="D8FDF57CD0364BB9BF13207D097DE63C" action="add">
+    <event_type>OnConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="InvokeStandardConverter" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>InvokeStandardConverter</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="PDF.Watermarking.Rule" type="ConversionRule">97484718BF9F4E5D9A9F08D49277C351</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="25BFF482868B4CD7929C3B39DD2F03AF" action="add">
+    <event_type>OnStartTaskProcessing</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="wm_GatherWMContentAndDataForTask" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>wm_GatherWMContentAndDataForTask</name>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="PDF.Watermarking.Rule" type="ConversionRule">97484718BF9F4E5D9A9F08D49277C351</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="2250446D676147AEAF60A6D2C4A7752E" action="add">
+    <event_type>OnAfterConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="wm_UpdateSourceWatermarkedFile" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>wm_UpdateSourceWatermarkedFile</name>
+     </Item>
+    </related_id>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="PDF.Watermarking.Rule" type="ConversionRule">97484718BF9F4E5D9A9F08D49277C351</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

@@ -1,0 +1,218 @@
+﻿<AML>
+ <Item type="SQL" id="2CB3B9160A5F4235B358880062A25E7B" action="add">
+  <execution_count>5</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>insertInto_ACTIVITIES_P_ASAP</old_name>
+  <sqlserver_body><![CDATA[create procedure [insertInto_ACTIVITIES_P_ASAP]
+  ( 
+    @flag int,
+    @TZ_NAME NVARCHAR(50) = NULL
+  )
+AS 
+BEGIN
+  INSERT INTO #ACTIVITIES_IN_WORK
+  SELECT id,
+          0
+  FROM
+         (SELECT id
+                FROM   #ACTIVITIES
+                INTERSECT
+                (SELECT source_id
+                    FROM   #PREDECESSORS
+                    WHERE  RELATED_ID IN (SELECT id
+                                          FROM   #ACTIVITIES_IN_WORK
+                                          WHERE  FLAG = 1))) as T
+
+  INSERT #ACTIVITIES_P
+          (id,
+          s,
+          f)
+  SELECT A.ID id,
+         [innovator].Select_sched_date2
+         (
+           /* early date. 1st argument */
+           A.DATE_ES,
+           /* prop date. 2nd argument */
+           Isnull
+           (
+             (SELECT max
+             (
+               CASE
+                 /* 'Finish to Start' */
+                 WHEN p.precedence_type_int = 0
+                 THEN 
+                 (
+                   [innovator].[Business_dateadd_Scalar]
+                   (
+                     PL.F, p.lead_lag + ( CASE
+                                           WHEN this.expected_duration = 0 THEN 0
+                                           ELSE 1
+                                          END
+                                        ),
+                     @TZ_NAME
+                   )
+                 )
+                 /* 'Start to Start' */
+                 WHEN p.precedence_type_int = 1
+                 THEN
+                 (
+                   [innovator].[Business_dateadd_Scalar]
+                   (
+                     PL.S,
+                     p.lead_lag - ( CASE
+                                     WHEN this.expected_duration = 0 THEN 1
+                                     ELSE 0
+                                    END
+                                  ),
+                     @TZ_NAME
+                   )
+                 )
+                 /* 'Finish to Finish' */
+                 WHEN p.precedence_type_int = 2
+                 THEN
+                 (
+                   [innovator].[Business_dateadd_Scalar]
+                   (
+                     PL.F, 
+                     -this.expected_duration + p.lead_lag + ( CASE
+                                                               WHEN this.expected_duration = 0 THEN 0
+                                                               ELSE 1
+                                                              END
+                                                            ),
+                     @TZ_NAME
+                   )
+                 )
+                 /* 'Start to Finish' */
+                 WHEN p.precedence_type_int = 3
+                 THEN 
+                 (
+                   [innovator].[Business_dateadd_Scalar]
+                   (
+                     PL.S,
+                     -this.expected_duration + p.lead_lag - ( CASE
+                                                               WHEN this.expected_duration = 0 THEN 1
+                                                               ELSE 0
+                                                              END
+                                                            ),
+                     @TZ_NAME
+                   )
+                 )
+               END
+             ) --max
+             FROM   #ACTIVITIES_P PL,
+                    #PREDECESSORS P,
+                    [ACTIVITY2] THIS
+             WHERE  P.SOURCE_ID = A.ID
+                    AND P.RELATED_ID = PL.ID
+                    AND A.ID = THIS.ID
+           ), --select
+           A.DATE_ES
+           ), --IsNull
+           /* cur date. 3rd argument */
+           A.DATE_START_SCHED,
+           /* target date. 4th argument */
+           A.DATE_START_TARGET,
+           /* late date. 5th argument */
+           A.DATE_LS,
+           /* flag. 6th argument */
+           @FLAG) start,
+         [innovator].[Business_dateadd_Scalar]
+         (
+           INNOVATOR.Select_sched_date2
+           (
+             /* early date. 1st argument */
+             A.DATE_ES,
+             /* prop date. 2nd argument */
+             Isnull
+             (
+               (SELECT Max
+               (
+                 CASE
+                 /* 'Finish to Start' */
+                 WHEN p.precedence_type_int = 0
+                 THEN [innovator].[Business_dateadd_Scalar]
+                 (
+                   PL.F,
+                   p.lead_lag + ( CASE
+                                   WHEN this.expected_duration = 0 THEN 0
+                                   ELSE 1
+                                  END
+                                ),
+                   @TZ_NAME
+                 )
+                 /* 'Start to Start' */
+                 WHEN p.precedence_type_int = 1
+                 THEN [innovator].[Business_dateadd_Scalar]
+                 (
+                   PL.S,
+                   p.lead_lag - ( CASE
+                                   WHEN this.expected_duration = 0 THEN 1
+                                   ELSE 0
+                                  END
+                                ),
+                   @TZ_NAME
+                 )
+                 /* 'Finish to Finish' */
+                 WHEN p.precedence_type_int = 2
+                 THEN [innovator].[Business_dateadd_Scalar]
+                 (
+                   PL.F,
+                   -this.expected_duration + p.lead_lag + ( CASE
+                                                             WHEN this.expected_duration = 0 THEN 0
+                                                             ELSE 1
+                                                            END
+                                                          ),
+                   @TZ_NAME
+                 )
+                 /* 'Start to Finish' */
+                 WHEN p.precedence_type_int = 3
+                 THEN [innovator].[Business_dateadd_Scalar]
+                 (
+                   PL.S, 
+                   -this.expected_duration + p.lead_lag - ( CASE
+                                                             WHEN this.expected_duration = 0 THEN 1
+                                                             ELSE 0
+                                                            END 
+                                                          ),
+                   @TZ_NAME
+                 )
+                 END
+               )--max
+               FROM   #ACTIVITIES_P PL,
+                      #PREDECESSORS P,
+                      [ACTIVITY2] THIS
+               WHERE  P.SOURCE_ID = A.ID
+                      AND P.RELATED_ID = PL.ID
+                      AND A.ID = THIS.ID
+               ), --select
+               A.DATE_ES
+             ), --IsNull
+             /* cur date. 3rd argument */
+             A.DATE_START_SCHED,
+             /* target date. 4th argument */
+             A.DATE_START_TARGET,
+             /* late date. 5th argument */
+             A.DATE_LS,
+             /* flag. 6th argument */
+             @FLAG
+           ),
+           A.EXPECTED_DURATION - ( CASE
+                                    WHEN A.EXPECTED_DURATION = 0 THEN 0
+                                    ELSE 1
+                                   END
+                                 ),
+           @TZ_NAME
+         ) finish
+  FROM   [ACTIVITY2] A
+  WHERE  A.ID IN (SELECT ID
+                  FROM   #ACTIVITIES_IN_WORK
+                  WHERE  FLAG = 1
+                         AND ID NOT IN (SELECT ID
+                                        FROM   #ACTIVITIES_P))
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>insertInto_ACTIVITIES_P_ASAP</name>
+ </Item>
+</AML>

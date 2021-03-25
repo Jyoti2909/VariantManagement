@@ -1,0 +1,38 @@
+﻿<AML>
+ <Item type="Method" id="DB05C412AF1142729AECA75C6BED97D8" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const effectivityContext = options.effectivityContext;
+
+const selectedRowIds = effectivityContext.grid.selectedRowIds;
+
+const editEffectivityCtxMenuItemOptions = {
+	disabled: false,
+	hidden: false
+};
+
+if (selectedRowIds.length !== 1) {
+	editEffectivityCtxMenuItemOptions.hidden = true;
+
+	return editEffectivityCtxMenuItemOptions;
+}
+
+let getPermissionsItem = aras.newIOMItem('Method', 'effs_getExpressionPermissions');
+getPermissionsItem.setProperty('access_type', 'can_update');
+getPermissionsItem.setProperty('expression_item_id', selectedRowIds[0]);
+getPermissionsItem.setProperty('expression_itemtype_id', effectivityContext.effectivityExpressionItemTypeId);
+
+getPermissionsItem = getPermissionsItem.apply();
+
+if (getPermissionsItem.isError()) {
+	editEffectivityCtxMenuItemOptions.disabled = true;
+
+	aras.AlertError(getPermissionsItem);
+} else {
+	editEffectivityCtxMenuItemOptions.disabled = getPermissionsItem.getResult() === '0';
+}
+
+return editEffectivityCtxMenuItemOptions;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_exprItemGridEditEffMenuInit</name>
+ </Item>
+</AML>

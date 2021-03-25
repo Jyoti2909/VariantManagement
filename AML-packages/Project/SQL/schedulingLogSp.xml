@@ -1,0 +1,41 @@
+﻿<AML>
+ <Item type="SQL" id="A51D9CFD04A740F6813631384379D336" action="add">
+  <execution_count>3</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>schedulingLogSp</old_name>
+  <sqlserver_body><![CDATA[create procedure [schedulingLogSp]
+ @callerSpName varchar(64),
+ @dbName  varchar(64) = NULL,
+ @inParams varchar(512) = null,
+ @outParams varchar(512) = null,
+ @additionalInfo NVARCHAR(MAX) = NULL
+AS
+BEGIN
+  if not exists (select * from sysobjects where [name]='MM_LogTable' and xtype='U')
+  begin
+    create table [innovator].[MM_LogTable]
+    (
+      rowNum int,
+      callerSpName varchar(64),
+      dbName  varchar(64),
+      callTime datetime,
+      inParams varchar(512),
+      outParams varchar(512),
+      additionalInfo NVARCHAR(MAX)
+  )
+  end
+  declare @rowNum int, @callTime datetime
+  select @rowNum = count(*) from MM_LogTable
+  set @rowNum = 1 + @rowNum
+  set @callTime = GETDATE()
+  insert into [innovator].[MM_LogTable]
+    (rowNum,  callerSpName,  dbName,  callTime,  inParams,  outParams,  additionalInfo)
+    values
+    (@rowNum, @callerSpName, @dbName, @callTime, @inParams, @outParams, @additionalInfo)
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>schedulingLogSp</name>
+ </Item>
+</AML>

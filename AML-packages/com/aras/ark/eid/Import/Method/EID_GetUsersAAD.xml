@@ -1,0 +1,222 @@
+﻿<AML>
+ <Item type="Method" id="9470076B37694941B010EA8CC8759D3C" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="EID_External Identity Configurator" type="Identity">5400BE2B4462465F820166CED8DA03CB</execution_allowed_to>
+  <method_code><![CDATA[            IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer dal;
+			private const string AzureAdUserUniqueIdName = "id";
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				dal = dataAccessLayer;
+			}
+			/// <summary>
+			/// The demo implementation is using Microsoft graph API to get Azure AD users.
+			/// It uses several existing EID properties to re-purpose AAD required fields
+			///     eid_connection_string - AAD tenant id
+			///     eid_user_name - AAD client id
+			///     eid_password_key - AAD client secret
+			///
+			/// Azure AD configuration:
+			/// 1. create an application(client) and register under AAD(tenant)
+			/// 2. create a client secret for the application (suggest long expire time i.e. more than 1 year)
+			/// 3. create a Microsoft graph permission for the application: "User.Read.All" and grant admin consent for AAD
+			///
+			/// End points used in the implementation:
+			/// https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token -- get access token
+			/// https://graph.microsoft.com/v1.0/user --get users
+			///     
+			/// </summary>
+			/// <param name="contextItem"></param>
+			/// <returns></returns>
+			public Item Run(Item contextItem)
+			{
+				string accessToken = dal.GetAzureAccessToken(
+				contextItem.getProperty("eid_connection_string", string.Empty),
+				contextItem.getProperty("eid_user_name", string.Empty),
+				contextItem.getProperty("eid_password_key", string.Empty));
+
+				if (string.IsNullOrEmpty(accessToken))
+					return dal.NewError("Cannot get Azure access token");
+
+				string extUniqueId = contextItem.getProperty("eid_unique_id");
+				bool isSingleUser = !string.IsNullOrEmpty(extUniqueId);
+				var attributes = GetSelectString(contextItem)
+					.Where(c => c != "unique_id" && c != "enabled").ToList();
+
+
+				attributes.Add(AzureAdUserUniqueIdName);
+				string select = string.Join(",", attributes.Distinct());
+				string filter = isSingleUser? $"id eq '{extUniqueId}'": contextItem.getProperty("eid_filter");
+				
+				var users = dal.GetUsers(accessToken, select, filter);
+				if (users == null)
+					return dal.NewError("Get error on endpoint call");
+
+				var lst = users.ToList();
+				lst.ForEach(user =>
+				{
+					user.Add("unique_id",user[AzureAdUserUniqueIdName]);
+					if (!user.ContainsKey("enabled"))
+					user.Add("enabled","1");
+				});
+
+				System.Web.Script.Serialization.JavaScriptSerializer serializer =
+					new System.Web.Script.Serialization.JavaScriptSerializer();
+				if (isSingleUser)
+				{
+					if (lst.Count == 0)
+					{
+						return dal.NewError("Cannot not find the user!");
+					}
+					contextItem.setProperty("eid_results", serializer.Serialize(lst[0]));
+				}
+				else
+				{
+					contextItem.setProperty("eid_results", serializer.Serialize(lst));
+				}
+				return contextItem;
+			}
+
+			private static IEnumerable<string> GetSelectString(Item contextItem)
+			{
+				string attrs = contextItem.getProperty("eid_attributes");
+				return attrs.Split(',');
+			}
+		}
+
+//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+		internal interface IDataAccessLayer
+		{
+			Item NewItem(string type = null, string action = null);
+			Item ApplyItem(Item item);
+			Item NewResult(string textMessage);
+			Item NewError(string errorMessage);
+			string GetAzureAccessToken(string tenantId, string clientId, string clientSecret);
+			IEnumerable<Dictionary<string,string>> GetUsers(string token, string select, string filter);
+		}
+
+//[PartialPath("DataAccessLayer/DataAccessLayer")]
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this.innovator = innovator;
+			}
+
+			public Item NewItem(string type = null, string action = null)
+			{
+				if (string.IsNullOrEmpty(type))
+				{
+					return innovator.newItem();
+				}
+				if (string.IsNullOrEmpty(action))
+				{
+					return innovator.newItem(type);
+				}
+				return innovator.newItem(type, action);
+			}
+
+			public Item NewResult(string textMessage)
+			{
+				return innovator.newResult(textMessage);
+			}
+
+			public Item NewError(string errorMessage)
+			{
+				return innovator.newError(errorMessage);
+			}
+
+			public string GetAzureAccessToken(string tenantId, string clientId, string clientSecret)
+			{
+				var url = new Uri($"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token");
+
+				Dictionary<string, string> urlParameters = new Dictionary<string, string>
+				{
+					{ "grant_type", "client_credentials" },
+					{ "response_type", "code" },
+					{ "client_id", clientId },
+					{ "client_secret", clientSecret },
+					{ "scope", "https://graph.microsoft.com/.default" }
+				};
+
+				using (var httpClient = new System.Net.Http.HttpClient())
+				{
+					httpClient.BaseAddress = url;
+					httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+					httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Content-Type", "application/x-www-form-urlencoded");
+
+					using (var content = new System.Net.Http.FormUrlEncodedContent(urlParameters))
+					{
+						var response = httpClient.PostAsync(url, content).Result;
+						if (!response.IsSuccessStatusCode)
+							return null;
+						var respContent = response.Content.ReadAsStringAsync().Result;
+						return Newtonsoft.Json.Linq.JObject.Parse(respContent)["access_token"].ToString();
+					}
+				}
+			}
+
+			public IEnumerable<Dictionary<string, string>> GetUsers(string token, string select, string filter)
+			{
+				var pare = new Dictionary<string, string>()
+				{
+					{"$select",select },
+					{"$filter",filter}
+				};
+
+				var url = GetEndPoint("https://graph.microsoft.com/v1.0/users", pare);
+				using (var httpClient = new System.Net.Http.HttpClient())
+				{
+					httpClient.BaseAddress = url;
+					httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+					httpClient.DefaultRequestHeaders.Authorization = 
+						new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+					var response = httpClient.GetAsync(url).Result;
+					if (!response.IsSuccessStatusCode)
+						return null;
+					var respString =  response.Content.ReadAsStringAsync().Result;
+					var value = Newtonsoft.Json.Linq.JObject.Parse(respString)["value"];
+					return value.Select(v =>
+					{
+						var user = new Dictionary<string, string>();
+						foreach (var key in select.Split(','))
+						{
+							user.Add(key, v[key]?.ToString());
+						}
+						return user;
+					});
+				}
+			}
+			private static Uri GetEndPoint(string baseUri, Dictionary<string, string> pare)
+			{
+				var sb = new StringBuilder(baseUri);
+				var notEmpty = pare.Where(c => !string.IsNullOrEmpty(c.Value) && !string.IsNullOrEmpty(c.Value))
+					.Select(c => $"{c.Key}={c.Value}").ToArray();
+				if (notEmpty.Length > 0)
+				{
+					sb.Append("?");
+					sb.Append(string.Join("&", notEmpty));
+				}
+				return new Uri(sb.ToString());
+			}
+
+			public Item ApplyItem(Item item)
+			{
+				return item.apply();
+			}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_GetUsersAAD</name>
+ </Item>
+</AML>

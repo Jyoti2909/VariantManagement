@@ -1,0 +1,18 @@
+﻿<AML>
+ <Item type="Method" id="12DE8AEB5E01493C8B2AFE0FE29CCC5F" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Item item = this.newItem("mp_MacPolicy", "get");
+item.setID(this.getID());
+item = item.apply();
+string state = item.getProperty("state");
+if (string.Equals(state, "Preliminary", StringComparison.Ordinal)) 
+{
+	Innovator inn = this.getInnovator();
+	string message = CCO.ErrorLookup.Lookup("mp_NewVersionFromPreliminary");
+	return inn.newError(message);
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>mp_OnBeforeNewVersion</name>
+ </Item>
+</AML>

@@ -1,0 +1,308 @@
+﻿<AML>
+ <Item type="Report" id="3FA087DFB77341F3B471015FA69AE775" action="add">
+  <description />
+  <location>server</location>
+  <report_query><![CDATA[<Item type="PR" id="{@id}" action="get" select="item_number,title,state,environment,affected_item(item_number),events,basis,priority,description,reported_by,owned_by_id,verification,phase_caused,phase_found,impact,severity,action"/>]]></report_query>
+  <target>one window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:user="urn:user-scripts" xmlns:aras="http://www.aras.com">
+ <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes" cdata-section-elements="script msxsl:script"></xsl:output>
+
+ <xsl:template match="/">
+  <xsl:apply-templates></xsl:apply-templates>
+ </xsl:template>
+
+ <xsl:template match="/Envelope">
+  <xsl:apply-templates></xsl:apply-templates>
+ </xsl:template>
+
+ <xsl:template match="/Envelope/Body">
+  <xsl:apply-templates></xsl:apply-templates>
+ </xsl:template>
+
+ <xsl:template match="/Envelope/Body/Result">
+  <xsl:apply-templates select="Item"></xsl:apply-templates>
+ </xsl:template>
+
+ <xsl:template match="Item[@type='PR']">
+  <html>
+   <head>
+    <title>PR Report</title>
+   </head>
+   <style>
+       table.row {width: 750px; empty-cells:show; border-collapse:collapse; border-style:solid; border-width:0;}
+       table.choices {empty-cells:show; border-style:solid; border-width:1; width: 100%}
+       td.mainTitle {font-family:helvetica; font-size:15pt; color:#DA1943; vertical-align:bottom;}
+       td.subTitle {font-family:helvetica; font-size:10pt; vertical-align:bottom;}
+       td.fieldTitle {font-family:Verdana; font-size: 8pt; font-variant: small-caps; height: 20; padding-left: 2px; padding-top: 5px;}
+       td.fieldValue {border-width:1; border-style: solid; font-family:Verdana; font-size: 12pt; padding-left: 2px; vertical-align: middle;}
+       td.fieldChoice {font-family:Verdana; font-size: 10pt; padding-left: 2px;}
+       td.choiceBox {border-width:1; border-style: solid; font-family:Verdana; font-size: 12pt; width: 12}
+       td.choiceTitle {font-family:Verdana; font-size: 12pt; padding-left: 2px; vertical-align: top;}
+       td.spacer {width: 10}
+       td.section {font-size:14pt; font-variant: small-caps; background-color:#dddddd;}
+       th {border-width:1; border-style: solid; font-family:Verdana; font-size: 12pt; font-variant: small-caps;}
+      .report_name {font-size: 16px; font-weight: bold; padding: 0 0 15px; display: inline-block; font-family: Roboto, Noto Sans, Arial}
+      .report_generation_time {font-size:14px; float: right; font-family: Roboto, Noto Sans, Arial }
+      .table_wrapper {box-shadow: 0 5px 8px rgba(0,0,0,0.24), 0 3px 4px rgba(0,0,0,0.24); width:1130px; padding: 35px 25px}
+    </style>
+    <style media="print">
+        .table_wrapper {box-shadow: none; width: 100%; padding: 0;}
+    </style>
+   <body  topmargin="50" leftmargin="50">
+    <div class="print_button_wrapper">
+     <img id="print_button" src="../images/Print.svg" onclick="printReport(window);" />
+     <a href="#" onclick="printReport(window); return false;">Print</a>
+    </div>
+    <div class="table_wrapper">
+     <div class="report_name">
+      PR Report
+     </div>
+     <div class="report_generation_time"></div>
+<!-- Row 1 -->
+    <table class="row">
+     <tr>
+      <td class="fieldTitle" width="200">PR Number</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="300">Title</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="150">Status</td>
+     </tr>
+     <tr>
+      <td class="fieldValue">
+       <xsl:value-of select="item_number"></xsl:value-of>
+      </td>
+      <td class="spacer"></td>
+      <td class="fieldValue">
+       <xsl:value-of select="title"></xsl:value-of>
+      </td>
+      <td class="spacer"></td>
+      <td class="fieldValue">
+       <xsl:value-of select="state"></xsl:value-of>
+      </td>
+     </tr>
+    </table>
+<!-- Row 2 -->
+    <table class="row">
+     <tr>
+      <td class="fieldTitle" width="500">Application Environment</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="150">Affected <xsl:value-of select="affected_item/Item/@type"/></td>
+     </tr>
+     <tr>
+      <td class="fieldValue">
+       <xsl:value-of select="concat(environment,' ')"></xsl:value-of>
+      </td>
+      <td class="spacer"></td>
+      <td class="fieldValue">
+       <xsl:value-of select="affected_item/Item/item_number"></xsl:value-of>
+      </td>
+     </tr>     
+    </table>
+<!-- Row 3 -->
+    <table class="row">
+     <tr>
+      <td class="fieldTitle" width="450">Sequence of Events</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="120">Basis</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="80">Priority For Tech Review</td>
+     </tr>
+     <tr>
+      <td class="fieldValue">
+       <xsl:value-of select="concat(events,' ')"></xsl:value-of>
+      </td>
+      <td class="spacer"></td>
+      <td rowspan="2">
+       <table class="choices">
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(basis,' '),1,1),'AP','X ')"></xsl:value-of>
+         </td>
+         <td>Administrative Hierarchy</td>
+        </tr>
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(basis,' '),1,1),'PA','X ')"></xsl:value-of>
+         </td>
+         <td>Physical Hierarchy</td>
+        </tr>
+       </table>
+      </td>
+      <td class="spacer"></td>
+      <td rowspan="4">
+       <table class="choices">
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(priority,' '),1,1),'1234','X   ')"></xsl:value-of>
+         </td>
+         <td class="fieldChoice">1</td>
+        </tr>
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(priority,' '),1,1),'2341','X   ')"></xsl:value-of>
+         </td>
+         <td class="fieldChoice">2</td>
+        </tr>
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(priority,' '),1,1),'3412','X   ')"></xsl:value-of>
+         </td>
+         <td class="fieldChoice">3</td>
+        </tr>
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(priority,' '),1,1),'4123','X   ')"></xsl:value-of>
+         </td>
+         <td class="fieldChoice">4</td>
+        </tr>
+       </table>
+      </td>
+     </tr>
+     <tr>
+      <td> </td>
+      <td> </td>
+     </tr>
+     <tr>
+      <td> </td>
+      <td> </td>
+     </tr>
+     <tr>
+      <td> </td>
+     </tr>
+    </table>    
+<!-- Row 4 -->
+    <table class="row">
+     <tr>
+      <td class="fieldTitle" width="350">Description</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="150">Reported By</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="150">Assigned Creator</td>
+     </tr>
+     <tr>
+      <td class="fieldValue">
+       <xsl:value-of select="concat(description,' ')"></xsl:value-of>
+      </td>
+      <td class="spacer"></td>
+      <td class="fieldValue">
+       <xsl:choose>
+        <xsl:when test="reported_by[@is_null='0' and string(.)='']">
+         <span style="color:#ff0000">Restricted</span>
+        </xsl:when>
+        <xsl:otherwise>
+         <xsl:value-of select="reported_by/@keyed_name"/>
+        </xsl:otherwise>
+       </xsl:choose>
+      </td>
+      <td class="spacer"></td>
+      <td class="fieldValue">
+       <xsl:value-of select="owned_by_id/@keyed_name"></xsl:value-of>
+      </td>
+     </tr>
+    </table>
+<!-- Row 5 -->
+    <table class="row">
+     <tr>
+      <td class="fieldTitle" width="350">Problem Verification</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="150">Phase Caused</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="150">Phase Found</td>
+     </tr>
+     <tr>
+      <td class="fieldValue">
+       <xsl:value-of select="concat(verification,' ')"></xsl:value-of>
+      </td>
+      <td class="spacer"></td>
+      <td class="fieldValue">
+       <xsl:value-of select="phase_caused"></xsl:value-of>
+      </td>
+      <td class="spacer"></td>
+      <td class="fieldValue">
+       <xsl:value-of select="phase_found"></xsl:value-of>
+      </td>
+     </tr>
+    </table>
+<!-- Row 6 -->
+    <table class="row">
+     <tr>
+      <td class="fieldTitle" width="300">Ramifications If Not Resolved</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="80">Severity</td>
+      <td class="spacer"></td>
+      <td class="fieldTitle" width="270">Final Action Taken</td>
+     </tr>
+     <tr>
+      <td class="fieldValue">
+       <xsl:value-of select="concat(impact,' ')"></xsl:value-of>
+      </td>
+      <td class="spacer"></td>
+      <td rowspan="4">
+       <table class="choices">
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(severity,' '),1,1),'1234','X   ')"></xsl:value-of>
+         </td>
+         <td class="fieldChoice">1</td>
+        </tr>
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(severity,' '),1,1),'2341','X   ')"></xsl:value-of>
+         </td>
+         <td class="fieldChoice">2</td>
+        </tr>
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(severity,' '),1,1),'3412','X   ')"></xsl:value-of>
+         </td>
+         <td class="fieldChoice">3</td>
+        </tr>
+        <tr>
+         <td class="choiceBox">
+          <xsl:value-of select="translate(substring(concat(severity,' '),1,1),'4123','X   ')"></xsl:value-of>
+         </td>
+         <td class="fieldChoice">4</td>
+        </tr>
+       </table>
+      </td>
+      <td class="spacer"></td>
+      <td class="fieldValue">
+       <xsl:value-of select="action"></xsl:value-of>
+      </td>
+     </tr>
+     <tr>
+      <td> </td>
+     </tr>
+     <tr>
+      <td> </td>
+     </tr>
+     <tr>
+      <td> </td>
+     </tr>
+    </table>
+    </div>
+   </body>
+   <script>
+    function loadScript(url)
+    {
+     const loadedJS = document.createElement('script');
+     loadedJS.src = url;
+     document.getElementsByTagName('head')[0].appendChild(loadedJS);
+    }
+    function loadStyle(url)
+    {
+     const link = document.createElement('link');
+     link.setAttribute('rel', 'stylesheet');
+     link.setAttribute('href', url);
+     document.getElementsByTagName('head')[0].appendChild(link)
+    }
+    loadScript(parent.aras.getBaseURL('/Solutions/PLM/javascript/report.js'));
+    loadStyle(parent.aras.getBaseURL('/Solutions/PLM/styles/printReport.css'));
+   </script>
+  </html>
+ </xsl:template>
+</xsl:stylesheet>]]></xsl_stylesheet>
+  <name>PR Report</name>
+ </Item>
+</AML>

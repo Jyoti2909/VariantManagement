@@ -1,0 +1,356 @@
+﻿<AML>
+ <Item type="Method" id="D06F1B4B6CEE4B53A73074906FD4CD35" action="add">
+  <comments>Publish web service based on the specified WSConfiguration</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+
+//MethodTemplateName=CSharpInOut;
+
+if (InnovatorServerASP == null) 
+  throw new ArgumentNullException("InnovatorServerASP");
+Innovator inn = new Innovator( InnovatorServerASP );
+WSPublisher wsp = new WSPublisher( inn, InnovatorServerASP, InnovatorContext, inDom, outDom );
+wsp.Publish();
+}
+public class Impersonator : IDisposable
+{
+  #region Public methods.
+  // ------------------------------------------------------------------
+  /// <summary>
+  /// Constructor. Starts the impersonation with the given credentials.
+  /// Please note that the account that instantiates the Impersonator class
+  /// needs to have the 'Act as part of operating system' privilege set.
+  /// </summary>
+  /// <param name="userName">The name of the user to act as.</param>
+  /// <param name="domainName">The domain name of the user to act as.</param>
+  /// <param name="password">The password of the user to act as.</param>
+  public Impersonator(string userName,string domainName,string password)
+  {
+  	ImpersonateValidUser(userName, domainName, password);
+  }
+  // ------------------------------------------------------------------
+  #endregion
+  
+  #region IDisposable member.
+  // ------------------------------------------------------------------
+  public void Dispose()
+  {
+  	UndoImpersonation();
+  }
+  // ------------------------------------------------------------------
+  #endregion
+  
+  #region P/Invoke.
+  // ------------------------------------------------------------------
+  private const int LOGON32_LOGON_INTERACTIVE = 2;
+  private const int LOGON32_PROVIDER_DEFAULT = 0;
+  
+  [System.Runtime.InteropServices.DllImport("advapi32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode, SetLastError = true)]
+		internal static extern int LogonUser(
+			string lpszUserName,
+			string lpszDomain,
+			string lpszPassword,
+			int dwLogonType,
+			int dwLogonProvider,
+			ref IntPtr phToken);
+  [System.Runtime.InteropServices.DllImport("advapi32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
+  internal static extern int DuplicateToken(IntPtr hToken,int impersonationLevel,ref IntPtr hNewToken);
+  
+  [System.Runtime.InteropServices.DllImport("advapi32.dll", CharSet = System.Runtime.InteropServices.CharSet.Auto, SetLastError = true)]
+  [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+  
+  internal static extern bool RevertToSelf();
+  [System.Runtime.InteropServices.DllImport("kernel32.dll", EntryPoint = "CloseHandle", SetLastError = true, CharSet = System.Runtime.InteropServices.CharSet.Auto, CallingConvention = System.Runtime.InteropServices.CallingConvention.StdCall)]
+  [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+  
+  internal extern static bool CloseHandle(IntPtr handle);
+  // ------------------------------------------------------------------
+  #endregion
+  
+  #region Private member.
+  // ------------------------------------------------------------------
+  /// <summary>
+  /// Does the actual impersonation.
+  /// </summary>
+  /// <param name="userName">The name of the user to act as.</param>
+  /// <param name="domainName">The domain name of the user to act as.</param>
+  /// <param name="password">The password of the user to act as.</param>
+  private void ImpersonateValidUser(string userName,string domain,string password)
+  {
+  	System.Security.Principal.WindowsIdentity tempWindowsIdentity = null;
+  	IntPtr token = IntPtr.Zero;
+  	IntPtr tokenDuplicate = IntPtr.Zero;
+  	try
+  	{
+  		if (RevertToSelf())
+  		{
+  			if (LogonUser(userName,domain,password,LOGON32_LOGON_INTERACTIVE,LOGON32_PROVIDER_DEFAULT,ref token) != 0)
+  			{
+  				if (DuplicateToken(token, 2, ref tokenDuplicate) != 0)
+  				{
+  					tempWindowsIdentity = new System.Security.Principal.WindowsIdentity(tokenDuplicate);
+  					impersonationContext = tempWindowsIdentity.Impersonate();
+  				}
+  				else
+  				{
+  					throw new System.ComponentModel.Win32Exception(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
+  				}
+  			}
+  			else
+  			{
+  				throw new System.ComponentModel.Win32Exception(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
+  			}
+  		}
+  		else
+  		{
+  			throw new System.ComponentModel.Win32Exception(System.Runtime.InteropServices.Marshal.GetLastWin32Error());
+  		}
+  	}
+  	finally
+  	{
+  		if (token != IntPtr.Zero)
+  		{
+  			CloseHandle(token);
+  		}
+  		if (tokenDuplicate != IntPtr.Zero)
+  		{
+  			CloseHandle(tokenDuplicate);
+  		}
+	}
+  }
+  
+  /// <summary>
+  /// Reverts the impersonation.
+  /// </summary>
+  private void UndoImpersonation()
+  {
+  		if (impersonationContext != null)
+  		{
+  			impersonationContext.Undo();
+  		}
+  }
+  private System.Security.Principal.WindowsImpersonationContext impersonationContext = null;
+  // ------------------------------------------------------------------
+  
+  #endregion
+}
+public class WSPublisher
+{
+	private const string CREATE_CONFIG_METHOD = "CreateWebServiceConfigXml";
+
+  HttpContext _cntx;
+  private IServerConnection _isconn;
+  private Innovator _inn;
+  private Item _wsconf;
+  private string _sname;
+  private string _wsg_dir;
+  private string _temp_dir;
+
+  /// It's assumed that inDom xml contains the following sub-element:
+  /// <![CDATA[
+  /// <WSConfiguration action='publish' name='...' service_name='...' />
+  /// ]]]]><![CDATA[>
+
+  public WSPublisher(Innovator inn, IServerConnection isconn, HttpContext cntx, XmlDocument inDom, XmlDocument outDom)
+  {
+    _cntx = cntx;
+    _isconn = isconn;
+    _inn = inn;
+
+    XmlElement wsc_elem = (XmlElement)inDom.DocumentElement.SelectSingleNode(".//WSConfiguration");
+    _sname = wsc_elem.Attributes["service_name"].Value;
+    if (this._sname == null || this._sname.Trim().Length == 0)
+      throw new ArgumentException("Name of the service being published is not defined");
+
+    string wsname = wsc_elem.Attributes["name"].Value;
+    if (wsname == null || wsname.Trim().Length == 0)
+      throw new ArgumentException("WSConfiguration name is not defined");
+
+    _wsconf = inn.applyAML(
+      string.Format("<AML><Item type='WSConfiguration' action='get' levels='2'><name>{0}</name></Item></AML>", System.Security.SecurityElement.Escape(wsname)));
+    if (_wsconf.isError())
+    {
+      if (_wsconf.getErrorCode() == "0")
+        throw new Exception(string.Format("WSConfiguration with name '{0}' not found", wsname));
+      else
+        throw new Exception(string.Format("Error when getting WSConfiguration '{0}': {1}", wsname, _wsconf.getErrorDetail()));
+    }
+
+    _temp_dir = (string)_isconn.GetOperatingParameter("temp_dir", HttpContext.Current.Server.MapPath("temp"));
+    _wsg_dir = HttpContext.Current.Server.MapPath(@"bin\WebServiceGenerator");
+  }
+
+  public void Publish()
+  {
+  
+    // By locking here we are trying to prevent more than one simultaneous web service
+    // publishing; allowing simultaneous publishing would create unnecessary problems with
+    // file access (what if 2 publishing procedure tries to create xml config files), etc.
+    // All these problems probable could be resolved but I don't see why to bother about
+    // publishing more then one at a time.
+    lock (typeof(WSPublisher))
+    {
+      CleanUp();
+      CreateConfigXml();
+      CallGenerator();
+      FixAppConfig();
+      CallPublishing();
+    }
+  }
+
+  private void CreateConfigXml()
+  {
+    string wsc_name = this._wsconf.getProperty("name");
+    string method_xml =
+      string.Format("<WSConfiguration name='{0}' action='generate_config' />", System.Security.SecurityElement.Escape(wsc_name));
+    Item result = this._inn.applyMethod(CREATE_CONFIG_METHOD, method_xml);
+    if (result.isError())
+      throw new Exception(string.Format("Failed to generate xml configuration for WSConfiguration '{0}'", wsc_name));
+    else
+    {
+      XmlNode tmp = result.dom.SelectSingleNode(".//Result/service_config");
+      string config_content = tmp.OuterXml;
+      using (StreamWriter ws_conf_xml = File.CreateText(Path.Combine(this._temp_dir, "wsconfig.xml")))
+      {
+        ws_conf_xml.WriteLine(config_content);
+      }
+    }
+  }
+
+  private void FixAppConfig()
+  {
+    XmlDocument app_conf = new XmlDocument();
+    string fpath = Path.Combine(Path.Combine(this._temp_dir, "InnovatorWebService"), "innovator.config");
+    try
+    {
+      app_conf.Load(fpath);
+    }
+    catch (Exception e)
+    {
+      throw new Exception("Failed to load 'innovator.config' from the generated web-service project", e);
+    }
+
+    XmlElement url_node = (XmlElement)app_conf.DocumentElement.SelectSingleNode("add[@key='url']");
+    if (url_node == null)
+    {
+      throw new Exception("File 'innovator.config' from the generated web-service project doesn't have required key 'url'");
+    }
+    url_node.SetAttribute("value", GetCurrentBaseURL());
+
+    XmlElement db_node = (XmlElement)app_conf.DocumentElement.SelectSingleNode("add[@key='db']");
+    if (db_node == null)
+    {
+      throw new Exception("File 'innovator.config' from the generated web-service project doesn't have required key 'db'");
+    }
+    db_node.SetAttribute("value", this._isconn.GetDatabaseName());
+
+    app_conf.Save(fpath);
+  }
+
+  private string GetCurrentBaseURL()
+  {
+    Uri current_uri = this._cntx.Request.Url;
+    string uri_path = current_uri.AbsolutePath.ToLower();
+    uri_path = uri_path.Substring(1, uri_path.IndexOf("/server/innovatorserver.aspx", 1) - 1);
+
+    return string.Format("{0}://localhost/{1}", current_uri.Scheme, uri_path);
+  }
+
+  private void CallGenerator()
+  {
+    System.Diagnostics.Process command = new System.Diagnostics.Process();
+
+    command.StartInfo.FileName = Path.Combine(this._wsg_dir, "GenerateWS.exe");
+    string wsg_out_dir = this._temp_dir;
+    string wsg_config = Path.Combine(this._temp_dir, "wsconfig.xml");
+
+    command.StartInfo.Arguments = string.Format("\"{0}\" \"{1}\" \"{2}\" \"{3}\"", wsg_out_dir, wsg_config, this._wsg_dir, this._sname);
+    command.StartInfo.UseShellExecute = false;
+    command.StartInfo.CreateNoWindow = true;
+    command.StartInfo.WorkingDirectory = this._wsg_dir;
+
+    command.Start();
+    // If not finished in 30 seconds assume that the process hung ...
+    if (!command.WaitForExit(30000))
+      throw new Exception(string.Format("The process '{0}' is not responding", command.StartInfo.FileName));
+
+    if (command.ExitCode != 0)
+      throw new Exception(string.Format("The process '{0}' has finished with error (ErrorCode={1})", command.StartInfo.FileName, command.ExitCode));
+  }
+
+  // It's assumed that there is a ASP.NET application (PublishWS) that can run publishing script.
+  // In order for PublishWS to be able to run publishing script(s) that require admin privileges:
+  //   - PublishWS must be impersonated through its web.config (see http://msdn2.microsoft.com/en-us/library/ms998351.aspx
+  //     for more details on impersonation, password encryption, etc.)
+  //   - User that is used for impersonation for PublishWS must be a member of Administrators group and must have privileges:
+  //       * SE_ASSIGNPRIMARYTOKEN_NAME and SE_INCREASE_QUOTA_NAME
+  //      In order to do so (for more details see: 
+  //       http://www.microsoft.com/technet/prodtechnol/WindowsServer2003/Library/IIS/08bc7712-548c-4308-a49c-d551a4b5e245.mspx?mfr=true):
+  //	      1.From the Start menu, point to Administrative Tools, and then click Local Security Policy.
+  //	      2.In the Local Security Settings dialog box, double-click Local Policies, and then double-click User Rights Assignment.
+  //	      3.In the details pane, double-click Adjust memory quotas for a process. This is the SE_INCREASE_QUOTA_NAME user right.
+  //	      4.Click Add User or Group, and, in the Enter the object names to select box, type the user or group name to which 
+  //	        you want to assign the user right, and then click OK.
+  //	      5.Click OK again, and then, in the details pane, double-click Replace a process level token. This is the 
+  //	        SE_ASSIGNPRIMARYTOKEN_NAME user right.
+  //	      6.Click Add User or Group, and, in the Enter the object names to select box, type the user or group name 
+  //	        to which you want to assign the user right, and then click OK.
+  //
+  private void CallPublishing()
+  {
+  		
+  	string server_root_dir = HttpContext.Current.Server.MapPath(".");
+  	System.Reflection.Assembly _Assemblies = System.Reflection.Assembly.LoadFrom(System.IO.Path.Combine(server_root_dir,@"Bin\WebServicePublisher.exe"));
+  	Type type = null;
+  	type = _Assemblies.GetType("ArasWebServicePublishing.PublishManager");
+  	System.Collections.Specialized.NameValueCollection collection = (System.Collections.Specialized.NameValueCollection)System.Configuration.ConfigurationManager.GetSection("webservicepublishing");
+  	string user=collection["user"];
+  	string domain=collection["domain"];
+  	string password=collection["password"];
+  	if(null == user || null == domain || null == password)
+  	{
+  		throw new Exception("Invalid user credentials for publishing of web service. Please, set valid data in section webservicepublishing in configuration file.");
+  	}
+  	string ws_depl_default = Path.Combine(server_root_dir.Substring(0, server_root_dir.ToLower().IndexOf("server") - 1), "WebServices");
+  	if (!System.IO.Directory.Exists(ws_depl_default))
+  	{
+  		try
+  		{
+  			System.IO.Directory.CreateDirectory(ws_depl_default);
+  		}
+  		catch (Exception ex)
+  		{
+  			throw new Exception(String.Format("Error when creating deployment directory :{0}{1}",
+					Environment.NewLine, ex.Message),ex);
+    	}
+  	}
+  	Object instance = Activator.CreateInstance(type, new string[] {this._sname, Path.Combine( this._temp_dir,"InnovatorWebService"), (string)_isconn.GetOperatingParameter("ws_deployment_dir", ws_depl_default) });
+  	using ( new Impersonator( user, domain, password ) )
+  	{
+  		try
+  		{
+  			type.InvokeMember("PublishWebService", System.Reflection.BindingFlags.InvokeMethod, null, instance, null);
+  		}
+  		catch (Exception ex)
+  		{
+  			if(null!=ex.InnerException)
+  			{
+  				throw ex.InnerException;
+  			}
+  			throw new Exception(string.Format("Publishing of web-service {0} failed.", this._sname),ex);
+  		}
+  	}
+  }
+
+  private void CleanUp()
+  {
+    string wsg_config = Path.Combine(this._temp_dir, "wsconfig.xml");
+    if (File.Exists(wsg_config))
+      File.Delete(wsg_config);
+  }
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>PublishWebService</name>
+ </Item>
+</AML>

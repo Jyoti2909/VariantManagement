@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Create a document","type":"item","url":"Create_a_document.htm"},{"name":"Attaching Files to a Document","type":"item","url":"Associate_Document_with_File.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

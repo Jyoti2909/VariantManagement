@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = "..";
+  gCommonRootRelPath = "..";
+  gTopicId = "11.0_7";
+
+//]]></script>
+
+<script type="text/javascript" src="../template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="../template/scripts/common.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="../assets/css/default.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Custom BOM Report Examples</title>
+  <meta name="topic-status" content="Draft"/>
+  
+</head>
+<body>
+  <div>
+  <h1>Custom BOM Report Examples</h1>
+  <p>The following examples demonstrate how you can create custom BOM reports. </p>
+  <h2>Adding a New Column Using an Item Property</h2>
+  <p>This example describes how to customize a multilevel BOM Report:</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/BOMrep1.jpg" style="width: 100%; max-width: 625px;"/></p>
+  <p>Use the following procedure to add the Unit column between the Quantity and AML Status columns to show the Unit property of the Part items:</p>
+  <ol class="Decimal">
+    <li class="Content_body">Search for the <strong>PE_multilevelReport</strong> Query definition and open it for editing.</li>
+    <br/>
+    <li class="Content_body">Click <strong>Show Editor</strong> on the <strong>PE_multilevelReport</strong> Query Definition sidebar.</li>
+    <br/>
+    <li class="Content_body">Click the <strong>Properties </strong>button on the <strong>RootPart </strong>row. The <strong>Properties </strong>dialog box appears.</li>
+    <br/>
+    <li class="Content_body">Add the <strong>Unit </strong>property to the <strong>Properties </strong>dialog box and click <strong>Save</strong>.</li>
+  </ol>
+  <p class="Figure_indented"><img alt="" src="../assets/images/unitprop.jpg" style="width: 100%; max-width: 521px;"/></p>
+  <p> </p>
+  <ol start="5">
+    <li class="Content_body">Take steps 3-4 for the Part row representing the Part Query item.</li>
+  </ol>
+  <p class="Figure_indented"><img alt="" src="../assets/images/partbomprops.jpg" style="width: 100%; max-width: 547px;"/></p>
+  <p class="Note">Both Root and Part Query items should have the same properties in a Query definition. Otherwise, Aras Innovator returns an error. This requirement does not apply to other Query items associated with the Query definition.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/error2.jpg" style="width: 100%; max-width: 419px;"/></p>
+  <ol start="6">
+    <li>Click <strong>Save</strong>, <strong>Unclaim</strong>, and <strong>Close </strong>on the <strong>PE_multilevelReport</strong> Query definition toolbar.</li>
+    <br/>
+    <li>Search for <strong>Multilevel BOM Report</strong> and open its item view for editing.</li>
+    <br/>
+    <li>Go to the Stylesheet editor tab.</li>
+    <br/>
+    <li>Add the &lt;<span style="font-family: Courier New;;">th</span>&gt;<span style="font-family: Courier New;;">Unit&lt;/th&gt;</span> table header cell element after &lt;<span style="font-family: Courier New;;">th&gt;</span><span style="font-family: Courier New;;">Quantity&lt;/th&gt;</span>.</li>
+  </ol>
+  <p class="Figure_indented"><img alt="" src="../assets/images/code1.jpg" style="width: 100%; max-width: 290px;"/></p>
+  <ol start="10">
+    <li>Add a table data cell element for the <span style="font-family: Courier New;;">unit</span> property values after the one for <span style="font-family: Courier New;;">quantity</span>.</li>
+  </ol>
+  <p class="Code_Sample">       &lt;td rowspan=&quot;{$rowcount}&quot; width=&quot;120px&quot;&gt;<br/>
+                    &lt;xsl:value-of select=&quot;unit&#39;/&gt;<br/>
+            &lt;/td&gt;</p>
+  <p class="Figure_indented">  <img alt="" src="../assets/images/code2.jpg" style="width: 100%; max-width: 401px;"/></p>
+  <ol start="11">
+    <li>Click <strong>Apply </strong>on the <strong>Stylesheet </strong>editor tab.</li>
+    <br/>
+    <li>Click <strong>Done </strong>on the <strong>Multilevel BOM Report</strong> toolbar. The Unit column is added to the Multilevel BOM Report.</li>
+  </ol>
+  <p class="Figure_indented"><img alt="" src="../assets/images/BOMreport2.jpg" style="width: 100%; max-width: 611px;"/></p>
+  <p> </p>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

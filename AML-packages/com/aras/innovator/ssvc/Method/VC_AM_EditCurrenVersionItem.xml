@@ -1,0 +1,62 @@
+﻿<AML>
+ <Item type="Method" id="A147F505D22740B7A039E426932A2210" action="add">
+  <comments>AM - is abbreviation of Actions Menu</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var itemTypeName = inArgs.itemTypeName;
+var itemTypeId = inArgs.typeId;
+var itemId = inArgs.itemId;
+var item;
+
+if (inArgs.isVersionable) {
+	item = aras.getItemLastVersion(itemTypeName, itemId);
+	itemId = item.getAttribute('id');
+} else {
+	item = aras.getItemById(itemTypeName, itemId);
+}
+
+if (!aras.getPermissions('can_get', itemId, itemTypeId, itemTypeName)) {
+	aras.AlertWarning(aras.getResource('', 'ssvc.secure_message.no_get_permission'));
+	return;
+}
+
+var isLocked = (aras.isTempEx(item) || aras.getItemProperty(item, 'locked_by_id') !== '');
+
+if (execInTearOffWindow()) {
+	return;
+}
+
+if (!isLocked) {
+	aras.lockItem(itemId, itemTypeName);
+}
+
+aras.uiShowItemEx(item);
+
+function execInTearOffWindow() {
+	var itemWindow = aras.uiFindWindowEx(itemId);
+
+	if (!itemWindow) {
+		return false;
+	}
+
+	if (aras.isWindowClosed(itemWindow)) {
+		aras.uiUnregWindowEx(itemId);
+		return true;
+	}
+
+	if (itemWindow.name === 'work') {
+		return true;
+	}
+
+	aras.browserHelper.setFocus(itemWindow);
+
+	if (!isLocked && aras.lockItem(itemId, itemTypeName)) {
+		aras.uiReShowItem(itemId, itemId);
+	}
+
+	return true;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VC_AM_EditCurrenVersionItem</name>
+ </Item>
+</AML>

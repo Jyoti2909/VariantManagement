@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Secure Social Functionality","type":"book","url":"Secure_Messages.htm","key":"toc10"},{"name":"Visual Collaboration Functionality","type":"book","url":"Visual_Colloboration_Functionality.htm","key":"toc13"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

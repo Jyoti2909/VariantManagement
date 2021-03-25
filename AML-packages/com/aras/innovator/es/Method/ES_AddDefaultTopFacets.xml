@@ -1,0 +1,25 @@
+﻿<AML>
+ <Item type="Method" id="9781C070B88A4B658EF8EEA166DD0622" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const string worldEsSettingsId = "B38F3DB4652A5C55D4E9E5C0602CEC48";
+Innovator innovator = this.getInnovator();
+
+string newPreferenceId = this.getID();
+
+if (!string.Equals(newPreferenceId, worldEsSettingsId)) {
+	try
+	{
+		Aras.ES.Helpers.PreferenceHelper.AddDefaultTopFacets(innovator, newPreferenceId);
+	}
+	catch (XmlException e)
+	{
+		return innovator.newError(e.Message);
+	}
+}
+
+return this;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>ES_AddDefaultTopFacets</name>
+ </Item>
+</AML>

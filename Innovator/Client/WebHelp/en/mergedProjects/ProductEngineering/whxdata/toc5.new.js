@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Structure Browser","type":"item","url":"Structure_Browser/structure browser.htm"},{"name":"Tab Redline View","type":"item","url":"Tab_Redline_View/tab redline view.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

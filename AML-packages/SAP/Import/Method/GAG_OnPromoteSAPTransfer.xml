@@ -1,0 +1,45 @@
+﻿<AML>
+ <Item type="Method" id="5BCED0B06A6A48AA80F02E2E9502E184" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				Item result = null;
+				System.Globalization.CultureInfo culture = new System.Globalization.CultureInfo("de-DE"); 
+				
+				Item transferlogItem = _dal.NewItem("GAG_SAPTransferLog", "add");
+				transferlogItem.setProperty("gag_material_number", contextItem.getID());
+				transferlogItem.setProperty("gag_sap_status", "Pending");
+				transferlogItem.setProperty("gag_revision", contextItem.getProperty("major_rev"));
+				transferlogItem.setProperty("gag_transfer_date", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss",culture));
+				transferlogItem.setProperty("gag_sap_user", contextItem.getInnovator().getUserID());
+				result = transferlogItem.apply();
+
+				if (result.isError())
+				{
+					return _dal.NewError(result.ToString());
+				}
+				
+				return result;
+				
+			}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_OnPromoteSAPTransfer</name>
+ </Item>
+</AML>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<!-- saved from url=(0577)https://myinnovator.com/vault/vaultserver.aspx?dbName=MyInnovator&fileId=7AF971810A644BB79EEAC67F9F54C263&fileName=gridTextBooleanFormatter.html&vaultId=67BBB9204FE84A8981ED8313049BA06C&token=0YB5sAkf4bIBVcV2adxnZaH64oWRNmKOPnJHvxjif3nekgk6dAPZ3SMihI7awZGAOpKcFE-hwxRumv3od6DdsxjqCPJ6alDIiInG93_J1K7Kb_poGM4L0QqdSBxI9TqGlPWzms3RV9ddHfNXr50O7hvkeQ3-7vY6gp9sEhjG59nOOGIlkgHPr7YRqObKKUho61YOED2rZG6BEK9Cz7yv-o1upxHiyn9b_IyjlqeKCc5AetUE8iFgXAeimNQ6TxoecL4LwLoCW79WVphKAaAg6em0ewWKuuZ3BSW2bkT9hd9eEg67b-8aZei3DnDeAQTrPLLBLS8AslAaA5e_HD8eYW20q7_bGdMfMaXdvMDIjPX5l833ZZ0kaF6ZATGEH-S80 -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	
+	<title>Grid TextBoolean Formatter Test</title>
+	<script src="../../vendors/regeneratorRuntime.js"></script>
+	<script src="../../Modules/polyfills/polyfillsBundle.min.js"></script>
+	<script src="../../Modules/polyfills/matchesAndClosest.js"></script>
+	<script src="../../Modules/polyfills/customEvent.js"></script>
+	<script src="../../Modules/polyfills/promises.js"></script>
+	<script src="../../Modules/polyfills/document-register-element.js"></script>
+	<script src="../../Modules/polyfills/smoothscroll.min.js"></script>
+	<script src="../../vendors/hyperhtml-element.min.js"></script>
+	<script src="../../vendors/inferno.min.js"></script>
+	<script src="../../jsBundles/core.js"></script>
+	<script src="Scripts/vmGridFormatters.js"></script>
+	<link href="../../styles/common.css" rel="stylesheet"/>
+	<link href="styles/vmGridFormatters.css" rel="stylesheet"/>
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			function shuffleArray(array) {
+				var j, x, i;
+				for (i = array.length - 1; i > 0; i--) {
+					j = Math.floor(Math.random() * (i + 1));
+					x = array[i];
+					array[i] = array[j];
+					array[j] = x;
+				}
+				return array;
+			}
+
+			const columns = [
+				{
+					label: 'Checkbox',
+					width: 80
+				},
+				{
+					label: 'Radio',
+					width: 100
+				},
+				{
+					label: 'Checkbox all or nothing',
+					width: 150
+				},
+				{
+					label: 'Radio at most one',
+					width: 150
+				},
+				{
+					label: 'Checkbox at most one',
+					width: 200
+				},
+				{
+					label: 'Radio disabled',
+					width: 200
+				},
+				{
+					label: 'Checkbox disabled',
+					width: 200
+				}
+				
+			];
+
+			const values = [
+				'Syntax',
+				'Properties',
+				'Methods',
+				'Inheritance',
+				'Function'
+			];
+
+			let getTextBooleanCssClassName = function(headId, rowId, value, grid, metadata) {
+					return 'vm-aras-grid-row-cell-text-boolean_boolean-alignment_right';
+				};
+
+			let head = new Map();
+			let rows = new Map();
+
+			for (let j = 0; j < columns.length; j++) {
+				head.set('column' + j, columns[j]);
+			}
+			for (let i = 0; i < values.length; i++) {
+				const row = {};
+
+				for (let j = 0; j < columns.length; j++) {
+					row['column' + j] = {
+						text: values[i],
+						isChecked: false
+					};
+				}
+
+				rows.set(i, row);
+			}
+
+			let grid = new Grid(document.getElementById('grid'), {editable: true});
+			grid.head = head;
+			grid.rows = rows;
+
+			grid.getCellType = function(headId, rowId, value, type) {
+				return 'vm_textBoolean';
+			};
+
+			grid.getEditorType = function(headId, rowId, value, type) {
+				if (type === 'vm_textBoolean') {
+					return 'nonEditable';
+				}
+				return type;
+			}
+
+			const atMostOnce = function(event) {
+				const headId = event.detail.headId;
+				const rowId = event.detail.rowId;
+				const value = event.detail.value;
+
+				if((headId === 'column3' || headId === 'column4') && value.isChecked) {
+					grid.rows._store.forEach(function(row, id) {
+						if(id !== rowId) {
+							row[headId].isChecked = false;
+							grid.rows.set(id, row);
+						}
+					});
+				}
+			};
+			const allOrNothing = function(event) {
+				const headId = event.detail.headId;
+				const rowId = event.detail.rowId;
+				const value = event.detail.value;
+
+				if (headId === 'column2') {
+					grid.rows._store.forEach(function(row, id) {
+						if(id !== rowId) {
+							row[headId].isChecked = value.isChecked;
+							grid.rows.set(id, row);
+						}
+					});
+				}
+			};
+
+			grid.on('applyEdit', atMostOnce);
+			grid.on('applyEdit', allOrNothing);
+
+			grid.getCellMetadata = function(headId, rowId, type){
+				let metadata = null;
+
+				if (headId === 'column1') {
+					metadata = {
+						type: 'radio'
+					};
+				}
+				if (headId === 'column3') {
+					metadata = {
+						type: 'radio',
+						getTextBooleanCssClassName: getTextBooleanCssClassName
+					};
+				}
+				if (headId === 'column4') {
+					metadata = {
+						getTextBooleanCssClassName: getTextBooleanCssClassName
+					};
+				}
+				if (headId === 'column5') {
+					metadata = {
+						type: 'radio',
+						getTextBooleanCssClassName: getTextBooleanCssClassName,
+						isDisabled: function(headId, rowId, grid) {
+							return true;
+						}
+					};
+					if (rowId % 2 == 0) {
+						grid.rows.get(rowId)[headId].isChecked = true;
+					}
+				}
+				if (headId === 'column6') {
+					metadata = {
+						isDisabled: function(headId, rowId, grid) {
+							return true;
+						}
+					};
+					if (rowId % 2 == 1) {
+						grid.rows.get(rowId)[headId].isChecked = true;
+					}
+				}
+
+				return metadata;
+			};
+		});
+	</script>
+</head>
+<body>
+	<div id="grid"></div>
+
+
+</body></html>

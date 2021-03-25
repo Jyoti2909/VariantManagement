@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="A0442DC19F6A4833965F1B6B4EDF7FDD" action="add">
+  <comments>Calls server side schedule method</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var schedCanNotBeCalled = inDom.selectSingleNode("descendant-or-self::Item[@isDirty='1' or (string(@action)!='' and string(@action)!='get')]");
+if (schedCanNotBeCalled)
+  return top.aras.AlertError(top.aras.getResource("project", "pr_methods.scheduling_cannot_for_unsaved_item"));
+
+var q = new Item("Method", "Schedule Project");
+var id = inDom.getAttribute("id");
+q.setProperty("body", "");
+q.setPropertyAttribute("body", "project_id", id);
+var r = q.apply();
+if (r.isError())
+  return top.aras.AlertError(r);
+
+//Reload project
+top.aras.removeFromCache(id);
+var w = top.aras.uiFindWindowEx(id);
+if (w)
+{
+  top.aras.getItemById("Project", id, 0);
+  top.aras.uiReShowItem(id, id, "tab view");
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PM_call_server_side_schedule</name>
+ </Item>
+</AML>

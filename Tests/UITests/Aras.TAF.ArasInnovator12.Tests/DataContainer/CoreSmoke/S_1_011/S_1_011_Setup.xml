@@ -1,0 +1,105 @@
+﻿<AML>
+	<Item type="List" id="7652AD945677440E8F426043773FBCE4" action="add">
+		<description>Wood used in construction.</description>
+		<name>TypeOfWood</name>
+		<Relationships>
+			<Item type="Value" action="add">
+				<label>Oak</label>
+				<value>Oak</value>
+			</Item>
+			<Item type="Value" action="add">
+				<label>Birch</label>
+				<value>Birch</value>
+			</Item>
+			<Item type="Value" action="add">
+				<label>Maple</label>
+				<value>Maple</value>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="List" id="7788E311F9A94876BB0ED16205B12B98" action="add">
+		<description>Paint color for chairs.</description>
+		<name>PaintColor</name>
+		<Relationships>
+			<Item type="Value" action="add">
+				<label>Red</label>
+				<value>#EF0808</value>
+			</Item>
+			<Item type="Value" action="add">
+				<label>Blue</label>
+				<value>#1908EF</value>
+			</Item>
+			<Item type="Value" action="add">
+				<label>Green</label>
+				<value>#1A8804</value>
+			</Item>
+		</Relationships>
+	</Item>
+	<Item type="Sequence" id="9B1A10CF1CE74E5DB4C74F649831129B" action="add">
+		<initial_value>0</initial_value>
+		<pad_to>2</pad_to>
+		<pad_with>K</pad_with>
+		<prefix>1</prefix>
+		<step>3</step>
+		<suffix>A</suffix>
+		<name>ChairNumbers</name>
+	</Item>
+	<Item type="ItemType" id="A769C8FC92404D76B135B396F3BF6740" action="add">
+		<label>Perfect Chair</label>
+		<label_plural>Perfect Chairs</label_plural>
+		<large_icon>../Images/Image.svg</large_icon>
+		<open_icon>../Images/Image.svg</open_icon>
+		<revisions keyed_name="Default" type="Revision">7FE395DD8B9F4E1090756A34B733D75E</revisions>
+		<show_parameters_tab>1</show_parameters_tab>
+		<name>Perfect Chair</name>
+		<Relationships>
+			<Item type="Property" id="01DE9A69C95A4BF6B6B61A4BC879B79A" action="add">
+				<column_alignment>left</column_alignment>
+				<data_source keyed_name="TypeofWood">7652AD945677440E8F426043773FBCE4</data_source>
+				<data_type>list</data_type>
+				<is_required>1</is_required>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{wood_type}</i18n:label>
+				<stored_length>256</stored_length>
+				<name>wood_type</name>
+			</Item>
+			<Item type="Property" id="5DB0BAED402041A2B280B986D300DF15" action="add">
+				<data_source keyed_name="ChairNumbers">9B1A10CF1CE74E5DB4C74F649831129B</data_source>
+				<data_type>sequence</data_type>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{chair_number}</i18n:label>
+				<name>chair_number</name>
+			</Item>
+			<Item type="Property" id="895F19335EDD49B4927CEC53FCDF84CB" action="add">
+				<column_alignment>left</column_alignment>
+				<data_source keyed_name="PaintColor">7788E311F9A94876BB0ED16205B12B98</data_source>
+				<data_type>color list</data_type>
+				<is_required>1</is_required>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{paint_color}</i18n:label>
+				<stored_length>32</stored_length>
+				<name>paint_color</name>
+			</Item>
+			<Item type="Property" id="021387E232F34BB88EF4D0A97C175043" action="add">
+				<column_alignment>left</column_alignment>
+				<data_type>date</data_type>
+				<is_required>1</is_required>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{date_created}</i18n:label>
+				<pattern>short_date</pattern>
+				<name>date_created</name>
+			</Item>
+			<Item type="Property" action="add">
+				<data_source keyed_name="File" type="ItemType" name="File">8052A558B9084D41B9F11805E464F443</data_source>
+				<data_type>item</data_type>
+				<item_behavior>float</item_behavior>
+				<i18n:label xmlns:i18n="http://www.aras.com/I18N" xml:lang="{LocaleLabel}">{blueprint}</i18n:label>
+				<name>blueprint</name>
+			</Item>
+			<Item type="Can Add" action="add">
+				<can_add>1</can_add>
+				<related_id keyed_name="World" type="Identity">
+					<Item type="Identity" action="get" select="id">
+						<name>World</name>
+					</Item>
+				</related_id>
+			</Item>
+		</Relationships>
+	</Item>
+</AML>

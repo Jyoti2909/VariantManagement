@@ -1,0 +1,51 @@
+﻿<AML>
+ <Item type="Method" id="9960C5D84D434A2985BDF15167AE1DB9" action="add">
+  <comments>Replace label for the form tab cui_Control with singular label of ItemType</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[    Item result;
+
+	Item windowSectionControl = this.newItem("cui_WindowSectionControl", "get");
+	Item cuiControl = this.newItem("cui_Control", "get");
+	cuiControl.setAttribute("select", "additional_data[is_not_null()],image[is_not_null()],include_events[is_not_null()],label[is_not_null()],on_click_handler[is_not_null()],on_init_handler[is_not_null()],on_keydown_handler[is_not_null()],tooltip_template[is_not_null()],name[is_not_null()],section[is_not_null()],control_type[is_not_null()],location[is_not_null()],sort_order[is_not_null()],item_classification[is_not_null()],parent_control[is_not_null()],action[is_not_null()],itemtype[is_not_null()],shortcut[is_not_null()],group_id[is_not_null()]");
+	cuiControl.setProperty("name", "ItemView.FormTab");
+	windowSectionControl.setRelatedItem(cuiControl);
+
+	windowSectionControl = windowSectionControl.apply();
+
+	if (!windowSectionControl.isError())
+	{
+		Item itemType = this.newItem("ItemType", "get");
+		itemType.setID(this.getProperty("item_type_id"));
+		itemType.setAttribute("select", "label,name");
+		itemType = itemType.apply();
+
+		Item newWindowSectionControl = windowSectionControl.clone(true);
+		newWindowSectionControl.setID(windowSectionControl.getID());
+		Item newCuiControl = newWindowSectionControl.getRelatedItem();
+		newCuiControl.setID(windowSectionControl.getRelatedItemID());
+
+		string newLabel = itemType.getProperty("label");
+		if (string.IsNullOrWhiteSpace(newLabel))
+		{
+			newLabel = itemType.getProperty("name");
+		}
+
+		newCuiControl.setProperty("label", newLabel);
+
+		windowSectionControl.setProperty("action", "Remove");
+		windowSectionControl.appendItem(newWindowSectionControl);
+
+		result = windowSectionControl;
+	}
+	else
+	{
+		// return non-Item respone to prevent any
+		// additional actions with this result
+		result = this.getInnovator().newResult("No Controls where found");
+	}
+
+	return result;]]></method_code>
+  <method_type>C#</method_type>
+  <name>ItemView_FormTab_ReplaceLabel</name>
+ </Item>
+</AML>

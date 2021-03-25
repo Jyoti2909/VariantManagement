@@ -1,0 +1,66 @@
+﻿<AML>
+ <Item type="SQL" id="B16DD87984574D52B0D8E8B82209A565" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>item_id_change</old_name>
+  <sqlserver_body><![CDATA[/* Name:    define-item-id-change-procedure.sql
+   Purpose: migrate the id of an item to match the commonly agreed upon definition.
+   Created: 7-JAN-2005 George J. Carrette
+*/
+create procedure item_id_change(@itemtype_name varchar(32),
+                                @existing_id char(32),
+                                @new_id char(32))
+AS
+BEGIN
+ DECLARE @ITEMTYPE_ID_SET TABLE(ID CHAR(32))
+ DECLARE @TBL_NAMES TABLE(TBL_NAME VARCHAR(64))
+ DECLARE @TBL_COLS TABLE(TBL_NAME VARCHAR(64),COL_NAME VARCHAR(64))
+ DECLARE @TBL_NAME VARCHAR(64)
+ DECLARE @COL_NAME VARCHAR(64)
+ DECLARE @TBL_COLS_CHANGED TABLE(TBL_NAME VARCHAR(64),COL_NAME VARCHAR(64),CHANGE_COUNT INTEGER)
+
+ INSERT INTO @ITEMTYPE_ID_SET
+  SELECT ID FROM ITEMTYPE WHERE NAME = @itemtype_name
+ while @@rowcount > 0 
+  insert into @itemtype_id_set
+   select source_id from morphae 
+   where related_id in (select id from @itemtype_id_set) and
+         not source_id in (select id from @itemtype_id_set)
+
+ INSERT INTO @TBL_NAMES
+  SELECT INSTANCE_DATA FROM ITEMTYPE
+  WHERE EXISTS (SELECT NAME FROM SYSOBJECTS WHERE NAME = ITEMTYPE.INSTANCE_DATA AND TYPE = 'U ')
+ INSERT INTO @TBL_COLS
+  SELECT ITEMTYPE.INSTANCE_DATA,PROPERTY.NAME FROM ITEMTYPE,PROPERTY
+  WHERE ITEMTYPE.INSTANCE_DATA IN (SELECT TBL_NAME FROM @TBL_NAMES) AND
+        ITEMTYPE.ID = PROPERTY.SOURCE_ID AND PROPERTY.DATA_TYPE = 'Item' AND
+        PROPERTY.DATA_SOURCE IN (SELECT ID FROM @ITEMTYPE_ID_SET)
+ INSERT INTO @TBL_COLS
+  select (select instance_data from itemtype where id = property.source_id),name
+  from property where data_type = 'Item' and data_source is null and name = 'source_id'
+
+ DECLARE @WORKPTR CURSOR
+ SET @WORKPTR = CURSOR FOR SELECT TBL_NAME,COL_NAME FROM @TBL_COLS
+ OPEN @WORKPTR
+ FETCH NEXT FROM @WORKPTR INTO @TBL_NAME, @COL_NAME
+ WHILE @@FETCH_STATUS = 0
+  BEGIN
+   DECLARE @SQL NVARCHAR(256)
+   DECLARE @DCL NVARCHAR(256)
+   SET @SQL = 'UPDATE [' + @TBL_NAME + '] SET ' + @COL_NAME + ' = @NEW_ID ' +
+              ' WHERE ' + @COL_NAME + ' = @EXISTING_ID'
+   SET @DCL = '@EXISTING_ID CHAR(32),@NEW_ID CHAR(32)'
+   execute sp_executesql @SQL,@DCL,@EXISTING_ID=@EXISTING_ID,@NEW_ID=@NEW_ID
+   INSERT INTO @TBL_COLS_CHANGED (TBL_NAME,COL_NAME,CHANGE_COUNT)
+                          VALUES (@TBL_NAME,@COL_NAME,@@rowcount)
+   FETCH NEXT FROM @WORKPTR INTO @TBL_NAME, @COL_NAME
+  END
+ CLOSE @WORKPTR
+ SELECT * FROM @TBL_COLS_CHANGED
+END
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>item_id_change</name>
+ </Item>
+</AML>

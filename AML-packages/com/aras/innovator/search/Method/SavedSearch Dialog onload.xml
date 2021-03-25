@@ -1,0 +1,115 @@
+﻿<AML>
+ <Item type="Method" id="E33B512BE43244F4B91E31D3E78946DC" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var itm = document.item;
+if (!itm) {
+	return;
+}
+
+document.body.onkeypress = bodyOnKeyPresshandler;
+document.getElementsByName('save_saved_search_button')[0].onclick = handler;
+
+var labelFld = document.querySelector('input[name=label]');
+labelFld.value = aras.getNodeTranslationElement(itm, 'label', aras.getSessionContextLanguageCode());
+labelFld.onkeypress = onKeyPressHandler;
+labelFld.focus();
+
+var sharedWithField = document.getElementById('4B81D7BCA01B4E0F8DFE05B8D72A788Bspan');
+var idOfIsAliasIdentityForTheUser = aras.getIsAliasIdentityIDForLoggedUser();
+
+var sharedWithFieldInputElement = field4B81D7BCA01B4E0F8DFE05B8D72A788BComponent;
+sharedWithFieldInputElement.setValue('');
+
+var tempOwnedById = aras.getItemProperty(itm, 'owned_by_id');
+var keyNameOwnedById =  aras.getKeyedName(tempOwnedById);
+var ownedbyid = '';
+
+if (idOfIsAliasIdentityForTheUser) {
+	if (labelFld.value !== '' && tempOwnedById !== idOfIsAliasIdentityForTheUser) {
+		ownedbyid = tempOwnedById;
+		sharedWithFieldInputElement.setValue(keyNameOwnedById);
+	}
+
+	aras.setItemProperty(itm, 'managed_by_id', idOfIsAliasIdentityForTheUser);
+	aras.setItemProperty(itm, 'owned_by_id',  ownedbyid);
+}
+sharedWithField.style.visibility  = aras.isAdminUser() ? 'visible' : 'hidden';
+// If Location != Main Grid, then Pin to Quick Access must be = 0.
+var pinToQuickAccessChbx = document.getElementsByTagName('input')['pin_to_quick_access'];
+if ('Main Grid' != aras.getItemProperty(itm, 'location')) {
+	pinToQuickAccessChbx.checked = false;
+	pinToQuickAccessChbx.disabled = true;
+} else {
+	pinToQuickAccessChbx.disabled = false;
+}
+
+function handler() {
+	var itname = aras.getItemProperty(itm, 'itname');
+	var identicalSavedSearch = null;
+	var canBeSaved = true;
+	var identicalSavedSearchAlreadyExist = false;
+
+	const favorites = aras.getMainWindow().favorites;
+	const favoriteItems = Array.from(favorites.data.values());
+
+	var label = document.querySelector('input[name=label]').value;
+
+	const sameItem = favoriteItems.find(function(item) {
+		return (
+			item.label === label &&
+			item.contextType === itname &&
+			item.ownedBy === idOfIsAliasIdentityForTheUser
+		);
+	});
+
+	if (sameItem) {
+		identicalSavedSearch = aras.getSavedSearches(itname, null, null, sameItem.additional_data.id)[0];
+		if (aras.getItemProperty(identicalSavedSearch, 'managed_by_id') !== idOfIsAliasIdentityForTheUser) {
+			canBeSaved = false;
+		} else {
+			identicalSavedSearchAlreadyExist = true;
+		}
+	}
+
+	var closeWindow = true;
+	if (!aras.getItemProperty(itm, 'owned_by_id')) {
+		aras.setItemProperty(itm, 'owned_by_id', idOfIsAliasIdentityForTheUser); // set default owned_by_id
+	}
+	if (!canBeSaved) {
+		alert(aras.getResource('', 'search.saved_search_cannot_be_overwritten', label, itname));
+		closeWindow = false;
+	} else if (identicalSavedSearchAlreadyExist) {
+		var overwrite = aras.confirm(aras.getResource('', 'search.saved_search_already_exists', label, itname));
+		if (overwrite) {
+			itm.setAttribute('id', aras.getItemProperty(identicalSavedSearch, 'id'));
+			itm.setAttribute('action', 'edit');
+		} else {
+			closeWindow = false;
+		}
+	}
+
+	if (closeWindow) {
+		parent.returnValue = itm;
+		parent.close();
+	}
+}
+
+function bodyOnKeyPresshandler(ev) {
+	if (!ev) {ev = window.event || event;}
+	if (ev.keyCode == 27) {
+		parent.returnValue = null;
+		parent.close();
+	}
+}
+
+function onKeyPressHandler(ev) {
+	if (!ev) {ev = window.event || event;}
+	if (ev.keyCode == 13) {
+		handler();
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>SavedSearch Dialog onload</name>
+ </Item>
+</AML>

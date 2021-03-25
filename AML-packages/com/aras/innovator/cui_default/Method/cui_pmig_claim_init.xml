@@ -1,0 +1,33 @@
+﻿<AML>
+ <Item type="Method" id="C964662A722F493AA0D3282A4EF6094D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const selectedRows = options.selectedRowsIds.map(rowId => {
+	const itemTypeId = options.isPolymorphic ? options.rows.get(rowId, 'itemtype') : options.itemTypeId;
+	const itemTypeName = aras.getItemTypeName(itemTypeId);
+
+	return {
+		lockedById: options.rows.get(rowId, 'locked_by_id'),
+		isNew: options.rows.get(rowId, '@aras.action') === 'add',
+		itemTypeName
+	};
+});
+const disabled = selectedRows.every(row => {
+	const isLocked = Boolean(row.lockedById);
+	const isNew = row.isNew;
+	const isLockDisabled = isFunctionDisabled(row.itemTypeName, 'Lock');
+
+	return isLocked || isNew || isLockDisabled;
+});
+const hidden = selectedRows.every(
+	row => Boolean(row.lockedById)
+);
+
+return {
+	disabled,
+	hidden
+};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_pmig_claim_init</name>
+ </Item>
+</AML>

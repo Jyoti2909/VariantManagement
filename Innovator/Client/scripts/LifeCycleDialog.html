@@ -1,0 +1,58 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/default.css";
+		@import "../styles/common.min.css";
+
+		html, body {
+			margin: 0px;
+			padding: 0px;
+			width: 100%;
+			overflow: hidden;
+			height: 100%;
+		}
+	</style>
+	<script>
+		var dialogArguments = window.frameElement.dialogArguments;
+		var aras = dialogArguments.aras;
+		var item = dialogArguments.item;
+	</script>
+	<script id="ScriptSet1" type="text/javascript" src="../javascript/include.aspx?classes=ArasModules,ScriptSet1,ToolbarWrapper"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=XmlDocument&files=lifeCycleDialog"></script>
+	<script type="text/javascript">
+		window.initializeLifeCycleDialogFunctions(window);
+		var toolbar = null;
+		var workflowApplet = null;
+		var current_state = aras.getItemProperty(item, 'current_state');
+		var lcMap = null;
+
+		clientControlsFactory.createControl('Aras.Client.Controls.Experimental.Workflow', 'workflow', function(control) {
+			workflowApplet = control;
+		});
+
+		const disabledPromotion = !!dialogArguments.disabledPromotion;
+
+		if (!disabledPromotion) {
+			window.loadPromoteDialogJS();
+			toolbar = new ToolbarWrapper({
+				id: 'top_toolbar',
+				connectId: 'toolbarContainer',
+				useCompatToolbar: true
+			});
+		}
+
+		window.onload = window.onload_handler;
+		window.addEventListener('resize', window.onresize_handler, false);
+	</script>
+</head>
+<body class="claro">
+	<div id="toolbarContainer" style="heoght: 30px; width: 100%"></div>
+	<div id="workflow" style="position: fixed; left: 0px; right: 0px; top: 30px; bottom: 0px; overflow: auto;"></div>
+</body>
+</html>

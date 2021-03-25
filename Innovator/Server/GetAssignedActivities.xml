@@ -1,0 +1,28 @@
+<!-- (c) Copyright by Aras Corporation, 2004-2007. -->
+<Item type="Activity" action="get"
+ select="name,can_delegate,can_refuse,state,message,active_date"
+ is_internal="1"
+ id="$$ACTIVITY_ID$$"
+ >
+
+ <Relationships>
+
+  <Item type="Activity Assignment" select="comments"
+         is_internal="1">
+   <Relationships>
+    <Item type="Activity Task Value" select="task,completed_on"
+          is_internal="1"/>
+    <Item type="Activity Variable Value" select="variable,value"
+          is_internal="1"/>
+   </Relationships>
+  </Item> 
+
+  <Item type="Activity Task" select="sequence,is_required,description"
+       is_internal="1"/>
+  <Item type="Activity Variable" select="is_hidden,sequence,name,datatype,source,is_required"
+        is_internal="1"/>
+  <Item type="Workflow Process Path" select="name,authentication"
+        is_internal="1"/>
+
+ </Relationships>
+</Item>

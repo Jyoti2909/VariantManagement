@@ -1,0 +1,250 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project name="Deployment" default="Deploy">
+	<script language="C#">
+		<references>
+			<include name="System.dll" />
+		</references>
+		<imports>
+			<import namespace="System.Text.RegularExpressions" />
+		</imports>
+		<code>
+			<![CDATA[
+				public static void ScriptMain(Project project) {
+					Regex nantPropertyRegex = new Regex(@"^[a-zA-Z_][a-zA-Z_0-9\.\-]+[a-zA-Z0-9_]$");
+
+					foreach (DictionaryEntry environmentVariableEntry in Environment.GetEnvironmentVariables())
+					{
+						string propertyName = environmentVariableEntry.Key.ToString();
+						if (nantPropertyRegex.IsMatch(propertyName)) {
+							string propertyValue = environmentVariableEntry.Value.ToString();
+							project.Properties.Add(propertyName, propertyValue);
+							project.Log(Level.Verbose, string.Format("Property {0} has been read from environment", propertyName));
+						}
+					}
+				}
+			]]>
+		</code>
+	</script>
+	<property name="Path.To.This.Git.Repository" value="${path::get-full-path('..')}" />
+	<property name="Path.To.Automated.Procedures.Output" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProceduresOutput')}" />
+	<property name="Path.To.Build.Output" value="${path::combine(Path.To.Automated.Procedures.Output, 'BuildOutput')}" />
+	<property name="Path.To.Tests.Output" value="${path::combine(Path.To.Automated.Procedures.Output, 'TestsOutput')}" />
+	<property name="Path.To.Deployment.Package.Dir" overwrite="false" value="${path::combine(Path.To.Automated.Procedures.Output, 'TemporaryFolderWithFilesToDeploy')}" />
+	<property name="Path.To.Automated.Procedures.Temp" value="${path::combine(Path.To.Automated.Procedures.Output, 'TemporaryFilesAndLogs')}" />
+	<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Automated.Procedures.Temp}" /S /Q' if='${directory::exists(Path.To.Automated.Procedures.Temp)}'/>
+	<mkdir dir="${Path.To.Automated.Procedures.Temp}" />
+	<property name="Path.To.Pre.Deploy.Validations.Log.File" value="${path::combine(Path.To.Automated.Procedures.Temp, 'PreDeployValidation.log')}" />
+	<property name="Path.To.Default.Settings" value="${path::get-full-path('Default.Settings.include')}" />
+	<property name="Path.To.Instance.Templates" overwrite="false" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\TemplatesOfInnovatorInstances')}" />
+	<property name="Path.To.Sandbox.Directory" overwrite="false" value="${path::combine(Path.To.This.Git.Repository, 'Instances')}" if="${not(property::exists('Path.To.Sandbox.Directory'))}" />
+	<property name="Path.To.Unzipped.Code.Tree" overwrite="false" value="${path::combine(Path.To.Automated.Procedures.Output, 'UnzippedCodeTree')}" />
+	<property name="Path.To.Default.Nuget.Source" value="${path::combine(Path.To.Automated.Procedures.Output, 'NugetSource')}" />
+	<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Default.Nuget.Source}" /S /Q' if='${directory::exists(Path.To.Default.Nuget.Source)}'/>
+	<mkdir dir="${Path.To.Default.Nuget.Source}" />
+
+	<property name="Path.To.ArasUpdate.Tool" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\tools\ArasUpdateCmd\ArasUpdateCmd.exe')}" />
+	<property name="Path.To.Nuget" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\tools\.nuget\NuGet.exe')}" />
+	<property name="Path.To.SevenZip" value="${path::get-full-path('tools\7-Zip.CommandLine\tools\7za.exe')}" />
+
+	<property name="Commit.Pointer" overwrite="false" value="Unknown" />
+	<property name="Is.Development.Build.Type" overwrite="false" value="false" />
+	<property name="Is.ContinuousIntegration.Build.Type" overwrite="false" value="false" />
+	<property name="Nightly.Build" overwrite="false" value="false" />
+
+	<include buildfile="${Path.To.Default.Settings}" verbose="true" />
+	<include buildfile="Includes\Nuget.include" verbose="true" />
+	<include buildfile="Includes\NodeJs.include" verbose="true" />
+	<include buildfile="Includes\MSBuild.include" verbose="true" />
+	<include buildfile="Includes\ValidateEncoding.include" verbose="true" />
+	<include buildfile="Includes\EnvironmentDiagnostics.include" verbose="true" />
+	<include buildfile="Includes\CSharpScripts.include" verbose="true" />
+
+	<loadtasks assembly="${path::combine(Path.To.Tools.Dir, 'NAnt.Contrib.Portable\tools\NAnt.Contrib.Tasks.dll')}" />
+
+	<property name="This.Script.Start.Time.As.Sortable.Date" overwrite="false" value="${string::replace(aras::now-as-sortable-string(),':','-')}" />
+
+	<!-- Include all NantScript.*.xml files from AutomatedProcedures folder -->
+	<foreach item="File" property="NantScriptFile">
+		<in>
+			<items>
+				<include name="NantScript.*.xml" />
+			</items>
+		</in>
+		<do>
+			<include buildfile="${NantScriptFile}" verbose="true" />
+		</do>
+	</foreach>
+
+	<!-- Remove all required substs before start build -->
+	<call target="Remove.Used.Substitutions" />
+
+	<if test="${property::exists('MachineSpecific.Includes.Folder.Path') and string::get-length(MachineSpecific.Includes.Folder.Path) != 0}">
+		<if test="${not(path::is-path-rooted(MachineSpecific.Includes.Folder.Path))}">
+			<fail message="Property 'MachineSpecific.Includes.Folder.Path' must contain absolute path to a folder with machine-specific includes" />
+		</if>
+
+		<property name="Is.MachineSpecific.Includes.Mandatory" overwrite="false" value="false" />
+
+		<property name="Machine.Specific.Settings.include" value="${path::combine(MachineSpecific.Includes.Folder.Path, 'Machine.Settings.include')}" />
+		<include buildfile="${Machine.Specific.Settings.include}" verbose="true" if="${file::exists(Machine.Specific.Settings.include)}" />
+
+		<property name="Repository.Specific.Settings.include" value="${path::combine(MachineSpecific.Includes.Folder.Path, Project.Prefix + '.Settings.include')}" />
+		<include buildfile="${Repository.Specific.Settings.include}" verbose="true" if="${file::exists(Repository.Specific.Settings.include)}" />
+
+		<property name="Branch.Specific.Settings.include" value="${path::combine(MachineSpecific.Includes.Folder.Path, Project.Prefix + '-' + Commit.Pointer + '.Settings.include')}" />
+		<if test="${not file::exists(Branch.Specific.Settings.include) and Is.MachineSpecific.Includes.Mandatory}">
+			<property name="Path.To.CodeTree.Zip.Initialized" value="false" />
+			<property name="Path.To.DB.Bak.Initialized" value="false" />
+			<property name="Innovator.License.Type.Initialized" value="false" />
+			<property name="Innovator.License.Company.Initialized" value="false" />
+			<property name="Innovator.License.Key.Initialized" value="false" />
+			<property name="Innovator.Activation.Key.Initialized" value="false" />
+			<property name="MSSQL.Server.Initialized" value="false" />
+			<property name="MSSQL.SA.Password.Initialized" value="false" />
+			<property name="MSSQL.Innovator.Password.Initialized" value="false" />
+			<property name="MSSQL.Innovator.Regular.Password.Initialized" value="false" />
+			<if test="${file::exists(Machine.Specific.Settings.include)}">
+				<property name="Path.To.CodeTree.Zip.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''Path.To.CodeTree.Zip'']')}" />
+				<property name="Path.To.DB.Bak.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''Path.To.DB.Bak'']')}" />
+				<property name="Innovator.License.Type.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''Innovator.License.Type'']')}" />
+				<property name="Innovator.License.Company.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''Innovator.License.Company'']')}" />
+				<property name="Innovator.License.Key.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''Innovator.License.Key'']')}" />
+				<property name="Innovator.Activation.Key.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''Innovator.Activation.Key'']')}" />
+				<property name="MSSQL.Server.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''MSSQL.Server'']')}" />
+				<property name="MSSQL.SA.Password.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''MSSQL.SA.Password'']')}" />
+				<property name="MSSQL.Innovator.Password.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''MSSQL.Innovator.Password'']')}" />
+				<property name="MSSQL.Innovator.Regular.Password.Initialized" value="${xml::CheckIfExists(Machine.Specific.Settings.include, '/project/property[@name=''MSSQL.Innovator.Regular.Password'']')}" />
+			</if>
+			<if test="${file::exists(Repository.Specific.Settings.include)}">
+				<property name="Path.To.CodeTree.Zip.Initialized"
+						  value="${Path.To.CodeTree.Zip.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''Path.To.CodeTree.Zip'']')}" />
+				<property name="Path.To.DB.Bak.Initialized"
+						  value="${Path.To.DB.Bak.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''Path.To.DB.Bak'']')}" />
+				<property name="Innovator.License.Type.Initialized"
+						  value="${Innovator.License.Type.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''Innovator.License.Type'']')}" />
+				<property name="Innovator.License.Company.Initialized"
+						  value="${Innovator.License.Company.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''Innovator.License.Company'']')}" />
+				<property name="Innovator.License.Key.Initialized"
+						  value="${Innovator.License.Key.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''Innovator.License.Key'']')}" />
+				<property name="Innovator.Activation.Key.Initialized"
+						  value="${Innovator.Activation.Key.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''Innovator.Activation.Key'']')}" />
+				<property name="MSSQL.Server.Initialized"
+						  value="${MSSQL.Server.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''MSSQL.Server'']')}" />
+				<property name="MSSQL.SA.Password.Initialized"
+						  value="${MSSQL.SA.Password.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''MSSQL.SA.Password'']')}" />
+				<property name="MSSQL.Innovator.Password.Initialized"
+						  value="${MSSQL.Innovator.Password.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''MSSQL.Innovator.Password'']')}" />
+				<property name="MSSQL.Innovator.Regular.Password.Initialized"
+						  value="${MSSQL.Innovator.Regular.Password.Initialized or xml::CheckIfExists(Repository.Specific.Settings.include, '/project/property[@name=''MSSQL.Innovator.Regular.Password'']')}" />
+			</if>
+			<if test="${not (Path.To.CodeTree.Zip.Initialized and Path.To.DB.Bak.Initialized and Innovator.License.Key.Initialized and Innovator.Activation.Key.Initialized and MSSQL.Server.Initialized and MSSQL.SA.Password.Initialized and MSSQL.Innovator.Password.Initialized)}">
+				<MoveNantProperties from="${Path.To.Default.Settings}" to="${Branch.Specific.Settings.include}">
+					<properties>
+						<property name="Path.To.CodeTree.Zip" if="${not Path.To.CodeTree.Zip.Initialized}" />
+						<property name="Path.To.DB.Bak" if="${not Path.To.DB.Bak.Initialized}" />
+						<property name="Innovator.License.Type" if="${not Innovator.License.Type.Initialized}" />
+						<property name="Innovator.License.Company" if="${not Innovator.License.Company.Initialized}" />
+						<property name="Innovator.License.Key" if="${not Innovator.License.Key.Initialized}" />
+						<property name="Innovator.Activation.Key" if="${not Innovator.Activation.Key.Initialized}" />
+						<property name="MSSQL.Server" if="${not MSSQL.Server.Initialized}" />
+						<property name="MSSQL.SA.Password" if="${not MSSQL.SA.Password.Initialized}" />
+						<property name="MSSQL.Innovator.Password" if="${not MSSQL.Innovator.Password.Initialized}" />
+						<property name="MSSQL.Innovator.Regular.Password" if="${not MSSQL.Innovator.Regular.Password.Initialized}" />
+					</properties>
+				</MoveNantProperties>
+				<xmlpoke file="${Branch.Specific.Settings.include}" value="true" xpath="/project/property/@overwrite" />
+
+				<call target="Get.Link.To.LicenseKeyService.Based.On.MAC.Address" />
+				<fail>********************************************************************************
+File ${Branch.Specific.Settings.include} does not exists!
+
+Copying default setting from the repository to create new Machine And Branch Specific Settings
+Please modify the following values according to your environment and re-run the script:
+
+Path.To.DB.Bak - absolute path to the DB.bak with production DB backup.
+Path.To.CodeTree.Zip - absolute path to the CodeTree.zip archive with code tree of production Innovator instance. (Required for ContinuousIntegration task)
+Innovator.License.Type - license type that should be obtained from ${Link.To.LicenseKeyService}
+Innovator.License.Company - company name specified at license obtained from ${Link.To.LicenseKeyService} (required for Verified licenses)
+Innovator.License.Key - license key that should be obtained from ${Link.To.LicenseKeyService}
+Innovator.Activation.Key - activation key that should be obtained from ${Link.To.LicenseKeyService}
+MSSQL.Server - MS SQL server name. Correct value is required for cases when DB is restored from backup.
+MSSQL.SA.Password - password for login 'sa' on a SQL Server
+MSSQL.Innovator.Password - password for login 'innovator' on a SQL Server.
+MSSQL.Innovator.Regular.Password - password for login 'innovator_regular' on a SQL Server.
+
+Path to the settings file is: ${Branch.Specific.Settings.include}
+********************************************************************************</fail>
+			</if>
+		</if>
+		<include buildfile="${Branch.Specific.Settings.include}" verbose="true" if="${file::exists(Branch.Specific.Settings.include)}" />
+	</if>
+
+	<!--
+		MSSQL.ConnectionString - connection string for MSSQL Server. The connection string is used to restore database.
+		Restoration of Innovator DB is required only for some of script use case.
+		If the value of MSSQL.ConnectionString is not explicitly defined outside then it is built from the connection string components, defined in Default.Settings.include file.
+		the connection string components is the following properties: MSSQL.SA.User, MSSQL.SA.Password, MSSQL.Innovator.User, MSSQL.Innovator.Password
+	-->
+	<if test="${not property::exists('MSSQL.ConnectionString') or string::get-length(MSSQL.ConnectionString) == 0}">
+		<property name="MSSQL.ConnectionString" value="Provider=SQLOLEDB;Data Source=${MSSQL.Server}" />
+		<property name="MSSQL.Login.Innovator.ConnectionString" value="${MSSQL.ConnectionString};user id=${MSSQL.Innovator.User};password=${MSSQL.Innovator.Password};" />
+		<property name="MSSQL.Innovator.Regular.ConnectionString" value="${MSSQL.ConnectionString};user id=${MSSQL.Innovator.Regular.User};password=${MSSQL.Innovator.Regular.Password};" />
+
+		<property name="MSSQL.Use.Windows.Authentication" value="${string::get-length(MSSQL.SA.Password) == 0}" />
+		<choose>
+			<when test="${MSSQL.Use.Windows.Authentication}">
+				<property name="MSSQL.ConnectionString" value="${MSSQL.ConnectionString};Integrated Security=SSPI;" />
+				<echo>Windows authentication will be used to access ${MSSQL.Server}</echo>
+			</when>
+			<otherwise>
+				<property name="MSSQL.ConnectionString" value="${MSSQL.ConnectionString};user id=${MSSQL.SA.User};password=${MSSQL.SA.Password};" />
+				<echo>SQL Server authentication will be used to access ${MSSQL.Server}</echo>
+			</otherwise>
+		</choose>
+	</if>
+
+	<property name="Deployment.Server.Port.String" value="" />
+	<property name="Deployment.Server.Port.String" value=":${Port.Of.Deployment.Server}" if="${string::get-length(Port.Of.Deployment.Server) > 0}" />
+
+	<target name="ContinuousIntegration"
+			depends="Environment.Diagnostics, Run.Pre.Build.Validations, RunUnitTests, Run.Client.Unit.Tests, SetupParameters.For.Continuous.Task, Run.Java.Script.Validation"
+			description="Deploys release N to the local temporary copy of production Innovator instance">
+
+		<call target="Validate.Encoding.Of.Code.Tree" />
+		<call target="Validate.Version.Of.Code.Tree.Aras.Binaries" />
+
+		<trycatch>
+			<try>
+				<call target="Setup.Innovator.From.Backups" cascade="false" />
+				<call target="CreateZipWithDeploymentPackageAndScripts" />
+				<call target="Deploy.Package" cascade="false" />
+				<call target="RunIntegrationTests" cascade="false" />
+			</try>
+			<finally>
+				<silent_call target="Clean.Up" output="${path::combine(Path.To.Automated.Procedures.Temp, 'ContinuousIntegrationCleanup.txt')}" />
+				<silent_call target="Create.Log.Package.Zip" output="${path::combine(Path.To.Automated.Procedures.Output, 'CreateLogPackageZip.txt')}" />
+			</finally>
+		</trycatch>
+	</target>
+
+	<target name="Deploy.Package"
+			depends="Unzip.Deployment.Package.Content"
+			description="Deploys release N to the tartget system.">
+		<trycatch>
+			<try>
+				<call target="Setup.Branding.Depending.On.Branch" cascade="false" />
+				<property name="Deploy.Verb.Value" value="-t Deploy" />
+				<property name="Deploy.Verb.Value" value="deploy" if="${version::get-major(fileversioninfo::get-file-version(fileversioninfo::get-version-info(Path.To.Deployment.Tool))) == 1}" />
+
+				<exec program="${Path.To.Deployment.Tool}" workingdir="${Path.To.Deployment.Tool.Dir}">
+					<arg value="${Deploy.Verb.Value}" />
+					<arg value="-c ${Path.To.Instance.Deploy.Config}" />
+				</exec>
+				<call target="SetupFeatureLicenses" />
+			</try>
+			<finally>
+				<silent_call target="Create.Log.Package.Zip" unless="${Is.Development.Build.Type}" />
+			</finally>
+		</trycatch>
+	</target>
+</project>

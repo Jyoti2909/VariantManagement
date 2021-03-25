@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = ".";
+  gCommonRootRelPath = ".";
+  gTopicId = "3.8.0_5";
+
+//]]></script>
+
+<script type="text/javascript" src="./template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="./template/scripts/common.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="./template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="assets/css/JAI_styles.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Workflow Examples</title>
+  
+</head>
+<body>
+  <div>
+  <h1>Workflow Examples</h1>
+  <p class="Content_body">There are a few properties on the workflow activity and a few of the workflow path that work together to create a number of different options.  The easiest way to understand how these properties interact together is through some examples.</p>
+  <h2><a name="Escalation" id="Escalation"></a>Escalation Example:</h2>
+  <p class="Content_body_indented"><img src="assets/images/escalateflow.jpg" style="width: 100%; max-width: 591px;"/></p>
+  <?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Figure_indented"> </p>
+  <?rh-list_end ?>
+  <p class="Content_body">In this example, the Analyze and Sort activity is activated. Notice that there are three identities responsible for this activity - Change Specialist I and the Creator . Let&#39;s say that these identities complete their tasks and vote as follows:</p>
+  <?rh-list_start class="Bullet_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <ul class="Disc">
+    <li class="Bulleted_list">
+      <p class="Content_body">Change Specialist I - Test Data (95%)</p>
+    </li>
+    <li class="Bulleted_list">
+      <p class="Content_body">
+        <?rh-list_end ?>
+        <?rh-list_start class="Bullet_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>Creator - Reject Data (10%)</p>
+    </li>
+  </ul>
+  <?rh-list_end ?>
+  <p class="Content_body">In this case, since none of the paths are marked as override or default, and since none of the paths have received a 100% vote, the decision is escalated to the identity specified in the Escalate To property, in our case the Creator.  If there is no identity specified there, then the activity is escalated to the workflow Process Owner.</p>
+  <h2><a name="Override" id="Override"></a>Override Example</h2>
+  <p class="Content_body">Let&#39;s take the same example we have above, but now, let&#39;s say that the Reject Data path is marked as Override.</p>
+  <p class="Content_body_indented"><img src="assets/images/override1.jpg" style="width: 100%; max-width: 809px;"/></p>
+  <?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Figure_indented"> </p>
+  <?rh-list_end ?>
+  <p class="Content_body">As soon as the Override path receives even one vote, no matter how small the percentage of the total vote weight that vote brings, the override path is executed.  So, in this case, even though the Reject Data path receives just 10%, the Reject Data activity is activated.</p>
+  <h2><a name="DefaultPath" id="DefaultPath"></a>Default Path Example</h2>
+  <p class="Content_body">In this example, we are again working with the Analyze and Sort activity, however, there are no longer any Override exit paths from this activity. Now, we have the Test Data path marked as the Default Path.</p>
+  <p class="Content_body_indented"> </p>
+  <?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <?rh-list_end ?>
+  <p class="Content_body_indented"><img src="assets/images/defaultpath1.jpg" style="width: 100%; max-width: 808px;"/></p>
+  <?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Figure_indented"> </p>
+  <?rh-list_end ?>
+  <p class="Content_body">Here again, the Change Analyst 1 votes Test Data, which gives it only 95%, and the Creator votes Reject Data, which receives 10%. If none of the paths are marked as Default or Override, this issue would be escalated. However, since we do have a Default Path, the default is chosen instead. So, in this case, the activity Test Data would become active next.</p>
+  <h2><a name="Required" id="Required"></a>Required Example</h2>
+  <p class="Content_body">In this example we are again working with the Analyze and Sort activity.  Notice however that now there are 3 Identities responsible for completing it - the Change Specialist I, the Creator, and the Inspectors. Notice that the Creator is marked as Required. This means that even if there is 100% vote weight on any one path, the Required identity must vote.</p>
+  <p class="Content_body_indented"><img src="assets/images/example.jpg" style="width: 100%; max-width: 835px;"/></p>
+  <?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Figure_indented"> </p>
+  <?rh-list_end ?>
+  <p class="Content_body">Let&#39;s assume that none of the paths are marked as Override or Default, and that the voting so far yields:</p>
+  <?rh-list_start class="Bullet_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="margin-left: 50px;">Data Analysis - Test Data (95 %)</p>
+  <?rh-list_end ?>
+  <?rh-list_start class="Bullet_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="margin-left: 50px;">Testing and Quality - Test Data (95%)</p>
+  <?rh-list_end ?>
+  <p class="Content_body">This would give the Test Data path 190%, which is enough for that path to be selected.  However, since the Creator has not yet voted, the activity does nothing and awaits that last input.  If the Creator votes Reject Data, the Test Data activity is activated next.  However, if the Reject Data was marked as Override, then that one last vote would change the whole picture and Reject Data would be activated instead.</p>
+  <h2><a name="WaitForAll" id="WaitForAll"></a>Wait For All Votes Example</h2>
+  <p class="Content_body">If the Wait For All Votes option is checked on the Activity, then no action will be taken until all the votes are in, even if there is 100% gathered on any particular path, or even if a vote is cast for an Override path.</p>
+  <p class="Content_body_indented"><img src="assets/images/wait4votes.jpg" style="width: 100%; max-width: 808px;"/></p>
+  <?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Figure_indented"> </p>
+  <?rh-list_end ?>
+  <p class="Content_body">In the above example, all 3 identities have to vote before the exit path is activated. Let&#39;s say that the Reject Data path is marked as Override. Then, the votes come in as follows:</p>
+  <?rh-list_start class="Bullet_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="margin-left: 50px;">Change Specialist I - Test Data (95%)</p>
+  <?rh-list_end ?>
+  <?rh-list_start class="Bullet_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+  <p class="Bulleted_list" style="margin-left: 50px;">Creator - Reject (10%)</p>
+  <?rh-list_end ?>
+  <p class="Content_body">At this point the result is very clear. The Reject Data path will be selected. However, Aras Innovator will wait until the Inspector group votes, and then the Reject Data activity will be activated.</p>
+
+</div>
+  <div>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

@@ -1,0 +1,43 @@
+﻿.mixin-svg-arrow(@width, @height, @degrees) {
+	@arrow-width: @width * 2;
+	@arrow-height: @height * 2;
+	@svg-arrow: ~'<svg xmlns="http://www.w3.org/2000/svg" width="@{arrow-width}" height="@{arrow-height}"><g transform="rotate(@{degrees})"><polygon points="0,0 12,16 24,0" fill="#fff" stroke="@{tooltip-border-color}" stroke-width="2"/><rect x="0" y="-2" width="24" height="4" fill="@{tooltip-bg}"/></g></svg>';
+	@-svg-code: escape(~'@{svg-arrow}');
+	background: url('data:image/svg+xml;charset=utf-8,@{-svg-code}') no-repeat;
+	background-size: 100% auto;
+	height: @height;
+	width: @width;
+}
+
+.svg-arrow(@color, @position) {
+	& when (@position = up) {
+		@width: @tooltip-arrow-size * 3;
+		@height: @tooltip-arrow-size * 2;
+		@degrees: 0;
+		.mixin-svg-arrow(@width, @height, @degrees);
+	}
+	& when (@position = down) {
+		@width: @tooltip-arrow-size * 3;
+		@height: @tooltip-arrow-size * 2;
+		@degrees: 180 12 8;
+		.mixin-svg-arrow(@width, @height, @degrees);
+	}
+	& when (@position = left) {
+		@width: @tooltip-arrow-size * 2;
+		@height: @tooltip-arrow-size * 3;
+		@degrees: -90 12 12;
+		.mixin-svg-arrow(@width, @height, @degrees);
+	}
+	& when (@position = right) {
+		@width: @tooltip-arrow-size * 2;
+		@height: @tooltip-arrow-size * 3;
+		@degrees: 90 8 8;
+		.mixin-svg-arrow(@width, @height, @degrees);
+	}
+}
+
+.base-effects() {
+	opacity: 0;
+	pointer-events: none;
+	transition: all 0.18s ease-out 0.18s;
+}

@@ -1,0 +1,574 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+<head>
+	<link rel="stylesheet" href="../javascript/include.aspx?classes=common.css" />
+	<style type="text/css">
+		@import "../styles/default.css";
+		html, body{
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			font-family: Arial, Helvetica, sans-serif;
+		}
+		.allcontainer {
+			padding: 20px;
+		}
+		#filePropertyContainer {
+			position: relative;
+			max-width: 250px;
+			float: left;
+		}
+		#buttonsContainer {
+			position: absolute;
+			top: 18px;
+			right: 20px;
+		}
+		#cleanButton {
+			border: none;
+		}
+		button::-moz-focus-inner {
+			border: 0px;
+		}
+		button:focus {
+			outline: 1px dashed #729EDB;
+		}
+		.fileProperty {
+			overflow:hidden;
+			max-width: 250px;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			margin-bottom: 3px;
+		}
+		#fileSizeType,
+		#fileDate {
+			color: #727272;
+		}
+		.separator {
+			margin-left: 1px;
+			margin-right: 1px;
+			margin-top: 3px;
+			float: left;
+			content: "";
+			height: 20px;
+			border-right: 1px solid #D4D4D4;
+		}
+		#fileHistory .separator {
+			height: 12px;
+			margin-top: 2px;
+			margin-left: 5px;
+			margin-right: 5px;
+			border-color: #727272;
+		}
+		#fileErrorMessage {
+			max-width: 250px;
+			color: #A0A0A0;
+			font-size: 14px;
+			font-style: italic;
+		}
+		#errorOverlay {
+			position: absolute;
+			z-index: 100;
+			top: 0px;
+			bottom: 0px;
+			left: 0px;
+			right: 0px;
+			padding: 10px;
+			background-color: #FFFFFF;
+			color: #b83b1d;
+			font-size: 16px;
+		}
+		#fileName {
+			padding: 0px;
+			background-color: transparent;
+			border: none;
+		}
+		#fileHistory {
+			float: left;
+		}
+		#fileHistory .buttonControl {
+			cursor: pointer;
+			background-color: #FFFFFF;
+			border: none;
+			-moz-user-select: none;
+			-webkit-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+			font-size: 12px;
+			margin-top: -1px;
+		}
+		#fileHistory .buttonControl img {
+			height: 20px;
+			width: 20px;
+		}
+		#fileDate {
+			float: left;
+		}
+		.formButtons {
+			vertical-align: auto;
+			margin-top: auto;
+			text-align: right;
+			padding-top: 10px;
+			position: absolute;
+			right: 20px;
+			bottom: 51px;
+		}
+		.formButtons .btn {
+			min-width: 105px;
+			min-height: 28px;
+			margin-left: 4px;
+			font-size: 12px;
+		}
+		.formButtons .cancelBtn {
+			background-color: rgb(95, 104, 113);
+		}
+		.formButtons .cancelBtn:hover {
+			background-color: #777f86;
+		}
+		.buttonControl {
+			position:relative;
+			cursor: pointer;
+			background-color: #FFFFFF;
+			font-size: 16px;
+			-moz-user-select: none;
+			-webkit-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+			float: left;
+			padding: 0px;
+			margin: 0px;
+		}
+		.buttonControl.controlDisabled {
+			color: #A0A0A0;
+		}
+		.fileButton {
+			position: relative;
+			width: 26px;
+			cursor: pointer;
+			border: none;
+			background-color: #FFFFFF;
+			font-size: 12px;
+			text-align: left;
+			white-space: nowrap;
+		}
+		.fileButton:hover, .fileButton:focus {
+			background-color: #dde7f5;
+		}
+		.controlDisabled .fileButton {
+			color: #A0A0A0;
+		}
+		.buttonIcon {
+			display: inline-block;
+			max-width: 30px;
+			width: 22px;
+			max-height: 22px;
+			height: 22px;
+			vertical-align: middle;
+		}
+		.controlDisabled .buttonIcon {
+			filter: url('../styles/grayscale.svg#grayscale');
+			-webkit-filter: grayscale(100%);
+			-webkit-opacity: 0.5;
+			filter: alpha(opacity=50), gray;
+			opacity: 0.5;
+		}
+		.controlDisabled svg * {
+			-webkit-opacity: 0.7;
+			filter: alpha(opacity=50), gray;
+			opacity: 0.7;
+			filter: url("#grayscale");
+		}
+	</style>
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<script type="text/javascript" src="../javascript/path.js"></script>
+	<script type="text/javascript" src="../javascript/PopulateDocByLabels.js"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=DragAndDrop"></script>
+	<script type="text/javascript">
+		// ===== variables section ============
+		var setupArguments = window.frameElement.dialogArguments,
+			aras = setupArguments ? setupArguments.aras : null,
+			pageControls = {},
+			selectedFile = null,
+			incomingFile = null,
+			fileName = "",
+			onChangeCallback = setupArguments.onchange || null,
+			isEditable = false,
+			isCleanAllowed;
+		// ===== end of variables section =====
+
+		oncontextmenu = function () {
+			return false;
+		};
+
+		onload = function () {
+			var isInitialized = false;
+			var svgFilter = document.createElement("div")
+			svgFilter.style.display = "none";
+			svgFilter.innerHTML = '<svg xmlns=\"http://www.w3.org/2000/svg\"><filter id=\"grayscale\"><feColorMatrix type=\"matrix\" values=\"0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0.3333 0.3333 0.3333 0 0 0 0 0 1 0\"/></filter></svg>';
+			document.body.appendChild(svgFilter);
+
+			PopulateDocByLabels();
+
+			if (setupArguments && aras) {
+				var fileNode = setupArguments.fileNode,
+					fileId;
+
+				isEditable = Boolean(setupArguments.editable);
+				isCleanAllowed = (setupArguments.cleanup !== undefined) ? (Boolean(setupArguments.cleanup) && isEditable) : isEditable;
+
+				if (fileNode) {
+					fileId = fileNode.getAttribute("id");
+					selectedFile = fileNode;
+				}
+				else {
+					fileId = setupArguments.fileId;
+					selectedFile = fileId ? aras.getItemById("File", fileId, 0) : null;
+				}
+
+				incomingFile = selectedFile;
+
+				initializeControls();
+				refreshControls(selectedFile, fileId);
+
+				if (isEditable) {
+					initializeDragAndDrop();
+				}
+
+				isInitialized = true;
+			}
+
+			if (!isInitialized) {
+				document.getElementById("errorOverlay").style.display = "";
+			}
+		}
+
+		function initializeDragAndDrop() {
+			var dialog = window.frameElement.parentNode;
+			/**
+			 * Create dropbox element.
+			 * @return {HTMLElement}
+			 */
+			var createDropbox = function() {
+				var dropbox = document.createElement('div');
+				dropbox.id = 'dropbox';
+				dropbox.className = 'dropbox';
+				dropbox.style.display = 'none';
+				dropbox.innerHTML = '<div class="dropboxBorder"></div>\
+					<div class="dropboxInternalContainer">\
+					<img src="../images/FileDragAndDrop.svg">\
+					<span>Drop files here!</span>\
+					</div>';
+				dialog.appendChild(dropbox);
+
+				return dropbox;
+			};
+			var dropbox = createDropbox();
+			var dropboxHandlers = {
+				onDragBrowserEnter: function (e) {
+					var isFilesDragged = e.dataTransfer && (!e.dataTransfer.types || (e.dataTransfer.types.contains ? e.dataTransfer.types.contains("Files") : e.dataTransfer.types.indexOf("Files") >= 0));
+					if (isFilesDragged) {
+						dropbox.style.display = "block";
+					}
+				},
+				onDragBrowserLeave: function() { dropbox.style.display = "none"; },
+				dropPriority: 10
+			};
+
+			dragManager.addDropbox(dropboxHandlers);
+
+			dropbox.addEventListener('dragover', function(e) {
+				e.dataTransfer.dropEffect = 'copy';
+				e.preventDefault();
+				e.stopPropagation();
+			});
+
+			dropbox.addEventListener('drop', function (e) {
+				var file = e.dataTransfer.files[0];
+				var newFile = aras.newItem("File", file);
+				if (newFile.selectSingleNode('file_size')) {
+					selectedFile = newFile;
+					refreshControls(newFile);
+					aras.itemsCache.addItem(newFile);
+				}
+			});
+		}
+
+		function initializeControls() {
+			// file properties section
+			pageControls.propertyContainer = document.getElementById("filePropertyContainer");
+			pageControls.nameProperty = document.getElementById("fileName");
+			pageControls.fileErrorMessage = document.getElementById("fileErrorMessage");
+			pageControls.sizeProperty = document.getElementById("fileSizeType");
+			pageControls.dateProperty = document.getElementById("fileDate");
+
+
+
+			// button section
+			pageControls.historyButton = document.getElementById("fileHistory");
+			pageControls.historyButton.title = aras.getResource("", "historygrid.item_history");
+			var fileItemType = aras.getItemTypeForClient("File", "name");
+			if (fileItemType.getProperty("history_template")) {
+				pageControls.historyButton.style.display = "";
+				pageControls.nameProperty.style.maxWidth = "250px";
+			}
+
+			pageControls.cleanButton = new DropDownButton(document.getElementById("cleanButton"), {
+				image: "../images/DeleteFile.svg",
+				title: aras.getResource("", "file_management.clear_file_property"),
+				onClick: cleanFileProperty
+			});
+			pageControls.cleanButton.setEnabled(isCleanAllowed);
+
+			pageControls.selectFileButton = new DropDownButton(document.getElementById("selectFile"), {
+				image: "../images/SelectFile.svg",
+				title: aras.getResource("","file_management.select_and_upload_file_tooltip"),
+				onClick: selectNewFile
+			});
+			pageControls.selectFileButton.setEnabled(isEditable);
+
+			pageControls.downloadButton = new DropDownButton(document.getElementById("downloadButton"), {
+				image: "../images/CopyFile.svg",
+				onClick: downloadFile,
+				title: "Download file"
+			});
+
+			pageControls.errorOverlay = document.getElementById("errorOverlay");
+
+			if (setupArguments.aras) {
+				document.getElementById("formButtonsBlock").style.bottom = "20px";
+			}
+		}
+
+		function refreshControls (fileNode, fileId) {
+			if (fileNode) {
+				var fileSize = parseInt(aras.getItemProperty(fileNode, "file_size") || "0"),
+					fileType = aras.getKeyedNameAttribute(fileNode, "file_type");
+
+				fileName = aras.getItemProperty(fileNode, "filename");
+				pageControls.nameProperty.innerHTML = fileName;
+				pageControls.nameProperty.title = fileName;
+				pageControls.sizeProperty.innerHTML = convertBytesToSize(fileSize) + (fileType ? " - " + fileType : "");
+				pageControls.dateProperty.innerHTML = aras.convertFromNeutral(aras.getItemProperty(fileNode, "created_on"), "date") || "\u0081";
+
+				setControlVisibility(pageControls.nameProperty, true);
+				setControlVisibility(pageControls.fileErrorMessage, false);
+
+				var isDownloadEnabled = !aras.isTempEx(fileNode);
+				pageControls.downloadButton.setEnabled(isDownloadEnabled);
+
+				var fileHistoryBlock = document.getElementById('fileHistoryBlock');
+				setControlVisibility(fileHistoryBlock, isDownloadEnabled);
+				if(!isDownloadEnabled){
+					pageControls.nameProperty.classList.remove('sys_item_link');
+				} else {
+					pageControls.nameProperty.classList.add('sys_item_link');
+				}
+			}
+			else {
+				pageControls.fileErrorMessage.innerHTML = fileId ? aras.getResource("", "file_management.file_with_id_not_found", fileId) : aras.getResource("", "file_management.file_not_specified");
+				pageControls.sizeProperty.innerHTML = "\u0081";
+				pageControls.dateProperty.innerHTML = "\u0081";
+
+				setControlVisibility(pageControls.nameProperty, false);
+				setControlVisibility(pageControls.fileErrorMessage, true);
+
+				pageControls.downloadButton.setEnabled(false);
+			}
+		}
+
+		function setControlVisibility (domNode, doVisible) {
+			if (domNode) {
+				domNode.style.display = doVisible ? "" : "none";
+			}
+		}
+
+		function cleanFileProperty () {
+			if (isCleanAllowed && confirm(aras.getResource("", "relationshipsgrid.clear_file_field"))) {
+				if (selectedFile && aras.isTempEx(selectedFile)) {
+					aras.removeFromCache(selectedFile);
+				}
+
+				selectedFile = null;
+				if (onChangeCallback) {
+					onChangeCallback("");
+				}
+				setupArguments.dialog.close(selectedFile);
+			}
+		}
+
+		function convertBytesToSize (byteLength) {
+			if (byteLength) {
+				var sizeUnits = ["Bytes", "KB", "MB", "GB", "TB"],
+					i = parseInt(Math.floor(Math.log(byteLength) / Math.log(1024)));
+
+				return (byteLength / Math.pow(1024, i)).toFixed(1) + " " + sizeUnits[i];
+			}
+			else {
+				return "0 Bytes";
+			}
+		}
+
+		function showSelectedFile () {
+			if (selectedFile) {
+				if (!aras.isTempEx(selectedFile)) {
+					aras.uiShowItemEx(selectedFile, undefined);
+				}
+			}
+		}
+
+		function selectNewFile () {
+			function processAddingFile(file) {
+				var newFile = aras.newItem("File", file);
+
+				if (newFile) {
+					selectedFile = newFile;
+					refreshControls(newFile);
+					aras.itemsCache.addItem(newFile);
+				}
+			}
+
+			aras.getMostTopWindowWithAras(window).ArasModules.vault.selectFile().then(processAddingFile.bind(this));
+		}
+
+		function downloadFile () {
+			aras.downloadFile(selectedFile);
+		}
+
+		function OKButtonHanler() {
+			if (incomingFile != selectedFile && onChangeCallback) {
+				onChangeCallback(selectedFile);
+			}
+			setupArguments.dialog.close();
+		}
+
+		function DropDownButton (domElement, /*object*/ configuration) {
+			if (this.initializeControl(domElement, configuration)) {
+				this.initEvents();
+			}
+		}
+
+		DropDownButton.prototype.initializeControl = function (domNode, configuration) {
+			if (!domNode) {
+				return false;
+			}
+
+			// dom nodes section
+			this.domNode = domNode;
+			domNode.classList.add('buttonControl');
+			domNode.classList.add('dropDownImageButton');
+			this.domNode.innerHTML = this.emptyTemplateString;
+			this.fileButton = domNode.querySelector(".fileButton");
+
+			// variables section
+			this.enabled = true;
+			if (configuration) {
+				this.userOnClickHandler = configuration.onClick;
+
+				if (configuration.image) {
+					this.setNodeIcon(this.fileButton, configuration.image);
+				}
+				if (configuration.title) {
+					this.domNode.title = configuration.title;
+				}
+			}
+
+			return true;
+		}
+
+		DropDownButton.prototype.emptyTemplateString =
+			"<button class='fileButton'>" +
+			"	<img class='buttonIcon'>" +
+			"</button>";
+
+		DropDownButton.prototype.setNodeIcon = function (domNode, iconPath) {
+			var iconNode = domNode.querySelector(".buttonIcon");
+			if (!iconNode || !iconPath) {
+				return;
+			}
+
+			iconNode.src = iconPath;
+			iconNode.style.display = iconPath ? "" : "none";
+		}
+
+		DropDownButton.prototype.setEnabled = function (doEnabled) {
+			if (this.enabled != doEnabled) {
+				this.enabled = doEnabled;
+				this.enabled ? this.domNode.classList.remove("controlDisabled") : this.domNode.classList.add("controlDisabled");
+			}
+		}
+
+		DropDownButton.prototype.initEvents = function () {
+			var self = this;
+
+			// attach handlers to dom elements
+			this.fileButton.addEventListener("click", function () {
+				if (self.enabled) {
+					self.userOnClickHandler();
+				}
+			});
+		}
+
+		DropDownButton.prototype.stopEvent = function (targetEvent) {
+			targetEvent.preventDefault();
+			targetEvent.stopPropagation();
+		}
+
+		function viewHistory() {
+			aras.getMostTopWindowWithAras(window).ModulesManager.using([
+				"aras.innovator.core.History/HistoryManager"]).then(
+					function (HistoryManager) {
+						var historyManager = new HistoryManager({ aras: aras });
+						historyManager.showItemHistory(selectedFile);
+					});
+		}
+	</script>
+</head>
+<body class="claro">
+	<div class="allcontainer">
+		<div id="filePropertyContainer">
+			<div id="fileErrorMessage"></div>
+			<div id="fileNameContainer">
+				<button id="fileName" arasAutoFocus class="fileProperty sys_item_link" style="font-size:14px;" onclick="showSelectedFile()"></button>
+			</div>
+			<div id="fileSizeType" class="fileProperty"></div>
+			<div id="fileHistoryBlock">
+				<div id="fileDate" class="fileProperty"></div>
+				<div id="fileHistory" style="display: none;">
+					<div class="separator"></div>
+					<button id="historyButton" class="buttonControl sys_item_link" onclick="viewHistory()">
+					<img class="buttonIcon" src="../images/HistoryContainer.svg?recipient=mfdialog" style="">History
+				</button>
+				</div>
+			</div>
+		</div>
+		<div id="buttonsContainer">
+			<div id="selectFile" style="margin-top:0px;"></div>
+			<div class="separator"></div>
+			<div id="cleanButton" style="margin-top:0px;"></div>
+			<div class="separator"></div>
+			<div id="downloadButton" style="margin-top:0px;"></div>
+		</div>
+		<div style="clear:both;"></div>
+		<div id="formButtonsBlock" class="formButtons">
+			<button class="btn" onclick="OKButtonHanler()">OK</button>
+			<button class="btn cancelBtn" onclick="setupArguments.dialog.close()">Cancel</button>
+		</div>
+	</div>
+	<div id="errorOverlay" style="display:none;" aras_ui_resource_key="file_management.dialog_initialization_failed"></div>
+	<script>
+		document.addEventListener('keydown', function(e) {
+			switch (e.keyCode) {
+				case 27:
+					setupArguments.dialog.close();
+					break;
+				case 13:
+					if (document.activeElement === document.body) {
+						OKButtonHanler();
+					}
+					break;
+			}
+		});
+	</script>
+</body>
+</html>

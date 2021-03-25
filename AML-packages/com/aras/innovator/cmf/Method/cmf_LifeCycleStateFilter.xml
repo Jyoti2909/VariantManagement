@@ -1,0 +1,45 @@
+﻿<AML>
+ <Item type="Method" id="4033CE51279549DA8F560C1AFFBC6097" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// get all Life Cycle States for current cmf_ContentType
+var fitem = aras.newIOMItem();
+fitem.loadAML('<Item type="cmf_ContentType" action="get" select="id,linked_item_type" id="' + item.getAttribute('id') + '">' +
+		'<linked_item_type>' +
+			'<Item type="ItemType" action="get" select="id">' +
+				'<Relationships>' +
+					'<Item type="ItemType Life Cycle" action="get" select="related_id">' +
+						'<related_id>' +
+							'<Item type="Life Cycle Map" action="get" select="id,name">' +
+								'<Relationships>' +
+									'<Item type="Life Cycle State" action="get" select="id,name" />' +
+								'</Relationships>' +
+							'</Item>' +
+						'</related_id>' +
+					'</Item>' +
+				'</Relationships>' +
+			'</Item>' +
+		'</linked_item_type>' +
+	'</Item>');
+
+var result = fitem.apply();
+var xmldom = result.dom;
+var properties = xmldom.selectNodes('//Item/linked_item_type/Item/Relationships/Item/related_id/Item/Relationships/Item/@id');
+
+var allPropertyIds = '';
+if (properties.length > 0) {
+	for (var i = 0; i < properties.length; i++) {
+		allPropertyIds += '\'' + properties[i].text + '\', ';
+	}
+	allPropertyIds = allPropertyIds.substring(0, allPropertyIds.length - 2);
+
+	// Never do something like that !!!
+	var filter = inDom.ownerDocument.createElement('id');
+	filter.setAttribute('condition', 'in');
+	filter.text = allPropertyIds;
+	inDom.appendChild(filter);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cmf_LifeCycleStateFilter</name>
+ </Item>
+</AML>

@@ -1,0 +1,61 @@
+﻿<AML>
+ <Item type="Method" id="FB7A79C3293B4A7EA93E79778A2B0AF5" action="add">
+  <comments>Method to save SAP User details</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const inn = aras.IomInnovator;
+const userID = inn.getUserID();
+let currentDate = new Date();
+const startDate = dateFormat(currentDate);
+
+const password = document
+	.getElementsByName('sapPassword')[0]
+	.getElementsByTagName('input')[0].value;
+const user = document
+	.getElementsByName('username')[0]
+	.getElementsByTagName('input')[0].value;
+let userDetails = inn.newItem('User', 'edit');
+userDetails.setID(userID);
+userDetails.setProperty('gag_sap_password', password);
+userDetails = userDetails.apply();
+
+if (userDetails.isError()) {
+	aras.AlertError('User not Found!');
+} else {
+	aras.AlertSuccess('Credentials saved successfully!');
+}
+
+let logItem = inn.newItem('GAG_SAPConnectionLog', 'add');
+currentDate = new Date();
+const endDate = dateFormat(currentDate);
+logItem.setProperty('gag_sap_job', 'SAP P11 Connection');
+logItem.setProperty('gag_status', 'Completed');
+logItem.setProperty('gag_start_date', startDate);
+logItem.setProperty('gag_end_date', endDate);
+logItem.setProperty('gag_sap_user', userID);
+logItem = logItem.apply();
+
+if (logItem.isError()) {
+	top.aras.AlertError(resultItem.getErrorDetail());
+	return;
+}
+
+function dateFormat(inputDate) {
+	let dateString = inputDate.getFullYear() + '-';
+	dateString += pad(inputDate.getMonth() + 1) + '-';
+	dateString += pad(inputDate.getDate()) + 'T';
+	dateString += pad(inputDate.getHours()) + ':';
+	dateString += pad(inputDate.getMinutes()) + ':';
+	dateString += pad(inputDate.getSeconds());
+	return dateString;
+}
+
+function pad(x) {
+	return x.toString().padStart(2, '0');
+}
+
+parent.dialogArguments.dialog.close();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_SAPSaveDetails</name>
+ </Item>
+</AML>

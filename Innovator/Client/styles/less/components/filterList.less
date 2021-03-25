@@ -1,0 +1,217 @@
+﻿@highlighted-color: #f9eec0;
+@default-size: @form-input-size;
+@spinner-size: 1.2rem;
+@list-item-height: 2.2rem;
+@background-dropdown: #fff;
+@background-hover: #edf4fb;
+
+.pseudo-block() {
+	content: '';
+	display: block;
+	position: absolute;
+}
+.dotted-background(@size, @repeat, @position) {
+	background-image: radial-gradient(
+		circle at 0 0,
+		#9c9c9c 1px,
+		transparent 1px,
+		transparent 100%
+	);
+	background-size: @size;
+	background-repeat: @repeat;
+	background-position: @position;
+}
+.aras-filter-list,
+.aras-itemProperty {
+	display: flex;
+	width: 100%;
+	.aras-form-boolean input[type='checkbox'] + span {
+		margin-left: 0.2rem;
+		margin-right: 0.6rem;
+	}
+	&__input {
+		flex-grow: 1;
+		padding: 0.25rem;
+		border-right-width: 0;
+		width: 0;
+		min-width: 0;
+		//Hide "clear" button in IE
+		&::-ms-clear {
+			display: none;
+			width: 0;
+			height: 0;
+		}
+		&:focus + .aras-filter-list__icon-container {
+			border-color: @blue;
+		}
+		&:disabled + .aras-filter-list__icon-container {
+			border-color: @gray-disable;
+		}
+	}
+	&__button {
+		flex-shrink: 0;
+		width: @default-size;
+		height: @default-size;
+		padding: 0;
+		&:disabled,
+		&:disabled:hover {
+			background-color: @gray-disable;
+		}
+		&_ellipsis {
+			.background-svg('ellipsis', @blue);
+			&:hover {
+				.background-svg('ellipsis', @blue-hover);
+			}
+			&:disabled {
+				.background-svg('ellipsis', @gray-disable);
+			}
+		}
+	}
+	&__icon-container {
+		display: flex;
+		align-items: center;
+		border-top: 1px solid @border-color;
+		border-bottom: 1px solid @border-color;
+		flex-shrink: 0;
+	}
+	&-icon {
+		box-sizing: border-box;
+		width: @spinner-size;
+		height: @spinner-size;
+		margin-right: 0.25rem;
+	}
+	&__dropdown {
+		&:not(.aras-dropdown_opened) {
+			visibility: hidden;
+			height: 0;
+			opacity: 0;
+		}
+		&.aras-dropdown_opened {
+			overflow-y: auto;
+			min-width: 100%;
+		}
+		background: @background-dropdown;
+		left: 0;
+		top: 0;
+		box-sizing: border-box;
+		display: block;
+		& > ul {
+			display: block;
+			box-sizing: border-box;
+			li.aras-list-item {
+				padding: 0.45rem 0.2rem;
+				&:not(.aras-list-item_shown) {
+					visibility: hidden;
+					height: 0;
+					padding: 0;
+				}
+				label {
+					overflow: hidden;
+					text-overflow: ellipsis;
+				}
+				&_warning {
+					font-style: 'italic';
+				}
+			}
+			& > li {
+				mark {
+					background: @highlighted-color;
+				}
+				overflow: hidden;
+				text-overflow: ellipsis;
+				height: @list-item-height;
+			}
+		}
+	}
+	&_without-border {
+		& .aras-filter-list__input {
+			border: none;
+		}
+		& .aras-filter-list__icon-container {
+			border: none;
+		}
+	}
+	&-tree {
+		ul {
+			padding: 0;
+			margin: 0;
+			list-style-type: none;
+			li {
+				height: auto;
+				padding-left: 1.5rem;
+				.dotted-background(1px 3px, repeat-y, 4.5px);
+				& > div > .aras-filter-list-tree-label:before {
+					.pseudo-block;
+					.dotted-background(2px, repeat-x, 0 11.5px);
+					height: 100%;
+					left: -1rem;
+					top: 0;
+					width: 1rem;
+				}
+				&:last-child {
+					background: none;
+					& > div > .aras-filter-list-tree-label:after {
+						.pseudo-block;
+						.dotted-background(1px 3px, repeat-y, 4.5px);
+						height: 50%;
+						left: -1.5rem;
+						top: 0;
+						width: 1.5rem;
+					}
+				}
+			}
+		}
+		& > ul {
+			position: relative;
+			& > li {
+				margin-left: 0.5rem;
+				padding-left: 0;
+				background: none;
+				& > .aras-filter-list-tree-label:before {
+					display: none;
+				}
+				&:last-child > .aras-filter-list-tree-label:after {
+					display: none;
+				}
+			}
+		}
+		&-label {
+			display: block;
+			line-height: @list-item-height;
+			position: relative;
+			white-space: nowrap;
+		}
+		&-leaf,
+		&-searchable-branch > div {
+			cursor: pointer;
+			&:hover,
+			&_selected {
+				&:before {
+					.pseudo-block;
+					background: @background-hover;
+					height: @list-item-height;
+					left: 0;
+					width: 100%;
+					z-index: -1;
+				}
+			}
+		}
+		&-branch {
+			& > .aras-filter-list-tree-label {
+				color: @font-color-disable;
+			}
+		}
+	}
+	.aras-icon-arrow_down:before {
+		top: ~'calc(50% - .333rem)';
+		left: ~'calc(50% - .333rem/2)';
+		border-width: 0.333rem;
+	}
+}
+
+.aras-filter-list_a {
+	.aras-input {
+		padding-right: .pxToRem(32px) [ @rem ];
+		flex-grow: 1;
+	}
+}

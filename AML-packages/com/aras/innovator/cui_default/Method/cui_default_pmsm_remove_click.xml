@@ -1,0 +1,27 @@
+﻿<AML>
+ <Item type="Method" id="E3DE0FB9092D45D3A8D8DEB7358C8F57" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[let promise;
+const currentTarget = options.currentTarget;
+const favoriteId = currentTarget.id;
+if (currentTarget.category === 'Search') {
+	const label = currentTarget.label || aras.getResource('', 'common.no_label');
+	const dialogMessage = aras.getResource('', 'favorites.confirm_delete', label);
+	promise = ArasModules.Dialog
+		.confirm(dialogMessage)
+		.then(function(result) {
+			if (result !== 'ok') {
+				return;
+			}
+
+			return options.favorites.delete(favoriteId);
+		});
+} else {
+	promise = options.favorites.delete(favoriteId);
+}
+
+return promise;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_pmsm_remove_click</name>
+ </Item>
+</AML>

@@ -1,0 +1,75 @@
+﻿<AML>
+ <Item type="Method" id="768E53BD63884E3A913E81B3A7F988A0" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[''' -----------------------------------------------------------------------------
+''' <summary>
+''' Calls ApplyItem using the initial_action and populates the result 
+''' by localized values for some data types (like date, float) per I18NSessionContext.
+''' </summary>
+''' <param name="initial_action">Action to be used in ApplyItem. If empty, then ApplyItem is not called (just the request is populated by localized values).</param>
+''' <param name="do_l10n">Set do_l10n="0" for an item to skip the localization. The flag is inherited by descendants.</param>
+''' <remarks>
+''' For example, 
+'''   <modified_on>2004-01-16T18:18:31+0300</modified_on>
+''' response tag is transformed to a tag like
+'''   <modified_on neutral_value="2004-01-16T18:18:31+0300">16 January 2004</modified_on>
+''' </remarks>
+''' -----------------------------------------------------------------------------
+
+Dim initial_action As String = Me.getAttribute("initial_action")
+Me.setAttribute("action", initial_action)
+Dim resDom As New XmlDocument
+
+If initial_action = "" Then
+  resDom = Me.dom
+Else
+  CCO.ApplyItem.ApplyItem(Me.dom, resDom)
+End If
+
+Dim tmpInn As Innovator = Me.getInnovator()
+Dim retValue As Item = tmpInn.newItem("", "")
+retValue.loadAML(resDom.OuterXml)
+If CCO.XML.HasFault(resDom, False) Then Return retValue
+
+resDom = retValue.dom
+Dim itm, nd2, prop As XmlElement
+Dim ndList As XmlNodeList
+Dim doL10N As Boolean
+Dim itemTypeNd As XmlElement
+Dim dataType, propNm, propPtrn, propVal As String
+Dim sCntxt As I18NSessionContext = tmpInn.GetI18NSessionContext()
+For Each itm In resDom.SelectNodes("//Item")
+  doL10N = Cbool(IIF(itm.getAttribute("do_l10n")="0", False, True ))
+  If Not itm.HasAttribute("do_l10n") AndAlso doL10N Then
+    ndList = itm.SelectNodes("ancestor::Item[@do_l10n]")
+    If ndList.Count>0 Then
+      nd2 = CType(ndList.Item(ndList.Count - 1), XmlElement)
+      doL10N = Cbool(IIF(itm.getAttribute("do_l10n")="0", False, True ))
+    End If
+  End If
+  If doL10N Then
+    itemTypeNd = CCO.Cache.GetItemTypeFromCache(itm.getAttribute("type"), "name")
+    If itemTypeNd Is Nothing Then Return tmpInn.newError("Item type with type=" + itm.getAttribute("type") + " is not found.")
+    
+    For Each prop In CCO.Cache.GetPropertiesFromCache(itemTypeNd.getAttribute("id"))
+      dataType = prop.getAttribute("data_type")
+      If dataType = "date" OrElse dataType = "float" OrElse dataType = "decimal" Then
+        propNm = prop.getAttribute("name")
+        propPtrn = prop.getAttribute("pattern")
+        nd2 = itm.selectSingleNode(propNm+"[string(.)!='']")
+        If Not nd2 Is Nothing Then
+          propVal = CCO.XML.GetItemProperty(itm, propNm)
+          nd2.SetAttribute("neutral_value", propVal)
+          propVal = sCntxt.ConvertFromNeutral(propVal, dataType, propPtrn)
+          CCO.XML.SetItemProperty(itm, propNm, propVal)
+        End If
+      End If
+    Next
+  End If
+Next
+
+Return retValue]]></method_code>
+  <method_type>VB</method_type>
+  <name>do_l10n</name>
+ </Item>
+</AML>

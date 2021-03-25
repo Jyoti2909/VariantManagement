@@ -1,0 +1,112 @@
+﻿<AML>
+ <Item type="Method" id="15CF56901A92437AB84DB6F880A3CD76" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// Show the "Select classification" dialog on start editing 
+// On calling from field event it has access to all of the current window and document properties and the srcElement variable
+// On calling from grid event the method receive the following arguments:
+//  relationshipID = ID for the Relationship Item. This is also the selected row ID in the Grid control
+//  relatedID = the ID for the related Item. (Blank for null relationships)
+//  gridApplet = handle to the Grid control
+//  propertyName = name of the Property for the currently selected cell
+//  colNumber = zero based column position number in the grid of the current cell
+
+function showClassificationOfitemType(itemtype, currVal, isEditMode) {
+
+  var class_structure = top.aras.getItemProperty(itemtype, "class_structure");
+
+    if (!class_structure) { class_structure = "<class id=\"" + top.aras.getItemProperty(itemtype = "", "id") + "\" />"; }
+    var param = {
+      aras: top.aras,
+      isEditMode: isEditMode,
+      class_structure: class_structure,
+      dialogType: "classification",
+      title: "Classification",
+      IsFirstDeletedNode: true,
+      isRootClassSelectForbidden: true,
+            itemTypeName : top.aras.getItemProperty(itemtype, "name"),
+            selectLeafOnly : true,
+            content : 'ClassStructureDialog.html',      
+            dialogHeight: 700,
+      dialogWidth: 600,
+      resizable: true
+       };
+    if(currVal){param.expandClassPath = currVal;}
+
+    var win = aras.getMostTopWindowWithAras(window);
+      (win.main || win).ArasModules.Dialog.show('iframe', param).promise.then(function (res) {
+            if (res !== undefined) {
+                          var doc_item_type_label = top.aras.getItemProperty(master_item_type, "label");
+                        if(res!==""){doc_item_type_label += " / " +res;}
+                          top.aras.setItemProperty(relshipItem.node, editPropertyName, res, true);
+                          top.aras.setItemProperty(relshipItem.node, 'label', doc_item_type_label, true);
+                if (!calledFromGrid) {
+                          handleItemChange(editPropertyName, res);
+                          handleItemChange('label', doc_item_type_label);
+                        }
+                else {
+                    if (!relshipItem.node.getAttribute("action")) {
+                        relshipItem.node.setAttribute("action", "edit");
+                    }
+                    updateRow(relshipItem.node);
+                    }
+            }
+    });
+}
+
+var isFieldEditMode = false;
+var relshipItem = null;
+var itemType = parent.item.getAttribute('type');
+var calledFromGrid = itemType == 'MSO_CommonSettings';
+if (calledFromGrid) 
+{
+  editPropertyName = propertyName;
+  relshipItem = parent.thisItem.getItemsByXPath("Relationships/Item[@id='" + relationshipID + "']");
+  isFieldEditMode = parent.isEditMode;
+}
+else
+{
+  editPropertyName = srcElement.name;
+  relshipItem = document.thisItem;
+  isFieldEditMode = document.isEditMode;
+  if(window.getFieldByName)
+  {
+    var field = getFieldByName("label");
+    if(field && field.focus )
+      {field.focus();}
+  }
+}
+  
+if (relshipItem && relshipItem.node && isFieldEditMode) 
+{
+  try
+  {
+    var master_item_typeID = relshipItem.getProperty("master_item_type","");
+    var currVal = relshipItem.getProperty(editPropertyName,"");
+    if(!master_item_typeID || master_item_typeID === "")
+      {throw new Error("You must set the Master ItemType first.");}
+  var master_item_type = top.aras.getItemById("ItemType", master_item_typeID);
+  if(!master_item_type)
+    {throw new Error("Master Item Type with ID '"+master_item_typeID+"' is not found");}
+    
+    showClassificationOfitemType(master_item_type, currVal, isFieldEditMode);
+  }
+  catch(e)
+  {
+    var message = e.message;
+    try
+    {
+      top.aras.AlertError(message);
+    }
+    catch(ex)
+    {
+      alert(message);
+    }
+  }
+}
+
+return false;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>MSO_DoSelectItemClassification</name>
+ </Item>
+</AML>

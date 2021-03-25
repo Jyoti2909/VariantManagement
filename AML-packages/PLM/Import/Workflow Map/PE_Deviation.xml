@@ -1,0 +1,278 @@
+﻿<AML>
+ <Item type="Workflow Map" id="3473F755D9D74B33BFF93D32164FABB7" action="add">
+  <description xml:lang="en">PE - Deviation Workflow</description>
+  <node_bg_color>       </node_bg_color>
+  <node_label1_color>       </node_label1_color>
+  <node_label1_font />
+  <node_label2_color>       </node_label2_color>
+  <node_label2_font />
+  <node_name_color>       </node_name_color>
+  <node_name_font />
+  <node_size />
+  <process_owner keyed_name="Creator" type="Identity">
+   <Item type="Identity" action="get" select="id">
+    <name>Creator</name>
+   </Item>
+  </process_owner>
+  <transition_line_color>       </transition_line_color>
+  <transition_name_color>       </transition_name_color>
+  <transition_name_font />
+  <name>PE_Deviation</name>
+  <Relationships>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Deviation Approved" type="Activity Template">
+     <Item type="Activity Template" id="BA13296DB4EC4AD0BA316FE1EFFF4D46" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Workflow End</message>
+      <priority>1</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>454</x>
+      <y>76</y>
+      <name>Deviation Approved</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="31B5B6280BBA4C3A97D4342CBEC46FFE" action="add">
+        <controlled_itemtype keyed_name="PE_Deviation" type="ItemType" name="PE_Deviation">C3317E65105D44C88C1603FB919146BC</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="9DDBAAFCA452415B837DE68B0917D2B8" type="Life Cycle Transition">9DDBAAFCA452415B837DE68B0917D2B8</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Deviation Approved" type="Activity Template">BA13296DB4EC4AD0BA316FE1EFFF4D46</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="PE_Deviation" type="Workflow Map">3473F755D9D74B33BFF93D32164FABB7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Start" type="Activity Template">
+     <Item type="Activity Template" id="1A2925E711504D7189652FA160C7BFB4" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <expected_duration>0</expected_duration>
+      <icon>../images/WorkflowStart.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>0</is_end>
+      <is_start>1</is_start>
+      <message xml:lang="en">Workflow Start</message>
+      <priority>2</priority>
+      <reminder_count>0</reminder_count>
+      <reminder_interval>0</reminder_interval>
+      <timeout_duration>0</timeout_duration>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>30</x>
+      <y>77</y>
+      <name>Start</name>
+      <Relationships>
+       <Item type="Workflow Map Path" id="84EE804796574E09B735FF347377F1E9" action="add">
+        <authentication>none</authentication>
+        <is_default>1</is_default>
+        <is_override>0</is_override>
+        <name>Go</name>
+        <related_id>644484D8A386462AA08F92DAA8BD8191</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Start" type="Activity Template">1A2925E711504D7189652FA160C7BFB4</source_id>
+        <x>12</x>
+        <y>8</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="PE_Deviation" type="Workflow Map">3473F755D9D74B33BFF93D32164FABB7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Review Deviation" type="Activity Template">
+     <Item type="Activity Template" id="2A41C06E45794C638CF2DEFF5D2797E9" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review the Deviation</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>287</x>
+      <y>76</y>
+      <name>Review Deviation</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="8CBAC23133824A4097CC6D7C7F47E592" action="add">
+        <related_id keyed_name="Manufacturing" type="Identity">BABF5AE8735447B48C26489922E585FE</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Deviation" type="Activity Template">2A41C06E45794C638CF2DEFF5D2797E9</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Task" id="75C6DC2156AF4FD4929831DE95A959E2" action="add">
+        <description xml:lang="en">Check Deviation for completeness</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Deviation" type="Activity Template">2A41C06E45794C638CF2DEFF5D2797E9</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Task" id="ADDC4587E4E24A86B1A1475F3F791A15" action="add">
+        <description xml:lang="en">Vote "Approve" to send the Deviation for approval or "Reject" if the Deviation should be rejected</description>
+        <is_required>0</is_required>
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review Deviation" type="Activity Template">2A41C06E45794C638CF2DEFF5D2797E9</source_id>
+        <sequence>2</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="A2D65086CA4D4906B7399319D72AAF8A" action="add">
+        <controlled_itemtype keyed_name="PE_Deviation" type="ItemType" name="PE_Deviation">C3317E65105D44C88C1603FB919146BC</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="3701F4D748B741CC87B523E9A04DAA75" type="Life Cycle Transition">3701F4D748B741CC87B523E9A04DAA75</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Deviation" type="Activity Template">2A41C06E45794C638CF2DEFF5D2797E9</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="64F17F39C62C4EC894B40AD68833E7E9" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Approve</name>
+        <related_id>BA13296DB4EC4AD0BA316FE1EFFF4D46</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Review Deviation" type="Activity Template">2A41C06E45794C638CF2DEFF5D2797E9</source_id>
+        <x>0</x>
+        <y>0</y>
+       </Item>
+       <Item type="Workflow Map Path" id="361CDF94D58743058A8B81C00A3908F1" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Reject</name>
+        <related_id>36F29C6C5BB945E09666341BA54D1806</related_id>
+        <segments />
+        <sort_order>256</sort_order>
+        <source_id keyed_name="Review Deviation" type="Activity Template">2A41C06E45794C638CF2DEFF5D2797E9</source_id>
+        <x>4</x>
+        <y>59</y>
+       </Item>
+       <Item type="Workflow Map Path" id="077CFD8A2BC04E5BA2CDA0BCE9020C98" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Rework</name>
+        <related_id>644484D8A386462AA08F92DAA8BD8191</related_id>
+        <segments>256,155|196,155</segments>
+        <sort_order>384</sort_order>
+        <source_id keyed_name="Review Deviation" type="Activity Template">2A41C06E45794C638CF2DEFF5D2797E9</source_id>
+        <x>-92</x>
+        <y>89</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>768</sort_order>
+    <source_id keyed_name="PE_Deviation" type="Workflow Map">3473F755D9D74B33BFF93D32164FABB7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Submit Deviation" type="Activity Template">
+     <Item type="Activity Template" id="644484D8A386462AA08F92DAA8BD8191" action="add">
+      <can_delegate>1</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/WorkflowNode.svg</icon>
+      <is_auto>0</is_auto>
+      <is_end>0</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please submit the Deviation</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>151</x>
+      <y>75</y>
+      <name>Submit Deviation</name>
+      <Relationships>
+       <Item type="Activity Template Assignment" id="7238A51DB53C42229CDECDB0B14E536B" action="add">
+        <related_id keyed_name="Creator" type="Identity">
+         <Item type="Identity" action="get" select="id">
+          <name>Creator</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Deviation" type="Activity Template">644484D8A386462AA08F92DAA8BD8191</source_id>
+        <is_required>0</is_required>
+        <for_all_members>0</for_all_members>
+        <voting_weight>100</voting_weight>
+       </Item>
+       <Item type="Activity Template Task" id="17AA10873F514A78A79BD9E97B83EDB5" action="add">
+        <description xml:lang="en">Ensure the Deviation is ready for initial review</description>
+        <is_required>0</is_required>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Deviation" type="Activity Template">644484D8A386462AA08F92DAA8BD8191</source_id>
+        <sequence>1</sequence>
+       </Item>
+       <Item type="Activity Template Transition" id="154EE6417DBD43BA8517A081554E414C" action="add">
+        <controlled_itemtype keyed_name="PE_Deviation" type="ItemType" name="PE_Deviation">C3317E65105D44C88C1603FB919146BC</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="408A673E36D9494CBED2E319141417D9" type="Life Cycle Transition">408A673E36D9494CBED2E319141417D9</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Deviation" type="Activity Template">644484D8A386462AA08F92DAA8BD8191</source_id>
+       </Item>
+       <Item type="Workflow Map Path" id="58876938385045C98A25F06E5D4352FD" action="add">
+        <authentication>none</authentication>
+        <is_default>0</is_default>
+        <is_override>0</is_override>
+        <name>Submit</name>
+        <related_id>2A41C06E45794C638CF2DEFF5D2797E9</related_id>
+        <segments />
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Submit Deviation" type="Activity Template">644484D8A386462AA08F92DAA8BD8191</source_id>
+        <x>0</x>
+        <y>0</y>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>896</sort_order>
+    <source_id keyed_name="PE_Deviation" type="Workflow Map">3473F755D9D74B33BFF93D32164FABB7</source_id>
+   </Item>
+   <Item type="Workflow Map Activity" action="add">
+    <related_id keyed_name="Deviation Rejected" type="Activity Template">
+     <Item type="Activity Template" id="36F29C6C5BB945E09666341BA54D1806" action="add">
+      <can_delegate>0</can_delegate>
+      <can_refuse>0</can_refuse>
+      <consolidate_ondelegate>0</consolidate_ondelegate>
+      <icon>../images/Delete.svg</icon>
+      <is_auto>1</is_auto>
+      <is_end>1</is_end>
+      <is_start>0</is_start>
+      <message xml:lang="en">Please Review...</message>
+      <wait_for_all_inputs>0</wait_for_all_inputs>
+      <wait_for_all_votes>0</wait_for_all_votes>
+      <x>284</x>
+      <y>184</y>
+      <name>Deviation Rejected</name>
+      <Relationships>
+       <Item type="Activity Template Transition" id="3350F00E691F4494886B12BD561BF509" action="add">
+        <controlled_itemtype keyed_name="PE_Deviation" type="ItemType" name="PE_Deviation">C3317E65105D44C88C1603FB919146BC</controlled_itemtype>
+        <event>on_activate</event>
+        <related_id keyed_name="FB9696EEDA034E89AE67456DE6D062F0" type="Life Cycle Transition">FB9696EEDA034E89AE67456DE6D062F0</related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="Deviation Rejected" type="Activity Template">36F29C6C5BB945E09666341BA54D1806</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+    </related_id>
+    <sort_order>1024</sort_order>
+    <source_id keyed_name="PE_Deviation" type="Workflow Map">3473F755D9D74B33BFF93D32164FABB7</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

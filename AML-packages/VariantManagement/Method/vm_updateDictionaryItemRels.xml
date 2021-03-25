@@ -1,0 +1,132 @@
+﻿<AML>
+ <Item type="Method" id="139A5F86578B427ABFF66EB05BDE79FF" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	bool isDefinitionNodeMissing = this.node.SelectSingleNode("definition") == null;
+
+	if (isDefinitionNodeMissing)
+	{
+		return this;
+	}
+
+	string dictionaryItemRelationshipName = GetDictionaryItemRelationshipTypeName();
+	string expressionItemId = this.getID();
+
+	Item dictionaryItemRelationships = this.newItem(dictionaryItemRelationshipName, "get");
+	dictionaryItemRelationships.setProperty("source_id", expressionItemId);
+	dictionaryItemRelationships.setAttribute("select", "related_id(id)");
+
+	dictionaryItemRelationships = dictionaryItemRelationships.apply();
+
+	if (dictionaryItemRelationships.isError() && !string.Equals(dictionaryItemRelationships.getErrorCode(), "0", StringComparison.Ordinal))
+	{
+		return dictionaryItemRelationships;
+	}
+
+	int dictionaryItemRelationshipCount = dictionaryItemRelationships.getItemCount();
+	HashSet<string> existingRelatedDictionaryItemIds = new HashSet<string>();
+	Dictionary<string, string> existingRelationshipIdByDictionaryItemId = new Dictionary<string, string>();
+
+	for (int i = 0; i < dictionaryItemRelationshipCount; i++)
+	{
+		Item dictionaryItemRelationship = dictionaryItemRelationships.getItemByIndex(i);
+		string dictionaryItemId = dictionaryItemRelationship.getRelatedItemID();
+
+		existingRelationshipIdByDictionaryItemId.Add(dictionaryItemId, dictionaryItemRelationship.getID());
+		existingRelatedDictionaryItemIds.Add(dictionaryItemId);
+	}
+
+	string definition = this.getProperty("definition");
+
+	System.Xml.Linq.XElement definitionElement = System.Xml.Linq.XElement.Parse(definition);
+	HashSet<string> dictionaryItemIdsFromDefinitionProperty = definitionElement
+		.Descendants()
+		.Where(element => string.Equals(element.Name.LocalName, "variable", StringComparison.Ordinal)
+			|| string.Equals(element.Name.LocalName, "named-constant", StringComparison.Ordinal))
+		.Select(element => element.Attribute("id").Value)
+		.ToHashSet<string>();
+
+	List<string> dictionaryItemRelationshipIdsToRemove = existingRelatedDictionaryItemIds
+		.Except(dictionaryItemIdsFromDefinitionProperty)
+		.Select(dictionaryItemIdToRemove => existingRelationshipIdByDictionaryItemId[dictionaryItemIdToRemove])
+		.ToList();
+	List<string> dictionaryItemIdsToAdd = dictionaryItemIdsFromDefinitionProperty.Except(existingRelatedDictionaryItemIds).ToList();
+
+	if (dictionaryItemRelationshipIdsToRemove.Count + dictionaryItemIdsToAdd.Count > 0)
+	{
+		UpdateDictionaryItemRelationships(dictionaryItemRelationshipIdsToRemove, dictionaryItemIdsToAdd, dictionaryItemRelationshipName, expressionItemId);
+	}
+
+	return this;
+}
+
+private string GetDictionaryItemRelationshipTypeName()
+{
+	Item dictionaryItemRelationshipType = this.newItem("RelationshipType", "get");
+	dictionaryItemRelationshipType.setAttribute("select", "name");
+
+	string expressionItemTypeId = this.getAttribute("typeId");
+
+	if (!string.IsNullOrEmpty(expressionItemTypeId))
+	{
+		dictionaryItemRelationshipType.setProperty("source_id", expressionItemTypeId);
+	}
+	else
+	{
+		string expressionItemTypeName = this.getType();
+		Item sourceItemType = dictionaryItemRelationshipType.createPropertyItem("source_id", "ItemType", null);
+		sourceItemType.setProperty("name", expressionItemTypeName);
+	}
+
+	Item relatedItemType = dictionaryItemRelationshipType.createPropertyItem("related_id", "ItemType", null);
+	relatedItemType.setProperty("name", "vm_DictionaryItem");
+
+	dictionaryItemRelationshipType = dictionaryItemRelationshipType.apply();
+
+	if (dictionaryItemRelationshipType.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(dictionaryItemRelationshipType.dom);
+	}
+
+	return dictionaryItemRelationshipType.getProperty("name");
+}
+
+private void UpdateDictionaryItemRelationships(
+	List<string> dictionaryItemRelationshipIdsToRemove,
+	List<string> dictionaryItemIdsToAdd,
+	string dictionaryItemRelationshipName,
+	string expressionItemId)
+{
+	StringBuilder aml = new StringBuilder("<AML>");
+
+	if (dictionaryItemRelationshipIdsToRemove.Count > 0)
+	{
+		aml.AppendFormat(
+			@"<Item type=""{0}"" idlist=""{1}"" action=""delete"" />",
+			System.Security.SecurityElement.Escape(dictionaryItemRelationshipName),
+			System.Security.SecurityElement.Escape(string.Join(",", dictionaryItemRelationshipIdsToRemove)));
+	}
+
+	foreach (string dictionaryItemIdToAdd in dictionaryItemIdsToAdd)
+	{
+		aml.AppendFormat(
+			@"<Item type=""{0}"" action=""add"">
+				<related_id>{1}</related_id>
+				<source_id>{2}</source_id>
+			</Item>",
+			System.Security.SecurityElement.Escape(dictionaryItemRelationshipName),
+			System.Security.SecurityElement.Escape(dictionaryItemIdToAdd),
+			System.Security.SecurityElement.Escape(expressionItemId));
+	}
+
+	aml.Append("</AML>");
+
+	Item dictionaryItemChanges = this.getInnovator().applyAML(aml.ToString());
+
+	if (dictionaryItemChanges.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(dictionaryItemChanges.dom);
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>vm_updateDictionaryItemRels</name>
+ </Item>
+</AML>

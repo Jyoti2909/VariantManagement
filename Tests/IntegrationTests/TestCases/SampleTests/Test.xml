@@ -1,0 +1,45 @@
+﻿<TestCase author="Noname" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>This is sample test</Description>
+	<Request>
+		<Comments>
+			List with one value.
+			Should succeed.
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="List" action="add" id="848001E68F6744D4A5DC20ECAB73B78E" doGetItem="0">
+					<name>SampleTestList</name>
+					<Relationships>
+						<Item type="Value" action="add">
+							<value>Hello World!</value>
+							<label>Hello World!</label>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="List" id="848001E68F6744D4A5DC20ECAB73B78E" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="848001E68F6744D4A5DC20ECAB73B78E" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp>
+		<Query>
+			<AML>
+				<Item type="List" action="delete" id="848001E68F6744D4A5DC20ECAB73B78E" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

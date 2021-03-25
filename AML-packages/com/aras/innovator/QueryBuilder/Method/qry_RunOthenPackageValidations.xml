@@ -1,0 +1,21 @@
+﻿<AML>
+ <Item type="Method" id="79D7A3EB362C4606BEED3375B9200BE8" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var method = this.newItem("Method", "get");
+method.setProperty("name", "dr_PreventEditingQDIfUsedInDRF");
+method.setAttribute("select", "id");
+method = method.apply();
+
+if (method.isError() && method.getErrorCode() == "0") {
+	return this;
+}
+
+var preventQDEditing = this.apply("dr_PreventEditingQDIfUsedInDRF");
+if (preventQDEditing.isError()) {
+	return preventQDEditing;
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>qry_RunOthenPackageValidations</name>
+ </Item>
+</AML>

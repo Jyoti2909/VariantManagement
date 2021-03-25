@@ -1,0 +1,138 @@
+﻿<TestCase author='apetrovsky@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description></Description>
+	<Request runAs='root:innovator'>
+		<Variables>
+			<Variable id='Password.Hash.Of.1' action='apply' xpath="Query/AML/Item[@type='User']/password | Query/AML/Item[@type='User']/confirm_password" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Identity' id='2B86BBD45BE3471CB0EEB312A2D43A11' action='add' doGetItem='0'>
+					<is_alias>1</is_alias>
+					<name>ietestuser</name>
+				</Item>
+				<Item type='Member' id='5AE98DBB45F6410780455FA6C59F3EF1' action='add' doGetItem='0'>
+					<related_id keyed_name='ietestuser' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43A11</related_id>
+					<sort_order>128</sort_order>
+					<source_id keyed_name='Industrial Engineer' type='Identity'>A8F3C6AC115C4349A89A06791B98E8C1</source_id>
+				</Item>
+				<Item type='User' id='B90A0DC9BF9B4A7C8B04F17A32BDB111' action='add' doGetItem='0'>
+					<login_name>ietestuser</login_name>
+					<logon_enabled>1</logon_enabled>
+					<password>{applied from variable Password.Hash.Of.1}</password>
+					<confirm_password>{applied from variable Password.Hash.Of.1}</confirm_password>
+					<owned_by_id keyed_name='ietestuser' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43A11</owned_by_id>
+					<Relationships>
+						<Item type='Alias' id='A4D3A4048C294889A3DCF238689FE121' action='add'>
+							<from_date>2020-08-10T13:39:13</from_date>
+							<related_id keyed_name='ietestuser' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43A11</related_id>
+							<sort_order>128</sort_order>
+							<source_id keyed_name='B90A0DC9BF9B4A7C8B04F17A32BDB111' type='User'>B90A0DC9BF9B4A7C8B04F17A32BDB111</source_id>
+						</Item>
+					</Relationships>
+				</Item>
+				<Item type='Identity' id='2B86BBD45BE3471CB0EEB312A2D43AC6' action='add' doGetItem='0'>
+					<is_alias>1</is_alias>
+					<name>petestuser</name>
+				</Item>
+				<Item type='Member' id='5AE98DBB45F6410780455FA6C59F3EF2' action='add' doGetItem='0'>
+					<related_id keyed_name='petestuser' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43AC6</related_id>
+					<sort_order>128</sort_order>
+					<source_id keyed_name='Product Engineer' type='Identity'>D8190B09A2604895AB3F6F35AC7DAF4D</source_id>
+				</Item>
+				<Item type='User' id='B90A0DC9BF9B4A7C8B04F17A32BDB791' action='add' doGetItem='0'>
+					<login_name>petestuser</login_name>
+					<logon_enabled>1</logon_enabled>
+					<password>{applied from variable Password.Hash.Of.1}</password>
+					<confirm_password>{applied from variable Password.Hash.Of.1}</confirm_password>
+					<owned_by_id keyed_name='petestuser' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43AC6</owned_by_id>
+					<Relationships>
+						<Item type='Alias' id='A4D3A4048C294889A3DCF238689FE120' action='add'>
+							<from_date>2020-08-10T13:39:13</from_date>
+							<related_id keyed_name='petestuser' type='Identity'>2B86BBD45BE3471CB0EEB312A2D43AC6</related_id>
+							<sort_order>128</sort_order>
+							<source_id keyed_name='B90A0DC9BF9B4A7C8B04F17A32BDB791' type='User'>B90A0DC9BF9B4A7C8B04F17A32BDB791</source_id>
+						</Item>
+					</Relationships>
+				</Item>
+				<Item type="User" id="85EEE4C7C5404DCB8A8964B9D9F27954" action="add" doGetItem="0">
+					<login_name>cadTestUser1</login_name>
+					<password></password>
+					<confirm_password></confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type="Member" id="4B66AB8624CE49118AC638D1FAE80190" action="add" doGetItem="0">
+					<related_id>
+						<Item type="Identity" action="get" select="id">
+							<keyed_name>cadTestUser1</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>
+						<Item action="get" type="Identity" select="id">
+							<name>CAD-Designer</name>
+						</Item>
+					</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Identity" id="2B86BBD45BE3471CB0EEB312A2D43A11" />
+						<Item type="Member" id="5AE98DBB45F6410780455FA6C59F3EF1">
+							<related_id>2B86BBD45BE3471CB0EEB312A2D43A11</related_id>
+						</Item>
+						<Item type="User" id="B90A0DC9BF9B4A7C8B04F17A32BDB111" />
+						<Item type="Identity" id="2B86BBD45BE3471CB0EEB312A2D43AC6" />
+						<Item type="Member" id="5AE98DBB45F6410780455FA6C59F3EF2">
+							<related_id>2B86BBD45BE3471CB0EEB312A2D43AC6</related_id>
+						</Item>
+						<Item type="User" id="B90A0DC9BF9B4A7C8B04F17A32BDB791" />
+						<Item type="User" id="85EEE4C7C5404DCB8A8964B9D9F27954" />
+						<Item type="Member" id="4B66AB8624CE49118AC638D1FAE80190">
+							<related_id>
+								<Item type="Identity" typeId="E582AB17663F4EF28460015B2BE9E094" id="BF9A1905DFB94A3D81B6747FE7B10E06">
+									<id keyed_name="cadTestUser" type="Identity">BF9A1905DFB94A3D81B6747FE7B10E06</id>
+								</Item>
+							</related_id>
+						</Item>
+					</Result>
+					<Message>
+						<event name="ids_modified" value="A8F3C6AC115C4349A89A06791B98E8C1|B90A0DC9BF9B4A7C8B04F17A32BDB111|D8190B09A2604895AB3F6F35AC7DAF4D|B90A0DC9BF9B4A7C8B04F17A32BDB791|85EEE4C7C5404DCB8A8964B9D9F27954|65CBCEA10A1F4D7B99BC6180FA2AF7DF" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Member']/related_id/Item" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='ES_IndexQueue' action='delete' where="[ES_IndexQueue].created_by_id in ('B90A0DC9BF9B4A7C8B04F17A32BDB791', 'B90A0DC9BF9B4A7C8B04F17A32BDB111', '85EEE4C7C5404DCB8A8964B9D9F27954')" />
+				<Item type='History' action='delete' where="[History].created_by_id in ('B90A0DC9BF9B4A7C8B04F17A32BDB791', 'B90A0DC9BF9B4A7C8B04F17A32BDB111', '85EEE4C7C5404DCB8A8964B9D9F27954')" />
+				<Item type='History Container' action='delete' where="[History_Container].created_by_id in ('B90A0DC9BF9B4A7C8B04F17A32BDB791', 'B90A0DC9BF9B4A7C8B04F17A32BDB111', '85EEE4C7C5404DCB8A8964B9D9F27954')" />
+				<Item type='Member' idlist='5AE98DBB45F6410780455FA6C59F3EF2,5AE98DBB45F6410780455FA6C59F3EF1,4B66AB8624CE49118AC638D1FAE80190' action='delete' />
+				<Item type='User' idlist='B90A0DC9BF9B4A7C8B04F17A32BDB791,B90A0DC9BF9B4A7C8B04F17A32BDB111,85EEE4C7C5404DCB8A8964B9D9F27954' action='delete' />
+				<Item type='Identity' idlist='2B86BBD45BE3471CB0EEB312A2D43AC6,2B86BBD45BE3471CB0EEB312A2D43A11' action='delete' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

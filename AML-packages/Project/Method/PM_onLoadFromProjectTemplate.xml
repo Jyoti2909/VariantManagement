@@ -1,0 +1,57 @@
+﻿<AML>
+ <Item type="Method" id="AD55F97106FB4E498287DA98486AEA9D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[//IR-009227 "Project Template Activity2 Assignments: usability issue"
+var maxCheck = 1000,
+	relshipFrame;
+
+function disableRelatedOptionChoice() {
+	var relOptionChoice, i, choiceItemName;
+	if (!relshipFrame.toolbarLoaded) {
+		setTimeout(disableRelatedOptionChoice, 0);
+		return;
+	}
+	relOptionChoice = relshipFrame.activeToolbar.getElement("related_option");
+	if (relOptionChoice) {
+		for (i = relOptionChoice.getItemCount() - 1; i >= 0; i--) {
+			choiceItemName = relshipFrame.getChoiceItemName(i);
+			if ("No Related" !== choiceItemName) {
+				relshipFrame.removeChoiceItem(choiceItemName);
+			}
+		}
+	}
+}
+
+function correctRelatedOptions() {
+	var relshipsDom = parent.document.getElementById("relationships"),
+		relships, isProjectTemplate, activity2AssignmentId;
+
+	if (relshipsDom && relshipsDom.contentWindow) {
+		relships = relshipsDom.contentWindow.relationships;
+	} else if (parent.relationships) {
+		relships = parent.relationships;
+	}
+
+	if (!relships || !relships.currTabID || !document.item) {
+		if (0 < --maxCheck) {
+			setTimeout(correctRelatedOptions, 10);
+		}
+		return;
+	}
+
+	isProjectTemplate = document.item.selectSingleNode("ancestor::Item[@type='Project Template']");
+
+	if (isProjectTemplate) {
+		activity2AssignmentId = top.aras.getRelationshipTypeId("Activity2 Assignment");
+		relshipFrame = relships.iframesCollection[activity2AssignmentId].contentWindow;
+		if (relshipFrame && activity2AssignmentId === relships.currTabID) {
+			disableRelatedOptionChoice();
+		}
+	}
+}
+
+correctRelatedOptions();]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PM_onLoadFromProjectTemplate</name>
+ </Item>
+</AML>

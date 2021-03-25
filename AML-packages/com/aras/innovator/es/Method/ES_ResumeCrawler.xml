@@ -1,0 +1,38 @@
+﻿<AML>
+ <Item type="Method" id="E2F554B0AE334A06AB9D58FFF6054E4E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (this.getProperty('crawler_state', '') === 'Active') {
+
+	var crawlerState = this.newItem('ES_CrawlerState', 'get');
+	crawlerState.setAttribute('select', 'current_action, next_action');
+	crawlerState.setProperty('source_id', this.getID());
+	crawlerState = crawlerState.apply();
+
+	if (!crawlerState.isError() && crawlerState.getItemCount() === 1) {
+
+		if (crawlerState.getProperty('current_action', '') === 'Pause') {
+			crawlerState.setProperty('next_action', 'Resume');
+
+			var iLockStatus = crawlerState.getLockStatus();
+
+			if (iLockStatus === 0) {
+				crawlerState.apply('edit');
+			}
+
+			if (iLockStatus === 1) {
+				crawlerState.apply('update');
+			}
+		} else {
+			aras.AlertError('\'Resume\' action can be used only after \'Pause\' action.');
+		}
+	} else {
+		aras.AlertError(crawlerState.getErrorString());
+	}
+} else {
+	aras.AlertError('A crawler should be in \'Active\' state to perform any operations.');
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_ResumeCrawler</name>
+ </Item>
+</AML>

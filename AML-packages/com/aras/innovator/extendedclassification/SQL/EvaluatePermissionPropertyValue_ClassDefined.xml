@@ -1,0 +1,43 @@
+﻿<AML>
+ <Item type="SQL" id="AEEFDD55C2984130BC7DDF609FAB8781" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>EvaluatePermissionPropertyValue_ClassDefined</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION EvaluatePermissionPropertyValue_ClassDefined
+(
+	@type VARCHAR(32),
+	@xclass_id CHAR(32),
+	@identity_list VARCHAR(MAX),
+	@item_type_id CHAR(32)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+		SELECT MAX (CASE 
+                      WHEN ( acs.can_update = '1' 
+                             AND @type = 'can_update' ) THEN 9 
+                      -- can_update permissions only  
+                      WHEN ( acs.can_get = '1' 
+                             AND @type = 'can_get' ) THEN 9 
+                      -- can_delete permissions only  
+                      WHEN ( acs.can_change_access = '1' 
+                             AND @type = 'can_change_access' ) THEN 9 
+                      -- can_change_access permissions only  
+                      ELSE NULL 
+                    -- No permissions on specified for specified access right  
+                    END) p 
+        FROM   (SELECT acs.can_get, 
+                       acs.can_update,
+                       acs.can_change_access 
+			    from [innovator].[XCLASS_XPROPVALUE_PERM] xclass_perm 
+				INNER JOIN [ACCESS_PROPERTYVALUE] acs ON acs.SOURCE_ID = xclass_perm.RELATED_ID
+                WHERE xclass_perm.SOURCE_ID = @xclass_id AND xclass_perm.ITEMTYPE_ID = @item_type_id AND
+					   (CHARINDEX(acs.[related_id] COLLATE Latin1_General_BIN2, @identity_list) > 0)
+               ) acs
+)]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>EvaluatePermissionPropertyValue_ClassDefined</name>
+ </Item>
+</AML>

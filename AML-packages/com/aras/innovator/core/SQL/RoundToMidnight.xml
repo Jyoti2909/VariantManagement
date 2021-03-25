@@ -1,0 +1,21 @@
+﻿<AML>
+ <Item type="SQL" id="BBD88994473D4AA9B159E0E569E1358F" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>RoundToMidnight</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION [Roundtomidnight](@DATE    DATETIME,
+                                  @TZ_NAME NVARCHAR(50) = NULL)
+RETURNS TABLE
+AS
+    RETURN
+      SELECT VALUE = CASE
+                       WHEN @DATE IS NULL THEN NULL
+                       ELSE (SELECT value
+                             FROM   [innovator].[ConvertFromLocal_Table](Dateadd(D, 0, Datediff(D, 0, (SELECT value
+                                                                                                 FROM   [innovator].[ConvertToLocal_Table](@DATE, @TZ_NAME)))), @TZ_NAME))
+                     END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>RoundToMidnight</name>
+ </Item>
+</AML>

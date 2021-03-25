@@ -1,0 +1,269 @@
+﻿<AML>
+ <Item type="Method" id="B350B874207F4203B1BD9337E27440A4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var ONEDAY = 24*60*60*1000;
+aras = top.aras;
+var projId = this.getID();
+
+var qryItem = new Item("Project","get");
+qryItem.setID(projId);
+qryItem.setAttribute("select","date_start_target,date_due_target,date_start_sched,date_due_sched,name,project_number,wbs_id");
+var projectItem = qryItem.apply();
+if (projectItem.isError()) return top.aras.getResource("project", "pr_methods.save_item_first");
+var todays_date = new Date();
+projectItem.setProperty("todays_date", aras.convertFromNeutral(parseFromDate(todays_date), "date", "long_date"));
+var wbsId = projectItem.getProperty("wbs_id");
+var dateStartSched = projectItem.getProperty("date_start_sched");
+var dateDueSched = projectItem.getProperty("date_due_sched");
+if (!dateStartSched || !dateDueSched) return top.aras.getResource("project", "pr_methods.run_scheduling_first");
+var dateStartSched2 = parseToDate(dateStartSched);
+var dateDueSched2 = parseToDate(dateDueSched);
+var startWeek = decDate(dateStartSched,dateStartSched2.getDay()-1);
+var endWeek = decDate(dateDueSched,dateDueSched2.getDay()-1);
+var numberOfWeeks = Math.round(diffDates(startWeek,endWeek))+1;
+var weeksArr = new Array(startWeek);
+for (var i=1;i<numberOfWeeks;i++) 
+{
+  weeksArr[i] = incDate(startWeek,7);
+  startWeek = weeksArr[i];
+}
+var startEnd = projectItem.node.appendChild(projectItem.node.ownerDocument.createElement("startEnd"));
+for (var i=0;i<Math.ceil(numberOfWeeks/6);i++) 
+{
+  curSE = startEnd.appendChild(startEnd.ownerDocument.createElement("startEnd"));
+  curSE.setAttribute("start",i*6);
+  curSE.setAttribute("end",i*6+7);
+}
+projectItem2 = projectItem.node.appendChild(projectItem.node.ownerDocument.createElement("Relationships"));
+
+xml = "<Item type='Activity2' action='get' select='name,date_start_sched,date_due_sched,expected_duration,work_est,managed_by_id(name)' where=\"Activity2.id IN (SELECT id FROM INNOVATOR.select_activities('"+wbsId+"'))\">" +
+        "<Relationships>" +
+          "<Item type='Activity2 Assignment' action='get' select='work_est,related_id(name)' isCriteria='0'/>" +
+        "</Relationships>" +
+      "</Item>";
+  qryItem = new Item();
+  qryItem.loadAML(xml);
+  res = qryItem.apply();
+
+  //+++ fake assignments if need +++  
+  var fakedAsmntNd_ptrn = aras.createXmlElement("Item");
+  fakedAsmntNd_ptrn.setAttribute("type", "Activity2 Assignment");
+  fakedAsmntNd_ptrn.appendChild(fakedAsmntNd_ptrn.ownerDocument.createElement("related_id"));
+	
+  var allAct = res.dom.selectNodes("//Result/Item[@type='Activity2'][Relationships/Item/related_id/Item/name or (managed_by_id/Item/name and not(Relationships/Item))]");
+  for (var i=0;i<allAct.length;i++) 
+  {
+    var curAct = projectItem2.appendChild(allAct[i].cloneNode(true));
+    if (!curAct.selectSingleNode("Relationships/Item"))
+    {
+      var fakedAsmntNd = fakedAsmntNd_ptrn.cloneNode(true);
+      setItemProperty(fakedAsmntNd, "work_est", aras.getItemProperty(curAct, "work_est"));
+      var mngerNd = curAct.selectSingleNode("managed_by_id/Item");
+      var relatedNd = fakedAsmntNd.selectSingleNode("related_id");
+      relatedNd.appendChild(mngerNd.cloneNode(true));
+      fakedAsmntNd.setAttribute("id", "FAKED_ASMNT");
+      var relshipsNd = curAct.selectSingleNode("Relationships");
+      if (!relshipsNd) relshipsNd = curAct.appendChild(curAct.ownerDocument.createElement("Relationships"));
+      relshipsNd.appendChild(fakedAsmntNd);
+    }
+  }
+  //--- fake assignments if need ---
+  
+  if (!projectItem2.selectSingleNode("Item")) return top.aras.getResource("project", "pr_methods.no_activities_to_show");
+  var usersArr = new Array();
+  var allUsers = projectItem2.selectNodes("Item/Relationships/Item/related_id/Item/name");
+  for (var i=0;i<allUsers.length;i++) usersArr.push(allUsers[i].text);
+  usersArr.sort();
+  allUsers = projectItem2.parentNode.appendChild(projectItem2.parentNode.ownerDocument.createElement("users"));
+  for (var i=0;i<usersArr.length;i++)
+  {
+    curUser = allUsers.appendChild(allUsers.ownerDocument.createElement("name"));
+    curUser.text = usersArr[i];
+  }
+
+  //+++++ if an activity has two or more assignments for the same identity, then sum
+  //+++++ the weeks work (and put the sum to the first relship) and remove the redundant relationships.
+  for (var i=0; i<usersArr.length; i++)
+  {
+    var curUsrNm = usersArr[i];
+    if (curUsrNm==usersArr[i-1]) continue;
+    var acts2handle = projectItem2.selectNodes("Item[count(Relationships/Item/related_id/Item[name='"+curUsrNm+"']) > 1]");
+    for (var j=0; j<acts2handle.length; j++)
+    {
+      var curAct = acts2handle[j];
+      var asmnts = curAct.selectNodes("Relationships/Item[related_id/Item/name='"+curUsrNm+"']");
+      var asmnt0 = asmnts[0];
+      var asmnt0_work_est = aras.getItemProperty(asmnt0, "work_est");
+      var tmpInt = parseInt(asmnt0_work_est);
+      var setWorkEstEmpty = isNaN(tmpInt);
+      asmnt0_work_est = (isNaN(tmpInt)) ? 0 : tmpInt;
+      for (var k=1; k<asmnts.length; k++)
+      {
+        var asmnt = asmnts[k];
+        var w_est = aras.getItemProperty(asmnt, "work_est");
+        tmpInt = parseInt(w_est);
+        if (!isNaN(tmpInt))
+        {
+          setWorkEstEmpty = false;
+          asmnt0_work_est += tmpInt;
+        }
+        asmnt.parentNode.removeChild(asmnt);
+      }
+      setItemProperty(asmnt0, "work_est", ((setWorkEstEmpty) ? "" : asmnt0_work_est));
+    }
+  }
+  //----- if an activity has two...
+  
+  allAct = projectItem2.selectNodes("Item");
+  for (var i=0;i<allAct.length;i++)
+  {
+    var curAct = allAct[i];
+    var startDate = aras.getItemProperty(curAct,"date_start_sched");
+    if (startDate=="") continue;
+    var startDate2 = parseToDate(startDate);
+    var startWeekOfAct = decDate(startDate,startDate2.getDay()-1);
+    var durationOfAct = aras.getItemProperty(curAct,"expected_duration");
+    durationOfAct = parseInt(durationOfAct);
+    if (isNaN(durationOfAct)) durationOfAct = 0;
+    var daysWorkOfAct = 6-startDate2.getDay();
+    var asmntsNds = curAct.selectNodes("Relationships/Item");
+    for (var k=0; k<asmntsNds.length; k++)
+    {
+      var startWeek = startWeekOfAct;
+      var duration = durationOfAct;
+      var daysWork = daysWorkOfAct;
+      var curAsmnt = asmntsNds[k];
+      var hours = aras.getItemProperty(curAsmnt,"work_est");
+      hours = parseInt(hours);
+      var useBrackets = false;
+      if (isNaN(hours))
+      {
+        useBrackets = true;
+        hours = duration * 8;//8 is the constant: work day duration.
+      }
+      if (duration==0 && hours==0)
+        work_in_one_day=0;
+      else
+      {
+        if (duration==0) duration = 1;
+        work_in_one_day = hours/duration;
+      }
+      var dates = curAsmnt.appendChild(curAsmnt.ownerDocument.createElement("dates"));
+      for (var j=0;j<numberOfWeeks;j++)
+      {
+        curDate = dates.appendChild(dates.ownerDocument.createElement("date"));
+        curDate.setAttribute("date", weeksArr[j]);
+      }
+      while (duration>0)
+      {
+        curDate = dates.selectSingleNode("date[@date='"+startWeek+"']");
+        if (curDate)
+        {
+          var v = (duration<=daysWork)?duration*work_in_one_day:daysWork*work_in_one_day;
+          v = Math.round(v*100);
+          v /= 100;
+          if (useBrackets) v = "("+v+")";
+          curDate.text = v;
+        }
+        startWeek = incDate(startWeek,7);
+        duration -= daysWork;
+        daysWork = 5;
+      }
+    }
+  }
+
+var props2Convert = new Array("date_start_target", "date_due_target", "date_start_sched", "date_due_sched");
+var nds2convert;
+for (var i=0; i<props2Convert.length; i++)
+{
+  nds2convert = projectItem.node.selectNodes("//"+props2Convert[i]);
+  for (var j=0; j<nds2convert.length; j++)
+  {
+    nds2convert[j].text = aras.convertFromNeutral(nds2convert[j].text, "date", "short_date");
+  }
+}
+nds2convert = projectItem.node.selectNodes("//dates/date[@date]");
+for (var i=0; i<nds2convert.length; i++)
+{
+  nds2convert[i].setAttribute("date", aras.convertFromNeutral(nds2convert[i].getAttribute("date"), "date", "short_date"));
+}
+
+var report = aras.getItemByKeyedName("Report","ProjectTimeReport");
+var style = aras.getItemProperty(report,"xsl_stylesheet");
+var html = projectItem.applyStylesheet(style,"text");
+
+return html;
+
+function parseToDate(si)
+{
+  // yyyy-MM-ddTHH:mm:sszzz
+  if (!si) return null;
+  var ar = si.split('T');
+  if (ar.length != 2) return null;
+  ar = ar[0].split('-');
+  if (ar.length != 3) return null;
+  return new Date(ar[0], Number(ar[1])-1, ar[2]);  
+}
+
+function parseFromDate(d)
+{
+  // yyyy-MM-ddTHH:mm:sszzz
+  var month = d.getMonth() + 1;
+  var day = d.getDate();
+  var year = d.getFullYear();
+  var str = year + "-" + (month>=10?"":"0" ) + month + "-" + (day>=10?"":"0" ) + day + "T00:00:00";
+  return str;
+}
+
+function incDate(sdate,sdays)
+{
+  var days=Number(sdays);
+  if(days == 0) return sdate;
+  else if(days < 0) return decDate(sdate,-days);
+  var date = parseToDate(sdate);
+  var incDate = new Date(date.getTime() + ONEDAY*sdays + ONEDAY/10);
+  return parseFromDate(incDate);
+}
+
+function decDate(sdate,sdays)
+{
+  var days=Number(sdays);
+  if(days==0) return sdate;
+  else if(days < 0) return incDate(sdate,-days);
+  var date = parseToDate(sdate);
+  var decDate = new Date(date.getTime() - ONEDAY*sdays)
+  return parseFromDate(decDate);
+}
+
+function diffDates(sdate1,sdate2)
+{
+  if(sdate1 == sdate2) return 0;
+  var date1 = parseToDate(sdate1);
+  var date2 = parseToDate(sdate2);
+  var invert = date1 > date2;
+  var tmp = null
+
+  if(invert)
+  {
+    tmp = date1;
+    date1 = date2;
+    date2 = tmp;
+    tmp = null;
+  }
+  
+  var days = (date2.getTime() - date1.getTime())/ONEDAY;
+
+  return days/7;
+}
+
+function setItemProperty(itm, nm, val)
+{
+  var elm = itm.selectSingleNode(nm);
+  if (!elm) elm = itm.appendChild(itm.ownerDocument.createElement(nm));
+  elm.text = val;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ProjectTimeReport</name>
+ </Item>
+</AML>

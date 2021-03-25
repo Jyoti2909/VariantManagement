@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Bookmarks","type":"item","url":"New_Topic.htm"},{"name":"Adding Items to Bookmarks","type":"item","url":"Adding_Items_to_Bookmarks.htm"},{"name":"Forums","type":"book","url":"Forums.htm","key":"toc19"},{"name":"Follow","type":"item","url":"Follow.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

@@ -1,0 +1,142 @@
+﻿<AML>
+ <Item type="Method" id="9A9F0758B02F40A2A9AF3D9667622D90" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	string itemTypeId = this.getProperty("item_type_id");
+
+	Innovator innovatorInstance = this.getInnovator();
+	IDataAccessLayer dataAccessLayer = new DataAccessLayer(innovatorInstance);
+	BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer, innovatorInstance);
+	Item actionMenuButtons = businessLogic.BuildPermissionMenuButtons(itemTypeId, 10000);
+
+	return actionMenuButtons ?? innovatorInstance.newResult("");
+}
+
+internal class BusinessLogic
+{
+	private IDataAccessLayer dataAccessLayer;
+	private Innovator innovator;
+	// 'A4FC1229133A4026BAC2D996B650B2C9' - itemview.itemcommandbar.default.permissions
+	public string parentMenuId = "A4FC1229133A4026BAC2D996B650B2C9";
+	public string initMethodName = "cui_ivicb_perm_allowed_init";
+	public string clickMethodName = "cui_ivicb_perm_allowed_click";
+	public string beforeSeparatorName = "itemview.itemcommandbar.default.more.permissionsmenu.beforeallowed";
+
+	internal BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+		this.innovator = innovator;
+	}
+
+	public Item BuildPermissionMenuButtons(string itemTypeId, int sortOrder = 0)
+	{
+		Item items = null;
+
+		if (!string.IsNullOrEmpty(itemTypeId))
+		{
+			Item permissionsList = this.dataAccessLayer.GetAllowedPermissions(itemTypeId);
+			items = CreatePermissionMenuButtons(permissionsList, sortOrder);
+		}
+
+		return items;
+	}
+
+	private Item CreateMenuSeparator(string separatorName, int sortOrder)
+	{
+		Item menuSeparator = this.innovator.newItem("CommandBarMenuSeparator");
+		menuSeparator.setProperty("name", separatorName);
+		menuSeparator.setProperty("parent_menu", this.parentMenuId);
+		menuSeparator.setProperty("sort_order", sortOrder.ToString(CultureInfo.InvariantCulture));
+
+		return menuSeparator;
+	}
+
+	private Item CreatePermissionMenuButtons(Item itemsList, int sortOrder = 0)
+	{
+		int permisionsCount = itemsList.getItemCount();
+
+		if (permisionsCount > 0)
+		{
+			Item resultItems = this.innovator.newItem();
+			string initHandlerId = dataAccessLayer.GetMethodIdByName(this.initMethodName);
+			string clickHandlerId = dataAccessLayer.GetMethodIdByName(this.clickMethodName);
+
+			if (!string.IsNullOrEmpty(this.beforeSeparatorName))
+			{
+				resultItems.appendItem(this.CreateMenuSeparator(this.beforeSeparatorName, sortOrder));
+				sortOrder += 128;
+			}
+
+			for (int i = 0; i < permisionsCount; i++)
+			{
+				Item currentItem = itemsList.getItemByIndex(i);
+				Item relatedItem = currentItem.getRelatedItem();
+				Item menuButton = currentItem.newItem("CommandBarMenuButton");
+				string permissionId = relatedItem.getID();
+				string buttonName = relatedItem.getProperty("name") ?? permissionId;
+				bool isDefault = currentItem.getProperty("is_default") == "1";
+
+				menuButton.setID(permissionId);
+				menuButton.setProperty("name", buttonName);
+				menuButton.setProperty("label", buttonName);
+				menuButton.setProperty("action", "Add");
+				menuButton.setProperty("parent_menu", this.parentMenuId);
+				menuButton.setProperty("on_init_handler", initHandlerId);
+				menuButton.setProperty("on_click_handler", clickHandlerId);
+				menuButton.setProperty("include_events", "UpdateTearOffWindowState");
+
+				menuButton.setProperty("additional_data", string.Format(CultureInfo.InvariantCulture, "{{\"permissionId\":\"{0}\", \"isDefault\":{1}}}",
+					permissionId, isDefault ? "true" : "false"));
+
+				menuButton.setProperty("sort_order", sortOrder.ToString(CultureInfo.InvariantCulture));
+				sortOrder += 128;
+
+				resultItems.appendItem(menuButton);
+			}
+
+			// newItem() is creates empty node. It's should be deleted
+			resultItems.removeItem(resultItems.getItemByIndex(0));
+
+			return resultItems;
+		}
+
+		return null;
+	}
+}
+
+internal interface IDataAccessLayer
+{
+	string GetMethodIdByName(string methodName);
+	Item GetAllowedPermissions(string itemTypeId);
+}
+
+internal class DataAccessLayer : IDataAccessLayer
+{
+	private Innovator innovator;
+
+	internal DataAccessLayer(Innovator innovator)
+	{
+		this.innovator = innovator;
+	}
+
+	public string GetMethodIdByName(string methodName)
+	{
+		Item methodRequest = this.innovator.newItem("Method", "get");
+		methodRequest.setAttribute("select", "id");
+		methodRequest.setProperty("name", methodName);
+		methodRequest = methodRequest.apply();
+
+		return methodRequest.getID();
+	}
+
+	public Item GetAllowedPermissions(string itemTypeId)
+	{
+		Item allowedPermissions = this.innovator.newItem("Allowed Permission", "get");
+		allowedPermissions.setAttribute("levels", "0");
+		allowedPermissions.setProperty("source_id", itemTypeId);
+
+		return allowedPermissions.apply();
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>cui_ivicb_more_permbuilder</name>
+ </Item>
+</AML>

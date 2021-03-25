@@ -1,0 +1,34 @@
+﻿<AML>
+ <Item type="SQL" id="C408D75092CF4302AA6EA37D99775FE3" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>get_locked_wbs</old_name>
+  <sqlserver_body><![CDATA[
+
+create procedure get_locked_wbs(@WBS_ID char(32))
+as
+begin
+ DECLARE @WBS_ELEMENTS TABLE(ID CHAR(32) COLLATE database_default primary key)
+ DECLARE @ACTIVITIES TABLE(ID CHAR(32) COLLATE database_default primary key)
+ DECLARE @ITEMS TABLE (ID CHAR(32),
+                       [TYPE] VARCHAR(32),
+                       LOCKED_BY_ID CHAR(32))
+ INSERT @WBS_ELEMENTS SELECT ID FROM SELECT_WBS_ELEMENTS(@WBS_ID)
+ INSERT @ACTIVITIES SELECT ID FROM SELECT_ACTIVITIES(@WBS_ID)
+ INSERT @ITEMS 
+  SELECT W1.ID,'WBS Element',W2.LOCKED_BY_ID
+  FROM @WBS_ELEMENTS W1,WBS_ELEMENT W2
+  WHERE W1.ID = W2.ID AND W2.LOCKED_BY_ID IS NOT NULL
+ INSERT @ITEMS
+  SELECT A1.ID,'Activity2',A2.LOCKED_BY_ID
+  FROM @ACTIVITIES A1,ACTIVITY2 A2
+  WHERE A1.ID = A2.ID AND A2.LOCKED_BY_ID IS NOT NULL
+ SELECT * FROM @ITEMS
+end
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>get_locked_wbs</name>
+ </Item>
+</AML>

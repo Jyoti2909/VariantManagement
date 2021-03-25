@@ -1,0 +1,57 @@
+﻿@import (reference) '../core/grid.less';
+@import '../core/variables';
+@import (reference) '../core/checkboxes_radios.less';
+
+@redline-value-margin: 4px;
+
+.line() {
+	height: 2px;
+	background: @red-700;
+	width: 100%;
+	position: absolute;
+	left: 0;
+	top: @row-height / 2 - 1px;
+}
+
+.aras-redline {
+	&_deleted td {
+		position: relative;
+		background-clip: padding-box;
+		&::after {
+			content: '';
+			.line();
+		}
+	}
+	&_new {
+		color: @color-15;
+	}
+	&__container {
+		display: flex;
+	}
+	&__line {
+		.line();
+	}
+	&__text {
+		color: @red-700;
+		text-decoration: line-through;
+		margin-left: @redline-value-margin;
+	}
+	&__checkbox {
+		position: relative;
+		padding: 0 3px;
+		margin-left: @redline-value-margin;
+		::after {
+			content: '';
+			.line();
+			top: calc(@checkbox-size / 2 - 1px);
+		}
+	}
+
+	&__image {
+		position: relative;
+		margin-left: @redline-value-margin;
+		.aras-redline__line {
+			top: calc(@grid-img-size / 2 - 1px);
+		}
+	}
+}

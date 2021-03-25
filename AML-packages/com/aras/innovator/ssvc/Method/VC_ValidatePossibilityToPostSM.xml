@@ -1,0 +1,18 @@
+﻿<AML>
+ <Item type="Method" id="6D5EBE0F8F5740F5A18A516BEE8DABEE" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Item item = this.newItem();
+item.loadAML(string.Format("<Item type='{0}' id='{1}' action='VC_IsSSVCEnabledForItem' />", System.Security.SecurityElement.Escape(this.getProperty("item_type_name")), System.Security.SecurityElement.Escape(this.getProperty("item_id"))));
+item = item.apply();
+if (item.isError())
+{
+	return this.getInnovator().newError(item.getErrorString());
+}
+
+return item.getResult() == "true"
+	? this
+	: this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_ItemNotEnabledToSSVC"));]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_ValidatePossibilityToPostSM</name>
+ </Item>
+</AML>

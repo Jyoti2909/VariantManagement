@@ -1,0 +1,45 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+	<title>image</title>
+
+	<link rel="stylesheet" href="../../../javascript/dijit/themes/claro/claro.css" />
+	<link rel="stylesheet" href="../styles/Viewer.css">
+	<link rel="stylesheet" href="../styles/svgSettings.css">
+	<link rel="stylesheet" href="../styles/ViewerToolbar.css" type="text/css" />
+	<link rel="stylesheet" href="../styles/Dialogs.css" type="text/css" />
+	<link rel="stylesheet" href="../../../styles/controls/toolbar.css" type="text/css" />
+	<link rel="stylesheet" href="../../../javascript/include.aspx?classes=common.min.css" />
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../../javascript/ClientUrlsUtility.js"></script>
+	<script type="text/javascript" src="../Scripts/Utils.js"></script>
+	<script type="text/javascript" src="../Scripts/canvg/canvg.js"></script>
+	<script type="text/javascript" src="../Scripts/canvg/rgbcolor.js"></script>
+	<script type="text/javascript" src="../../../javascript/pageReturnBlocker.js"></script>
+	<script type="text/javascript" src="../../../javascript/cookie.js"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=XmlDocument"></script>
+</head>
+<body onselectstart="return true;" class="claro">
+
+
+	<script type="text/javascript">
+		require(["dojo/ready"], function(ready) {
+			ready(function() {
+				VC.Utils.registerModulePaths();
+				VC.Utils.Page.LoadGeometry();
+				VC.Utils.Page.LoadModules(["Viewer", "SketchViewer", "ViewerAgent"]);
+
+				var args = VC.Utils.Page.GetParams();
+				window.aras = args.itemWindow ? args.itemWindow.aras : top.aras;
+				args.aras = window.aras;
+
+				window.SSVCViewer = new VC.SketchViewer(args);
+				if (window.onViewerIsReady) {
+					window.onViewerIsReady();
+				}
+			});
+		});
+	</script>
+</body>
+</html>

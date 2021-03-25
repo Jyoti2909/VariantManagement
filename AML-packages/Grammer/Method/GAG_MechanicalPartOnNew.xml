@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="EA16F2E87A854BDFA39F417B4F082407" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const partLabel = 'Part';
+const typeAttr = 'type';
+const part = aras.uiNewItemEx('Part');
+const type = 'GAG_MechanicalPart';
+const itemNumberAttr = 'item_number';
+const classification = 'Mechanical Part/' + inArgs.classification;
+aras.setItemProperty(part, itemNumberAttr, 'Server Assigned');
+aras.setItemProperty(part, 'classification', classification);
+
+if (part) {
+	part.setAttribute(typeAttr, type);
+	part.setAttribute('federatedType', 'GAG_MechanicalPart');
+	aras.itemsCache.addItem(part);
+	const mainWin = aras.getMainWindow();
+	if (mainWin.work.insertRow) {
+		mainWin.work.insertRow(part);
+	}
+	part.setAttribute(typeAttr, partLabel);
+}
+
+return this;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_MechanicalPartOnNew</name>
+ </Item>
+</AML>

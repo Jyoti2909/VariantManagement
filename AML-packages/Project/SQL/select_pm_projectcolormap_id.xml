@@ -1,0 +1,27 @@
+﻿<AML>
+ <Item type="SQL" id="A7219CB613014A01B969A5AB4F4A7213" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>select_pm_projectcolormap_id</old_name>
+  <sqlserver_body><![CDATA[/* Name: select_pm_projectcolormap_id
+   Created: 1-DEC-2005 George J. Carrette
+*/
+CREATE FUNCTION innovator.Select_pm_projectcolormap_id(@STATE VARCHAR(64))
+RETURNS TABLE
+AS
+    RETURN
+      SELECT value = (SELECT ID
+                      FROM   [PM_PROJECTCOLORMAP]
+                      WHERE  SOURCE_ID = (SELECT ID
+                                          FROM   [PREFERENCE]
+                                          WHERE  IDENTITY_ID = (SELECT id
+                                                                FROM   [identity]
+                                                                WHERE  name = 'World'))
+                             AND ACTIVITY_STATE = @STATE) 
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>select_pm_projectcolormap_id</name>
+ </Item>
+</AML>

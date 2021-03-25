@@ -1,0 +1,129 @@
+﻿<AML>
+ <Item type="Method" id="C9309380A80F42B5B0EDD397D41A16E7" action="add">
+  <comments>Calls project schedule, update if need based on input event name.</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*
+purpose: to call update or schedule if need (based on project item xml).
+input:
+<Item>
+  <event>Event_Type</event><project_item>Item_XML</project_item>
+</Item>
+  where possible Event_Types: onafterunlock, onupdateactivity, oncompleteactivity
+  Item_XML MUST include properties: scheduling_mode, project_update_mode, state, locked_by_id, wbs_id
+  NOTE 1: if Item_XML does not have tag for a prop, then the prop value is considered as NULL.
+  NOTE 2: for onafterunlock event: additional get is used to populate project item.
+  
+output:
+  error item if failed.
+  If update or schedule is fired and success then updated project with levels="1".
+  Else this is returned.
+*/
+
+string onafterunlock = "onafterunlock";
+string oncompleteactivity = "oncompleteactivity";
+string onupdateactivity = "onupdateactivity";
+string eventType = this.getProperty("event", "").ToLower();
+string interActivelyAndOnUnlock = "2";
+string onActivityComplete = "3";
+string onActivityUpdate = "4";
+
+Innovator inn = this.getInnovator();
+XmlElement projItem = this.node.SelectSingleNode("project_item/Item") as XmlElement;
+if (projItem==null)
+{
+  return inn.newError("Input parameter is invalid: project_item is required");
+}
+string id = projItem.GetAttribute("id");
+
+//if onAfterUnlock then project item node is not populated by required data: wbs_id, locked_by_id, etc.
+Item q = null;
+Item r;
+if (eventType == onafterunlock)
+{
+  q = inn.newItem("Project", "get");
+  q.setAttribute("id", id);
+  q.setAttribute("select", "scheduling_mode,project_update_mode,state,locked_by_id,wbs_id");
+  r = q.apply();
+  if (r.getItemCount()<1) return inn.newError("Getting of Project item returns bad result");
+  projItem = r.getItemByIndex(0).node;
+}
+
+XmlElement tmpNd;
+tmpNd = projItem.SelectSingleNode("scheduling_mode") as XmlElement;
+string schedMode = (tmpNd==null) ? "":tmpNd.InnerText;
+tmpNd = projItem.SelectSingleNode("project_update_mode") as XmlElement;
+string updateMode = (tmpNd==null) ? "":tmpNd.InnerText;
+
+if (eventType == onafterunlock && updateMode==interActivelyAndOnUnlock)
+{
+  q.removeAttribute("select");
+  r = q.apply();
+  if (r.getItemCount()<1) return inn.newError("Getting of Project item returns bad result");
+  projItem = r.getItemByIndex(0).node;
+}
+
+if (schedMode!="1" && schedMode!="2" && schedMode!="3" && schedMode!="4") return inn.newError("scheduling_mode value is invalid for the Project Item");
+if (updateMode!="1" && updateMode!="2" && updateMode!="3" && updateMode!="4") return inn.newError("project_update_mode value is invalid for the Project Item");
+
+string methNm = "PM_fireCustomProjectHook";
+string mode;
+string body;
+string prop_name2hookMethod;
+Item res = null;
+
+//stepNum==1 for project Scheduling;
+//stepNum==2 for project Update;
+for (int stepNum = 1; stepNum<3; stepNum ++)
+{
+  bool ignoreProcessing = false;
+  if (stepNum==2)
+  {
+  	mode = updateMode;
+  	prop_name2hookMethod = "update_method";
+  	tmpNd = projItem.SelectSingleNode("state") as XmlElement;
+  	if (tmpNd!=null) ignoreProcessing = (tmpNd.InnerText.ToLower()!="active");
+  	tmpNd = projItem.SelectSingleNode("locked_by_id") as XmlElement;
+  	ignoreProcessing = (ignoreProcessing || (tmpNd!=null && tmpNd.InnerText.Length>0));
+  }
+  else
+  {
+  	mode = schedMode;
+  	prop_name2hookMethod = "scheduling_method";
+  }
+  body = String.Format("<body project_id='{0}' prop_name='{1}'/>", System.Security.SecurityElement.Escape(id), System.Security.SecurityElement.Escape(prop_name2hookMethod));
+  if (!ignoreProcessing)
+  {
+    int imode;
+    try
+    {
+      imode = int.Parse(mode);
+    }
+    catch (Exception)
+    {
+      return inn.newError("The specified mode="+mode+" is not integer. Cannot handle this case.");
+    }
+    if ((eventType == onafterunlock && imode >= int.Parse(interActivelyAndOnUnlock)) || (eventType == oncompleteactivity && imode >= int.Parse(onActivityComplete)) || (eventType == onupdateactivity && imode >= int.Parse(onActivityUpdate)))
+    {
+      res = inn.applyMethod(methNm, body);
+      if (res.isError()) return res;
+    }
+  }
+}
+
+if (res != null)
+{
+  q = inn.newItem("Project", "get");
+  q.setAttribute("levels", "1");
+  q.setAttribute("id", projItem.GetAttribute("id"));
+  res = q.apply();
+}
+else
+{
+  res = this;
+}
+
+return res;]]></method_code>
+  <method_type>C#</method_type>
+  <name>PM_hndle_scheduling_update_modes</name>
+ </Item>
+</AML>

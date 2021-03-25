@@ -1,0 +1,167 @@
+﻿@{
+	Layout = "_Layout.cshtml";
+
+	string state = Request.QueryString["state"];
+	string formHeight = String.IsNullOrEmpty(Request.QueryString["formHeight"]) ? "0px" : Request.QueryString["formHeight"] + "px";
+}
+@RenderBody()
+@section header
+{
+	@if (IsSectionDefined("header"))
+	{
+		@RenderSection("header")
+	}
+	else
+	{
+		<style type="text/css">
+			@@import "@Url.ContentWithSalt("~/Modules/aras.innovator.core.Controls/Styles/Controls/Tab.css")";
+			@@import "@Url.ContentWithSalt("~/Modules/aras.innovator.core.ItemWindow/Styles/StateButtons.css")";
+
+			#statusbar, #tearoff_menu, #relationships{
+				display: none;
+			}
+
+			#page_status .status-column{
+				text-align: center;
+			}
+
+			#tearoffmenucontrol{
+				width: 100%;
+				border: 0px;
+				padding: 0px;
+				margin: 0px;
+			}
+
+			#center{
+				top: 52px !important;
+			}
+
+			#tabs-container {
+				width: calc(100% - 48px);
+			}
+
+			#relationshipExpandButtons {
+				margin-left: -1px;
+				padding-left: 10px;
+			}
+
+			.buttons-container {
+				width:48px;
+				height:22px;
+				z-index:10;
+			}
+
+			.tabs__hidden {
+				visibility: hidden;
+			}
+		</style>
+		if (state == "tabs off")
+		{
+			<script type="text/javascript">
+				var hideTabs = true;
+				var startupSequence = ["form"];
+			</script>
+		}
+		else
+		{
+			<script type="text/javascript">
+				var hideTabs = false;
+				var startupSequence = ["form","centerMiddle"];
+			</script>
+		}
+		<script type="text/javascript" id="ScriptSet1" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=tearoffWindow,ItemViewWrappers")"></script>
+		<script type="text/javascript">
+			windowStateObject.state = "@state";
+		</script>
+		if (IsSectionDefined("extra_header"))
+		{
+			@RenderSection("extra_header")
+		}
+	}
+}
+
+@section center
+{
+	@if (IsSectionDefined("center"))
+	{
+		@RenderSection("center")
+	}
+	else
+	{
+		<div style="position:relative; width:100%; height:100%; display: flex; flex-direction: column;" id="CenterBorderContainer">
+			@if (IsSectionDefined("instance"))
+			{
+				@RenderSection("instance")
+			}
+			else
+			{
+				<div id="formContentPane" style="@(state == "tabs off" ? Html.Raw("height: 100%;") : Html.Raw("height:" + formHeight))">
+					<div style="position:relative; height: 100%" id="formLayoutContainer">
+						<div id="placeHolderContentPane" style="height: 100%">
+							<aras-switcher id="viewers" style="height: 100%">
+								<div data-dojo-type="Controls/Tab" data-dojo-props="selected:true" id="formTab">
+									<div data-dojo-type="Aras/Client/Controls/Experimental/FormInstance" data-dojo-props="aras: aras, isNew: isNew, item: item, isEditMode: isEditMode, formHeight: formHeight, formWidth: formWidth" baseClass="dijitContentPaneNoPadding" id="form" style="height:100%; width:100%;"></div>
+								</div>
+								@if (IsSectionDefined("editor"))
+								{
+									@RenderSection("editor")
+								}
+							</aras-switcher>
+						</div>
+					</div>
+				</div>
+			}
+			<aras-splitter id="form-splitter"></aras-splitter>
+
+			@if (IsSectionDefined("relationships"))
+			{
+				@RenderSection("relationships")
+			}
+			else
+			{
+				if(state != "tabs off")
+				{
+					<div id="relationshipContentPane" class="aras-flex-grow">
+						<div class="aras-flex">
+							<aras-tabs movable id="tabs-container" class="aras-flex-grow"></aras-tabs>
+							<div id="relationshipExpandButtons">
+								<div class="buttons-container">
+									<button id="collapseBtn" data-dojo-type="dijit/form/Button" class="@(state == "tabs min"?"dijitHidden":"")" baseClass="stateButton" iconClass="stateButtonCollapseIcon" type="button">
+										<script type="dojo/on" data-dojo-event="click" data-dojo-args="evt">
+											windowStateObject.setCollapse();
+											windowStateObject.updateButtons();
+										</script>
+									</button>
+									<button id="normalBtn" data-dojo-type="dijit/form/Button" class="@(state == "tabs on"?"dijitHidden":"")" baseClass="stateButton" iconClass="stateButtonNormalIcon" type="button">
+										<script type="dojo/on" data-dojo-event="click" data-dojo-args="evt">
+											windowStateObject.setNormal();
+											windowStateObject.updateButtons();
+										</script>
+									</button>
+									<button id="expandBtn" data-dojo-type="dijit/form/Button" class="@(state == "tabs max"?"dijitHidden":"")" baseClass="stateButton" iconClass="stateButtonExpandIcon" type="button">
+										<script type="dojo/on" data-dojo-event="click" data-dojo-args="evt">
+											windowStateObject.setExpand();
+											windowStateObject.updateButtons();
+										</script>
+									</button>
+								</div>
+							</div>
+						</div>
+						<div data-dojo-type="Aras/Client/Controls/Experimental/Relationships" style="height: calc(100% - 2.667rem);" data-dojo-props="region: 'center', queryString: {db:databaseName, ITName: itemTypeName, itemID: itemID, editMode:(isEditMode?'1':'0'), tabbar:'1', toolbar:'1', where:'tabview'}, window : window" id="centerMiddle">
+							<script type="dojo/connect" data-dojo-event="startup">
+								window.relationshipsControl = this;
+								//compatibility code
+								window.relationships = new RelationshipsWrapper(this);
+							</script>
+						</div>
+					</div>
+				}
+			}
+		</div>
+	}
+
+	@if (IsSectionDefined("after_center"))
+	{
+		@RenderSection("after_center")
+	}
+}

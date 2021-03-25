@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="165DF12448944D0B8235ED92838120CD" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const queryDefinitionId = aras.getItemProperty(item, 'query_definition_id');
+const queryDefinition = aras.itemsCache.getItem(queryDefinitionId) || aras.getItemById('qry_QueryDefinition', queryDefinitionId);
+const rootQueryReference = queryDefinition.selectSingleNode('Relationships/Item[@type="qry_QueryReference" and not(parent_ref_id)]');
+const rootQueryItem = queryDefinition.selectSingleNode('Relationships/Item[ref_id="' + aras.getItemProperty(rootQueryReference, 'child_ref_id') + '"]');
+const qDItemTypeId = aras.getItemProperty(rootQueryItem, 'item_type');
+const drRelationshipFamilyElement = aras.newIOMItem();
+const drUIRelationshipFamilyNode = item.selectSingleNode('Relationships/Item[@id="' + relationshipID + '"]');
+
+drRelationshipFamilyElement.node = item;
+drRelationshipFamilyElement.dom = item.ownerDocument;
+
+const drFamilyElement = drRelationshipFamilyElement.createRelationship('dr_FamilyElement', 'add');
+const drRelationshipElement = aras.newIOMItem('dr_Relationship', 'add');
+const departureItemtypeNode = aras.getItemTypeForClient(qDItemTypeId, 'id').node;
+
+drRelationshipElement.setID(relationshipID);
+drRelationshipElement.setProperty('departure_itemtype_id', qDItemTypeId);
+aras.setItemProperty(drUIRelationshipFamilyNode, 'departure_itemtype_id', departureItemtypeNode);
+drFamilyElement.setPropertyItem('dr_relationship_id', drRelationshipElement);
+const columnIndex = gridApplet.getColumnIndex('departure_itemtype_id_D');
+gridApplet.setCellValue(relationshipID, columnIndex, aras.getItemProperty(departureItemtypeNode, 'name'));]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>dr_AddDerivedRelationship</name>
+ </Item>
+</AML>

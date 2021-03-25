@@ -1,0 +1,180 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<title></title>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=XmlDocument"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?files=TopWindowHelper"></script>
+	<script>
+		var topWnd = TopWindowHelper.getMostTopWindowWithAras(window);
+		var argsDialog = window.frameElement.dialogArguments,
+			aras = argsDialog.aras;
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: true, baseUrl:'../javascript/dojo'"></script>
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/default.css";
+
+		html, body{
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+	<script type="text/javascript">
+		var grid = null;
+
+		var itemTypeName = argsDialog.itemTypeName;
+		var itemID = argsDialog.itemID;
+		var doNotOpenItemOnDblClick = argsDialog.doNotOpenItemOnDblClick ? argsDialog.doNotOpenItemOnDblClick : false;
+
+		var itemTypeLabel = "";
+		var currItemType = null, visiblePropNds;
+		var itemTypeID = "";
+		var resDom;
+
+		onload = function () {
+			var w = window.innerWidth;
+			var h = window.innerHeight;
+			style = "width: " + w + "px; height:" + h + "px;";
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", {style: style, id: "revision_grid"}, function(control) {
+				grid = control;
+				clientControlsFactory.on(grid, {
+					"gridDoubleClick": onDoubleClick,
+					"gridLinkClick": onLink,
+					"gridXmlLoaded": onXmlLoaded,
+					"gridMenuClick": onMenuClicked
+				});
+				document.gridTD = grid;
+			});
+
+			onPageLoad();
+			initGrid();
+			onMenuCreate();
+		}
+
+		function onMenuClicked(m, rowId, col) {
+			if (m == 'WhereUsed' && currItemType) {
+				onShowWhereUsed(rowId);
+				return true;
+			}
+		}
+
+		function onShowWhereUsed(rowId) {
+			var url = "whereUsed.html?id=" + rowId + "&type_name=" + itemTypeName + "&curLy=" + aras.getPreferenceItemProperty("Core_GlobalLayout", null, "core_structure_layout") + "&toolbar=1&where=dialog";
+			var options = {
+				dialogWidth: 600,
+				dialogHeight: 400,
+				resizable: true,
+				aras: aras,
+				title: aras.getResource("", "whereused.wu", itemTypeName, aras.getKeyedName(itemID)),
+				content: url
+			};
+			(topWnd.main || topWnd).ArasModules.Dialog.show("iframe", options);
+		}
+
+		function onPageLoad() {
+			currItemType = aras.getItemTypeDictionary(itemTypeName);
+			if (!currItemType) {
+				aras.AlertError(aras.getResource("", "revisiondlg.failed_get_it", itemTypeName));
+				closeWindow();
+			}
+
+			itemTypeLabel = aras.getItemProperty(currItemType.node, 'label') ? aras.getItemProperty(currItemType.node, 'label') : itemTypeName;
+			itemTypeID = aras.getItemProperty(currItemType.node, "id");
+			const xpath = "Relationships/Item[@type=\"Property\" and (not(is_hidden) or is_hidden=0 or name=\"generation\" or name=\"major_rev\" or name=\"comments\")]|Relationships/Item[@type=\"xItemTypeAllowedProperty\" and not(inactive=\"1\")]/related_id/Item";
+			visiblePropNds = topWnd.ArasModules.xml.selectNodes(currItemType.node, xpath);
+			visiblePropNds = aras.sortProperties(visiblePropNds);
+			const visiblePropNames = visiblePropNds.map(function(propNode) { return  aras.getItemProperty(propNode, "name")});
+
+			var currentItem = aras.getItemById(itemTypeName, itemID, 0);
+			if (currentItem) {
+				var config_id = aras.getItemProperty(currentItem, "config_id");
+				var aml = "<Item type='" + itemTypeName + "' action='get' select='" + visiblePropNames.join(",") + "' orderBy='generation'>" +
+					"	<config_id>" + config_id + "<\/config_id>" +
+					"	<id condition='is not'>null<\/id>" +
+					"<\/Item>";
+
+				var res = aras.soapSend('ApplyItem', aml);
+				if (res.getFaultCode() != 0) {
+					aras.AlertError(res);
+					closeWindow();
+				}
+				resDom = res.results;
+			}
+		}
+
+		function initGrid() {
+			topWnd.aras.uiInitItemsGridSetups(currItemType.node, visiblePropNds);
+
+			var colWidths = topWnd.aras.getPreferenceItemProperty('Core_ItemGridLayout', itemTypeID, "col_widths");
+			var colOrder = topWnd.aras.getPreferenceItemProperty('Core_ItemGridLayout', itemTypeID, "col_order");
+
+			const columnObjects = aras.uiPrepareDOM4XSLT(resDom, itemTypeID, "IT_", colWidths, colOrder);
+			var params = aras.newObject();
+			params["revisions"] = 1;
+			params["columnObjects"] = columnObjects;
+			var grid_xml = aras.uiGenerateItemsGridXML(resDom, visiblePropNds, itemTypeID, params);
+			grid.InitXML(grid_xml);
+		}
+
+		function onXmlLoaded() {
+			grid.ShowInputRow(false);
+		}
+
+		function onDoubleClick(rowID) {
+			var itm = aras.getItemById(itemTypeName, rowID, 0);
+			if (itm) {
+				if (doNotOpenItemOnDblClick)
+					_close_window(rowID, itm);
+				else {
+					aras.uiShowItemEx(itm, aras.viewMode);
+				}
+			}
+			else aras.AlertError(aras.getResource("", "revisiondlg.failed_get_item_id", itemTypeLabel, rowID));
+		}
+
+		function _close_window(itemID, itm) {
+			var res = aras.newObject();
+			res.item = itm;
+			res.itemID = itemID;
+			closeWindow(res);
+		}
+
+		function onLink(link) {
+			var linkParam = link.replace(/'/g,"").split(",");
+			var itemTypeName = linkParam[0];
+			var itemID = linkParam[1];
+			var itm = aras.getItemById(itemTypeName, itemID, 0);
+			if (itm)
+				aras.uiShowItemEx(itm, aras.viewMode);
+			else
+				aras.AlertError(aras.getResource("", "revisiondlg.failed_get_it", itemTypeLabel));
+		}
+
+		function onMenuCreate() {
+			var gridPPM = grid.getMenu();
+			gridPPM.add("WhereUsed", aras.getResource("", "common.whereused"));
+		}
+
+		function closeWindow(value) {
+			if (argsDialog.dialog) {
+				argsDialog.dialog.close(value);
+			} else {
+				window.returnValue = value;
+				window.close();
+			}
+		}
+	</script>
+</head>
+<body class="claro">
+	<div id="gridTD" style="height: 100%; width: 100%; margin: 0px; padding: 0px;"></div>
+</body>
+</html>

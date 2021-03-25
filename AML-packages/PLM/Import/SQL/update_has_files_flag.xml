@@ -1,0 +1,43 @@
+﻿<AML>
+ <Item type="SQL" id="F20B6878289E4C4E8A3931DDFF7E0DA6" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>update_has_files_flag</old_name>
+  <sqlserver_body><![CDATA[create procedure update_has_files_flag(@itemtypename nvarchar(32),@itemID char(32))
+AS
+BEGIN
+  DECLARE @relationship_db_name nvarchar(32)
+  DECLARE @itemtype_db_name nvarchar(32)
+  
+  SET @itemtype_db_name = (select instance_data from [ITEMTYPE] where name = @itemtypename)  
+  
+  SET @relationship_db_name = (select instance_data from [ITEMTYPE] where 
+	id = (select relationship_id from [RELATIONSHIPTYPE] where 
+	source_id = (select id from [ITEMTYPE] where name = @itemtypename)
+	AND
+	related_id = (select id from [ITEMTYPE] where name = 'File')))
+	
+  DECLARE @SQLstr nvarchar(500)
+  DECLARE @ParmDefinition nvarchar(500);
+  SET @ParmDefinition = N'@id char(32)';
+
+  DECLARE @count int
+  SET @SQLstr = N'UPDATE [' + @itemtype_db_name + '] 
+	SET HAS_FILES = CASE 
+		WHEN (select count(id) FROM [' + @relationship_db_name + '] where SOURCE_ID = @id) > 0 
+			THEN ''1'' 
+			ELSE ''0'' 
+		END
+	WHERE ID=@id';
+  
+  EXECUTE sp_executesql @SQLstr, @ParmDefinition, @id=@itemID
+  
+  SET @SQLstr = N'SELECT * FROM [' + @itemtype_db_name + '] WHERE ID = @id'
+  
+  EXECUTE sp_executesql @SQLstr, @ParmDefinition, @id=@itemID
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>update_has_files_flag</name>
+ </Item>
+</AML>

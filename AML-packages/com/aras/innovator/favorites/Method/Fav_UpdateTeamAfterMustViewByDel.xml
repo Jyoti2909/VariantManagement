@@ -1,0 +1,88 @@
+﻿<AML>
+ <Item type="Method" id="8E2C4C746BCE45D8867A20AB1375F910" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	return ProcessMethodLogic(new UserPermissionManager());
+}
+
+internal Item ProcessMethodLogic(IUserPermissionManager permissionManager)
+{
+	const string FavoriteMustViewByReaderID = "32FC798A2D3B4D30B58B378BE112C1C3";
+
+	bool permsWasSet = false;
+	try
+	{
+		permsWasSet = permissionManager.GrantCurrentIdentityByAdminPermissions();
+
+		Item favoriteMustVewBy = this.newItem("FavoriteMustViewBy", "get");
+		favoriteMustVewBy.setID(this.getID());
+		favoriteMustVewBy.setAttribute("select", "source_id(team_id),related_id");
+		favoriteMustVewBy = favoriteMustVewBy.apply();
+		if (favoriteMustVewBy.isError())
+		{
+			return favoriteMustVewBy;
+		}
+
+		Item favoriteItem = favoriteMustVewBy.getPropertyItem("source_id");
+		string teamId = favoriteItem.getProperty("team_id");
+		if (string.IsNullOrEmpty(teamId))
+		{
+			return this;
+		}
+
+		Item teamIdentities = this.newItem("Team Identity", "get");
+		teamIdentities.setProperty("source_id", teamId);
+		teamIdentities.setProperty("team_role", FavoriteMustViewByReaderID);
+		teamIdentities.setProperty("related_id", favoriteMustVewBy.getRelatedItemID());
+		teamIdentities = teamIdentities.apply();
+
+		if (teamIdentities.isError())
+		{
+			return this;
+		}
+
+
+		for (int i = 0; i < teamIdentities.getItemCount(); i++)
+		{
+			Item teamIdentity = teamIdentities.getItemByIndex(i);
+			teamIdentity.setAction("delete");
+			teamIdentity = teamIdentity.apply();
+			if (teamIdentity.isError())
+			{
+				return teamIdentity;
+			}
+		}
+	}
+	finally
+	{
+		if (permsWasSet)
+		{
+			permissionManager.RevokeAdminPermissionsFromCurrentUser();
+		}
+	}
+
+	return this;
+}
+
+internal interface IUserPermissionManager
+{
+	bool GrantCurrentIdentityByAdminPermissions();
+	bool RevokeAdminPermissionsFromCurrentUser();
+}
+
+internal class UserPermissionManager : IUserPermissionManager
+{
+	public bool GrantCurrentIdentityByAdminPermissions()
+	{
+		Aras.Server.Security.Identity superUser = Aras.Server.Security.Identity.GetByName("Super User");
+		return Aras.Server.Security.Permissions.GrantIdentity(superUser);
+	}
+
+	public bool RevokeAdminPermissionsFromCurrentUser()
+	{
+		Aras.Server.Security.Identity superUser = Aras.Server.Security.Identity.GetByName("Super User");
+		return Aras.Server.Security.Permissions.RevokeIdentity(superUser);
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>Fav_UpdateTeamAfterMustViewByDel</name>
+ </Item>
+</AML>

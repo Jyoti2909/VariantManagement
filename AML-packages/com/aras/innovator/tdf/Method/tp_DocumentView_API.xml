@@ -1,0 +1,530 @@
+﻿<AML>
+ <Item type="Method" id="6C253158FB2947E6A84A18C80F840AB7" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[DocumentViewDialog = function() {
+	const topWindow = aras.getMostTopWindowWithAras(window);
+
+	this.aras = aras;
+	this.dialogArguments = parent.dialogArguments || topWindow.dialogArguments;
+	this.documentViewSettings = this.dialogArguments.documentViewSettings || {};
+	this.dialogControls = {};
+	this._fieldHtmlCache = {
+		_fieldRegExpressions: {
+			scripts: /<script[\s\S]*?>([\s\S]*?)<\/script>/gi,
+			fieldId: /%fieldId%/g,
+			fieldName: /%fieldName%/g,
+			fieldLabel: /%fieldLabel%/g
+		}
+	};
+
+	document.isEditMode = true;
+
+	this.initializeData();
+	this.initializeControls();
+};
+
+DocumentViewDialog.prototype.initializeData = function() {
+	const documentItem = this.documentViewSettings.primaryView.documentItem;
+	const dialogData = {
+		systemLanguages: {},
+		itemVersions: {}
+	};
+	const languageItemNodes = this.aras.getLanguagesResultNd().selectNodes('.//Item[@type="Language"]');
+	const versionItemNodes = this.aras.getItemAllVersions(documentItem.getAttribute('type'), documentItem.getAttribute('id'));
+	let currentNode;
+	let propertyValue;
+	let i;
+
+	for (i = 0; i < languageItemNodes.length; i++) {
+		currentNode = languageItemNodes[i];
+		propertyValue = this.aras.getItemProperty(currentNode, 'name');
+
+		dialogData.systemLanguages[propertyValue] = this.aras.getItemProperty(currentNode, 'code');
+	}
+
+	for (i = 0; i < versionItemNodes.length; i++) {
+		currentNode = versionItemNodes[i];
+		propertyValue = this.aras.getItemProperty(currentNode, 'major_rev') + '.' + this.aras.getItemProperty(currentNode, 'generation');
+
+		dialogData.itemVersions[propertyValue] = {
+			itemNode: currentNode,
+			isCurrent: this.aras.getItemProperty(currentNode, 'is_current') == '1',
+			itemId: currentNode.getAttribute('id')
+		};
+	}
+
+	this.dialogData = dialogData;
+};
+
+DocumentViewDialog.prototype.enableSecondaryViewControls = function(doEnabled) {
+	const secondaryViewControls = this.dialogControls.secondaryView;
+	let controlsGroup;
+	let groupKey;
+	let controlKey;
+	let currentControl;
+	let controlReference;
+
+	for (groupKey in secondaryViewControls) {
+		controlsGroup = secondaryViewControls[groupKey];
+
+		for (controlKey in controlsGroup) {
+			currentControl = controlsGroup[controlKey];
+
+			if (currentControl.component) {
+				controlReference = currentControl.setDisabled ? currentControl : currentControl.component;
+				controlReference.setDisabled(!doEnabled);
+			} else {
+				if (doEnabled) {
+					currentControl.removeAttribute('disabled');
+				} else {
+					currentControl.setAttribute('disabled', 'true');
+				}
+			}
+		}
+	}
+};
+
+DocumentViewDialog.prototype.initializeControls = function() {
+	const filterGroupBoxId = document.fieldsTab.filterGroupBox;
+	const optionFamilies = this.dialogArguments.optionFamilies;
+	const usedOptionFamilies = this.dialogArguments.usedOptionFamilies;
+	const rootOptionFamilies = this.dialogArguments.rootOptionFamilies;
+	let componentFields;
+	let fieldObject;
+	let dropdownListValues;
+	let currentList;
+	let listKey;
+	let listValue;
+	let primaryControls;
+	let secondaryControls;
+
+	// initialization of controls reference container
+	this.dialogControls = {
+		filterContainer: document.querySelector('[id="' + filterGroupBoxId + '"] .sys_groupbox_content_vertical'),
+		viewDisplayType: {
+			single: document.getElementById('singleDisplayTypeRadio'),
+			sideBySide: document.getElementById('sbsDisplayTypeRadio')
+		},
+		primaryView: primaryControls = {
+			documentView: {
+				language: getFieldComponentByName('primaryViewLanguage'),
+				revision: getFieldComponentByName('primaryViewRevision'),
+				htmlRadio: document.getElementById('primaryHTMLContentRadio'),
+				xmlRadio: document.getElementById('primaryXMLContentRadio')
+			},
+			filteredView: {
+				hiddenRadio: document.getElementById('primaryFilteredViewHiddenRadio'),
+				inactiveRadio: document.getElementById('primaryFilteredViewInactiveRadio'),
+			},
+			filterFamilies: {},
+			filterButtons: {
+				clearButton: document.querySelector('.primaryButtonClear')
+			}
+		},
+		secondaryView: secondaryControls = {
+			filteredView: {
+				hiddenRadio: document.getElementById('secondaryFilteredViewHiddenRadio'),
+				inactiveRadio: document.getElementById('secondaryFilteredViewInactiveRadio')
+			},
+			documentView: {
+				language: getFieldComponentByName('secondaryViewLanguage'),
+				revision: getFieldComponentByName('secondaryViewRevision'),
+				htmlRadio: document.getElementById('secondaryHTMLContentRadio'),
+				xmlRadio: document.getElementById('secondaryXMLContentRadio')
+			},
+			filterFamilies: {},
+			filterButtons: {
+				clearButton: document.querySelector('.secondaryButtonClear')
+			}
+		},
+		componentFields: componentFields = {},
+		applyButton: document.querySelector('.buttonApply')
+	};
+
+	// dynamic creation of filter dropdown fields
+	for (let optionFamily in optionFamilies) {
+		let optionValues = optionFamilies[optionFamily];
+		let usedOptionValues = usedOptionFamilies[optionFamily] || [];
+		let rootOptionValues = rootOptionFamilies[optionFamily] || [];
+
+		let currentContainerNode = document.createElement('div');
+		currentContainerNode.className = 'filterFamilyContainer';
+		this.dialogControls.filterContainer.appendChild(currentContainerNode);
+
+		fieldObject = this.CreateOptionFamily(currentContainerNode, optionFamily, optionValues, usedOptionValues,
+			rootOptionValues, this.documentViewSettings.primaryView.filterFamilies[optionFamily]);
+
+		primaryControls.filterFamilies[fieldObject.id] = fieldObject;
+		componentFields[fieldObject.id] = fieldObject;
+
+		fieldObject = this.CreateOptionFamily(currentContainerNode, optionFamily, optionValues, usedOptionValues,
+			rootOptionValues, this.documentViewSettings.secondaryView.filterFamilies[optionFamily], true);
+
+		secondaryControls.filterFamilies[fieldObject.id] = fieldObject;
+		componentFields[fieldObject.id] = fieldObject;
+	}
+
+	// setup document language lists
+	currentList = this.dialogData.systemLanguages;
+	dropdownListValues = [];
+
+	for (listKey in currentList) {
+		dropdownListValues.push({
+			label: listKey + (currentList[listKey] == this.documentViewSettings.defaultLanguageCode ? ' (Default)' : ''),
+			value: currentList[listKey]
+		});
+	}
+
+	this._disableFieldManualEditing(primaryControls.documentView.language);
+	primaryControls.documentView.language.component.setState({
+		list: dropdownListValues,
+		value: this.documentViewSettings.primaryView.languageCode || 'en'
+	});
+
+	this._disableFieldManualEditing(secondaryControls.documentView.language);
+	secondaryControls.documentView.language.component.setState({
+		list: dropdownListValues,
+		value: this.documentViewSettings.secondaryView.languageCode || 'en'
+	});
+
+	// setup document revisions list
+	dropdownListValues = [];
+	currentList = this.dialogData.itemVersions;
+
+	for (listKey in currentList) {
+		listValue = currentList[listKey];
+
+		dropdownListValues.push({
+			label: listKey + (listValue.isCurrent ? ' (Current)' : ''),
+			value: listValue.itemId
+		});
+	}
+
+	this._disableFieldManualEditing(primaryControls.documentView.revision);
+	primaryControls.documentView.revision.component.setState({
+		disabled: true,
+		list: dropdownListValues,
+		value: this.documentViewSettings.primaryView.documentItemId
+	});
+
+	this._disableFieldManualEditing(secondaryControls.documentView.revision);
+	secondaryControls.documentView.revision.component.setState({
+		list: dropdownListValues,
+		value: this.documentViewSettings.secondaryView.documentItemId || this.documentViewSettings.primaryView.documentItemId
+	});
+
+	this.dialogControls.viewDisplayType[this.documentViewSettings.viewType == 'single' ? 'single' : 'sideBySide'].checked = true;
+	this.enableSecondaryViewControls(this.documentViewSettings.viewType !== 'single');
+
+	primaryControls.filteredView[this.documentViewSettings.primaryView.filteredContentView == 'hidden' ? 'hiddenRadio' : 'inactiveRadio'].checked = true;
+	primaryControls.documentView[this.documentViewSettings.primaryView.displayType == 'xml' ? 'xmlRadio' : 'htmlRadio'].checked = true;
+
+	secondaryControls.filteredView[this.documentViewSettings.secondaryView.filteredContentView == 'hidden' ? 'hiddenRadio' : 'inactiveRadio'].checked = true;
+	secondaryControls.documentView[this.documentViewSettings.secondaryView.displayType == 'xml' ? 'xmlRadio' : 'htmlRadio'].checked = true;
+
+	this._expandRadioButtonsClickArea();
+
+	// assign event handlers for controls
+	this.dialogControls.viewDisplayType.single.addEventListener('change', function() {
+		this.enableSecondaryViewControls(false);
+	}.bind(this));
+	this.dialogControls.viewDisplayType.sideBySide.addEventListener('change', function() {
+		this.enableSecondaryViewControls(true);
+	}.bind(this));
+
+	this.dialogControls.applyButton.addEventListener('click', function() { this.Apply(); }.bind(this));
+
+	primaryControls.filterButtons.clearButton.addEventListener('click', function() {
+		this.clearFilterFields(this.dialogControls.primaryView.filterFamilies);
+	}.bind(this));
+	secondaryControls.filterButtons.clearButton.addEventListener('click', function() {
+		this.clearFilterFields(this.dialogControls.secondaryView.filterFamilies);
+	}.bind(this));
+};
+
+DocumentViewDialog.prototype._expandRadioButtonsClickArea = function() {
+	const radioLabels = document.querySelectorAll('.arasCheckboxOrRadio + label');
+
+	for (let i = 0; i < radioLabels.length; i++) {
+		radioLabels[i].addEventListener('click', function(clickEvent) {
+			const radioButtonNode = this.previousElementSibling;
+
+			if (!radioButtonNode.disabled) {
+				this.previousElementSibling.checked = true;
+			}
+		});
+	}
+};
+
+DocumentViewDialog.prototype._getManualEditDisabledTemplate = function() {
+	// template is overriden in order to disable manual input (value can be changed only with dropdown)
+	// current component implementation doesn't support such customization and this code can be remove if it happens
+	const label = this._getCurrentInputValue();
+
+	return {
+		tag: 'span',
+		className: 'aras-filter-list__input aras-form-input',
+		attrs: {
+			style: 'display:inline-flex;align-items:center;',
+			tabindex: '1'
+		},
+		children: [label],
+		events: {
+			onblur: function(blurEvent) {
+				this._onInputFocusoutHandler(blurEvent);
+			}.bind(this),
+			onmousedown: function(e) {
+				if (!this.state.disabled) {
+					this._onButtonClickHandler(e);
+				}
+			}.bind(this),
+			onchange: function(e) {
+				this.setState({
+					value: this.state.predictedValue
+				});
+			}.bind(this)
+		},
+		ref: function(node) {
+			this.state.refs.input = node;
+		}.bind(this)
+	};
+};
+
+DocumentViewDialog.prototype._disableFieldManualEditing = function(targetFieldComponent) {
+	if (targetFieldComponent && targetFieldComponent.component) {
+		targetFieldComponent.component._getInputTemplate = this._getManualEditDisabledTemplate;
+	}
+};
+
+DocumentViewDialog.prototype._getFieldHtml = function(fieldDescriptor) {
+	const fieldCacheId = fieldDescriptor.fieldType;
+	let fieldHtmlData = this._fieldHtmlCache[fieldCacheId];
+	const regExpressions = this._fieldHtmlCache._fieldRegExpressions;
+	const fieldId = 'id' + this.aras.generateNewGUID();
+
+	if (!fieldHtmlData) {
+		const fieldAML = '' +
+			'<Item type="Field" id="%fieldId%">' +
+			'	<display_length>145</display_length>' +
+			'	<display_length_unit>px</display_length_unit>' +
+			'	<field_type>' + fieldDescriptor.fieldType + '</field_type>' +
+			'	<font_size>12px</font_size>' +
+			'	<is_visible>1</is_visible>' +
+			'	<label>%fieldLabel%</label>' +
+			'	<label_position>left</label_position>' +
+			'	<positioning>relative</positioning>' +
+			'	<tab_stop>1</tab_stop>' +
+			'	<name>%fieldName%</name>' +
+			'</Item>';
+		const fieldDom = this.aras.createXMLDocument();
+		const scriptContent = [];
+		let fieldHtml;
+		let currentMatch;
+
+		fieldDom.loadXML(fieldAML);
+		fieldHtml = this.aras.uiDrawFieldEx(fieldDom.documentElement, null, 'edit');
+
+		// searching for all script blocks in fieldHtml
+		while ((currentMatch = regExpressions.scripts.exec(fieldHtml)) !== null) {
+			scriptContent.push(currentMatch[1]);
+		}
+
+		// cutting off script blocks from fieldHtml
+		fieldHtml = fieldHtml.replace(regExpressions.scripts, '');
+
+		this._fieldHtmlCache[fieldCacheId] = fieldHtmlData = {
+			html: fieldHtml,
+			scripts: scriptContent.join('\n')
+		};
+	}
+
+	return {
+		id: fieldId,
+		html: fieldHtmlData.html
+			.replace(regExpressions.fieldId, fieldId)
+			.replace(regExpressions.fieldName, fieldDescriptor.name)
+			.replace(regExpressions.fieldLabel, fieldDescriptor.label || fieldDescriptor.name),
+		scripts: fieldHtmlData.scripts
+			.replace(regExpressions.fieldId, fieldId)
+			.replace(regExpressions.fieldName, fieldDescriptor.name)
+	};
+};
+
+DocumentViewDialog.prototype.CreateOptionFamily = function(containerNode, optionFamily, optionValues, usedOptionValues,
+	rootOptionValues, documentViewOptionValues, isSecondary) {
+	const fieldHtmlData = this._getFieldHtml({
+		name: 'option_family_dropdown',
+		label: isSecondary ? '' : optionFamily,
+		fieldType: 'dropdown'
+	});
+	const tempContainerNode = document.createElement('div');
+	const selectedValue = documentViewOptionValues && documentViewOptionValues[0];
+	const optionDescriptors = [{label: '', value: ''}];
+	let fieldComponent;
+	let fieldNode;
+	let scriptNode;
+	let labelNode;
+
+	tempContainerNode.innerHTML = fieldHtmlData.html;
+	fieldNode = tempContainerNode.querySelector('div[name="option_family_dropdown"]');
+
+	// add title attribute for the list label
+	labelNode = fieldNode.querySelector('.aras-field__label');
+	labelNode.setAttribute('title', labelNode.textContent);
+
+	if (isSecondary) {
+		fieldNode.classList.add('secondaryView');
+	}
+
+	scriptNode = document.createElement('script');
+	scriptNode.textContent = fieldHtmlData.scripts;
+	fieldNode.appendChild(scriptNode);
+	containerNode.appendChild(fieldNode);
+
+	// after changes in form rendering dropdown field is rendered as component
+	fieldComponent = getFieldComponentById(fieldHtmlData.id);
+	fieldComponent.component.format = this._dropDownFormatter;
+
+	this._disableFieldManualEditing(fieldComponent);
+
+	//populate highlighted first
+	for (let i = 0; i < optionValues.length; i++) {
+		let optionValue = optionValues[i];
+		let isRootOption = rootOptionValues.indexOf(optionValue) !== -1;
+		let isUsedOption = usedOptionValues.indexOf(optionValue) !== -1;
+
+		optionDescriptors.push({
+			label: optionValue,
+			value: optionValue,
+			color: isRootOption ? '#A74E06' : (isUsedOption ? '#00748F' : '#C0C0C0'),
+			title: isRootOption || isUsedOption ? this.aras.getResource('../Modules/aras.innovator.TDF',
+				isRootOption ? 'includes.usedforrootblock' : 'includes.usedindocument') : '',
+			priority: isRootOption + isUsedOption
+		});
+	}
+
+	optionDescriptors.sort(function(firstDescriptor, secondDescriptor) {
+		return secondDescriptor.priority - firstDescriptor.priority;
+	});
+
+	fieldComponent.component.setState({
+		list: optionDescriptors,
+		value: selectedValue
+	});
+
+	return {
+		id: fieldHtmlData.id,
+		optionFamily: optionFamily,
+		component: fieldComponent,
+	};
+};
+
+DocumentViewDialog.prototype._dropDownFormatter = function(format) {
+	const dropDownFormat = format.children[3];
+	const optionsFormatList = dropDownFormat.children[0].children;
+	const optionDescriptors = this.state.list;
+	const inputNode = this.state.refs.input;
+
+	dropDownFormat.style.top = (inputNode.offsetHeight - 1) + 'px';
+	dropDownFormat.style.width = '130px';
+	dropDownFormat.style.maxHeight = '100px';
+
+	for (let i = 0; i < optionsFormatList.length; i++) {
+		let optionAttributes = optionsFormatList[i].attrs;
+
+		optionAttributes.style = optionAttributes.style || {};
+		optionAttributes.style.color = optionDescriptors[i].color;
+		optionAttributes.title = optionDescriptors[i].title;
+	}
+};
+
+DocumentViewDialog.prototype.clearFilterFields = function(targetControlsGroup) {
+	targetControlsGroup = targetControlsGroup || {};
+
+	for (let fieldId in targetControlsGroup) {
+		let fieldObject = targetControlsGroup[fieldId];
+		fieldObject.component.setValue('');
+	}
+};
+
+DocumentViewDialog.prototype.validateViewSettings = function(targetSettings) {
+	if (targetSettings) {
+		const primaryViewSettings = targetSettings.primaryView;
+		const secondaryViewSettings = targetSettings.secondaryView;
+		const isSideBySide = targetSettings.viewType == 'sidebyside';
+
+		if (isSideBySide && primaryViewSettings.documentItemId == secondaryViewSettings.documentItemId &&
+			primaryViewSettings.languageCode == secondaryViewSettings.languageCode) {
+			this.aras.AlertError('Same document version and language is not allowed for both views.');
+
+			return false;
+		}
+	}
+
+	return true;
+};
+
+// Buttons handlers
+DocumentViewDialog.prototype.Apply = function() {
+	const viewSettings = this.documentViewSettings;
+	const primarySettings = viewSettings.primaryView;
+	const secondarySettings = viewSettings.secondaryView;
+	let newFilterFamilies;
+	let filterFamiliesControls;
+	let fieldId;
+	let fieldObject;
+	let fieldValue;
+
+	viewSettings.viewType = this.dialogControls.viewDisplayType.single.checked ? 'single' : 'sidebyside';
+
+	primarySettings.languageCode = this.dialogControls.primaryView.documentView.language.getValue();
+	primarySettings.documentItemId = this.dialogControls.primaryView.documentView.revision.getValue();
+	primarySettings.displayType = this.dialogControls.primaryView.documentView.htmlRadio.checked ? 'html' : 'xml';
+	primarySettings.filteredContentView = this.dialogControls.primaryView.filteredView.hiddenRadio.checked ? 'hidden' : 'inactive';
+	primarySettings.filterFamilies = newFilterFamilies = this.aras.newObject();
+
+	filterFamiliesControls = this.dialogControls.primaryView.filterFamilies;
+
+	for (fieldId in filterFamiliesControls) {
+		fieldObject = filterFamiliesControls[fieldId];
+		fieldValue = fieldObject.component.getValue();
+
+		if (fieldValue) {
+			newFilterFamilies[fieldObject.optionFamily] = this.aras.newArray(fieldValue);
+		}
+	}
+
+	secondarySettings.languageCode = this.dialogControls.secondaryView.documentView.language.getValue();
+	secondarySettings.documentItemId = this.dialogControls.secondaryView.documentView.revision.getValue();
+	secondarySettings.displayType = this.dialogControls.secondaryView.documentView.htmlRadio.checked ? 'html' : 'xml';
+	secondarySettings.filterFamilies = newFilterFamilies = this.aras.newObject();
+	secondarySettings.filteredContentView = this.dialogControls.secondaryView.filteredView.hiddenRadio.checked ? 'hidden' : 'inactive';
+
+	filterFamiliesControls = this.dialogControls.secondaryView.filterFamilies;
+
+	for (fieldId in filterFamiliesControls) {
+		fieldObject = filterFamiliesControls[fieldId];
+		fieldValue = fieldObject.component.getValue();
+
+		if (fieldValue) {
+			newFilterFamilies[fieldObject.optionFamily] = this.aras.newArray(fieldValue);
+		}
+	}
+
+	if (this.validateViewSettings(viewSettings)) {
+		this.dialogArguments.dialog.close(this.documentViewSettings);
+	}
+};
+
+DocumentViewDialog.prototype.Close = function() {
+	this.dialogArguments.dialog.close();
+};
+// end of Buttons handlers
+
+// Init class
+documentViewDialog = new DocumentViewDialog();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>tp_DocumentView_API</name>
+ </Item>
+</AML>

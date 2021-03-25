@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="D06FAD5EF4B14C509795636DA353F1B4" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+var prohibitedClasses = new List <string>
+{
+	"System",
+	"Team"
+};
+string relatedId = this.getRelatedItemID();
+if (string.IsNullOrEmpty(relatedId))
+{
+	return this;
+}
+Item identity = inn.getItemById("Identity", relatedId);
+if (identity.isError())
+{
+	return identity;
+}
+var classification = identity.getProperty("classification");
+if (prohibitedClasses.Contains(classification, StringComparer.Ordinal))
+{
+	string name = identity.getProperty("name");
+	string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("mp_NotSupportedIdentity"), name);
+	return inn.newError(message);
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>mp_OnBeforeSaveExemptIdentity</name>
+ </Item>
+</AML>

@@ -1,0 +1,71 @@
+﻿<TestCase author='apetrovsky@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>
+		Create Parent item as Industrial engineer.
+		Delete Parent item and get error as Industrial engineer.
+	</Description>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Industrial Engineer identity
+			When:
+				The user tries to create a part with Mechanical Part/MBOM only Part classification.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='6244437A27DD4AC0A74CCE74D0A082A7' doGetItem='0'>
+					<classification>Mechanical Part/MBOM only Part</classification>
+					<name>Parent Item</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='6244437A27DD4AC0A74CCE74D0A082A7' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='ietestuserdeletion:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Industrial Engineer identity
+			When:
+				The user tries to delete item without relationship.
+			Then:
+				The item should be deleted.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='delete' id='6244437A27DD4AC0A74CCE74D0A082A7' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+</TestCase>

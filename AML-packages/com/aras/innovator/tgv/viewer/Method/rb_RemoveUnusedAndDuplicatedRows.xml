@@ -1,0 +1,106 @@
+﻿<AML>
+ <Item type="Method" id="1809F7B36B4C416DBE59C1EE94D7B097" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	return Execute(this);
+}
+
+internal static Item Execute(Item thisItem)
+{
+	//input: use idlist to specify TGVD.
+	
+	Item tgvdRequest = thisItem.getInnovator().newItem("rb_TreeGridViewDefinition", "get");
+	tgvdRequest.setAttribute("levels", "2");
+	string idList = thisItem.getAttribute("idlist");
+	if (!string.IsNullOrEmpty(idList)){
+		tgvdRequest.setAttribute("idlist", idList);
+	}
+	Item tgvds = tgvdRequest.apply();
+	int tgvdCount = tgvds.getItemCount();
+	for (int i = 0; i < tgvdCount; i++)
+	{
+		Item tgvd = tgvds.getItemByIndex(i);
+		FixTgvd(tgvd);
+	}
+
+	return thisItem;
+}
+
+internal static void FixTgvd(Item tgvd)
+{
+	HashSet<string> childRefIds = new HashSet<string>();
+	Item rowRefs = tgvd.getRelationships("rb_TreeRowReference");
+	int rowRefsCount = rowRefs.getItemCount();
+	for (int i = 0; i < rowRefsCount; i++)
+	{
+		Item rowRef = rowRefs.getItemByIndex(i);
+		childRefIds.Add(rowRef.getProperty("child_ref_id"));
+	}
+
+	Item rows = tgvd.getRelationships("rb_TreeRowDefinition");
+	int rowsCount = rows.getItemCount();
+	List<string> refIdsToRemove = new List<string>();
+	List<string> rowIdsToRemove = new List<string>();
+	for (int i = 0; i < rowsCount; i++)
+	{
+		Item row = rows.getItemByIndex(i);
+		string refId = row.getProperty("ref_id");
+		if (!childRefIds.Contains(refId))
+		{
+			refIdsToRemove.Add(refId);
+			rowIdsToRemove.Add(row.getID());
+		}
+	}
+
+	if (refIdsToRemove.Count == 0)
+	{
+		return;
+	}
+
+	Item toRemove = tgvd.getInnovator().newItem("rb_TreeRowDefinition", "delete");
+	toRemove.setAttribute("idlist", string.Join(",", rowIdsToRemove));
+	Item result = toRemove.apply();
+	if (result.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(result.getErrorDetail());
+	}
+
+	List<string> mappingIdsToRemoveOut = new List<string>();
+	//note that we can have the same refIdsToRemove in different TGVD, e.g., in case of copy
+	//or copy and paste of part of TGVD, so, we need to go throw column definitions->column mappings in this TGVD.
+	CollectColumnMappingsToRemove(tgvd, refIdsToRemove.ToHashSet(), mappingIdsToRemoveOut);
+	if (mappingIdsToRemoveOut.Count == 0)
+	{
+		return;
+	}
+	Item toRemoveMappings = tgvd.getInnovator().newItem("rb_ColumnMapping", "delete");
+	toRemoveMappings.setAttribute("idlist", string.Join(",", mappingIdsToRemoveOut));
+	Item resultMapping = toRemoveMappings.apply();
+	if (resultMapping.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(resultMapping.getErrorDetail());
+	}
+}
+
+internal static void CollectColumnMappingsToRemove(Item tgvd, HashSet<string> refIdsToRemove, List<string> mappingIdsToRemoveOut)
+{
+	Item columns = tgvd.getRelationships("rb_ColumnDefinition");
+	int columnsCount = columns.getItemCount();
+	for (int i = 0; i < columnsCount; i++)
+	{
+		Item column = columns.getItemByIndex(i);
+		Item mappings = column.getRelationships("rb_ColumnMapping");
+		int mappingsCount = mappings.getItemCount();
+		for (int j = 0; j < mappingsCount; j++)
+		{
+			Item mapping = mappings.getItemByIndex(j);
+			if (refIdsToRemove.Contains(mapping.getProperty("tree_row_ref_id")))
+			{
+				mappingIdsToRemoveOut.Add(mapping.getID());
+			}
+
+		}
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>rb_RemoveUnusedAndDuplicatedRows</name>
+ </Item>
+</AML>

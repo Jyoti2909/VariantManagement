@@ -1,0 +1,84 @@
+﻿<AML>
+ <Item type="Method" id="AE401091F3A44FD88F1E04C27AFDAFC0" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[require(['EffectivityServices/Scripts/EffectivityCriteriaDialog'], function(EffectivityCriteriaDialog) {
+	const effectivityScopeIdParameterName = 'EffectivityScopeId';
+	const effectivityCriteriaDefinitionParameterName = 'EffectivityCriteriaDefinition';
+	const effectivityResolutionConfigurationQueryDefinitionIdParameterName = 'EffectivityResolutionConfigurationQueryDefinitionId';
+
+	const constructTermAsJson = function(id, datatype, value) {
+		const termNodeAsJsonObject = {
+			eq: {
+				variable: {
+					'@attrs': {
+						id: id
+					}
+				}
+			}
+		};
+
+		if (!datatype) {
+			termNodeAsJsonObject.eq['named-constant'] = {
+				'@attrs': {
+					id: value
+				}
+			};
+		} else {
+			termNodeAsJsonObject.eq.constant = {
+				'@attrs': {
+					type: datatype
+				},
+				'@value': value
+			};
+		}
+
+		return termNodeAsJsonObject;
+	};
+
+	const contextParameters = inArgs.contextParams;
+
+	//create EffectivityCriteriaDialog instance once
+	//and get effectivity resolution configuration QD ID once when "Set Effectivity Criteria" button is clicked first time
+	if (!contextParameters.effectivityCriteriaDialog) {
+		contextParameters.effectivityCriteriaDialog = new EffectivityCriteriaDialog(window.aras);
+		contextParameters.effectivityResolutionConfigurationQueryDefinitionId = aras.evalMethod('effs_getResolutionCfgQdIdByTgvId', '', {
+			treeGridViewDefinitionId: contextParameters.tgvContext.getViewDefinitionId()
+		});
+	}
+
+	contextParameters.effectivityCriteriaDialog.show()
+		.then(function(scope) {
+			if (scope === undefined) {
+				return;
+			}
+
+			if (scope === null) {
+				scope = {
+					id: '',
+					variables: []
+				};
+			}
+
+			const effectivityCriteriaDefinition = Array.prototype
+				.filter.call(scope.variables, function(variable) { return !!variable.value; })
+				.reduce(function(prevConstructedTerms, variable) {
+					return prevConstructedTerms + ArasModules.jsonToXml(constructTermAsJson(variable.id, variable.datatype, variable.value));
+				}, '');
+
+			const tgvParametersProvider = contextParameters.tgvContext.parametersProvider;
+			tgvParametersProvider.setParameter(
+				effectivityResolutionConfigurationQueryDefinitionIdParameterName,
+				// set empty string to EffectivityResolutionConfigurationQueryDefinitionId TGV parameter
+				// when EffectivityScopeId TGV parameter value is an empty string in order to disable effectivity resolution
+				// and avoid "'effs_scope_id' node must have a proper value" exception from the EffectivityServicesGetEffectiveItems internal method
+				scope.id === '' ? '' : contextParameters.effectivityResolutionConfigurationQueryDefinitionId
+			);
+			tgvParametersProvider.setParameter(effectivityScopeIdParameterName, scope.id);
+			tgvParametersProvider.setParameter(effectivityCriteriaDefinitionParameterName, effectivityCriteriaDefinition);
+			contextParameters.tgvContext.reload();
+		});
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_setEffectivityCriteriaHandl</name>
+ </Item>
+</AML>

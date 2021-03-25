@@ -1,0 +1,80 @@
+﻿<AML>
+ <Item type="Method" id="F1A66BA68ED249B7B1F33F8A651FF79B" action="add">
+  <classification>/*</classification>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// GetAccess
+// Returns the current user's access rights for the specified item(s)
+//
+// Request syntax: <Item type="x" action="GetAccess" id="..."/> or <Item type="x" action="GetAccess" idlist="..."/>
+// 
+// Response syntax: <Item type="x" typeId="E01BB563B2C44E21B64BEAE340B09531" id="27A7C500806243A59197E5C6B2D9CA4A"
+//                        can_discover="1" can_get="0" can_update="0" can_delete="0" can_change_access="0">
+//                    <permission_id keyed_name="x" type="Permission">1F1078943AD545A4AD756E541CA0BD36</permission_id>
+//                    <locked_by_id is_null="1" />
+//                    <id keyed_name="x" type="x">27A7C500806243A59197E5C6B2D9CA4A</id>
+//                  </Item>
+//
+// Notes: 1) If the user does not have at least can_discover for a specified id, the item will not be included in the response
+//        2) Lock status is returned separately from access. If the item is locked by another user it cannot be updated, deleted, etc.
+
+Innovator inn = this.getInnovator();
+
+// Check for a valid id or idlist
+string idList = this.getAttribute("idlist","");
+string id = this.getID();
+if (id.Length != 32 && idList.Length < 32) return inn.newError("A valid id or idlist must be specified");
+
+
+// Build arrays for the privileges to be checked 
+// we only fetch the privileges we need for the CAD connector.
+string[] privs = { "can_discover", "can_get", "can_update" };
+
+
+
+// Query for the specified items
+Item res = inn.newItem(this.getType(),"get");
+res.setAttribute("select","locked_by_id,owned_by_id,managed_by_id,created_by_id");
+if (id.Length == 32)
+{
+	res.setID(id);
+} else {
+	res.setAttribute("idlist",idList);
+}
+res = res.apply();
+
+Item perms;
+String result;
+int lockStatus;
+
+
+// Loop through the results and check the privilege for each item
+for (int i=0; i<res.getItemCount(); i++)
+{
+	Item thisItem = res.getItemByIndex(i);
+    lockStatus = thisItem.fetchLockStatus();
+    thisItem.setProperty("lockStatus",lockStatus.ToString());
+	
+	// Loop through the privileges, test for each and set the attribute on the item
+	foreach (string priv in privs)
+	{
+	   // get the permission:
+	   perms = inn.newItem(thisItem.getType(),"getPermissions");
+	   perms.setID(thisItem.getID());
+	   perms.setAttribute("access_type",priv);
+	   perms = perms.apply();
+	   result = perms.getResult();
+	   // caveat, the getPermissions does not check if the object is locked by someone else. 
+	   // in this case, we need to check this additionally:
+
+		thisItem.setAttribute(priv, result);
+	}
+	
+}
+
+return res;
+
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>GetAccess</name>
+ </Item>
+</AML>

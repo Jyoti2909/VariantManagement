@@ -1,0 +1,273 @@
+﻿<AML>
+ <Item type="Method" id="FC5A9FB8FC224E5EACA2B9CD2FB7945F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA['input parameters: <Item type="Method" action="UpdateActivity2"><Item type="Activity2" action="UpdateActivity|CompleteActivity">...
+'                 managed_by_id of Activity2, relationships of Activity2 Assignment type are required (to calculate permissions to Update/Complete).
+'return value:
+'   if fault then error item
+'   else result item with result in format: 
+'      {isProjectUpdated:false,isActivityUpdated:true}
+
+Dim tmpInn As Innovator = Me.getInnovator()
+Dim q As Item
+Dim r As Item
+
+'Set identityList before GrantIdentity is called
+Dim identityList As String = Aras.Server.Security.Permissions.Current.IdentitiesList
+
+'++++ Add current user to Program Management identity. +++
+Dim pmIdentityNm As String = "Project Management"
+Dim pmIdentity As Aras.Server.Security.Identity = Aras.Server.Security.Identity.GetByName(pmIdentityNm)
+Dim PermissionWasSet As Boolean = Aras.Server.Security.Permissions.GrantIdentity(pmIdentity)
+'---- Add current user to Program Management identity. ---
+
+Dim errMsgPrefix As String = "UpdateActivity Failed: "
+Dim itm As Item
+Dim validateMethodNm As String = "Activity2Update Validation"
+Dim methBodyNd As XmlElement = CType(Me.dom.selectSingleNode("//Item[@type='Method']/Item[@type='Activity2']"), XmlElement)
+If IsNothing(methBodyNd) Then
+  methBodyNd = Me.dom.CreateElement("Item")
+  methBodyNd.setAttribute("type", "Activity2")
+End If
+r = tmpInn.applyMethod(validateMethodNm, methBodyNd.OuterXml)
+If r.isError() Then
+  Return r
+End If
+
+Dim CompleteActivity As String = "completeactivity"
+Dim UpdateActivity As String = "updateactivity"
+Dim currAction As String = methBodyNd.getAttribute("action")
+If Not IsNothing(currAction) Then currAction = currAction.ToLower()
+If currAction<>CompleteActivity AndAlso currAction<>UpdateActivity Then
+  Return tmpInn.newError("Current Action ("+currAction+") does not supported.")
+End If
+
+Dim i As Integer
+Dim j As Integer
+Dim tmpNd As XmlElement
+Dim nd As XmlElement
+Dim nds As XmlNodeList = Nothing
+
+'+++ Check Permissions +++
+Dim managed_by_id() As String
+Dim isPermsOk As Boolean = False
+i = 0
+j = 1
+If currAction=UpdateActivity Then j = 3
+While Not isPermsOk AndAlso i<j
+  'if i=0 then check managed_by_id of Activity
+  'if i=1 then check permissions to update Assignments
+  'if i=2 then check permissions to update activity based on Assignments
+  If i=0 Then
+    nds = methBodyNd.selectNodes(".")
+  ElseIf i=1 Then
+    nds = methBodyNd.selectNodes("Relationships/Item[@type='Activity2 Assignment' and (@action='update' or @action='edit')]")
+  ElseIf i=2 Then
+    q = tmpInn.newItem("", "")
+    q.LoadAML("<Item type='Activity2 Assignment' action='get' select='related_id(keyed_name)'/>")
+    q.setProperty("source_id", methBodyNd.getAttribute("id"))
+    r = q.apply()
+    nds = r.dom.selectNodes("//Item[@type='Activity2 Assignment']")
+  End If
+
+  Redim managed_by_id(IIF(nds.Count>0, nds.Count-1, 0))
+  Dim k As Integer = 0
+  For Each nd In nds
+    tmpNd = nd.selectSingleNode(IIF(i=0, "managed_by_id", "related_id/Item"))
+    If Not IsNothing(tmpNd) Then 
+      managed_by_id(k) = IIF(i=0, tmpNd.innerText, tmpNd.getAttribute("id"))
+    Else
+      managed_by_id(k) = Nothing
+    End If
+    k+=1
+  Next nd
+  k=0
+  If nds.Count=0 Then k=1
+  While k<nds.Count 'now: nds.Count=0 or nds.Count=managed_by_id.Length
+  	If i=2 Then
+      If Not IsNothing(managed_by_id(k)) AndAlso identityList.indexOf(managed_by_id(k))>-1 Then
+        isPermsOk = True
+        k = nds.Count + 1
+      End If
+      If k=nds.Count-1 Then k = nds.Count + 1
+    Else
+      If IsNothing(managed_by_id(k)) OrElse identityList.indexOf(managed_by_id(k))<0 Then
+        k = nds.Count + 1
+      End If
+    End If
+    k+=1
+  End While
+  
+  If k=nds.Count Then isPermsOk = True
+  
+  If i=1 AndAlso nds.Count>0 AndAlso Not isPermsOk Then
+    i = 4 'User does not have permissions to update assignments. Thus permissions denied. Thus exit.
+  End If
+  
+  i+=1
+End While
+
+If Not isPermsOk Then
+  Return tmpInn.newError(String.Format("{0}{1}", errMsgPrefix, "You have insufficient permissions to process Activity or Assignment"))
+End If
+'--- Check Permissions ---
+
+'+++ update the properties of Activity2 and its relationships per the dom
+methBodyNd.setAttribute("action", "edit")
+methBodyNd.setAttribute("doGetItem", "0")
+q = tmpInn.newItem("", "")
+q.LoadAML(methBodyNd.OuterXml)
+r = q.apply()
+If (r.isError()) Then
+  Return r
+End If
+'--- update the properties of Activity2 and its relationships per the dom
+
+'+++ promote any assignments that are 100% complete to the Complete state
+q.loadAML("<Item type='Activity2 Assignment' action='PromoteItem'><state>Complete</state></Item>")
+For Each tmpNd In methBodyNd.selectNodes("Relationships/Item[@type='Activity2 Assignment' and percent_compl='100' and state!='Complete']")
+  q.setAttribute("id", tmpNd.getAttribute("id"))
+  r = q.apply()
+  If r.isError() Then
+    Return r
+  End If
+Next tmpNd
+'--- promote any assignments that are 100% complete to the Complete state
+
+'+++ If the action is "Complete Activity" or if all assignments are closed and the signoff_required flag is false, then
+'+++   the Activity2 And all Assignments should be promoted To Complete
+Dim allAssgnmtsQ As Item
+Dim allAssgnmtsR As Item
+
+Dim signoff_required As Boolean = False
+tmpNd = methBodyNd.selectSingleNode("signoff_required")
+If Not IsNothing(tmpNd) Then signoff_required = Cbool(tmpNd.InnerText = "1")
+
+Dim curActivityState As String = ""
+tmpNd = methBodyNd.selectSingleNode("state")
+If Not IsNothing(tmpNd) Then curActivityState = tmpNd.InnerText.ToLower()
+
+Dim doCompleteActivity As Boolean = False
+Dim doCompleteAssgnmnts As Boolean = False
+
+If curActivityState<>"complete" AndAlso (currAction=CompleteActivity OrElse Not signoff_required) Then
+  Dim actID As String = methBodyNd.getAttribute("id")
+  allAssgnmtsQ = tmpInn.newItem("Activity2 Assignment", "get")
+  allAssgnmtsQ.setAttribute("select", "id,state,locked_by_id,percent_compl")
+  allAssgnmtsQ.setProperty("source_id", actID)
+  allAssgnmtsR = allAssgnmtsQ.apply()
+  
+  doCompleteActivity = True
+  doCompleteAssgnmnts = True
+  
+  If currAction<>CompleteActivity Then
+    doCompleteAssgnmnts = False
+    If allAssgnmtsR.getItemCount()=0 Then doCompleteActivity = False
+    For i=0 To allAssgnmtsR.getItemCount()-1
+      itm = allAssgnmtsR.getItemByIndex(i)
+      If itm.getProperty("state")<>"Complete" Then doCompleteActivity = False
+    Next i
+  End If
+  
+  If doCompleteActivity Then
+    Dim q2 As Item = tmpInn.newItem("Activity2", "edit")
+    q2.setAttribute("id", actID)
+    q2.setAttribute("doGetItem", IIF(currAction=CompleteActivity, "0", "1"))
+    q2.setProperty("percent_compl", "100")
+    r = q2.apply()
+    If r.isError() Then
+      Return r
+    End If
+    If currAction<>CompleteActivity Then 'fire CompleteActivity validation
+      r = r.getItemByIndex(0)
+      r.setAttribute("action", CompleteActivity)
+      r = tmpInn.applyMethod(validateMethodNm, r.node.OuterXml) 'validate activity2 again before Complete
+      If r.isError() Then
+        Return r
+      End If
+    End If
+    q.setAttribute("type", "Activity2")
+    q.setAttribute("id", actID)
+    r = q.apply() 'Promote To Complete
+    If r.isError() Then
+      Return r
+    End If
+    If doCompleteAssgnmnts Then 
+      Dim qPtrn2UpdateAsmnt As Item = tmpInn.newItem("tmp", "tmp")
+      qPtrn2UpdateAsmnt.loadAML("<Item type='Activity2 Assignment' doGetItem='0' serverEvents='0'/>")
+      For i=0 To allAssgnmtsR.getItemCount()-1
+        itm = allAssgnmtsR.getItemByIndex(i)
+        If itm.getProperty("percent_compl")<>"100" Then
+          qPtrn2UpdateAsmnt.setAttribute("id", itm.getAttribute("id"))
+          qPtrn2UpdateAsmnt.setAttribute("action", IIF(itm.getProperty("locked_by_id", "")="", "edit", "update"))
+          qPtrn2UpdateAsmnt.setProperty("percent_compl", "100")
+          r = qPtrn2UpdateAsmnt.apply() 'set percent_compl=100
+          If r.isError() Then 
+            Return r
+          End If
+        End If
+        If itm.getProperty("state")<>"Complete" Then
+          q.setAttribute("type", "Activity2 Assignment")
+          q.setAttribute("id", itm.getAttribute("id"))
+          r = q.apply() 'Promote To Complete
+          If r.isError() Then 
+            Return r
+          End If
+        End If
+      Next i
+    End If
+  End If
+End If
+'--- If the action is "Complete Activity"...
+
+'+++ Call Project Update/Schedule +++
+tmpNd = methBodyNd.selectSingleNode("proj_num")
+Dim projNum As String = ""
+If Not IsNothing(tmpNd) Then projNum = tmpNd.InnerText
+q.loadAML("<Item type='Project' action='get' select='wbs_id,scheduling_mode,project_update_mode,state,locked_by_id'/>")
+q.setProperty("project_number", projNum)
+r = q.apply()
+If r.getItemCount()<>1 Then
+  Return tmpInn.newError("Project instance is not found for this Activity.")
+End If
+r = r.getItemByIndex(0)
+Dim projectNd As XmlElement = r.node
+Dim mNm As String = "PM_hndle_scheduling_update_modes"
+Dim eventNm As String = "onupdateactivity"
+Dim isProjectUpdated As String = "false"
+Dim repeatMethodCall As Boolean = True
+While repeatMethodCall
+  repeatMethodCall = False
+  If currAction=CompleteActivity Then eventNm = "oncompleteactivity"
+  Dim body As String = String.Format("<event>{0}</event><project_item>{1}</project_item>", eventNm, projectNd.OuterXml)
+  r = tmpInn.applyMethod(mNm, body)
+  If r.isError() Then
+    Return r
+  End If
+  If r.getItemCount()<1 Then
+    Return tmpInn.newError("Internal exception. Called "+mNm+" method returns no items. It's not supposed.")
+  End If
+  r = r.getItemByIndex(0)
+  tmpNd = CType(r.dom.selectSingleNode(String.Format("//Item[@type='Method' and @action='{0}']", mNm)), XmlElement)
+  If Not IsNothing(tmpNd) AndAlso isProjectUpdated<>"true" Then 
+    isProjectUpdated = "false"
+  Else
+    isProjectUpdated = "true"
+End If
+
+  If eventNm="onupdateactivity" AndAlso doCompleteActivity Then
+    repeatMethodCall = True
+    eventNm = "oncompleteactivity"
+  End If
+End While
+'--- Call Project Update/Schedule ---
+
+If (PermissionWasSet=True)	Then
+	Aras.Server.Security.Permissions.RevokeIdentity(pmIdentity)
+End If	
+Return tmpInn.newResult(String.Format("{{isProjectUpdated:{0},isActivityUpdated:true}}", isProjectUpdated))
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>UpdateActivity2</name>
+ </Item>
+</AML>

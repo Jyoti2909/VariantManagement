@@ -1,0 +1,22 @@
+﻿<AML>
+ <Item type="Method" id="6881B6AABCFA4621AAFD9B4A40BCE391" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const itemId = options.rowId;
+if (!itemId) {
+	return;
+}
+
+const item = aras.getItemById(options.itemTypeName, itemId, 0);
+if (!item) {
+	return;
+}
+
+const newVersionItem = aras.versionItem(options.itemTypeName, itemId);
+if (newVersionItem && window.isItemsGrid && window.grid.getRowIndex(newVersionItem.id) !== -1) {
+	window.onSelectItem(newVersionItem.id);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_pmig_version_item</name>
+ </Item>
+</AML>

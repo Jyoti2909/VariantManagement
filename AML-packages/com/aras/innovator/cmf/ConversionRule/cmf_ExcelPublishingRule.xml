@@ -1,0 +1,44 @@
+﻿<AML>
+ <Item type="ConversionRule" id="2A42197397564AED8BEB046AB515ADD0" action="add">
+  <converter_type keyed_name="cmf_ExcelPublishingConverter" type="ConverterType">9FE48A2504EE4769B3CF9A66446788C1</converter_type>
+  <cutoff>1</cutoff>
+  <delay>1</delay>
+  <enabled>1</enabled>
+  <timeout>2</timeout>
+  <name>cmf_ExcelPublishingRule</name>
+  <Relationships>
+   <Item type="ConversionRuleEventHandler" id="A2EA894D18D247FF9D82B48BF6D952C7" action="add">
+    <event_type>OnTaskAfterCreate</event_type>
+    <related_id keyed_name="SendOnCreateTaskNotification" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>SendOnCreateTaskNotification</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="cmf_ExcelPublishingRule" type="ConversionRule">2A42197397564AED8BEB046AB515ADD0</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="59FA9FC5B2A1443FB60951B28167FE2A" action="add">
+    <event_type>OnConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="InvokeStandardConverterAsCreator" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>InvokeStandardConverterAsCreator</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="cmf_ExcelPublishingRule" type="ConversionRule">2A42197397564AED8BEB046AB515ADD0</source_id>
+   </Item>
+   <Item type="ConversionRuleEventTemplate" id="2E6165527871440BB80D0F98F8A4F3B0" action="add">
+    <event_type>OnAfterConvert</event_type>
+    <lock_dependencies>0</lock_dependencies>
+    <related_id keyed_name="SetFilesToFileGroup" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>SetFilesToFileGroup</name>
+     </Item>
+    </related_id>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="cmf_ExcelPublishingRule" type="ConversionRule">2A42197397564AED8BEB046AB515ADD0</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

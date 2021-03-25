@@ -1,0 +1,45 @@
+.colored-button(@color) {
+	background-color: @color;
+
+	&:focus {
+		outline: 0;
+		.color-with-alpha(@color, 0.8);
+	}
+
+	&:hover {
+		.color-with-alpha(@color, 0.8);
+	}
+
+	&:active {
+		.color-with-alpha(@color, 0.8);
+	}
+
+	&:disabled {
+		.color-with-alpha(@color, 0.3);
+
+		&:hover,
+		&:focus {
+			.color-with-alpha(@color, 0.3);
+		}
+	}
+}
+
+.toggled-on {
+	color: @neutral-3;
+	background-color: @color-3;
+	border-color: @color-14;
+	box-shadow: none;
+	&:not([disabled]) {
+		&:hover,
+		&:focus {
+			background-color: @color-2;
+			border-color: @color-14;
+			box-shadow: none;
+		}
+
+		&:active {
+			background-color: @color-2;
+			border-color: @color-9;
+		}
+	}
+}

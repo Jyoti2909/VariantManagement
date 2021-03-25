@@ -1,0 +1,525 @@
+﻿<AML>
+ <Item type="Method" id="908A381FD1654821BE93B7774E504810" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			Innovator innovator = this.getInnovator();
+			var dataAccessLayer = new DataAccessLayer(innovator, CCO.DB.InnDatabase);
+			var businessLogic = new BusinessLogic(dataAccessLayer, innovator, CCO.ErrorLookup);
+			var result = businessLogic.GetTocTree();
+			return result;
+		}
+
+		internal class BusinessLogic
+		{
+			private IDataAccessLayer dataAccessLayer;
+
+			private Innovator innovator;
+
+			private Aras.Server.Core.ErrorLookup errorLookup;
+
+			internal BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator, Aras.Server.Core.ErrorLookup errorLookup)
+			{
+				this.dataAccessLayer = dataAccessLayer;
+				this.innovator = innovator;
+				this.errorLookup = errorLookup;
+			}
+
+			internal Item GetTocTree()
+			{
+				Item commandBarItemsForTOCLocation = dataAccessLayer.GetCommandBarItemsForTOCLocation();
+
+				List<CommandBarItem> commandBarItems = GetCommandBarItemsList(commandBarItemsForTOCLocation);
+
+				DeleteTocViewsWithoutTocAccess(commandBarItems);
+
+				DeleteEmptyMenus(commandBarItems);
+
+				MergeTocViewWithTocAccess(commandBarItems);
+
+				ProcessCategoryForms(commandBarItems);
+
+				MergeTocAccessButtons(commandBarItems);
+
+				MergeTocViewButtons(commandBarItems);
+
+				SetAbsentLabelsOnCommandBarItems(commandBarItems, dataAccessLayer);
+
+				UpdateItemsSortOrder(commandBarItems);
+
+				return GetResultItem(commandBarItems);
+			}
+
+			private static List<CommandBarItem> GetCommandBarItemsList(Item commandBarItemsForTOCLocation)
+			{
+				List<CommandBarItem> commandBarItems = new List<CommandBarItem>();
+
+				int commandBarItemsForTOCLocationCount = commandBarItemsForTOCLocation.getItemCount();
+				for (int i = 0; i < commandBarItemsForTOCLocationCount; i++)
+				{
+					Item commandBarSectionItemRelationship = commandBarItemsForTOCLocation.getItemByIndex(i);
+					CommandBarItem commandBarItem = new CommandBarItem(commandBarSectionItemRelationship);
+					commandBarItems.Add(commandBarItem);
+				}
+
+				return commandBarItems;
+			}
+
+			private static void DeleteTocViewsWithoutTocAccess(List<CommandBarItem> commandBarItems)
+			{
+				commandBarItems.RemoveAll(commandBarItem =>
+				{
+					return !string.IsNullOrEmpty(commandBarItem.TocViewId) &&
+						GetTocAccessButton(commandBarItems, commandBarItem.ParentMenuId, commandBarItem.ItemTypeId, null) == null;
+				});
+			}
+
+			private static void DeleteEmptyMenus(List<CommandBarItem> commandBarItems)
+			{
+				List<CommandBarItem> commandBarMenuItems = commandBarItems
+					.Where(commandBarItem => string.Equals(commandBarItem.Type, "CommandBarMenu", StringComparison.OrdinalIgnoreCase))
+					.ToList();
+
+				bool needToRepeat = true;
+
+				while (needToRepeat)
+				{
+					needToRepeat = false;
+
+					List<CommandBarItem> remainingCommandBarMenuItems = new List<CommandBarItem>();
+
+					foreach (CommandBarItem commandBarMenuItem in commandBarMenuItems)
+					{
+						bool commandBarMenuHasChildren = commandBarItems.Any(
+							commandBarItem => string.Equals(commandBarItem.ParentMenuId, commandBarMenuItem.Id, StringComparison.OrdinalIgnoreCase));
+
+						if (commandBarMenuHasChildren)
+						{
+							remainingCommandBarMenuItems.Add(commandBarMenuItem);
+						}
+						else
+						{
+							commandBarItems.Remove(commandBarMenuItem);
+							needToRepeat = true;
+						}
+					}
+
+					commandBarMenuItems = remainingCommandBarMenuItems;
+				}
+			}
+
+			private static void MergeTocViewWithTocAccess(List<CommandBarItem> commandBarItems)
+			{
+				List<CommandBarItem> commandBarItemsWithTocViewId = commandBarItems
+					.Where(commandBarItem => !string.IsNullOrEmpty(commandBarItem.TocViewId))
+					.ToList();
+
+				commandBarItemsWithTocViewId.ForEach(commandBarItem =>
+				{
+					CommandBarItem tocAccessButtonForSameIdentity = GetTocAccessButton(
+						commandBarItems,
+						commandBarItem.ParentMenuId,
+						commandBarItem.ItemTypeId,
+						commandBarItem.Role);
+
+					if (tocAccessButtonForSameIdentity != null)
+					{
+						commandBarItems.Remove(tocAccessButtonForSameIdentity);
+					}
+				});
+			}
+
+			private void ProcessCategoryForms(List<CommandBarItem> commandBarItems)
+			{
+				const string worldIdentityId = "A73B655731924CD0B027E4F4D5FCC0A9";
+
+				Item categoryForms = dataAccessLayer.GetCategoryForms();
+
+				int categoryFormItemCount = categoryForms.getItemCount();
+				for (int i = 0; i < categoryFormItemCount; i++)
+				{
+					Item categoryForm = categoryForms.getItemByIndex(i);
+					string formName = categoryForm.getProperty("name");
+
+					List<CommandBarItem> menusForCategory = GetMenusByName(formName, commandBarItems);
+
+					menusForCategory.ForEach(menuForCategory =>
+					{
+						Item relationshipToButton = innovator.newItem("CommandBarSectionItem", "add");
+						relationshipToButton.setProperty("role", worldIdentityId);
+						relationshipToButton.setProperty("action", "Add");
+
+						Item buttonForCategoryForm = innovator.newItem("CommandBarMenuButton", "add");
+						relationshipToButton.setRelatedItem(buttonForCategoryForm);
+						buttonForCategoryForm.setProperty("parent_menu", menuForCategory.Id);
+						buttonForCategoryForm.removeAttribute("isNew");
+						buttonForCategoryForm.removeAttribute("isTemp");
+						buttonForCategoryForm.removeAttribute("action");
+
+						string buttonForCategoryFormName = formName + "_" + relationshipToButton.getID();
+						buttonForCategoryForm.setProperty("name", buttonForCategoryFormName);
+						buttonForCategoryForm.setProperty("image", "../images/DefaultItemType.svg");
+						buttonForCategoryForm.setProperty("label", formName);
+
+						Newtonsoft.Json.Linq.JObject additionalData = new Newtonsoft.Json.Linq.JObject();
+						additionalData["formId"] = categoryForm.getID();
+						buttonForCategoryForm.setProperty("additional_data", additionalData.ToString());
+
+						CommandBarItem commandBarItem = new CommandBarItem(relationshipToButton);
+
+						commandBarItems.Add(commandBarItem);
+					});
+				}
+			}
+
+			private static void MergeTocAccessButtons(List<CommandBarItem> commandBarItems)
+			{
+				var groups = commandBarItems
+					.Where(commandBarItem => !string.IsNullOrEmpty(commandBarItem.TocAccessId))
+					.GroupBy(buttonForTocAccess =>
+					{
+						return new
+						{
+							a = buttonForTocAccess.ItemTypeId,
+							b = buttonForTocAccess.ParentMenuId
+						};
+					})
+					.Where(group => group.Count() > 1);
+
+				foreach (var group in groups)
+				{
+					for (int i = 1; i < group.Count(); i++)
+					{
+						commandBarItems.Remove(group.ElementAt(i));
+					}
+				}
+			}
+
+			private static void MergeTocViewButtons(List<CommandBarItem> commandBarItems)
+			{
+				var groups = commandBarItems
+					.Where(commandBarItem => !string.IsNullOrEmpty(commandBarItem.TocViewId))
+					.GroupBy(buttonForTocView =>
+					{
+						return new
+						{
+							a = buttonForTocView.TocViewId,
+							b = buttonForTocView.ParentMenuId
+						};
+					})
+					.Where(group => group.Count() > 1);
+
+				foreach (var group in groups)
+				{
+					for (int i = 1; i < group.Count(); i++)
+					{
+						commandBarItems.Remove(group.ElementAt(i));
+					}
+				}
+			}
+
+			private static void SetAbsentLabelsOnCommandBarItems(List<CommandBarItem> commandBarItems, IDataAccessLayer dataAccessLayer)
+			{
+				List<string> commandBarItemIdsToDelete = new List<string>();
+
+				foreach (CommandBarItem commandBarItem in commandBarItems)
+				{
+					if (!string.IsNullOrEmpty(commandBarItem.Label) || commandBarItemIdsToDelete.Contains(commandBarItem.Id))
+					{
+						continue;
+					}
+
+					if (string.Equals("CommandBarMenu", commandBarItem.Type, StringComparison.Ordinal))
+					{
+						commandBarItem.Label = commandBarItem.Name;
+					}
+					else
+					{
+						Item itemTypeItem = dataAccessLayer.GetItemById("ItemType", commandBarItem.ItemTypeId, "name", null);
+
+						if (itemTypeItem.isError() && itemTypeItem.isEmpty())
+						{
+							commandBarItemIdsToDelete.Add(commandBarItem.Id);
+
+							continue;
+						}
+
+						commandBarItem.Label = itemTypeItem.getProperty("name");
+					}
+				}
+
+				commandBarItems.RemoveAll(commandBarItem => commandBarItemIdsToDelete.Contains(commandBarItem.Id));
+			}
+
+			private static void UpdateItemsSortOrder(List<CommandBarItem> commandBarItems)
+			{
+				int sortOrder = 0;
+				int sortOrderIncrement = 128;
+
+				List<CommandBarItem> menuItems = new List<CommandBarItem>();
+				List<CommandBarItem> notMenuItems = new List<CommandBarItem>();
+
+				commandBarItems.ForEach(commandBarItem =>
+				{
+					if (string.Equals(commandBarItem.Type, "CommandBarMenu", StringComparison.OrdinalIgnoreCase))
+					{
+						menuItems.Add(commandBarItem);
+					}
+					else
+					{
+						notMenuItems.Add(commandBarItem);
+					}
+				});
+
+				void setSortOrder(List<CommandBarItem> itemsToSetSortOrder)
+				{
+					itemsToSetSortOrder.Sort((x, y) => string.Compare(
+						x.Label,
+						y.Label,
+						StringComparison.OrdinalIgnoreCase));
+
+					foreach (CommandBarItem commandBarItem in itemsToSetSortOrder)
+					{
+						commandBarItem.CommandBarSectionItemRelationship.setProperty(
+							"sort_order",
+							(sortOrder += sortOrderIncrement).ToString(CultureInfo.InvariantCulture));
+					}
+				}
+
+				setSortOrder(menuItems);
+
+				setSortOrder(notMenuItems);
+			}
+
+			private static CommandBarItem GetTocAccessButton(List<CommandBarItem> commandBarItems, string parentMenuId, string itemTypeId, string role)
+			{
+				foreach (CommandBarItem commandBarItem in commandBarItems)
+				{
+					if (string.IsNullOrEmpty(commandBarItem.TocAccessId))
+					{
+						continue;
+					}
+
+					bool isButton = false;
+
+					if (string.IsNullOrEmpty(parentMenuId))
+					{
+						isButton = string.Equals(commandBarItem.Type, "CommandBarButton", StringComparison.OrdinalIgnoreCase);
+					}
+					else
+					{
+						isButton = string.Equals(commandBarItem.Type, "CommandBarMenuButton", StringComparison.OrdinalIgnoreCase)
+							&& string.Equals(commandBarItem.ParentMenuId, parentMenuId, StringComparison.OrdinalIgnoreCase);
+					}
+
+					if (!isButton)
+					{
+						continue;
+					}
+
+					if (!string.IsNullOrEmpty(role) && !string.Equals(commandBarItem.Role, role, StringComparison.OrdinalIgnoreCase))
+					{
+						continue;
+					}
+
+					if (string.Equals(itemTypeId, commandBarItem.ItemTypeId, StringComparison.OrdinalIgnoreCase))
+					{
+						return commandBarItem;
+					}
+				}
+
+				return null;
+			}
+
+			private static List<CommandBarItem> GetMenusByName(string menuName, List<CommandBarItem> commandBarItems)
+			{
+				List<CommandBarItem> menuItems = commandBarItems
+					.Where(commandBarItem => string.Equals(commandBarItem.Type, "CommandBarMenu", StringComparison.OrdinalIgnoreCase)
+						&& string.Equals(commandBarItem.Name.Substring(commandBarItem.Name.Length - menuName.Length), menuName, StringComparison.OrdinalIgnoreCase))
+					.ToList();
+
+				return menuItems;
+			}
+
+			private Item GetResultItem(List<CommandBarItem> commandBarItems)
+			{
+				if (commandBarItems.Count == 0)
+				{
+					Item itemsNotFoundError = innovator.newError(errorLookup.Lookup("GetItem_NoItemsFound", "CommandBarSectionItem"));
+					itemsNotFoundError.setErrorCode("0");
+					return itemsNotFoundError;
+				}
+
+				Item result = innovator.newResult(string.Empty);
+				XmlNode resultNode = result.dom.SelectSingleNode("//Result");
+				resultNode.RemoveAll();
+
+				commandBarItems.ForEach(commandBarItem =>
+				{
+					XmlNode commandBarSectionItemNode = commandBarItem.CommandBarSectionItemRelationship.node;
+					XmlNode importedCommandBarSectionItemNode = result.dom.ImportNode(commandBarSectionItemNode, true);
+					resultNode.AppendChild(importedCommandBarSectionItemNode);
+				});
+
+				result.node = commandBarItems.Count == 1 ? resultNode.ChildNodes[0] as XmlElement : null;
+				result.nodeList = commandBarItems.Count > 1 ? resultNode.ChildNodes : null;
+
+				return result;
+			}
+		}
+
+		internal interface IDataAccessLayer
+		{
+			string GetUserIdentitiesClause();
+			Item GetCommandBarItemsForTOCLocation();
+			Item GetCategoryForms();
+			Item GetItemById(string itemTypeName, string id, string select, string language);
+		}
+
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Aras.Server.Core.IInnovatorDatabase innovatorDB;
+			private Innovator innovator;
+
+			internal DataAccessLayer(Innovator innovator, Aras.Server.Core.IInnovatorDatabase innovatorDB)
+			{
+				this.innovator = innovator;
+				this.innovatorDB = innovatorDB;
+			}
+
+			public virtual string GetUserIdentitiesClause()
+			{
+				const string superUserId = "AD30A6D8D3B642F5A2AFED1A4B02BEFA";
+				string userId = innovator.getUserID();
+
+				return string.Equals(userId, superUserId, StringComparison.OrdinalIgnoreCase) ? null : Aras.Server.Security.Permissions.GetIdentitiesList(innovatorDB, innovator.getUserID());
+			}
+
+			public Item GetCommandBarItemsForTOCLocation()
+			{
+				Item result = innovator.newItem();
+
+				string aml = @"<AML>
+	<Item type=""CommandBarSectionItem"" action=""get"" select=""action,role,sort_order,item_classification,alternate,related_id(additional_data[is_not_null()],image[is_not_null()],include_events[is_not_null()],label[is_not_null()],on_click_handler[is_not_null()],on_init_handler[is_not_null()],tooltip_template[is_not_null()],name[is_not_null()],section[is_not_null()],sort_order[is_not_null()],item_classification[is_not_null()],parent_menu[is_not_null()],action[is_not_null()],itemtype[is_not_null()],shortcut[is_not_null()])"">
+		<source_id>
+			<Item>
+				<location>
+					<Item type=""Location"">
+						<name>TOC</name>
+					</Item>
+				</location>
+			</Item>
+		</source_id>
+	</Item>
+</AML>";
+
+				result.loadAML(aml);
+
+				string identitiesListForFilter = this.GetUserIdentitiesClause();
+
+				if (!string.IsNullOrEmpty(identitiesListForFilter))
+				{
+					result.setProperty("role", this.GetUserIdentitiesClause());
+					result.setPropertyAttribute("role", "condition", "in");
+				}
+
+				return result.apply();
+			}
+
+			public Item GetCategoryForms()
+			{
+				Item forms = innovator.newItem("Form", "get");
+				forms.setAttribute("select", "name");
+				forms.setProperty("category_form", "1");
+
+				return forms.apply();
+			}
+
+			public Item GetItemById(string itemTypeName, string id, string select, string language)
+			{
+				Item requestItem = this.innovator.newItem(itemTypeName, "get");
+				requestItem.setID(id);
+
+				if (!string.IsNullOrEmpty(language))
+				{
+					requestItem.setAttribute("language", language);
+				}
+
+				if (!string.IsNullOrEmpty(select))
+				{
+					requestItem.setAttribute("select", select);
+				}
+
+				return requestItem.apply();
+			}
+		}
+
+		internal class CommandBarItem
+		{
+			public CommandBarItem(Item commandBarSectionItemRelationship)
+			{
+				Item relatedCommandBarItem = commandBarSectionItemRelationship.getRelatedItem();
+
+				string id = relatedCommandBarItem.getID();
+
+				string type = relatedCommandBarItem.getType();
+
+				string name = relatedCommandBarItem.getProperty("name");
+
+				string label = relatedCommandBarItem.getProperty("label");
+
+				string parentMenuId = relatedCommandBarItem.getProperty("parent_menu");
+
+				string role = commandBarSectionItemRelationship.getProperty("role");
+
+				string additionalData = relatedCommandBarItem.getProperty("additional_data");
+
+				string itemTypeId = string.Empty;
+				string tocViewId = string.Empty;
+				string tocAccessId = string.Empty;
+
+				if (!string.IsNullOrEmpty(additionalData))
+				{
+					Newtonsoft.Json.Linq.JObject additionalDataJObject = Newtonsoft.Json.Linq.JObject.Parse(additionalData);
+
+					itemTypeId = additionalDataJObject.Value<string>("itemTypeId");
+					tocViewId = additionalDataJObject.Value<string>("tocViewId");
+					tocAccessId = additionalDataJObject.Value<string>("tocAccessId");
+				}
+
+				_commandBarItem = relatedCommandBarItem;
+				CommandBarSectionItemRelationship = commandBarSectionItemRelationship;
+				Id = id;
+				Type = type;
+				Name = name;
+				Label = label;
+				ParentMenuId = parentMenuId;
+				Role = role;
+				ItemTypeId = itemTypeId;
+				TocViewId = tocViewId;
+				TocAccessId = tocAccessId;
+			}
+
+			private Item _commandBarItem;
+			private string _label;
+
+			public Item CommandBarSectionItemRelationship { get; }
+			public string Id { get; }
+			public string Type { get; }
+			public string Name { get; }
+			public string Label
+			{ 
+				get => _label;
+				set
+				{
+					_commandBarItem.setProperty("label", value);
+					_label = value;
+				}
+			}
+			public string ParentMenuId { get; }
+			public string Role { get; }
+			public string ItemTypeId { get; }
+			public string TocViewId { get; }
+			public string TocAccessId { get; }]]></method_code>
+  <method_type>C#</method_type>
+  <name>cui_default_toc_builder_method</name>
+ </Item>
+</AML>

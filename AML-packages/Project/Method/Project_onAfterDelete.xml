@@ -1,0 +1,93 @@
+﻿<AML>
+ <Item type="Method" id="F4CDD68223E549688C2D9E72EDEFEE17" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	XmlDocument outDom = this.getInnovator().newXMLDocument();
+	Item res = DeleteWbs(this.node.InnerText, outDom, CCO);
+	if (res != null && res.isError()) return res;
+	res = DeleteActivities(outDom, CCO);
+	if (res != null && res.isError()) return res; 
+	return this;
+}
+private IDictionary<string, List<string>> delItemList = new Dictionary<string, List<string>>();
+
+private Item DeleteWbs(string id, XmlDocument outDom, Aras.Server.Core.CallContext cco)
+{
+	Aras.Server.Core.InnovatorDataSet relRs;
+	Aras.Server.Core.InnovatorDataSet rs;
+	Aras.Server.Core.InnovatorDatabase conn = cco.DB.InnDatabase;
+	id = string.IsNullOrEmpty(id) ? id : id.Replace("'", "''");
+	relRs = conn.ExecuteSelect("SELECT related_id FROM " + conn.GetTableName("Sub_WBS") + " WHERE source_id='" + id + "'");
+	rs = conn.ExecuteSelect(" SELECT act2.id, pr.id " +
+	   " FROM " + conn.GetTableName("activity2") + " act2 LEFT OUTER JOIN " + conn.GetTableName("predecessor") +
+	   " pr ON act2.id = pr.source_id where act2.id IN (SELECT related_id FROM " + conn.GetTableName("wbs_activity2") + " WHERE source_id = '" + id + "')");
+	Item itm = this.newItem("WBS Element", "purge");
+	itm.setID(id);
+	itm = itm.apply();
+	if (itm.isError())
+	{
+		return itm;
+	}
+
+	while (!relRs.Eof)
+	{
+		Item res = DeleteWbs(relRs[0].ToString(), outDom, cco);
+		if (res != null && res.isError()) return res;
+		relRs.MoveNext();
+	}
+
+	while (!rs.Eof)
+	{
+		string activityId = rs[0] as string;
+		string predecessorId = rs[1] as string;
+		if (delItemList.ContainsKey(activityId))
+		{
+			delItemList[activityId].Add(predecessorId);
+		}
+		else
+		{
+			List<string> list = new List<string>();
+			list.Add(predecessorId);
+			delItemList.Add(activityId, list);
+		}
+		rs.MoveNext();
+	}
+
+	return null;
+}
+
+private Item DeleteActivities(XmlDocument outDom, Aras.Server.Core.CallContext cco)
+{
+	string xml;
+	foreach (KeyValuePair<string, List<string>> tag in delItemList)
+	{
+		foreach (string predecessorId in tag.Value)
+		{
+			if (String.IsNullOrEmpty(predecessorId))
+				continue;
+
+			Item itm = this.newItem("Predecessor", "purge");
+			itm.setID(predecessorId);
+			itm = itm.apply();
+			if (itm.isError())
+			{
+				return itm;
+			}
+		}
+	}
+
+	foreach (string activityId in delItemList.Keys)
+	{
+		Item itm = this.newItem("Activity2", "purge");
+		itm.setID(activityId);
+		itm = itm.apply();
+		if (itm.isError())
+		{
+			return itm;
+		}
+	}
+	
+	return null;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Project_onAfterDelete</name>
+ </Item>
+</AML>

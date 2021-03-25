@@ -1,0 +1,23 @@
+﻿<AML>
+ <Item type="Method" id="62B796EB90B448D4B342BE3136E09437" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const formNd = aras.getItemByName('Form', 'PE_ChooseCMOptions', 0);
+if (!formNd) {
+    return;
+}
+
+const params = {
+    title: aras.getResource('PLM', 'pe_change_management.choose_cm_options'),
+    formId: formNd.getAttribute('id'),
+    aras: aras
+};
+const options = {
+    dialogWidth: aras.getItemProperty(formNd, 'width'),
+    dialogHeight: aras.getItemProperty(formNd, 'height')
+};
+aras.modalDialogHelper.show('DefaultPopup', aras.getMainWindow(), params, options, 'ShowFormAsADialog.html');
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PE_ChooseCMOptions</name>
+ </Item>
+</AML>

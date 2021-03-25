@@ -1,0 +1,424 @@
+﻿<AML>
+ <Item type="Report" id="70007FC2534243EEBC63B0F988F4AE6B" action="add">
+  <description />
+  <location>server</location>
+  <report_query><![CDATA[<Item type="ECN" id="{@id}" action="do_l10n" initial_action="get">
+ <Relationships>
+  <Item type="ECN Affected Item" action="get">
+   <related_id>
+    <Item type="Affected Item" action="get" select="action,in_build_disposition,in_service_disposition,affected_id(item_number,major_rev),new_item_id(item_number,major_rev)"/>
+   </related_id>
+  </Item>
+ </Relationships>
+</Item>]]></report_query>
+  <target>one window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:user="urn:user-scripts" xmlns:aras="http://www.aras.com">
+  <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes" cdata-section-elements="script msxsl:script"></xsl:output>
+  <xsl:template match="/">
+    <xsl:apply-templates></xsl:apply-templates>
+ </xsl:template>
+  <xsl:template match="/Envelope">
+    <xsl:apply-templates></xsl:apply-templates>
+ </xsl:template>
+  <xsl:template match="/Envelope/Body">
+    <xsl:apply-templates></xsl:apply-templates>
+ </xsl:template>
+  <xsl:template match="/Envelope/Body/Result">
+    <xsl:apply-templates select="Item"></xsl:apply-templates>
+ </xsl:template>
+  <xsl:template match="Item[@type='ECN']">
+    <html>
+      <head>
+        <title>ECN Report</title>
+   </head>
+      <style>
+       table.row {width: 750px; empty-cells:show; border-collapse:collapse; border-style:solid; border-width:0;}
+       table.choices {empty-cells:show; border-style:solid; border-width:1; width: 100%}
+       td.mainTitle {font-family:helvetica; font-size:15pt; color:#DA1943; vertical-align:bottom;}
+       td.subTitle {font-family:helvetica; font-size:10pt; vertical-align:bottom;}
+       td.fieldTitle {font-family:Verdana; font-size: 8pt; font-variant: small-caps; height: 20; padding-left: 2px; padding-top: 5px;}
+       td.fieldValue {border-width:1; border-style: solid; font-family:Verdana; font-size: 12pt; padding-left: 2px; vertical-align: middle;}
+       td.fieldChoice {font-family:Verdana; font-size: 10pt; padding-left: 2px;}
+       td.choiceBox {border-width:1; border-style: solid; font-family:Verdana; font-size: 12pt; width: 12}
+       td.choiceTitle {font-family:Verdana; font-size: 12pt; padding-left: 2px; vertical-align: top;}
+       td.spacer {width: 10}
+       td.section {font-size:14pt; font-variant: small-caps; background-color:#dddddd;}
+       th {border-width:1; border-style: solid; font-family:Verdana; font-size: 12pt; font-variant: small-caps;}
+    </style>
+      <style type="text/css" userData="Global">
+.cellSolid {
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+border-left:1px #000000 solid;
+}
+.cellSolidTopRight {
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+}
+.cellSolidTopLeft {
+border-top:1px #000000 solid;
+border-left:1px #000000 solid;
+}
+.cellSolidRightBottom {
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+}
+.cellSolidBottomLeft {
+border-bottom:1px #000000 solid;
+border-left:1px #000000 solid;
+}
+.cellSolidTop {
+border-top:1px #000000 solid;
+}
+.cellSolidRight {
+border-right:1px #000000 solid;
+}
+.cellSolidBottom {
+border-bottom:1px #000000 solid;
+}
+.cellSolidLeft {
+border-left:1px #000000 solid;
+}
+.cellDashed {
+border-top:1px #666666 dashed;
+border-right:1px #666666 dashed;
+border-bottom:1px #666666 dashed;
+border-left:1px #666666 dashed;
+}
+.cellDashedTopRight {
+border-top:1px #666666 dashed;
+border-right:1px #666666 dashed;
+}
+.cellDashedTopLeft {
+border-top:1px #666666 dashed;
+border-left:1px #666666 dashed;
+}
+.cellDashedBottomRight {
+border-bottom:1px #666666 dashed;
+border-right:1px #666666 dashed;
+}
+.cellDashedBottomLeft {
+border-bottom:1px #666666 dashed;
+border-left:1px #666666 dashed;
+}
+.cellDashedTop {
+border-top:1px #666666 dashed;
+}
+.cellDashedRight {
+border-right:1px #666666 dashed;
+}
+.cellDashedBottom {
+border-bottom:1px #666666 dashed;
+}
+.cellDashedLeft {
+border-left:1px #666666 dashed;
+}
+.cellHeader {
+background-color:#CCCCCC;
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+padding:2px;
+text-align:center;
+text-transform:capitalize;
+text-align:center;
+font-family:helvetica;
+font-weight:bold;
+font-size:8pt;
+}
+.cellHeaderVertBT {
+background-color:#CCCCCC;
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+border-left:1px #000000 solid;
+padding:2px;
+writing-mode:tb-rl;filter: flipv fliph;
+text-align:center;
+text-transform:capitalize;
+text-align:center;
+font-family:helvetica;
+font-weight:bold;
+font-size:8pt;
+}
+.cellHeaderVertTB {
+background-color:#CCCCCC;
+border-top:1px #000000 solid;
+border-right:1px #000000 solid;
+border-bottom:1px #000000 solid;
+border-left:1px #000000 solid;
+padding:2px;
+writing-mode:tb-rl;filter: flipv flipv;
+text-align:center;
+text-transform:capitalize;
+text-align:center;
+font-family:helvetica;
+font-weight:bold;
+font-size:8pt;
+}
+.report_name {
+font-size: 16px;
+font-weight: bold;
+padding: 0 0 15px;
+display: inline-block;
+font-family: Roboto, Noto Sans, Arial
+}
+.report_generation_time {
+font-size:14px;
+float: right;
+font-family: Roboto, Noto Sans, Arial
+}
+.table_wrapper {
+box-shadow: 0 5px 8px rgba(0,0,0,0.24), 0 3px 4px rgba(0,0,0,0.24);
+width:1130px;
+padding: 35px 25px
+}
+</style>
+<style media="print">
+.table_wrapper {box-shadow: none; width: 100%; padding: 0;}
+</style>
+      <body topmargin="50" leftmargin="50">
+<!-- Main Title -->
+      <div class="print_button_wrapper">
+        <img id="print_button" src="../images/Print.svg" onclick="printReport(window);" />
+        <a href="#" onclick="printReport(window); return false;">Print</a>
+      </div>
+      <div class="table_wrapper">
+        <div class="report_name">
+          ECN Report
+        </div>
+        <div class="report_generation_time"></div>
+        <table class="row">
+          <tr height="10"></tr>
+    </table>
+<!-- Row 1 -->
+        <table class="row">
+          <tr>
+            <td class="fieldTitle" width="200">ECN Number</td>
+            <td class="spacer"></td>
+            <td class="fieldTitle" width="300">Title</td>
+            <td class="spacer"></td>
+            <td class="fieldTitle" width="150">Status</td>
+     </tr>
+          <tr>
+            <td class="fieldValue">
+              <xsl:value-of select="item_number"></xsl:value-of>
+      </td>
+            <td class="spacer"></td>
+            <td class="fieldValue">
+              <xsl:value-of select="title"></xsl:value-of>
+      </td>
+            <td class="spacer"></td>
+            <td class="fieldValue">
+              <xsl:value-of select="state"></xsl:value-of>
+      </td>
+     </tr>
+    </table>
+<!-- Row 2 -->
+        <table class="row">
+          <tr>
+            <td class="fieldTitle" width="200">Basis</td>
+            <td class="spacer"></td>
+            <td class="fieldTitle" width="60">Priority</td>
+            <td class="spacer"></td>
+            <td class="fieldTitle" width="200">Creator</td>
+      </tr>
+          <tr>
+            <td rowspan="2">
+              <table class="choices">
+                <tr>
+                  <td class="choiceBox">
+                    <xsl:value-of select="translate(substring(concat(basis,' '),1,1),'AP','X ')"></xsl:value-of>
+         </td>
+                  <td>Administrative Hierarchy</td>
+        </tr>
+                <tr>
+                  <td class="choiceBox">
+                    <xsl:value-of select="translate(substring(concat(basis,' '),1,1),'PA','X ')"></xsl:value-of>
+         </td>
+                  <td>Physical Hierarchy</td>
+        </tr>
+       </table>
+      </td>
+            <td class="spacer"></td>
+            <td rowspan="4">
+              <table class="choices">
+                <tr>
+                  <td class="choiceBox">
+                    <xsl:value-of select="translate(substring(concat(priority,' '),1,1),'1234','X   ')"></xsl:value-of>
+         </td>
+                  <td class="fieldChoice">1</td>
+        </tr>
+                <tr>
+                  <td class="choiceBox">
+                    <xsl:value-of select="translate(substring(concat(priority,' '),1,1),'2341','X   ')"></xsl:value-of>
+         </td>
+                  <td class="fieldChoice">2</td>
+        </tr>
+                <tr>
+                  <td class="choiceBox">
+                    <xsl:value-of select="translate(substring(concat(priority,' '),1,1),'3412','X   ')"></xsl:value-of>
+         </td>
+                  <td class="fieldChoice">3</td>
+        </tr>
+                <tr>
+                  <td class="choiceBox">
+                    <xsl:value-of select="translate(substring(concat(priority,' '),1,1),'4123','X   ')"></xsl:value-of>
+         </td>
+                  <td class="fieldChoice">4</td>
+        </tr>
+       </table>
+      </td>
+            <td class="spacer"></td>
+            <td class="fieldValue">
+              <xsl:value-of select="concat(owned_by_id/@keyed_name,' ')"></xsl:value-of>
+            </td>
+     </tr>
+          <tr>
+            <td> </td>
+     </tr>
+          <tr>
+            <td> </td>
+     </tr>
+          <tr>
+            <td> </td>
+     </tr>
+    </table>
+<!-- Row 3 -->
+        <table class="row">
+          <tr>
+            <td class="fieldTitle" width="200">Customer Approval</td>
+            <td class="spacer"></td>
+            <td class="fieldTitle" width="150">Release Date</td>
+            <td class="spacer"></td>
+            <td class="fieldTitle" width="150">Effectivity Date</td>
+      </tr>
+          <tr>
+            <td class="fieldValue">
+              <xsl:choose>
+                <xsl:when test="customer_approval='1'">Required</xsl:when>
+                <xsl:otherwise>Not Required</xsl:otherwise>
+          </xsl:choose>
+       </td>
+            <td class="spacer"></td>
+            <td class="fieldValue">
+              <xsl:value-of select="release_date"></xsl:value-of>
+            </td>
+            <td class="spacer"></td>
+            <td class="fieldValue">
+              <xsl:value-of select="effectivity_date"></xsl:value-of>
+            </td>
+      </tr>
+     </table>
+<!-- Row 4 -->
+        <table class="row">
+          <tr>
+            <td class="fieldTitle" width="650">Description</td>
+      </tr>
+          <tr>
+            <td class="fieldValue">
+              <xsl:value-of select="concat(description,' ')"></xsl:value-of>
+            </td>
+      </tr>
+     </table>
+<!-- Row 5 -->
+        <table class="row">
+          <tr>
+            <td class="fieldTitle" width="650">Special Instructions</td>
+      </tr>
+          <tr>
+            <td class="fieldValue">
+              <xsl:value-of select="concat(special_instructions,' ')"></xsl:value-of>
+            </td>
+      </tr>
+     </table>
+<!-- Affected Items -->
+        <table class="row">
+          <tr>
+            <td></td>
+     </tr>
+          <tr>
+            <td class="section">
+              <b>Affected Items</b>
+      </td>
+     </tr>
+    </table>
+        <table class="row">
+          <tr>
+            <th rowspan="2">Type</th>
+            <th colspan="2">Superseded</th>
+            <th rowspan="2">Action</th>
+            <th colspan="2">Superseding</th>
+            <th rowspan="2">In Work</th>
+            <th rowspan="2">In Service</th>
+     </tr>
+          <tr>
+            <th>Number</th>
+            <th>Revision</th>
+            <th>Number</th>
+            <th>Revision</th>
+     </tr>
+          <xsl:apply-templates select="Relationships/Item/related_id/Item"></xsl:apply-templates>
+    </table>
+    </div>
+   </body>
+   <script>
+    function loadScript(url)
+    {
+     const loadedJS = document.createElement('script');
+     loadedJS.src = url;
+     document.getElementsByTagName('head')[0].appendChild(loadedJS);
+    }
+    function loadStyle(url)
+    {
+     const link = document.createElement('link');
+     link.setAttribute('rel', 'stylesheet');
+     link.setAttribute('href', url);
+     document.getElementsByTagName('head')[0].appendChild(link)
+    }
+    loadScript(parent.aras.getBaseURL('/Solutions/PLM/javascript/report.js'));
+    loadStyle(parent.aras.getBaseURL('/Solutions/PLM/styles/printReport.css'));
+   </script>
+    </html>
+ </xsl:template>
+  <xsl:template match="Item[@type='Affected Item']">
+    <tr>
+      <td class="fieldValue">
+        <xsl:choose>
+          <xsl:when test="affected_id/Item/@type!=''">
+            <xsl:value-of select="affected_id/Item/@type"></xsl:value-of>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="new_item_id/Item/@type"></xsl:value-of>
+          </xsl:otherwise>
+    </xsl:choose>
+   </td>
+      <td class="fieldValue">
+        <xsl:value-of select="affected_id/Item/item_number"></xsl:value-of>
+   </td>
+      <td class="fieldValue">
+        <xsl:value-of select="affected_id/Item/major_rev"></xsl:value-of>
+   </td>
+      <td class="fieldValue">
+        <xsl:value-of select="action"></xsl:value-of>
+   </td>
+      <td class="fieldValue">
+        <xsl:value-of select="new_item_id/Item/item_number"></xsl:value-of>
+   </td>
+      <td class="fieldValue">
+        <xsl:value-of select="new_item_id/Item/major_rev"></xsl:value-of>
+   </td>
+      <td class="fieldValue">
+        <xsl:value-of select="in_build_disposition"></xsl:value-of>
+   </td>
+      <td class="fieldValue">
+        <xsl:value-of select="in_service_disposition"></xsl:value-of>
+   </td>
+  </tr>
+ </xsl:template>
+</xsl:stylesheet>]]></xsl_stylesheet>
+  <name>ECN Report</name>
+ </Item>
+</AML>

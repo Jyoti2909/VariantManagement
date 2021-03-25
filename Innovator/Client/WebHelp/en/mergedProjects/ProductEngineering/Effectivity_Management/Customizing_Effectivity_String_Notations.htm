@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = "..";
+  gCommonRootRelPath = "..";
+  gTopicId = "11.0_9";
+
+//]]></script>
+
+<script type="text/javascript" src="../template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="../template/scripts/common.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="../assets/css/default.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Customizing Effectivity String Notations</title>
+  <meta name="topic-status" content="Draft"/>
+  
+</head>
+<body>
+  <div>
+  <h1>Customizing Effectivity String Notations</h1>
+  <p>Effectivity Expressions are saved as XML. User-friendly Expression notations appear to the user. Notations can be customized.</p>
+  <p>Effectivity on a <strong>Part BOM </strong>relationship is managed using its related <strong>effs_Part_BOM_expression</strong> items. A <strong>Part BOM</strong> Relationship can have zero, one, or more Effectivities. The <strong>string_notation</strong> text property on the<strong> effs_Part_BOM_expression</strong> ItemType stores the user-friendly Notation for a single Effectivity expression. The <strong>effs_expression_string_notation</strong> federated property on the <strong>Part BOM</strong> ItemType dynamically constructs the Effectivity text from its related Effectivities.</p>
+  <p>The string_notation property from the effs_Part_BOM_expression ItemType appears in:</p>
+  <ul class="Disc">
+    <li>The <strong>Manage Effectivity Expressions</strong> split pane on the <strong>BOM Structure</strong> accordion tab of the <strong>Part </strong>item view when you access the <strong>View Effectivity</strong> context menu item.</li>
+    <br/>
+    <li>The <strong>Effectivity </strong>accordion tab of the <strong>Part BOM</strong> Relationship item view.</li>
+  </ul>
+  <p>The <strong>eff_expression_string_notation</strong> property on the <strong>Part BOM</strong> ItemType is displayed in the <strong>BOM Structure</strong> tab of the <strong>Part </strong>item view in the <strong>Effectivity </strong>column.</p>
+  <h2>Customizing Effectivity String Notation on Effectivity Expression</h2>
+  <p>When you create and update an Effectivity expression it gets a new Effectivity String Notation. This behavior is the job of the <strong>effs_expStringNotationConversion</strong> server-side method executed on the <strong>onBeforeAdd </strong>and <strong>onBeforeUpdate </strong>events of the <strong>effs_Part_BOM_expression</strong> items. This method converts an Effectivity condition to an Effectivity String Notation and stores the output to the <strong>string_notation</strong> item property.</p>
+  <p>Customizing Effectivity String notations requires modification of the discussed method as follows:</p>
+  <ol class="Decimal">
+    <li>Define a <em>new class</em> to represent a new Effectivity String Notation converter and to provide a String Notation value for a given Effectivity Expression object representation. This <em>class </em>should get objects of Effectivity variables and Effectivity expression, convert them into Effectivity String Notation, and return this Notation. The <em>class </em>must implement the <span style="font-family:&#39;Courier New&#39;;">Aras.Server.Core.Configurator.IStringNotationConverter</span> interface, as scheduled in the Appendix.</li>
+  </ol>
+  <p class="Note">A new class for a custom Effectivity String Notation converter is required because the Aras.Server.Core.Configurator.ExpressionToStringNotationConverter class with the default Effectivity String Notation converter is compiled. A customization example is provided in the Appendix.</p>
+  <ol start="2">
+    <li>In the CreateNewStringNotationConverter local method definition, replace the <span style="font-family:&#39;Courier New&#39;;">Aras.Server.Core.Configurator.ExpressionToStringNotationConverter </span>class with your custom class defined in step 1 in the return statement creating a new instance of the given class. Do not change the variableContainer argument.</li>
+  </ol>
+  <p class="Code_Sample" style="margin-left:40px">internal virtual Aras.Server.Core.Configurator.IStringNotationConverterCreateNewStringNotationConverter(IEnumerable&lt;Aras.Server.Core.Configurator.Variable&gt; variableContainer)<br/>
+    {<br/>
+    return new<br/>
+    Aras.Server.Core.Configurator.ExpressionToStringNotationConverter(variableContainer);<br/>
+    }</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/effsstringnotation.jpg" style="cursor: nesw-resize; width: 100%; max-width: 843px;"/></p>
+  <h2>Customizing Unified Effectivity String Notation</h2>
+  <p>In Aras Innovator 12.0, the part BOM Type is the Effectivity Scope ItemType of the Aras part BOM Scope. An ItemType used as the Effectivity Scope ItemType can have a unified Effectivity String Notation joined from its single Effectivity Expressions. To provide this feature, the Part BOM ItemType uses the:</p>
+  <ul class="Disc">
+    <li><strong>eff_expression_string_notation</strong> federated property.</li>
+    <li><strong>effs_getExpressionStringNotation</strong> server-side method executed on the onAfterGet event.</li>
+  </ul>
+  <p>Customizing the unified Effectivity String Notations requires modification of this method, where the <strong><span style="font-family:&#39;Courier New&#39;;">
+        <font size="3" style="courier">JoinExpressionStringNotation</font>
+      </span> </strong>local method definition is changed according to the desired uniting template.</p>
+  <p>The local method produces a single value for the <strong>eff_expression_string_notation</strong> property. It combines related Effectivity Expressions using a conjunction.</p>
+  <p>The following is the default implementation of <span style="font-family:&#39;Courier New&#39;">JoinExpressionStringNotation</span> where parentheses enclose individual Effectivity String Notations and commas join these notations.</p>
+  <p class="Code_Sample">internal virtual string JoinExpressionStringNotation (IEnumerable&lt;string&gt; expressionStringNotations)<br/>
+    <br/>
+    {<br/>
+        if<br/>
+        (!string.IsNullOrEmpty(expressionStringNotations.ElementAtOrDefault(1)))<br/>
+    {<br/>
+           expressionStringNotations = expressionStringNotations.Select(<br/>
+           expressionStringNotations =&gt; &quot;(&quot; + expressionStringNotation + &#39;)&#39;);<br/>
+    }<br/>
+    return string.Join(&#39;, &quot;, expressionStringNotations);<br/>
+    }</p>
+  <p class="Code_Sample"><img alt="" src="../assets/images/effs_getExpress.jpg" style="width: 100%; max-width: 843px;"/></p>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

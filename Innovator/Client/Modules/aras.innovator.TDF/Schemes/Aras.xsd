@@ -1,0 +1,228 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://aras.com/ArasTechDoc" targetNamespace="http://aras.com/ArasTechDoc">
+	<xs:element name="document">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="content" />
+				<xs:element ref="references" />
+				<xs:element ref="generatedContent" />
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="content">
+		<xs:complexType>
+			<xs:choice minOccurs="1" maxOccurs="1">
+				<xs:element ref="block" />
+			</xs:choice>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="references">
+		<xs:complexType>
+			<xs:choice minOccurs="0" maxOccurs="unbounded">
+				<xs:element ref="block" />
+				<xs:element ref="image" />
+				<xs:element ref="item" />
+				<xs:element ref="link" />
+			</xs:choice>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="generatedContent">
+		<xs:complexType>
+			<xs:choice maxOccurs="unbounded">
+				<xs:any namespace="##other" processContents="skip"/>
+			</xs:choice>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:complexType name="string">
+		<xs:simpleContent>
+			<xs:extension base="xs:string"></xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+
+	<xs:complexType name="text">
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element ref="emph"/>
+		</xs:choice>
+	</xs:complexType>
+
+	<xs:element name="emph">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="string">
+					<xs:attribute name="bold" type="xs:boolean"/>
+					<xs:attribute name="italic" type="xs:boolean"/>
+					<xs:attribute name="under" type="xs:boolean"/>
+					<xs:attribute name="strike" type="xs:boolean"/>
+					<xs:attribute name="sub" type="xs:boolean"/>
+					<xs:attribute name="sup" type="xs:boolean"/>
+					<xs:attribute name="link" type="xs:boolean"/>
+					<xs:attribute name="linktype" type="linkTypeEnum"/>
+					<xs:attribute name="url" type="xs:string"/>
+					<xs:attribute name="ref-id" type="xs:string"/>
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:simpleType name="linkTypeEnum">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="internalelement" />
+			<xs:enumeration value="url" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:element name="link">
+		<xs:complexType>
+			<xs:attribute name="linkId" type="xs:string" use="required"/>
+			<xs:attribute name="path" type="xs:string"  use="required"/>
+			<xs:attribute name="targetBlock" type="xs:string"  use="required"/>
+			<xs:attribute name="targetElement" type="xs:string"  use="required"/>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="image">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="imageType">
+					<xs:attribute name="id" type="xs:string"/>
+					<xs:attribute name="src" type="xs:string"/>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+		
+	<xs:complexType name="imageType">
+		<xs:attribute name="ref-id" type="xs:string" use="required" />
+	</xs:complexType>
+	
+	<xs:element name="item">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="itemType">
+					<xs:choice maxOccurs="unbounded">
+						<xs:any namespace="##any" processContents="lax"/>
+					</xs:choice>
+					<xs:attribute name="id" type="xs:string" use="required"/>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:complexType name="itemType">
+		<xs:attribute name="ref-id" type="xs:string" use="required" />
+		<xs:attribute name="typeId" type="xs:string" use="required" fixed="DE828FBA99FF4ABB9E251E8A4118B397" />
+	</xs:complexType>
+
+	<xs:complexType name="itemProperty">
+		<xs:attribute name="property" type="xs:string" use="required" />
+		<xs:attribute name="mode" type="itemPropertyModeEnum" default="read" />
+	</xs:complexType>
+
+	<xs:simpleType name="itemPropertyModeEnum">
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="read" />
+			<xs:enumeration value="write" />
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:element name="block">
+		<xs:complexType>
+			<xs:choice maxOccurs="unbounded">
+				<xs:any namespace="##other" processContents="lax"/>
+			</xs:choice>
+			<xs:attribute name="by-reference" use="required">
+				<xs:simpleType>
+					<xs:restriction base="xs:NMTOKEN">
+						<xs:enumeration value="external"/>
+						<xs:enumeration value="internal"/>
+					</xs:restriction>
+				</xs:simpleType>
+			</xs:attribute>
+			<xs:attribute name="condition" use="required" type="xs:string" />
+			<xs:attribute name="id" type="xs:string" />
+			<xs:attribute name="ref-id" type="xs:string" />
+		</xs:complexType>
+	</xs:element>
+
+	<xs:complexType name="list">
+		<!-- 
+		Element which will implement aras:listType will have to include only instances of aras:listitemType
+		<xs:choice maxOccurs="unbounded">
+			<xs:element ref="listitem" />
+		</xs:choice>
+		-->
+		<xs:attribute name="type" default="bullet">
+			<xs:simpleType>
+				<xs:restriction base="xs:NMTOKEN">
+					<xs:enumeration value="bullet"/>
+					<xs:enumeration value="numeric"/>
+					<xs:enumeration value="alpha"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+
+	<xs:element name="listitem" abstract="true" type="listitemType"></xs:element>
+
+	<xs:complexType name="listitemType" abstract="true">
+		<!--<xs:choice maxOccurs="unbounded">
+			<xs:any namespace="##other" processContents="lax"/>
+		</xs:choice>-->
+	</xs:complexType>
+
+	<xs:complexType name="table" abstract="true">
+		<xs:choice maxOccurs="unbounded">
+			<xs:element ref="tablerow"/>
+		</xs:choice>
+		<xs:attribute name="MergeMatrix" type="xs:string"></xs:attribute>
+		<xs:attribute name="ColWidth" type="xs:string"></xs:attribute>
+	</xs:complexType>
+
+	<xs:element name="tablerow" type="tr"/>
+
+	<xs:complexType name="tr" abstract="true">
+		<xs:choice maxOccurs="unbounded">
+			<xs:element ref="tablecell"/>
+		</xs:choice>
+	</xs:complexType>
+
+	<xs:element name="tablecell" type="td"/>
+
+	<xs:complexType abstract="true" name="td">
+		<!--<xs:attribute name="merge">
+			<xs:simpleType>
+				<xs:restriction base="xs:NMTOKEN">
+					<xs:enumeration value="up"/>
+					<xs:enumeration value="right"/>
+					<xs:enumeration value="left"/>
+					<xs:enumeration value="down"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>-->
+		<xs:attribute name="valign" default="top">
+			<xs:simpleType>
+				<xs:restriction base="xs:NMTOKEN">
+					<xs:enumeration value="top"/>
+					<xs:enumeration value="middle"/>
+					<xs:enumeration value="bottom"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="align" default="left">
+			<xs:simpleType>
+				<xs:restriction base="xs:NMTOKEN">
+					<xs:enumeration value="right"/>
+					<xs:enumeration value="center"/>
+					<xs:enumeration value="left"/>
+					<xs:enumeration value="justify"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<!--<xs:attribute name="width" type="xs:positiveInteger"/>-->
+	</xs:complexType>
+
+</xs:schema>

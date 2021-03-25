@@ -1,0 +1,23 @@
+﻿<AML>
+ <Item type="Method" id="3598AC8A12B8458CB194A8D7086F8406" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Item xClassTree = this;
+var regex = new System.Text.RegularExpressions.Regex("\\(|\\)");
+xClassTree.fetchRelationships("xClass");
+Item xClassItems = xClassTree.getRelationships("xClass");
+int size = xClassItems.getItemCount();
+for (int i = 0; i < size; i++)
+{
+    Item xClass = xClassItems.getItemByIndex(i);
+    string name = xClass.getProperty("name");
+    name = regex.Replace(name, "");
+    xClass.setProperty("name", name.Replace("Copy of ", ""));
+    xClass.setAction("edit");
+}
+
+return xClassTree.apply("edit");
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>xClassTreeRemoveCopyOf</name>
+ </Item>
+</AML>

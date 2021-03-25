@@ -1,0 +1,309 @@
+﻿<style type="text/css">
+	#VIS_ID_CONTAINER .izenda-vis-tree-node circle {
+		cursor: pointer;
+		fill: #fff;
+		stroke: steelblue;
+		stroke-width: 1.5px;
+	}
+
+	#VIS_ID_CONTAINER .izenda-vis-tree-node text {
+		cursor: pointer;
+		font-family: "Helvetica Neue",Helvetica;
+		font-size: 11px;
+		text-shadow: 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 5px white, 0 0 2px white, 0 0 2px white, 0 0 2px white;
+		pointer-events: none;
+	}
+
+	#VIS_ID_CONTAINER path.izenda-vis-tree-link {
+		fill: none;
+		stroke: #ccc;
+		stroke-width: 1.5px;
+	}
+</style>
+
+<div id="VIS_ID_CONTAINER">
+	<div id="VIS_ID"></div>
+</div>
+
+<script type="text/javascript" src="d3.v3.min.js"></script>
+
+<script type="text/javascript">
+	(function init() {
+		var services = window.ReportingServices;
+
+		(function () {
+			/* Backward Compatibility Section */
+			if (VIS_CONTEXT.props && VIS_CONTEXT.props.length > 2 && VIS_CONTEXT.props && VIS_CONTEXT.props.indexOf('metric') > 0) {
+				var props = {};
+				try {
+					var oldProps = JSON.parse(VIS_CONTEXT.props);
+					props['Metric'] = oldProps['metric'];
+				} catch (e) {
+					props = {};
+				}
+				VIS_CONTEXT.props = JSON.stringify(props);
+			}
+		})();
+
+		var colors = ['#D5252F', '#E96B38', '#F47337', '#B02D5D', '#9B2C67', '#982B9A', '#692DA7', '#5725AA', '#4823AF'];
+
+		var vis = new izenda.visualization({
+			id: 'VIS_ID',
+			rows: VIS_ROWS,
+			columns: VIS_COLUMNS,
+			context: VIS_CONTEXT,
+			status: VIS_FORMJSASTATUS,
+			requirements: { d3: true, svg: true },
+			dataLayout: 'tree',
+			draw: draw
+		});
+
+		vis.initHeader({
+			metrics: [{
+				name: 'Metric',
+				onChangeCallback: function () { }
+			}]
+		});
+
+		var subscriptions = [];
+		function draw() {
+			subscriptions.forEach(function (subscription) { subscription.remove(); });
+
+			var root = vis.traverseTree();
+
+			var maxradius = 20,
+				m = [maxradius, maxradius, maxradius, maxradius],
+				w = vis.width - m[1] - m[3],
+				h = vis.height - m[0] - m[2],
+				nodeId = 0;
+			var levels;
+
+			var tree = d3.layout.tree()
+				.size([h, w]);
+
+			var diagonal = d3.svg.diagonal()
+				.projection(function (d) { return [d.y, d.x]; });
+
+			var g = d3.select(vis.element.get(0))
+				.append('svg:svg')
+					.attr('width', vis.width)
+					.attr('height', vis.height)
+				.append('svg:g')
+					.attr('transform', 'translate(' + m[3] + ', ' + m[0] + ')');
+
+			function update(source) {
+				var spendField = vis.getProperty('Metric');
+				function getStrokeWidth(d) {
+					var result = levels[d.source.depth].radius(vis.itemValue(d.target, spendField)) * 2;
+					return isNaN(result) ? 4 : result;
+				}
+
+				function getStrokeOpacity(d) {
+					return vis.itemValue(d.target, spendField) <= 0 ? 0 : (d.source.depth + 2) / (levels.length * 4);
+				}
+
+				var levelWidth = vis.width / (levels.length + 1);
+				var duration = d3.event && d3.event.altKey ? 5000 : 500;
+				var nodes = tree.nodes(root).reverse();
+				var depthCounter = 0;
+
+				d3.selection.prototype.applyTransition = function (dynamic, duration) {
+					return dynamic
+						? this.transition().duration(duration)
+						: this;
+				};
+
+				nodes.forEach(function (d) {
+					d.y = d.depth * levelWidth;
+					d.numChildren = (d.children) ? d.children.length : 0;
+
+					if (d.depth == 1) {
+						d.linkColor = colors[(depthCounter % (colors.length - 1))];
+						depthCounter++;
+					}
+					if (d.numChildren == 0 && d._children)
+						d.numChildren = d._children.length;
+				});
+
+				nodes.forEach(function (d) {
+					var obj = d;
+					while ((obj.source && obj.source.depth > 1) || obj.depth > 1)
+						obj = (obj.source) ? obj.source.parent : obj.parent;
+					d.linkColor = (obj.source) ? obj.source.linkColor : obj.linkColor;
+				});
+
+				var node = g.selectAll('g.izenda-vis-tree-node')
+					.data(nodes, function (d) { return d.id || (d.id = ++nodeId); });
+
+				var nodeEnter = node.enter().append('svg:g')
+					.attr('class', 'izenda-vis-tree-node')
+					.attr('transform', function () { return 'translate(' + source.y0 + ',' + source.x0 + ')'; })
+					.on('mouseover', function (d) {
+						var metric = vis.getProperty('Metric');
+						if (d.depth == 0 && isNaN(vis.itemValue(d, metric)))
+							return;
+						services.showTip(d, {
+							mode: 'tooltip',
+							containerStyle: 'text-align: left;',
+							nested: true,
+							exclusion: ['id', 'x0', 'y0', '_children', 'children', 'link', 'numChildren', 'linkColor'],
+							pass: function (obj, v) {
+								return (v === metric && !isNaN(vis.itemValue(obj, metric))) || vis.metrics.indexOf(v) < 0;
+							}
+						});
+					})
+					.on('mouseout', function (d) {
+						services.hideTip();
+					});
+
+				nodeEnter.append('svg:circle')
+					.on('click', function (d) {
+						toggle(d);
+						update(d);
+					})
+					.attr('r', 1e-6)
+					.style('fill', function (d) { return d.source ? d.source.linkColor : d.linkColor; })
+					.style('fill-opacity', '.8')
+					.style('stroke', function (d) { return d.source ? d.source.linkColor : d.linkColor; });
+
+				nodeEnter.append('svg:text')
+					.attr('x', function (d) { return d.children || d._children ? -10 : 10; })
+					.attr('dy', '.35em')
+					.attr('text-anchor', function (d) { return d.children || d._children ? 'end' : 'start'; })
+					.text(function (d) { return d.name; })
+					.style('fill-opacity', 1e-6);
+
+				var nodeUpdate = node.applyTransition(!vis.context.isImageRender, duration)
+					.attr('transform', function (d) { return 'translate(' + d.y + ',' + d.x + ')'; });
+
+				nodeUpdate.select('circle')
+					.attr('r', function (d) {
+						if (d.depth > 0) {
+							var result = levels[d.depth - 1].radius(vis.itemValue(d, spendField));
+							return isNaN(result) ? 2 : result;
+						}
+						return 10;
+					})
+					.style('fill', function (d) { return d.source ? d.source.linkColor : d.linkColor; })
+					.style('fill-opacity', function (d) { return ((d.depth + 2) / (levels.length * 3)); });
+
+				nodeUpdate.select('text').style('fill-opacity', 1);
+
+				var nodeExit = node.exit().applyTransition(!vis.context.isImageRender, duration)
+					.attr('transform', function () { return 'translate(' + source.y + ',' + source.x + ')'; })
+					.remove();
+
+				nodeExit.select('circle').attr('r', 1e-6);
+				nodeExit.select('text').style('fill-opacity', 1e-6);
+
+				var link = g.selectAll('path.izenda-vis-tree-link')
+					.data(tree.links(nodes), function (d) { return d.target.id; });
+
+				var rootCounter = 0;
+				link.enter().insert('svg:path', 'g')
+					.attr('class', 'izenda-vis-tree-link')
+					.attr('d', function (d) {
+						if (vis.itemValue(d.target, spendField) <= 0)
+							return null;
+
+						var o = { x: source.x0, y: source.y0 };
+						return diagonal({ source: o, target: o });
+					})
+					.style('stroke', function (d) {
+						if (d.source.depth != 0)
+							return d.source ? d.source.linkColor : d.linkColor;
+
+						rootCounter++;
+						return (d.source.children[rootCounter - 1].linkColor);
+					})
+					.style('stroke-width', getStrokeWidth)
+					.style('stroke-opacity', getStrokeOpacity)
+					.style('stroke-linecap', 'round')
+					.applyTransition(!vis.context.isImageRender, duration)
+					.attr('d', diagonal);
+
+				var linkUpdate = link.applyTransition(!vis.context.isImageRender, duration)
+					.attr('d', diagonal);
+
+				linkUpdate
+					.style('stroke-width', getStrokeWidth)
+					.style('stroke-opacity', getStrokeOpacity);
+
+				link.exit().applyTransition(!vis.context.isImageRender, duration)
+					.attr('d', function () {
+						var o = { x: source.x, y: source.y };
+						return diagonal({ source: o, target: o });
+					})
+					.remove();
+
+				nodes.forEach(function (d) { d.x0 = d.x; d.y0 = d.y; });
+			}
+
+			function toggle(d) {
+				if (d.children) {
+					d._children = d.children;
+					d.children = null;
+				}
+				else {
+					d.children = d._children;
+					d._children = null;
+				}
+			}
+			function toggleAll(d) {
+				if (d.children) {
+					d.children.forEach(toggleAll);
+					toggle(d);
+				}
+			}
+
+			function setup() {
+				var node = root, children;
+				var spendField = vis.getProperty('Metric');
+				while (children = (node.children || node._children))
+					node = children[0];
+				levels = Array.apply(null, Array(node.depth)).map(function () { return { max: 0, sum: 0, radius: 0 }; });
+
+				for (var i = 0; i < nodes.length; i++) {
+					if (nodes[i].depth > 0) {
+						var value = vis.itemValue(nodes[i], spendField), level = levels[nodes[i].depth - 1];
+						if (!isNaN(value)) {
+							level.max = Math.max(level.max, value);
+							level.sum += value;
+						}
+					}
+				}
+
+				var fieldFormatter = VIS_COLUMNS.find(function (d) { return d.name == spendField; }).formatter;
+				for (i = 0; i < nodes.length; i++) {
+					vis.itemLabel(nodes[i], spendField, {
+						value: fieldFormatter
+						? fieldFormatter(vis.itemValue(nodes[i], spendField), nodes[i], vis, spendField)
+						: Math.round(vis.itemValue(nodes[i], spendField) * 100) / 100
+					});
+				}
+
+				for (i = 0; i < levels.length; i++)
+					levels[i].radius = d3.scale.sqrt().domain([0, levels[i].max]).range([2, maxradius]);
+			}
+
+			root.x0 = h / 2;
+			root.y0 = 0;
+
+			var nodes = tree.nodes(root).reverse();
+			tree.children(function (d) { return d.children; });
+
+			setup();
+			root.children.forEach(toggleAll);
+			update(root);
+
+			subscriptions.push(vis.events.subscribe('MetricChange', function () {
+				setup();
+				update(root);
+			}));
+		}
+
+		draw();
+
+		izenda.visualization.registerResize('VIS_ID', init, vis.clear);
+	})();
+</script>

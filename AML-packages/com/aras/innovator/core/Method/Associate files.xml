@@ -1,0 +1,13 @@
+﻿<AML>
+ <Item type="Method" id="D9FD61B9A9B3461098E0AF75B8848F29" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string FileType = CCO.DB.InnDatabase.QuoteValue(this.getProperty("id"));
+string FileExtension = CCO.DB.InnDatabase.QuoteValue(this.getProperty("extension"));
+  
+string sql = String.Format(CultureInfo.InvariantCulture, "UPDATE [FILE] SET file_type = '{0}' WHERE filename like '%.{1}' AND file_type IS NULL", FileType, FileExtension);
+CCO.DB.InnDatabase.ExecuteSQL(sql);
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Associate files</name>
+ </Item>
+</AML>

@@ -1,0 +1,40 @@
+﻿<AML>
+ <Item type="Method" id="4865038801704343B90B7BAE1EA8A686" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const itemId = options.itemId;
+const itemTypeName = options.itemTypeName;
+const item = window.getItem();
+const currentPermissionId = aras.getItemProperty(item, 'permission_id');
+const resultOptions = {hidden: !currentPermissionId};
+
+if (!currentPermissionId) {
+	return resultOptions;
+}
+
+// Request required permissions info only if permission id was set
+const itemTypeDescriptor = aras.getItemTypeForClient(itemTypeName, 'name');
+const additionalData = target.additional_data || (target.additional_data = {});
+const permissionsState = additionalData.permissionsState || (additionalData.permissionsState = {
+	canChangeAccess: aras.getPermissions('can_change_access', itemId, itemTypeDescriptor.getAttribute('id')),
+	allowPrivatePermission: itemTypeDescriptor.getProperty('allow_private_permission') === '1'
+});
+
+Object.assign(resultOptions, {
+	hidden: !permissionsState.canChangeAccess,
+	checked: currentPermissionId === additionalData.permissionId,
+	disabled: !window.isEditMode
+});
+
+if (additionalData.isDefault) {
+	const defaultSuffix = aras.getResource('', 'tearoffmenu.default_permission_sfx');
+
+	if (!target.label.endsWith(defaultSuffix)) {
+		resultOptions.label = target.label + defaultSuffix;
+	}
+}
+
+return resultOptions;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivicb_perm_allowed_init</name>
+ </Item>
+</AML>

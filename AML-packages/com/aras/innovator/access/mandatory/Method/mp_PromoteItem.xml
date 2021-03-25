@@ -1,0 +1,81 @@
+﻿<AML>
+ <Item type="Method" id="6370D1E562494EE8A96FF2B221CA3FB0" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Aras.Server.Security.Identity mpIdentity = Aras.Server.Security.Identity.GetByName("mp_AccessControlDaemon");
+bool permissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(mpIdentity);
+Innovator inn = this.getInnovator();
+
+try
+{
+	Item currentItem = this.newItem("mp_MacPolicy", "get");
+	currentItem.setID(this.getID());
+	currentItem = currentItem.apply();
+	if (currentItem.isError())
+	{
+		return currentItem;
+	}
+	string oldConfigId = currentItem.getProperty("config_id");
+	string nextState = this.getProperty("nextstate");
+	string state = currentItem.getProperty("state");
+	if (!string.Equals(nextState, "Active", StringComparison.Ordinal) && !string.Equals(nextState, "Inactive", StringComparison.Ordinal)) {
+		string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("mp_WrongStateTransition"), state, nextState);
+		return inn.newError(message);
+	}
+	int generation;
+	if (int.TryParse(currentItem.getProperty("generation"), out generation))
+	{
+		generation -= 1;
+	}
+
+	if (string.Equals(nextState, "Active", StringComparison.Ordinal) && !string.IsNullOrEmpty(oldConfigId) && generation > 0)
+	{
+		Item parentItem = inn.newItem("mp_MacPolicy", "get");
+		parentItem.setProperty("config_id", oldConfigId);
+		parentItem.setProperty("generation", generation.ToString(CultureInfo.InvariantCulture));
+		parentItem = parentItem.apply();
+		if (parentItem.isError())
+		{
+			return parentItem;
+		}
+		string parentItemState = parentItem.getProperty("state");
+		if (string.Equals(parentItemState, "Active", StringComparison.Ordinal) || string.Equals(parentItemState, "Inactive", StringComparison.Ordinal))
+		{
+			parentItem = parentItem.promote("Archived", "");
+			if (parentItem.isError())
+			{
+				return parentItem;
+			}
+		}
+	}
+	
+	currentItem.fetchRelationships("mp_MacPolicyControlledType");
+	Item controlledTypes = currentItem.getRelationships("mp_MacPolicyControlledType");
+	for (var i = 0; i < controlledTypes.getItemCount(); i++) {
+		Item controlledType = controlledTypes.getItemByIndex(i);
+		controlledType.setAction("mp_OnAfterAddControlledType");
+		controlledType = controlledType.apply();
+		if (controlledType.isError())
+		{
+			return controlledType;
+		}
+	}
+
+	Item resItem = this.promote(nextState, string.Empty);
+	if (resItem.isError())
+	{
+		return resItem;
+	}
+}
+finally
+{
+	if (permissionWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(mpIdentity);
+	}
+}
+
+return inn.newResult("OK");]]></method_code>
+  <method_type>C#</method_type>
+  <name>mp_PromoteItem</name>
+ </Item>
+</AML>

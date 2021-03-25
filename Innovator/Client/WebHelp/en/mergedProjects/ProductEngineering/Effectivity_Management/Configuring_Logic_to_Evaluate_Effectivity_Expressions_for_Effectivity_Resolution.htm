@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = "..";
+  gCommonRootRelPath = "..";
+  gTopicId = "11.0_4";
+
+//]]></script>
+
+<script type="text/javascript" src="../template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="../template/scripts/common.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="../assets/css/default.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Configuring Logic to Evaluate Effectivity Expressions for Effectivity Resolution</title>
+  <meta name="topic-status" content="Draft"/>
+  
+</head>
+<body>
+  <div>
+  <h1>Configuring Logic to Evaluate Effectivity Expressions for Effectivity Resolution</h1>
+  <p>A part BOM item can have several Effectivity Expressions, as shown:</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/ppbom.jpg" style="width: 100%; max-width: 708px;"/></p>
+  <p>Out-of-the-box, multiple Effectivity Expressions on a Part BOM Relationship item are evaluated using the OR conditional operator for the Effectivity Resolution. A given Part BOM is effective against Effectivity criteria if at least one of its Effectivity expressions evaluates to True for the selected Effectivity Scope.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/effectfilter.jpg" style="width: 100%; max-width: 516px;"/></p>
+  <p>You can change the evaluation logic to use the AND conditional operator. A given part BOM is effective against Effectivity Criteria if all of its Effectivity expressions evaluate to true for the selected Effectivity Scope.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/pbom6.jpg" style="width: 100%; max-width: 648px;"/></p>
+  <p>The evaluation logic is configured in the <strong>Where </strong>condition of the top<strong> Part BOM</strong> item in the <strong>effs_effectivityResolutionOnPartBom</strong> Query definition. </p>
+  <h3>AND Evaluation Logic Specification</h3>
+  <p>For the AND evaluation logic, the <strong>Where Condition</strong> of the top <strong>Part BOM</strong> item of the <strong>effs_effectivityResolutionOnPartBom</strong> Query definition should be configued as follows:</p>
+  <p class="Code_Sample">Count ([[Relationship]] effs_Part_BOM_expression)=<br/>
+    Count ([Relationship]] effs_Part_BOM_expr_no_resolve)</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/noresolve2.jpg" style="width: 100%; max-width: 495px;"/></p>
+  <h3>OR (Default) Evaluation Logic Specification</h3>
+  <p>For the OR (default) evaluation logic, configure the Where Condition of the top Part BOM item of the effs_effectivityResolutionOnPartBom Query definition as follows:</p>
+  <p class="Code_Sample">(Count([[Relationship]] effs_Part_BOM_expr_no_resolve) = 0) OR<br/>
+    (Count ([[Relationship]] effs_Part_BOM_expression) &gt; 0)</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/where7.jpg" style="width: 100%; max-width: 615px;"/></p>
+  <p> </p>
+  <p> </p>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

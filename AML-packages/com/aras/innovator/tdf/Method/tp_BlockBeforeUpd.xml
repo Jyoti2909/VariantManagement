@@ -1,0 +1,937 @@
+﻿<AML>
+ <Item type="Method" id="F1DD93CC30F8493BA0CEE73F9A952892" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+			Item documentItemType = GetItemTypeDescriptor(this);
+			String itemTypeTableName = documentItemType.getProperty("instance_data");
+
+			Innovator inn = this.getInnovator();
+			int itemCount = this.getItemCount();
+
+			List<string> allowedLanguages = getAllowedLanguageCodes();
+
+			for (int i = 0; i < itemCount; i++)
+			{
+				Item tmpItem = this.getItemByIndex(i);
+				string xmlSchemaId = tmpItem.getProperty("xml_schema");
+
+				if (!IsAllowedToChangeClassification(tmpItem))
+				{
+					return inn.newError(CCO.ErrorLookup.Lookup("tp_SpecifyClassificationAccess"));
+				}
+
+				Dictionary<string, string> contentTranslations = getItemPropertyTranslations(CCO, tmpItem, "content");
+				Dictionary<string, XmlDocument> contentTranslationDocuments = new Dictionary<string, XmlDocument>();
+				foreach (KeyValuePair<string, string> currentTranslation in contentTranslations)
+				{
+					contentTranslationDocuments.Add(currentTranslation.Key, createContentDocumentFromContent(currentTranslation.Value));
+				}
+
+				foreach (string languageCode in allowedLanguages)
+				{
+					string documentXml = tmpItem.getProperty("document_xml", null, languageCode);
+
+					if (!String.IsNullOrEmpty(documentXml))
+					{
+						XmlDocument document = createContentDocument(documentXml);
+						XmlNamespaceManager nsmgr = new XmlNamespaceManager(document.NameTable);
+						nsmgr.AddNamespace("aras", "http://aras.com/ArasTechDoc");
+
+						List<XmlDocument> otherTranslations = contentTranslationDocuments.Where((x) => !string.Equals(x.Key,languageCode) && x.Value != null).Select((x) => x.Value).ToList();
+						XmlNode rootBlockNode = document.SelectSingleNode(String.Format(CultureInfo.CurrentCulture, "aras:document/aras:content/aras:block[@blockId='{0}']", tmpItem.getID()), nsmgr);
+
+						if (rootBlockNode != null)
+						{
+							SaveReferencedBlocks(tmpItem, rootBlockNode, xmlSchemaId, nsmgr, languageCode, itemTypeTableName, CCO.DB.InnDatabase.QuoteValue, CCO.DB.InnDatabase.QuoteName, CCO.ErrorLookup, otherTranslations);
+							SaveReferencedImages(tmpItem, rootBlockNode, nsmgr, CCO.ErrorLookup, otherTranslations);
+							SaveReferencedItems(tmpItem, rootBlockNode, nsmgr, CCO.ErrorLookup, otherTranslations);
+							SaveReferencedLinks(tmpItem, rootBlockNode, nsmgr, otherTranslations);
+
+							SaveReferencedItemsChanges(inn, document, nsmgr, CCO.ErrorLookup);
+
+							SetItemTranslattionProperty(tmpItem, "content", rootBlockNode.InnerXml, languageCode);
+							SetBlockElementNameAndType(tmpItem, rootBlockNode);
+
+							String rootBlockCondition = GetNodeAttributeValue(rootBlockNode, "aras:condition");
+							tmpItem.setProperty("condition", rootBlockCondition);
+
+							tmpItem.removeProperty("document_xml", languageCode);
+						}
+					}
+				}
+			}
+
+			return this;
+		}
+
+		enum BlockElementType
+		{
+			Single,
+			Multiple,
+			Empty,
+			Unknown
+		}
+
+		Hashtable referencedItemsHash = new Hashtable();
+
+		private static Item GetItemTypeDescriptor(Item documentItem)
+		{
+			Item requestItem = documentItem.newItem("ItemType", "get");
+			requestItem.setAttribute("select", "instance_data");
+			requestItem.setProperty("name", documentItem.getType());
+			requestItem = requestItem.apply();
+
+			if (requestItem.isError())
+			{
+				throw new Aras.Server.Core.InnovatorServerException(requestItem.getErrorString());
+			}
+
+			return requestItem;
+		}
+		private bool IsAllowedToChangeClassification(Item newItem)
+		{
+			Item tmpItem = this.getInnovator().newItem(newItem.getAttribute("type"), "get");
+			tmpItem.setAttribute("select", "classification");
+			tmpItem.setAttribute("id", newItem.getAttribute("id"));
+			tmpItem = tmpItem.apply();
+
+			string oldClassification = tmpItem.getProperty("classification");
+			var newClassification = newItem.getProperty("classification");
+
+			bool isEmptyBoth = (String.IsNullOrEmpty(newClassification) && String.IsNullOrEmpty(oldClassification));
+			bool areEqualsClassifications = (newClassification == oldClassification);
+
+			if (isEmptyBoth || areEqualsClassifications)
+			{
+				return true;
+			}
+
+			if (!String.IsNullOrEmpty(oldClassification))
+			{
+				return false;
+			}
+
+			return IsValidContent(newItem, newClassification);
+		}
+
+		private bool IsValidContent(Item newItem, string newClassification)
+		{
+			string xmlSchemaId = newItem.getProperty("xml_schema");
+			Item schemaElementItem = this.getInnovator().newItem("tp_XmlSchemaElement", "get");
+			schemaElementItem.setAttribute("select", "id, name");
+			schemaElementItem.setProperty("source_id", xmlSchemaId);
+			schemaElementItem.setProperty("default_classification", newClassification);
+			schemaElementItem = schemaElementItem.apply();
+
+			if (schemaElementItem.getItemCount() != 1)
+			{
+				return false;
+			}
+
+			string newItemNodeName = schemaElementItem.node.SelectSingleNode("name").InnerText;
+			List<string> languageCodes = getAllowedLanguageCodes();
+			string docXml = newItem.getProperty("document_xml", null, languageCodes[0]);
+
+			if (docXml != null)
+			{
+				return CheckContent(docXml, newItemNodeName, String.Format(CultureInfo.CurrentCulture, "aras:document/aras:content/aras:block[@blockId='{0}']", newItem.getID()));
+			}
+
+			string content = newItem.getProperty("content", null, languageCodes[0]);
+			return CheckContent(content, newItemNodeName, ".");
+		}
+
+		private static bool CheckContent(string content, string newItemNodeName, string selector)
+		{
+			XmlDocument doc = new XmlDocument();
+			doc.XmlResolver = null;
+			XmlNamespaceManager nsmgr = new XmlNamespaceManager(doc.NameTable);
+			nsmgr.AddNamespace("aras", "http://aras.com/ArasTechDoc");
+			doc.PreserveWhitespace = true;
+			doc.LoadXml(content);
+
+			XmlNode rootBlockNode = doc.SelectSingleNode(selector, nsmgr);
+			XmlNodeList childs = rootBlockNode.ChildNodes;
+
+			return (childs.Count == 1 && childs[0].Name == newItemNodeName);
+		}
+
+		private XmlNode GetFirstNonBlockElement(XmlNode node)
+		{
+			if (node.Name != "aras:block")
+			{
+				return node;
+			}
+			else
+			{
+				foreach(XmlNode child in node.ChildNodes)
+				{
+					XmlNode result = GetFirstNonBlockElement(child);
+					if (result != null)
+					{
+						return result;
+					}
+				}
+			}
+
+			return null;
+		}
+
+		private static BlockElementType GetBlockElementType(XmlNode blockNode)
+		{
+			int count = 0;
+			bool isUnknown = false;
+
+			Action<XmlNode> findFirstLevelChildren = null;
+			findFirstLevelChildren = (x) =>
+			{
+				if (isUnknown)
+				{
+					return;
+				}
+
+				if (x.Name == "aras:block")
+				{
+					if (x.Attributes["by-reference"].Value == "internal")
+					{
+						foreach(XmlNode child in x.ChildNodes)
+						{
+							findFirstLevelChildren(child);
+						}
+					}
+					else
+					{
+						isUnknown = true;
+						return;
+					}
+				}
+				else
+				{
+					count++;
+				}
+			};
+
+			foreach(XmlNode child in blockNode.ChildNodes)
+			{
+				findFirstLevelChildren(child);
+			}
+
+			if (isUnknown)
+			{
+				return BlockElementType.Unknown;
+			}
+			else if (count == 1)
+			{
+				return BlockElementType.Single;
+			}
+			else if (count > 1)
+			{
+				return BlockElementType.Multiple;
+			}
+			else
+			{
+				return BlockElementType.Empty;
+			}
+		}
+
+		private static void SetItemTranslattionProperty(Item tmpItem, String propnm, String value, String langCode)
+		{
+			/*+++ Workaround for IR-026574 +++*/
+			XmlNodeList contentNodeList = tmpItem.node.SelectNodes("./*[local-name()='" + propnm + "']", new XmlNamespaceManager(tmpItem.dom.NameTable));
+			foreach (XmlNode contentNode in contentNodeList)
+			{
+				tmpItem.node.RemoveChild(contentNode);
+			}
+
+			tmpItem.setProperty(propnm, value, "xyz");
+			XmlNode propNode = tmpItem.node.SelectSingleNode("./*[local-name()='" + propnm + "' and namespace-uri()='http://www.aras.com/I18N' and @xml:lang='xyz']", new XmlNamespaceManager(tmpItem.dom.NameTable));
+			((XmlElement)propNode).SetAttribute("xml:lang", langCode);
+			/*--- Workaround for IR-026574 ---*/
+		}
+
+		private void SetBlockElementNameAndType(Item blockItem, XmlNode blockNode)
+		{
+			BlockElementType blockType = GetBlockElementType(blockNode);
+			switch (blockType)
+			{
+				case BlockElementType.Single:
+					String elementName = GetFirstNonBlockElement(blockNode).Name;
+					blockItem.setProperty("root_element_name", elementName);
+					blockItem.setProperty("root_element_type", "Single");
+					break;
+
+				case BlockElementType.Multiple:
+					blockItem.setProperty("root_element_name", "");
+					blockItem.setPropertyAttribute("root_element_name", "is_null", "1");
+					blockItem.setProperty("root_element_type", "Multiple");
+					break;
+
+				case BlockElementType.Empty:
+					blockItem.setProperty("root_element_name", "");
+					blockItem.setPropertyAttribute("root_element_name", "is_null", "1");
+					blockItem.setProperty("root_element_type", "Empty");
+					break;
+
+				case BlockElementType.Unknown:
+					blockItem.setProperty("root_element_name", "");
+					blockItem.setPropertyAttribute("root_element_name", "is_null", "1");
+					blockItem.setProperty("root_element_type", "Unknown");
+					break;
+			}
+		}
+
+		private List<string> getAllowedLanguageCodes()
+		{
+			Item methodItem = this.getInnovator().newItem("Method", "tp_GetDefaultLanguageCode");
+			methodItem = methodItem.apply();
+
+			return new List<String>() { methodItem.getResult() };
+		}
+
+		private static List<string> getSystemLanguageCodes(Aras.Server.Core.ICachePublicAPI cache)
+		{
+			#pragma warning disable CS0618 // Type or member is obsolete
+			ArrayList cachedLanguages = cache.GetLanguagesFromCache();
+			#pragma warning restore CS0618 // Type or member is obsolete
+			List<string> languageCodes = new List<string>();
+
+			foreach (XmlElement languageDescriptor in cachedLanguages)
+			{
+				string languageCode = languageDescriptor.GetAttribute("code");
+				languageCodes.Add(languageCode);
+			}
+
+			return languageCodes;
+		}
+
+		private static Dictionary<string, string> getItemPropertyTranslations(Aras.Server.Core.CallContext callContext, Item targetItem, string propertyName)
+		{
+			Dictionary<string, string> propertyTranslations = new Dictionary<string, string>();
+			List<string> languageCodes = getSystemLanguageCodes(callContext.Cache);
+			Item requestItem = targetItem.newItem();
+			string requestAML = string.Format(CultureInfo.InvariantCulture, "<Item type='{0}' id='{1}' action='get' related_expand='0' select='{2}' language='*'/>", targetItem.getType(), targetItem.getID(), propertyName);
+
+			#pragma warning disable IA1000 // Improper escaping of Special Elements used in an AML Query
+			requestItem.loadAML(requestAML);
+			#pragma warning restore IA1000 // Improper escaping of Special Elements used in an AML Query
+			requestItem = requestItem.apply();
+
+			if (!requestItem.isError())
+			{
+				foreach (string languageCode in languageCodes)
+				{
+					string propertyTranslation = requestItem.getProperty(propertyName, string.Empty, languageCode);
+					propertyTranslations.Add(languageCode, propertyTranslation);
+				}
+			}
+
+			return propertyTranslations;
+		}
+
+		private static XmlDocument createContentDocument(string documenttContentXml)
+		{
+			if (!string.IsNullOrEmpty(documenttContentXml))
+			{
+				XmlDocument contentDocument = new XmlDocument();
+				contentDocument.XmlResolver = null;
+				contentDocument.PreserveWhitespace = true;
+
+				contentDocument.LoadXml(documenttContentXml);
+
+				return contentDocument;
+			}
+
+			return null;
+		}
+
+		private static XmlDocument createContentDocumentFromContent(string contentXml)
+		{
+			contentXml = string.IsNullOrEmpty(contentXml) ? contentXml :
+				$"<aras:document xmlns='http://www.aras.com/TechDocExample' xmlns:aras='http://aras.com/ArasTechDoc'><aras:content><aras:block>{contentXml}</aras:block></aras:content></aras:document>";
+
+			return createContentDocument(contentXml);
+		}
+
+		private static bool isReferenceInDocuments(string referenceId, List<XmlDocument> documentsList, XmlNamespaceManager namespaceManager)
+		{
+			if (documentsList != null)
+			{
+				foreach (XmlDocument currentDocument in documentsList)
+				{
+					XmlNode referenceNode = currentDocument.DocumentElement.SelectSingleNode($"descendant::*[@ref-id='{referenceId}']", namespaceManager);
+
+					if (referenceNode != null) {
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+
+		private Item getReferencedItem(String itemType, String itemId)
+		{
+			if (!String.IsNullOrEmpty(itemId) && !referencedItemsHash.ContainsKey(itemId))
+			{
+				Item referencedItem = this.newItem(itemType, "get");
+				referencedItem.setID(itemId);
+				referencedItemsHash.Add(itemId, referencedItem.apply());
+			}
+
+			return (Item) referencedItemsHash[itemId];
+		}
+
+		private static void applyReferenceProperties(Item referenceItem, Dictionary<String, String> referenceProperties)
+		{
+			if (referenceItem != null && referenceProperties != null)
+			{
+				// check that new reference allready have changed properties
+				String propertyValue = referenceProperties.ContainsKey("ignoreAllVersions") ? referenceProperties["ignoreAllVersions"] : "";
+				if (!String.IsNullOrEmpty(propertyValue))
+				{
+					referenceItem.setProperty("ignore_all_versions", referenceProperties["ignoreAllVersions"]);
+				}
+
+				propertyValue = referenceProperties.ContainsKey("ignoredVersionId") ? referenceProperties["ignoredVersionId"] : "";
+				if (!String.IsNullOrEmpty(propertyValue))
+				{
+					referenceItem.setProperty("ignored_version_id", referenceProperties["ignoredVersionId"]);
+				}
+			}
+		}
+
+		private static Item getUpdatedReference(Item referenceItem, Item relatedItem, Dictionary<String, String> referenceProperties)
+		{
+			if (referenceItem != null) {
+				String currentRelatedId = referenceItem.getProperty("related_id");
+				String newRelatedId = relatedItem != null ? relatedItem.getID() : "";
+
+				if (!string.Equals(currentRelatedId, newRelatedId))
+				{
+					Item updatedReference = referenceItem.newItem(referenceItem.getType(), "update");
+					updatedReference.setAttribute("id", referenceItem.getID());
+					updatedReference.setProperty("related_id", newRelatedId);
+					applyReferenceProperties(updatedReference, referenceProperties);
+
+					return updatedReference;
+				}
+			}
+
+			return null;
+		}
+
+		private void SaveReferencedImages(Item self, XmlNode rootBlockContent, XmlNamespaceManager namespaceManager, Aras.Server.Core.ErrorLookup errorLookup, List<XmlDocument> translationDocuments = null)
+		{
+			Innovator inn = self.getInnovator();
+
+			Item relationships = inn.newItem("tp_ImageReference", "get");
+			relationships.setProperty("source_id", self.getID());
+			relationships = relationships.apply();
+
+			//+++get dictionary of all root image's relationships
+			Dictionary<String, Item> tpImageReferenceItemsFromDB = new Dictionary<String, Item>();
+
+			for (int i = 0, count = relationships.getItemCount(); i < count; i++)
+			{
+				Item relationshipItem = relationships.getItemByIndex(i);
+				string refId = relationshipItem.getProperty("reference_id");
+				tpImageReferenceItemsFromDB[refId] = relationshipItem;
+			}
+			//---get dictionary of all root image's relationships
+
+			//+++get dictionary of existing referenced images from aras:reference
+			XmlNodeList referencedImageNodeList = rootBlockContent.OwnerDocument.DocumentElement.SelectNodes("aras:references/aras:image", namespaceManager);
+			Dictionary<string, XmlNode> referencedImageNodesFromReferences = new Dictionary<string, XmlNode>();
+			System.Web.Script.Serialization.JavaScriptSerializer jsSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+			Item tpImageReferenceItemFromDB;
+
+			foreach (XmlNode referencedImageNode in referencedImageNodeList)
+			{
+				string imageRefId = GetNodeAttributeValue(referencedImageNode, "ref-id");
+
+				referencedImageNodesFromReferences[imageRefId] = referencedImageNode;
+			}
+			//---get dictionary of existing referenced images from aras:reference
+
+			foreach (String imageRefId in referencedImageNodesFromReferences.Keys)
+			{
+				XmlNode referencedImageNode = referencedImageNodesFromReferences[imageRefId];
+
+				//I don't want to call XmlSchema here in order to get list of all possible element names which implements aras:imageType, thus scan by ref-id and hope that ref-id is unique for all ref-id items.
+				XmlNode imageReferenceNodeFromContent = rootBlockContent.SelectSingleNode("descendant::*[@ref-id='" + imageRefId + "']", namespaceManager);
+
+				if (imageReferenceNodeFromContent != null)
+				{
+					String referencedImageId = GetNodeAttributeValue(referencedImageNode, "imageId");
+					String referencedImageRefId = GetNodeAttributeValue(referencedImageNode, "ref-id");
+					String referencePropertiesString = GetNodeAttributeValue(referencedImageNode, "referenceProperties");
+					Dictionary<String, String> referenceProperties = jsSerializer.Deserialize<Dictionary<String, String>>(!String.IsNullOrEmpty(referencePropertiesString) ? referencePropertiesString : "{}");
+					Item referencedItem = getReferencedItem("tp_Image", referencedImageId);
+
+					if (!tpImageReferenceItemsFromDB.TryGetValue(imageRefId, out tpImageReferenceItemFromDB))
+					{
+						Item tpImageReference = self.newItem("tp_ImageReference", "add");
+						tpImageReference.setProperty("reference_id", referencedImageRefId);
+						applyReferenceProperties(tpImageReference, referenceProperties);
+
+						//before creation of new itemReference, we must check, that item still exists
+						if (referencedItem != null) {
+							if (!referencedItem.isError()) {
+								tpImageReference.setProperty("related_id", referencedImageId);
+							}
+							else {
+								throw new Aras.Server.Core.InnovatorServerException(errorLookup.Lookup("tp_ReferencedItemNotExist", "tp_Image", referencedImageId));
+							}
+						}
+
+						self.addRelationship(tpImageReference);
+					}
+					else
+					{
+						Item updatedReference = getUpdatedReference(tpImageReferenceItemFromDB, referencedItem, referenceProperties);
+
+						if (updatedReference != null) {
+							self.addRelationship(updatedReference);
+						}
+					}
+				}
+				else
+				{
+					if (tpImageReferenceItemsFromDB.TryGetValue(imageRefId, out tpImageReferenceItemFromDB) && !isReferenceInDocuments(imageRefId, translationDocuments, namespaceManager))
+					{
+						String tpImageReferenceItemID = tpImageReferenceItemFromDB.getID();
+
+						Item tpImageReference = self.newItem("tp_ImageReference");
+						tpImageReference.setAction("delete");
+						tpImageReference.setAttribute("id", tpImageReferenceItemID);
+
+						self.addRelationship(tpImageReference);
+					}
+				}
+			}
+		}
+
+		private void SaveReferencedItems(Item self, XmlNode rootBlockContent, XmlNamespaceManager namespaceManager, Aras.Server.Core.ErrorLookup errorLookup, List<XmlDocument> translationDocuments = null)
+		{
+			Innovator inn = self.getInnovator();
+
+			Item relationships = inn.newItem("tp_ItemReference", "get");
+			relationships.setProperty("source_id", self.getID());
+			relationships = relationships.apply();
+
+			//+++get dictionary of all root item's relationships
+			Dictionary<String, Item> tpItemReferenceItemsFromDB = new Dictionary<String, Item>();
+
+			for (int i = 0, count = relationships.getItemCount(); i < count; i++)
+			{
+				Item relationshipItem = relationships.getItemByIndex(i);
+				string refId = relationshipItem.getProperty("reference_id");
+				tpItemReferenceItemsFromDB[refId] = relationshipItem;
+			}
+			//---get dictionary of all root image's relationships
+
+			//+++get dictionary of existing referenced items from aras:reference
+			XmlNodeList referencedItemNodeList = rootBlockContent.OwnerDocument.DocumentElement.SelectNodes("aras:references/aras:item", namespaceManager);
+			Dictionary<string, XmlNode> referencedItemNodesFromReferences = new Dictionary<string, XmlNode>();
+			System.Web.Script.Serialization.JavaScriptSerializer jsSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+			Item tpItemReferenceItemFromDB;
+
+			foreach (XmlNode referencedItemNode in referencedItemNodeList)
+			{
+				string itemRefId = GetNodeAttributeValue(referencedItemNode, "ref-id");
+
+				referencedItemNodesFromReferences[itemRefId] = referencedItemNode;
+			}
+			//+++get dictionary of existing referenced items from aras:reference
+
+			foreach (String itemRefId in referencedItemNodesFromReferences.Keys)
+			{
+				XmlNode referencedItemNode = referencedItemNodesFromReferences[itemRefId];
+
+				//I don't want to call XmlSchema here in order to get list of all possible element names which implements aras:itemType, thus scan by ref-id and hope that ref-id is unique for all ref-id items.
+				XmlNode itemReferenceNodeFromContent = rootBlockContent.SelectSingleNode("descendant::*[@ref-id='" + itemRefId + "']", namespaceManager);
+
+				if (itemReferenceNodeFromContent != null)
+				{
+					String referencedItemRefId = GetNodeAttributeValue(referencedItemNode, "ref-id");
+					XmlNode itemNode = referencedItemNode.FirstChild;
+					Boolean hasItemNode = itemNode != null && itemNode.Name == "Item";
+					String itemId = hasItemNode ? GetNodeAttributeValue(itemNode, "id") : "";
+					String itemType = hasItemNode ? GetNodeAttributeValue(itemNode, "type") : "";
+					String referencePropertiesString = GetNodeAttributeValue(referencedItemNode, "referenceProperties");
+					Dictionary<String, String> referenceProperties = jsSerializer.Deserialize<Dictionary<String, String>>(!String.IsNullOrEmpty(referencePropertiesString) ? referencePropertiesString : "{}");
+					Item referencedItem = getReferencedItem(itemType, itemId);
+
+					if (!tpItemReferenceItemsFromDB.TryGetValue(itemRefId, out tpItemReferenceItemFromDB))
+					{
+						Item tpItemReference = self.newItem("tp_ItemReference", "add");
+						tpItemReference.setProperty("reference_id", referencedItemRefId);
+						applyReferenceProperties(tpItemReference, referenceProperties);
+
+						if (referencedItem != null) {
+							//before creation of new itemReference relationship, we must check, that item still exists
+							if (!referencedItem.isError()) {
+								tpItemReference.setProperty("related_id", itemId);
+							}
+							else {
+								throw new Aras.Server.Core.InnovatorServerException(errorLookup.Lookup("tp_ReferencedItemNotExist", itemType, itemId));
+							}
+						}
+
+						self.addRelationship(tpItemReference);
+					}
+					else
+					{
+						Item updatedReference = getUpdatedReference(tpItemReferenceItemFromDB, referencedItem, referenceProperties);
+
+						if (updatedReference != null) {
+							self.addRelationship(updatedReference);
+						}
+					}
+				}
+				else
+				{
+					if (tpItemReferenceItemsFromDB.TryGetValue(itemRefId, out tpItemReferenceItemFromDB) && !isReferenceInDocuments(itemRefId, translationDocuments, namespaceManager))
+					{
+						String tpItemReferenceItemID = tpItemReferenceItemFromDB.getID();
+
+						Item tpItemReference = self.newItem("tp_ItemReference");
+						tpItemReference.setAction("delete");
+						tpItemReference.setAttribute("id", tpItemReferenceItemID);
+
+						self.addRelationship(tpItemReference);
+					}
+				}
+			}
+		}
+
+		private static XmlNode PrepareReferencedItemNodeChanges(XmlNode itemNode)
+		{
+			XmlNode resultNode = null;
+
+			if (itemNode != null)
+			{
+				var changedProperties = itemNode.SelectNodes("*[@initialValue or @newValue]");
+
+				resultNode = itemNode.CloneNode(false);
+
+				for (int i = 0; i < changedProperties.Count; i++)
+				{
+					var propertyNode = changedProperties[i];
+
+					resultNode.AppendChild(propertyNode.CloneNode(true));
+				}
+			}
+
+			return resultNode;
+		}
+
+		internal static void SaveReferencedItemsChanges(Innovator innovatorInstance, XmlDocument contentDocument, XmlNamespaceManager namespaceManager, Aras.Server.Core.ErrorLookup errorLookup)
+		{
+			var changedItemReferences = contentDocument.DocumentElement.SelectNodes("aras:references/*[@isItemModified]", namespaceManager);
+			var saveErrors = new List<string>();
+			var savedItemIds = new List<string>();
+
+			for (int i = 0; i < changedItemReferences.Count; i++)
+			{
+				var itemReferenceNode = (XmlElement) changedItemReferences[i];
+				var itemNode = (XmlElement) itemReferenceNode.FirstChild;
+				var itemId = itemNode?.GetAttribute("id");
+
+				if (!string.IsNullOrEmpty(itemId) && !savedItemIds.Contains(itemId))
+				{
+					var referencedItem = innovatorInstance.newItem();
+					var preparedItemNode = PrepareReferencedItemNodeChanges(itemReferenceNode.FirstChild);
+					var saveCandidateItem = innovatorInstance.newItem();
+					var saveAction = "edit";
+					var applyAllowed = true;
+
+					#pragma warning disable IA1000 // Improper escaping in AML queries
+					referencedItem.loadAML(itemNode.OuterXml);
+					saveCandidateItem.loadAML(preparedItemNode.OuterXml);
+					#pragma warning restore IA1000 // Improper escaping in AML queries
+
+					var itemKeyedName = referencedItem.getProperty("keyed_name") ?? itemId;
+					int lockStatus = saveCandidateItem.fetchLockStatus();
+					switch (lockStatus) {
+						case 1:
+							saveAction = "update";
+							break;
+						case 2:
+							applyAllowed = false;
+							saveErrors.Add(errorLookup.Lookup("tp_RefencedItemLockedByOther", itemKeyedName));
+							break;
+					}
+
+					if (applyAllowed)
+					{
+						saveCandidateItem.setAction(saveAction);
+						var saveResultItem = saveCandidateItem.apply();
+
+						if (saveResultItem.isError())
+						{
+							saveErrors.Add(string.Format(CultureInfo.InvariantCulture, "{0}: {1}", itemKeyedName, saveResultItem.getErrorString()));
+						}
+						else if (string.IsNullOrEmpty(saveResultItem.getResult()))
+						{
+							saveErrors.Add(errorLookup.Lookup("tp_RefencedItemOutdated", itemKeyedName));
+						}
+					}
+
+					savedItemIds.Add(itemId);
+				}
+			}
+
+			if (saveErrors.Count > 0)
+			{
+				string combinedError = string.Join("\n", saveErrors.ToArray());
+				string errorMessage = errorLookup.Lookup("tp_RefencedItemsNotSaved", combinedError).Replace("\\n", "\n");
+
+				throw new Aras.Server.Core.InnovatorServerException(errorMessage);
+			}
+		}
+
+		private static void SaveReferencedLinks(Item self, XmlNode rootBlockContent, XmlNamespaceManager namespaceManager, List<XmlDocument> translationDocuments = null)
+		{
+			Item relationships = self.newItem("tp_LinkReference", "get");
+			relationships.setProperty("source_id", self.getID());
+			relationships = relationships.apply();
+
+			//+++get dictionary of all root item's relationships
+			Dictionary<String, Item> tpItemReferenceLinksFromDB = new Dictionary<String, Item>();
+
+			for (int i = 0, count = relationships.getItemCount(); i < count; i++)
+			{
+				Item relationshipItem = relationships.getItemByIndex(i);
+				string refId = relationshipItem.getProperty("reference_id");
+				tpItemReferenceLinksFromDB[refId] = relationshipItem;
+			}
+			//---get dictionary of all root image's relationships
+
+			//+++get dictionary of existing referenced items from aras:reference
+			XmlNodeList referencedLinkNodeList = rootBlockContent.OwnerDocument.DocumentElement.SelectNodes("aras:references/aras:link", namespaceManager);
+			Dictionary<string, XmlNode> referencedLinkNodesFromReferences = new Dictionary<string, XmlNode>();
+
+			foreach (XmlNode referencedLinkNode in referencedLinkNodeList)
+			{
+				string linkRefId = GetNodeAttributeValue(referencedLinkNode, "ref-id");
+
+				referencedLinkNodesFromReferences[linkRefId] = referencedLinkNode;
+			}
+			//+++get dictionary of existing referenced items from aras:reference
+
+			foreach (String linkRefId in referencedLinkNodesFromReferences.Keys)
+			{
+				XmlNode referencedLinkNode = referencedLinkNodesFromReferences[linkRefId];
+
+				XmlNode itemReferenceNodeFromContent = rootBlockContent.SelectSingleNode("descendant::*[@ref-id='" + linkRefId + "']", namespaceManager);
+
+				if (itemReferenceNodeFromContent != null)
+				{
+					Item tpItemReferenceLinkFromDB;
+					if (!tpItemReferenceLinksFromDB.TryGetValue(linkRefId, out tpItemReferenceLinkFromDB))
+					{
+						String referencedLinkPath = GetNodeAttributeValue(referencedLinkNode, "path");
+						String referencedLinkRefId = GetNodeAttributeValue(referencedLinkNode, "ref-id");
+						String referencedLinkBlockId = GetNodeAttributeValue(referencedLinkNode, "targetBlock");
+						String referencedLinkElementId = GetNodeAttributeValue(referencedLinkNode, "targetElement");
+
+						Item tpLinkReference = self.newItem("tp_LinkReference");
+						tpLinkReference.setAction("add");
+						tpLinkReference.setProperty("path", referencedLinkPath);
+						tpLinkReference.setProperty("reference_id", referencedLinkRefId);
+						tpLinkReference.setProperty("related_id", referencedLinkBlockId);
+						tpLinkReference.setProperty("targetelement", referencedLinkElementId);
+						self.addRelationship(tpLinkReference);
+					}
+				}
+				else
+				{
+					Item tpItemReferenceLinkFromDB;
+					if (tpItemReferenceLinksFromDB.TryGetValue(linkRefId, out tpItemReferenceLinkFromDB) && !isReferenceInDocuments(linkRefId, translationDocuments, namespaceManager))
+					{
+						String tpItemReferenceItemID = tpItemReferenceLinkFromDB.getID();
+
+						Item tpLinkReference = self.newItem("tp_LinkReference");
+						tpLinkReference.setAction("delete");
+						tpLinkReference.setAttribute("id", tpItemReferenceItemID);
+
+						self.addRelationship(tpLinkReference);
+					}
+				}
+			}
+		}
+
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Aras.Security", "IA1001:Improper escaping of Special Elements used in an SQL Query")]
+		internal void SaveReferencedBlocks(Item self, XmlNode rootBlockContent, string xmlSchemaId,
+			XmlNamespaceManager namespaceManager, String langCode, String tableName, Func<string, string> dbQuoteValue, Func<string, string> dbQuoteName, Aras.Server.Core.ErrorLookup errorLookup, List<XmlDocument> translationDocuments = null)
+		{
+			Innovator inn = self.getInnovator();
+			String documentItemType = self.getType();
+
+			Item relationships = inn.newItem("tp_BlockReference", "get");
+			relationships.setProperty("source_id", self.getID());
+			relationships = relationships.apply();
+			//---edit root block
+
+			//+++get dictionary of all root block's relationships
+			Dictionary<String, Item> tpBlockReferenceItemsFromDB = new Dictionary<String, Item>();
+
+			for (int i = 0, count = relationships.getItemCount(); i < count; i++)
+			{
+				Item relationshipItem = relationships.getItemByIndex(i);
+				string refId = relationshipItem.getProperty("reference_id");
+				tpBlockReferenceItemsFromDB[refId] = relationshipItem;
+			}
+			//---get dictionary of all root block's relationships
+
+			//+++ get list of all ref-id in aras:content
+			XmlNodeList blockReferenceNodesFromContent = rootBlockContent.SelectNodes("descendant::aras:block[@by-reference='external']", namespaceManager);
+			List<String> blockReferenceIDsFromContent = new List<String>();
+
+			foreach (XmlNode blockReferenceNode in blockReferenceNodesFromContent)
+			{
+				string blockReferenceId = GetNodeAttributeValue(blockReferenceNode, "ref-id");
+				if (!blockReferenceIDsFromContent.Contains(blockReferenceId))
+				{
+					blockReferenceIDsFromContent.Add(blockReferenceId);
+				}
+			}
+			//--- get list of all ref-id in aras:content
+
+			//+++get dictionary of existing referenced blocks from aras:reference
+			XmlNodeList referencedBlockNodeList = rootBlockContent.SelectNodes("./../../aras:references/aras:block", namespaceManager);
+			Dictionary<string, XmlNode> referencedBlockNodesFromReferences = new Dictionary<string, XmlNode>();
+			List<String> referencedBlockIDsFromReferences = new List<String>();
+
+			foreach (XmlNode referencedBlockNode in referencedBlockNodeList)
+			{
+				string blockRefId = GetNodeAttributeValue(referencedBlockNode, "ref-id");
+				string blockId = GetNodeAttributeValue(referencedBlockNode, "blockId");
+
+				referencedBlockNodesFromReferences[blockRefId] = referencedBlockNode;
+				referencedBlockIDsFromReferences.Add(blockId);
+			}
+			//+++get dictionary of existing referenced blocks  from aras:reference
+
+			//+++ get list of blocks used in references and existing in DB     
+			string referencedBlockIDsForSQL = "'" + string.Join("','", referencedBlockIDsFromReferences.Select(dbQuoteValue)) + "'";
+			string sql = "SELECT id FROM innovator." + dbQuoteName(tableName) + " where id IN(" + referencedBlockIDsForSQL + ")";
+
+			Item tpBlockItemsFromDB = inn.applySQL(sql);
+
+			if (tpBlockItemsFromDB.isError() && tpBlockItemsFromDB.getErrorCode() != "0")
+			{
+				throw new Aras.Server.Core.InnovatorServerException(tpBlockItemsFromDB.getErrorString());
+			}
+
+			List<String> existingBlockIDsFromDB = new List<String>();
+			for (int i = 0, count = tpBlockItemsFromDB.getItemCount(); i < count; i++)
+			{
+				Item tpBlockItem = tpBlockItemsFromDB.getItemByIndex(i);
+				existingBlockIDsFromDB.Add(tpBlockItem.getID());
+			}
+			//--- get list of blocks used in references and existing in DB
+
+			//process all external block references existing in current content
+			System.Web.Script.Serialization.JavaScriptSerializer jsSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+			foreach (String blockReferenceIDFromContent in blockReferenceIDsFromContent)
+			{
+				Item tpBlockReferenceItemFromDB;
+				XmlNode referencedBlockNode = referencedBlockNodesFromReferences[blockReferenceIDFromContent];
+				String referencePropertiesString = GetNodeAttributeValue(referencedBlockNode, "referenceProperties");
+				Dictionary<String, String> referenceProperties = jsSerializer.Deserialize<Dictionary<String, String>>(!String.IsNullOrEmpty(referencePropertiesString) ? referencePropertiesString : "{}");
+
+				//if external block reference is not present in database, then we need to add relationship and block accordingly
+				if (!tpBlockReferenceItemsFromDB.TryGetValue(blockReferenceIDFromContent, out tpBlockReferenceItemFromDB))
+				{
+					String referencedBlockId = GetNodeAttributeValue(referencedBlockNode, "blockId");
+					String referencedBlockRefId = GetNodeAttributeValue(referencedBlockNode, "ref-id");
+					String referencedBlockContent = referencedBlockNode.InnerXml;
+					String referencedBlockCondition = GetNodeAttributeValue(referencedBlockNode, "aras:condition");
+					String blockPropertiesString = GetNodeAttributeValue(referencedBlockNode, "blockProperties");
+					Dictionary<String, String> blockProperties = jsSerializer.Deserialize<Dictionary<String, String>>(blockPropertiesString);
+
+					Item blockItem = inn.newItem(documentItemType);
+					blockItem.setID(referencedBlockId);
+
+					//+++ add missing relationships and blocks
+					if (!existingBlockIDsFromDB.Contains(referencedBlockId))
+					{
+						blockItem.setProperty("xml_schema", xmlSchemaId);
+						blockItem.setAttribute("action", "add");
+
+						SetItemTranslattionProperty(blockItem, "content", referencedBlockContent, langCode); 
+
+						blockItem.setProperty("condition", referencedBlockCondition);
+						blockItem.setProperty("tp_toolbar_editor", self.getProperty("tp_toolbar_editor"));
+
+						foreach (KeyValuePair<string, string> pair in blockProperties) {
+							String propertyName = pair.Key;
+
+							if (!String.IsNullOrEmpty(pair.Value)) {
+								Boolean isMultilingual = propertyName.Contains(':');
+
+								if (isMultilingual)
+								{
+									string[] nameParts = propertyName.Split(':');
+									blockItem.setProperty(nameParts[0], pair.Value, nameParts[1]);
+								}
+								else {
+									blockItem.setProperty(propertyName, pair.Value);
+								}
+							}
+						}
+
+						SetBlockElementNameAndType(blockItem, referencedBlockNode);
+
+						SaveReferencedBlocks(blockItem, referencedBlockNode, xmlSchemaId, namespaceManager, langCode, tableName, dbQuoteValue, dbQuoteName, errorLookup);
+
+						SaveReferencedImages(blockItem, referencedBlockNode, namespaceManager, errorLookup);
+
+						SaveReferencedItems(blockItem, referencedBlockNode, namespaceManager, errorLookup);
+
+						SaveReferencedLinks(blockItem, referencedBlockNode, namespaceManager);
+					}
+					else
+					{
+						blockItem.setAttribute("action", "get");
+					}
+
+					Item tpBlockReference = self.newItem("tp_BlockReference");
+					tpBlockReference.setAction("add");
+					tpBlockReference.setPropertyItem("related_id", blockItem);
+					tpBlockReference.setProperty("reference_id", referencedBlockRefId);
+					applyReferenceProperties(tpBlockReference, referenceProperties);
+
+					// add relationship
+					self.addRelationship(tpBlockReference);
+				}
+			}
+
+			foreach (KeyValuePair<String, Item> pair in tpBlockReferenceItemsFromDB)
+			{
+				Item tpBlockReferenceFromDB = pair.Value;
+
+				String blockReferenceRefId = tpBlockReferenceFromDB.getProperty("reference_id");
+				String blockReferenceId = tpBlockReferenceFromDB.getID();
+
+				if (!blockReferenceIDsFromContent.Contains(blockReferenceRefId) && !isReferenceInDocuments(blockReferenceRefId, translationDocuments, namespaceManager))
+				{
+					Item tpBlockReference = self.newItem("tp_BlockReference");
+					tpBlockReference.setAction("delete");
+					tpBlockReference.setAttribute("id", blockReferenceId);
+
+					self.addRelationship(tpBlockReference);
+				}
+			}
+		}
+
+		private static string GetNodeAttributeValue(XmlNode node, string attributeName)
+		{
+			return ((XmlElement)node).GetAttribute(attributeName);
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>tp_BlockBeforeUpd</name>
+ </Item>
+</AML>

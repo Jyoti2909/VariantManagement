@@ -1,0 +1,429 @@
+﻿<style type="text/css">
+	#VIS_ID_CONTAINER #VIS_ID {
+		position: relative;
+	}
+
+	 #VIS_ID_CONTAINER #VIS_ID_LABEL {
+		cursor: pointer;
+		position: absolute;
+		font-family: Helvetica Neue, Helvetica, Arial, sans-serif;
+		font-size: 30px;
+		left: 0;
+		right: 0;
+		text-align: center;
+	 }
+</style>
+
+<div id="VIS_ID_CONTAINER">
+	<div id="VIS_ID"></div>
+</div>
+
+<script src="d3.v3.min.js" type="text/javascript"></script>
+<script src="topojson.v1.min.js" type="text/javascript"></script>
+<script src="izenda.world.m110.js" type="text/javascript"></script>
+<script src="izenda.world.country.names.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+	(function init() {
+		var services = window.ReportingServices;
+
+		(function () {
+			/* Backward Compatibility Section */
+			if (VIS_CONTEXT.props && VIS_CONTEXT.props.length > 2 && VIS_CONTEXT.props && VIS_CONTEXT.props.indexOf('metric') > 0) {
+				var props = {};
+				try {
+					var oldProps = JSON.parse(VIS_CONTEXT.props);
+					props['Metric'] = oldProps['metric'];
+				} catch (e) {
+					props = {};
+				}
+				VIS_CONTEXT.props = JSON.stringify(props);
+			}
+		})();
+
+		var vis = new izenda.visualization({
+			id: 'VIS_ID',
+			rows: VIS_ROWS,
+			columns: VIS_COLUMNS,
+			context: VIS_CONTEXT,
+			status: VIS_FORMJSASTATUS,
+			requirements: { d3: true, svg: true, animation: true },
+			validate: function (columns, rows) {
+				return columns.length > 1
+					&& columns[0].type == 'String'
+					&& !columns.slice(1).some(function (o) { return !izenda.visualization.isMetric(o); });
+			},
+			draw: draw
+		});
+
+		var items = [],item = {};
+		for (var i = 0; i < vis.rows.length; i++) {
+			items.push(item = {});
+			for (var j = 0; j < vis.rows[i].length; j++) {
+				vis.itemValue(item, j, { ri: i });
+			}
+		}
+
+		vis.metrics = [];
+		for (var i = 1; i < vis.columns.length; ++i) {
+			vis.metrics.push(vis.columns[i].name);
+		}
+
+		vis.initHeader({
+			metrics: [{
+				name: 'Metric',
+				onChangeCallback: function () {
+					stopped = true;
+					vis.redraw();
+				}
+			}]
+		});
+
+		izenda.visualization.registerResize('VIS_ID', init, function () {
+			stopped = true;
+			vis.clear();
+		});
+
+		var stopped = false;
+
+		function draw() {
+			stopped = false;
+			var synonymsArray = [
+				['USA', 'United States', 'United States of America'],
+				['UK', 'United Kingdom', 'England', 'Britain', 'Great Britain', 'United Kingdom of Great Britain and Northen Ireland'],
+				['Venezuela', 'Venezuela, Bolivarian Republic of'],
+				['Netherlands', 'Holland'],
+				['Russia', 'Russian Federation'],
+				['China', 'People\'s Republic of China'],
+				['Taiwan', 'Republic of China', 'Taiwan, Province of China'],
+				['South Korea', 'Republic of Korea', 'Korea, Republic of'],
+				['North Korea', 'Democratic People\'s Republic of Korea', 'Korea, Democratic People\'s Republic of'],
+				['Egypt', 'Arab Republic of Egypt']
+			];
+
+			var synonymsMap = (function () {
+				var map = {};
+				var length = synonymsArray.length;
+				for (var i = 0; i < length; ++i) {
+					for (var j = 0; j < synonymsArray[i].length; ++j) {
+						map[synonymsArray[i][j].toLowerCase()] = synonymsArray[i];
+					}
+				}
+				return map;
+			})();
+
+			function getCountryNameSynonyms(value) {
+				var result = synonymsMap[value.toLowerCase()];
+				return result || [value];
+			}
+
+			d3.select(vis.element.get(0)).append('div')
+				.attr('id', 'VIS_ID_LABEL');
+
+			var metricValue = vis.getProperty('Metric');
+
+			var margin = { top: 5, right: 5, bottom: 5, left: 5 },
+				minDimension = Math.min(vis.width - margin.left - margin.right, vis.height - margin.top - margin.bottom),
+				center = [margin.left + (vis.width - margin.left - margin.right) / 2, margin.top + (vis.height - margin.top - margin.bottom) / 2];
+
+			var projection = d3.geo.orthographic()
+				.scale(minDimension / 2)
+				.clipAngle(90)
+				.translate(center);
+
+			var graticule = d3.geo.graticule();
+
+			var m0 = null, m1 = null, o0;
+			function mousedown() {
+				stopped = true;
+				m0 = trackballAngles(d3.mouse(canvas.node()));
+				o0 = projection.rotate();
+				d3.event.preventDefault();
+				title.style('visibility', 'hidden');
+			}
+			function mousemove() {
+				if (!m0)
+					return;
+
+				m1 = trackballAngles(d3.mouse(canvas.node()));
+				var o1 = [o0[0] + (m1[0] - m0[0]), o0[1] + (m1[1] - m0[1])];
+
+				projection.rotate(o1);
+				drawEarth();
+			}
+			function mouseup() {
+				if (m0 && (!m1 || m0[0] == m1[0] && m0[1] == m1[1])) {
+					title.style('visibility', 'visible');
+					stopped = false;
+					transition();
+				}
+
+				if (m0) {
+					mousemove();
+					m0 = null;
+					m1 = null;
+				}
+			}
+
+			var canvas = d3.select('#VIS_ID').append('canvas')
+				.attr('width', vis.width)
+				.attr('height', vis.height)
+				.on('mousedown', mousedown)
+				.on('mousemove', mousemove)
+				.on('mouseup', mouseup)
+				.on('touchstart', mousedown)
+				.on('touchmove', mousemove)
+				.on('touchend', mouseup);
+
+			function trackballAngles(pt) {
+				// based on http://www.opengl.org/wiki/Trackball
+				// given a click at (x,y) in canvas coords on the globe (trackball),
+				// calculate the spherical coordianates for the point as a rotation around
+				// the vertical and horizontal axes
+				var r = projection.scale();
+				var c = projection.translate();
+				var x = pt[0] - c[0], y = -(pt[1] - c[1]), ss = x * x + y * y;
+
+				var z = r * r > 2 * ss ? Math.sqrt(r * r - ss) : r * r / 2 / Math.sqrt(ss);
+
+				var lambda = Math.atan2(x, z) * 180 / Math.PI;
+				var phi = Math.atan2(y, z) * 180 / Math.PI;
+				return [lambda, phi];
+			}
+
+			var context = canvas.node().getContext('2d');
+
+			var path = d3.geo.path()
+				.projection(projection)
+				.context(context);
+			var labelFactor = 0.06;
+			var title = d3.select('#VIS_ID_LABEL')
+				.style({
+					'top': (center[1] + minDimension * labelFactor) + 'px',
+					'text-shadow': '0px 0px 8px white, 0px 0px 8px white, 0px 0px 8px white, 0px 0px 8px white, 0px 0px 8px white',
+					'font-size': (minDimension * labelFactor) + 'px',
+					'visibility': 'visible'
+				});
+
+			var land, grid, countries = [], countriesInReportOrder = [], borders, min, max;
+
+			function equalsString(a, b, ci) {
+				return ci ? a.toLowerCase() === b.toLowerCase() : a === b;
+			}
+
+			function equalsMultipleString(a, b, ci) {
+				var arr1 = jq$.isArray(a) ? a : [a],
+					arr2 = jq$.isArray(b) ? b : [b],
+					len1 = arr1.length,
+					len2 = arr2.length;
+				for (var i = 0; i < len1; ++i) {
+					for (var j = 0; j < len2; ++j) {
+						if (equalsString(arr1[i], arr2[j], ci)) {
+							return true;
+						}
+					}
+				}
+				return false;
+			}
+
+			function drawEarth() {
+				context.clearRect(0, 0, vis.width, vis.height);
+
+				context.beginPath();
+				path({ type: 'Sphere' });
+				context.lineWidth = 3;
+				context.strokeStyle = '#000';
+				context.stroke();
+				context.fillStyle = '#fff';
+				context.fill();
+
+				projection.clipAngle(180);
+
+				context.beginPath();
+				path(land);
+				context.fillStyle = 'rgba(222,235,247,1)';
+				context.fill();
+
+				context.beginPath();
+				path(grid);
+				context.lineWidth = .5;
+				context.strokeStyle = 'rgba(119,119,119,.5)';
+				context.stroke();
+
+				projection.clipAngle(90);
+
+				context.beginPath();
+				path(land);
+				context.fillStyle = 'rgba(222,235,247)';
+				context.fill();
+				context.lineWidth = .5;
+				context.strokeStyle = '#000';
+				context.stroke();
+
+				context.strokeStyle = '#fff';
+				context.lineWidth = 1;
+				context.beginPath();
+				path(borders);
+				context.stroke();
+
+				context.strokeStyle = 'rgb(20,20,20)';
+				context.lineWidth = 0.5;
+				context.beginPath();
+				path(country);
+				context.stroke();
+
+				for (var i = 0; i < countries.length; i++) {
+					var country = countries[i];
+
+					context.beginPath();
+					path(country);
+
+					if (country.id == countriesInReportOrder[countryIndex].id) {
+						country.lastValue = vis.itemValue(items[itemIndex], metricValue);
+					}
+
+					if (typeof country.lastValue === 'undefined') {
+						for (var j = items.length - 1; j >= 0; j--) {
+							if (equalsMultipleString(vis.itemValue(items[j], 0), getCountryNameSynonyms(country.name), true)) {
+								country.lastValue = vis.itemValue(items[j], metricValue);
+								break;
+							}
+						}
+					}
+
+					var v = !isNaN(country.lastValue) ? country.lastValue : 0;
+					var c = izenda.utils.color.getColorMix([33, 113, 181], [198, 219, 239], (v - min) / (max - min));
+					context.fillStyle = izenda.utils.color.getRgbFromArray(c);
+					context.fill();
+
+					if (country.id == countriesInReportOrder[countryIndex].id) {
+						context.save();
+
+						path(country);
+						context.clip();
+
+						context.beginPath();
+						context.lineWidth = 2;
+						context.shadowColor = 'rgb(20,20,20)';
+						context.strokeStyle = 'rgb(20,20,20)';
+						context.shadowBlur = 20;
+						path(country);
+						context.stroke();
+
+						context.restore();
+					}
+				}
+			}
+
+			function checkStop() {
+				return stopped || !document.getElementById('VIS_ID') || vis.element.is(':hidden');
+			}
+
+			var countryIndex = 0,
+				itemIndex = 0;
+
+			function transition() {
+				if (checkStop() || !countriesInReportOrder.length) {
+					return;
+				}
+
+				canvas.transition()
+					.duration(1000)
+					.each('start', function () {
+						var item = items[itemIndex],
+							name = vis.itemValue(item, 0),
+							val = vis.itemValue(item, metricValue),
+							fieldFormatter = vis.columns.find(function (d) { return d.name == metricValue; }).formatter; 
+						var label = name;
+						if (!isNaN(val)) {
+							label += ' (' + (fieldFormatter ? fieldFormatter(val, null, vis, metricValue) : val) + ')';
+						}
+						title.text(label);
+					})
+					.tween('rotate', function () {
+						var p = d3.geo.centroid(countriesInReportOrder[countryIndex]),
+								r = d3.interpolate(projection.rotate(), [-p[0], -p[1]]);
+							return function (t) {
+								if (checkStop()) {
+									return;
+								}
+								projection.rotate(r(t));
+								drawEarth();
+							};
+					})
+					.transition()
+					.each('end', function () {
+						if (checkStop()) {
+							return;
+						}
+						itemIndex = (itemIndex + 1) % items.length;
+						var item = items[itemIndex],
+							name = vis.itemValue(item, 0);
+						if (!equalsMultipleString(name, getCountryNameSynonyms(countriesInReportOrder[countryIndex].name), true)) {
+							countryIndex = (countryIndex + 1) % countriesInReportOrder.length;
+						}
+						transition();
+					});
+			}
+
+			function startTransition(world, names) {
+				land = topojson.feature(world, world.objects.land);
+				grid = graticule();
+				var features = topojson.feature(world, world.objects.countries).features
+					.filter(function (feature) { return names.some(function (n) { return feature.id == n.id && (feature.name = n.name); }); });
+				var filteredItems = [],
+					lastItemName = null;
+
+				var featuresCache = {};
+				function getFeatureByName(name) {
+					var feature = featuresCache[name];
+					if (typeof feature === 'undefined') {
+						feature = featuresCache[name] = (function () {
+							for (var i = 0; i < features.length; ++i) {
+								var feature = features[i];
+								if (equalsMultipleString(name, getCountryNameSynonyms(feature.name), true)) {
+									return feature;
+								}
+							}
+							return null;
+						})();
+					}
+					return feature;
+				}
+
+				for (var i = 0; i < items.length; ++i) {
+					var name = vis.itemValue(items[i], 0);
+					var feature = getFeatureByName(name);
+					if (feature) {
+						filteredItems.push(items[i]);
+						if (name !== lastItemName && (lastItemName = name)) {
+							countriesInReportOrder.push(feature);
+							if (!countries.some(function (c) { c.id == feature.id })) {
+								countries.push(feature);
+							}
+						}
+					}
+				}
+
+				items = filteredItems;
+
+				borders = topojson.mesh(world, world.objects.countries, function (a, b) { return a !== b; });
+				if (countriesInReportOrder.length > 0) {
+					min = d3.min(items, function (item) { return item.support[metricValue].o; });
+					max = d3.max(items, function (item) { return item.support[metricValue].o; });
+					if (Math.abs(max - min) < 0.0000001) {
+						max = min + 1;
+					}
+					transition();
+				} else {
+					drawEarth();
+				}
+			}
+
+			startTransition(izenda.world.m110, izenda.world.country.names);
+		}
+
+		draw();
+
+	})();
+</script>

@@ -1,0 +1,334 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+	<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/default.css";
+
+		html, body{
+			padding: 0px;
+			margin: 0px;
+			height: 100%;
+			width: 100%;
+			overflow: hidden;
+		}
+	</style>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules,ScriptSet2,ScriptSet6"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript">
+		//==global variables==
+		var grid;
+		var toolbar;
+		var topWnd = parent;
+		var itemID = QueryString("itemID").toString();
+		var itemTypeName = QueryString("ITName").toString();
+		var resolution = QueryString("resolution").toString();
+		var reverseItemTypeName = QueryString("reverseITName").toString();
+		var reversePropertyName = QueryString("reversePropertyName").toString();
+		var reversItemTypeID = topWnd.aras.getItemTypeId(reverseItemTypeName);
+		var itemTypeId = topWnd.aras.getItemTypeId(itemTypeName);
+		var item = parent.item;
+		//==end of global variables==
+
+		var gridInitialized = false;
+		var implementItemsCount;
+		var implementationOrderColIndex = null;
+		var modifiedItems = {};
+		var oldFieldValue = null;
+
+		window.onload = onload_handler;
+		window.onbeforeunload = onbeforeunload_handler;
+
+		function onload_handler() {
+			toolbarLoad_handler();
+			gridLoad_handler();
+
+			topWnd.aras.registerEventHandler("ItemLock", topWnd.window, relatedItemLockListener);
+			topWnd.aras.registerEventHandler("ItemSave", topWnd.window, ItemSaveListener);
+		}
+
+		var onbeforeunload_handler = function () {
+			topWnd.aras.unregisterEventHandler("ItemLock", topWnd.window, relatedItemLockListener);
+			topWnd.aras.unregisterEventHandler("ItemSave", topWnd.window, ItemSaveListener);
+		}
+
+		window.addEventListener("resize", function () {
+			refreshGridSize();
+		});
+
+		function refreshGridSize() {
+			var gridRequiredHeight = dojo.window.getBox().h - toolbar.getCurrentToolBarDomNode_Experimental().offsetHeight,
+			newGridHeight = gridRequiredHeight > 0 ? gridRequiredHeight : 0;
+			if (grid && grid.grid_Experimental) {
+				grid.grid_Experimental.resize({ h: newGridHeight });
+			}
+		}
+
+		function updateStatusBar() {
+			var statusMsg = topWnd.aras.getResource("", "search.n_items_found", implementItemsCount);
+			topWnd.aras.showStatusMessage("page_status", statusMsg);
+		}
+
+		function onGridXmlLoaded(isSuccess) {
+			refreshGridSize();
+			setTimeout("updateStatusBar()", 10);
+		}
+
+		function gridLoad_handler() {
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", {validateCell_Experimental: validateCell, connectId: "gridContainer"}, function(control) {
+				grid = control;
+				grid.setMultiselect(false);
+				clientControlsFactory.on(grid, {
+					"gridLinkClick": function(linkVal){
+											if (linkVal.length){
+												linkVal = linkVal.replace(/'/g, "");
+												var typeName = linkVal.split(",")[0];
+												var id = linkVal.split(",")[1];
+												onLink(typeName, id);
+											}
+										},
+					"gridEditCell" : onGridEditCell,
+					"gridXmlLoaded": onGridXmlLoaded
+				});
+				InitGridByRevereseItems();
+			});
+		}
+
+		function relatedItemLockListener(params) {
+			item = params.itemNd;
+			if (implementationOrderColIndex !== null) {
+				grid.grid_Experimental.getCell(implementationOrderColIndex).editable = params.newLockedValue;
+			}
+		}
+
+		function validateCell (rowId, field, value) {
+			var propertyDef = {
+				data_type: "integer",
+				pattern: null,
+				is_required: false,
+				stored_length: null
+			};
+			if (!topWnd.aras.isPropertyValueValid(propertyDef, value, "invariantLocale")) {
+				grid.edit_Experimental.setErrorMessage(topWnd.aras.ValidationMsg);
+				return false;
+			}
+			return true;
+		}
+
+		function onGridEditCell(type, rowId, columnIndex) {
+			var cell = grid.cells(rowId, columnIndex);
+			var field = grid.getColumnName(columnIndex);
+			switch (type)
+			{
+				case 0: //start edit cell
+					oldFieldValue = cell.cell_Experimental[field][0];
+					break;
+				case 2: //end edit cell
+					var newFieldValue  = cell.cell_Experimental[field][0];
+					var isIntegerOrEmpty = new RegExp('^\\d*$|^$');
+					if (!isIntegerOrEmpty.test(newFieldValue)) {
+						return;
+					}
+					if (newFieldValue !== oldFieldValue) {
+						modifiedItems[rowId] = newFieldValue;
+					}
+					break;
+			}
+		}
+
+		function ItemSaveListener(params) {
+			var request = "<AML>\n";
+			for (var itemId in modifiedItems) {
+				request += "" +
+					"<Item type='Morphae' id='" + itemId + "' action='edit'>\n" +
+						"<implementation_order>" + modifiedItems[itemId] + "</implementation_order>\n" +
+					"</Item>";
+			}
+			request += "</AML>";
+
+			var requestDOM = topWnd.aras.createXMLDocument();
+			requestDOM.loadXML(request);
+
+			var result = topWnd.aras.soapSend('ApplyAML', requestDOM.xml);
+
+			if (result.getFaultCode() != 0) {
+				topWnd.aras.AlertError(result.getFaultString(), result.getFaultDetails(), result.getFaultActor());
+				return;
+			}
+		}
+
+		function onLink(typeName, id) {
+			var itemType = topWnd.aras.getItemTypeDictionary(typeName, "name");
+			if (itemType && !itemType.isError() && topWnd.aras.isPolymorphic(itemType.node)) {
+				var item = topWnd.aras.getItemById(typeName, id, 0);
+				if (item.getAttribute("type") === typeName) {
+					var polyTypeId = topWnd.aras.getItemProperty(item, "itemtype");
+					typeName = topWnd.aras.getItemTypeName(polyTypeId);
+					topWnd.aras.removeFromCache(item);
+				}
+			}
+			topWnd.aras.uiShowItem(typeName, id);
+		}
+
+		function toolbarLoad_handler() {
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", { id: "Implements_toolbar", connectId: "toolbarContainer" }, function(control) {
+				toolbar = control;
+				clientControlsFactory.on(toolbar, {
+					"onClick": toolbarClick_handler
+				});
+
+				document.toolbar = toolbar;
+				toolbar.loadXml(topWnd.aras.getI18NXMLResource("ImplementsGrid_toolbar.xml", ""));
+				toolbar.show();
+			});
+		}
+
+		function toolbarClick_handler(item) {
+			if (item.getId() == "reload") {
+				gridReload_handler();
+			}
+		}
+
+		function gridReload_handler() {
+			modifiedItems = [];
+			InitGridByRevereseItems();
+			enableToolbar();
+		}
+
+		function enableToolbar() {
+			var val = (topWnd.aras.getVariable('ShowLabels') == 'true');
+			toolbar.showLabels(val);
+		}
+
+		function setToolbarItemEnabled(tbItem, doEnable)
+		{
+			if (doEnable === undefined)
+				doEnable = true;
+			else 
+				doEnable = Boolean(doEnable);
+			try
+			{
+				var tbi = toolbar.getElement(tbItem);
+				if (tbi)
+					tbi.setEnabled(doEnable);
+			}
+			catch (excep)
+			{
+				alert('exception during setToolbarItemEnabled()');
+			}
+		}
+
+		function CheckReverseProperty(ItemTypeDOM) {
+			var reverseproperty = ItemTypeDOM.selectSingleNode(topWnd.aras.XPathResult() + "/Item/Relationships/Item[@type='Property' and name = '" + reversePropertyName + "' and data_source = '" + itemTypeId + "']")
+			if (reverseproperty == null) {
+				topWnd.aras.AlertError(topWnd.aras.getResource("PLM", "plm_reversegrid.invalidreverseproperty"));
+				return false;
+			}
+			return true;
+		}
+
+		function ClassReverseGrid() {
+			this.GetReverseItems = function () {
+				alert('Should be overrided');
+			}
+
+			this.CheckQueryParameter = function () {
+				alert('Should be overrided');
+			}
+
+			if (reversePropertyName != "") {
+				this.GetReverseItems = GetReverseItemsFromProperty; //override
+				this.CheckQueryParameter = CheckPropertyQueryParameter; //override
+			}
+			else {
+				topWnd.aras.AlertError(topWnd.aras.getResource("", "plm_reversegrid.invalidqueryparameters"));
+				return;
+			}
+
+			function GetReverseItemsFromProperty() {
+				var aml = "" +
+					"<AML>" +
+					"	<Item type='" + reverseItemTypeName + "' action='get'>" +
+					"		<" + reversePropertyName + " condition='eq'>" + itemID + "</" + reversePropertyName + ">" +
+					" </Item>" +
+					"</AML>";
+
+				return GetReverseItemsResult(aml);
+			}
+
+			function GetReverseItemsResult(aml) {
+				var amlDOM = topWnd.aras.createXMLDocument();
+				amlDOM.loadXML(aml);
+
+				var res = topWnd.aras.soapSend('ApplyAML', amlDOM.xml);
+
+				if (res.getFaultCode() != 0) {
+					topWnd.aras.AlertError(res.getFaultString(), res.getFaultDetails(), res.getFaultActor());
+					return;
+				}
+
+				return res.getResult().ownerDocument;
+			}
+
+			function CheckPropertyQueryParameter(ItemTypeDOM) {
+				var reverseproperty = ItemTypeDOM.selectSingleNode(topWnd.aras.XPathResult() + "/Item/Relationships/Item[@type='Property' and name = '" + reversePropertyName + "' and data_source = '" + itemTypeId + "']")
+				if (reverseproperty == null) {
+					topWnd.aras.AlertError(topWnd.aras.getResource("PLM", "plm_reversegrid.invalidreverseproperty"));
+					return false;
+				}
+
+				return true;
+			}
+		}
+
+		function InitGridByRevereseItems() {
+			var reversegrid = new ClassReverseGrid();
+			var resDom = reversegrid.GetReverseItems();
+			if (!resDom) {
+				return;
+			}
+
+			implementItemsCount = resDom.selectNodes("//Item[@type='" + reverseItemTypeName + "']").length;
+			var currItemType = topWnd.aras.getItemTypeDictionary(reverseItemTypeName);
+			if (!currItemType) {
+				topWnd.aras.AlertError(topWnd.aras.getResource("", "revisiondlg.failed_get_it", itemTypeName));
+				return;
+			}
+
+			currItemType = currItemType.node;
+			if (!reversegrid.CheckQueryParameter(currItemType)) {
+				return;
+			}
+			
+			var visiblePropNds = topWnd.aras.getvisiblePropsForItemType(currItemType);
+			if (!gridInitialized) {
+				topWnd.aras.uiInitItemsGridSetups(currItemType, visiblePropNds);
+				gridInitialized = true;
+			}
+			
+			const columnObjects = topWnd.aras.uiPrepareDOM4XSLT(resDom, reversItemTypeID, "IT_");
+			const params = {
+				columnObjects: columnObjects
+			};
+			var grid_xml = topWnd.aras.uiGenerateItemsGridXML(resDom, visiblePropNds, reversItemTypeID, params);
+			grid.InitXML(grid_xml);
+			implementationOrderColIndex = grid.GetColumnIndex("implementation_order_D");
+			if (item.selectSingleNode("locked_by_id") !== null) {
+				grid.grid_Experimental.getCell(implementationOrderColIndex).editable = true;
+			}
+		}
+	</script>
+	</head>
+	<body ondragenter="return false;" ondragover="return false;" ondrop="return false;" class="claro">
+		<div id="main_table" style="width: 100%; height: 100%;" >
+			<div id="toolbarContainer"></div>
+			<div id="gridContainer" style="width:100%; height: 100%;"></div>
+		</div>
+	</body>>
+</body>
+</html>

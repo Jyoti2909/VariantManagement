@@ -1,0 +1,25 @@
+﻿<AML>
+ <Item type="Method" id="A04EFCAAFC7D41D698939D4BBD4315DC" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const ruleEditorField = window.getFieldByName('rule_editor');
+const ruleEditorFrame = ruleEditorField.querySelector('iframe');
+
+if (ruleEditorFrame && ruleEditorFrame.contentWindow && ruleEditorFrame.contentWindow.ruleEditorController) {
+	// We use this way of scopeId getting because type-ahead and search dialog are triggering OnChange event
+	// handler, but they have different flow of value-updating and event-handling.
+	// When we use search dialog, selecting value and applying it, it is going like - update actual value and
+	// then invoke all the events on the change.
+	// But it is not the case case for type-ahead functionality -  when we select some option from suggestions
+	// the value is updated after the event was fired and also there is no other easy way to get id info, only
+	// value is transfered to handlers. That is why we implement other mechanism of getting it then just
+	// getting it from expression item. In case of type-ahead expression item is not in the new state when the
+	// event is fired.
+	const selectedScopeKeyedName = window.getFieldComponentByName('effs_scope_id').getValue();
+	const scopeItem = aras.uiGetItemByKeyedName('effs_scope', selectedScopeKeyedName);
+	const scopeId = aras.getItemProperty(scopeItem, 'id');
+	ruleEditorFrame.contentWindow.ruleEditorController.loadEditorState(scopeId);
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_onScopeChange</name>
+ </Item>
+</AML>

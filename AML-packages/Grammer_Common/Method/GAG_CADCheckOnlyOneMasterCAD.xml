@@ -1,0 +1,116 @@
+﻿<AML>
+ <Item type="Method" id="AD6E36ECCC7349BEA3DE847B363C3D9F" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public const int AllowedCountWithMasters = 1;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				if (contextItem.getProperty("gag_classification") != "MASTER")
+				{
+					return contextItem;
+				}
+
+				Item partsRelatedToCad = GetPartsRelatedToCad(contextItem.getID());
+				if (partsRelatedToCad == null)
+				{
+					return contextItem;
+				}
+
+				Item parts = CreatePartCadsAndAddRelationships(partsRelatedToCad);
+
+				Contract.ThrowIfError(partsRelatedToCad);
+				IEnumerable<Item> notAllowedParts =
+					parts.Enumerate().Where(IfCountRelationshipsMoreThanAllowed).ToList();
+				if (notAllowedParts.Any())
+				{
+					GenerateAndThrowErrorMessage(notAllowedParts);
+				}
+
+				return contextItem;
+			}
+
+			protected void GenerateAndThrowErrorMessage(IEnumerable<Item> notAllowedParts)
+			{
+				IEnumerable<string> group = notAllowedParts
+					.GroupBy(part => part.getProperty("item_number"))
+					.Select(part => part.Key);
+				var errors = new StringBuilder();
+				foreach (string partName in group)
+				{
+					errors.AppendFormat(CultureInfo.InvariantCulture, "Error in {0}:", partName);
+					errors.AppendLine();
+					errors.AppendLine("Only one MASTER 3D-Doc allowed!");
+					errors.AppendLine();
+				}
+				throw new ItemException(_dal.NewError(errors.ToString()));
+			}
+
+			protected Item CreatePartCadsAndAddRelationships(Item partsRelatedToCad)
+			{
+				Item cad = GetCadWithMasterClassification();
+				Item partCads = GetPartCad(cad);
+				Item parts = _dal.NewItem("Part", "get");
+				IEnumerable<string> partIds =
+					partsRelatedToCad.Enumerate().Select(part => part.getProperty("source_id"));
+				parts.setProperty("idlist", string.Join(",", partIds));
+				parts.setProperty("select", "id");
+				parts.addRelationship(partCads);
+				parts = _dal.ApplyItem(parts);
+				return parts;
+			}
+
+			protected Item GetPartsRelatedToCad(string cadId)
+			{
+				Item partsRelatedToCad = _dal.NewItem("Part CAD", "get");
+				partsRelatedToCad.setProperty("related_id", cadId);
+				partsRelatedToCad.setProperty("select", "source_id");
+				partsRelatedToCad = _dal.ApplyItem(partsRelatedToCad);
+				if (partsRelatedToCad.isEmpty())
+				{
+					return null;
+				}
+
+				Contract.ThrowIfError(partsRelatedToCad);
+				return partsRelatedToCad;
+			}
+
+			protected Item GetCadWithMasterClassification()
+			{
+				Item cad = _dal.NewItem("CAD", "get");
+				cad.setProperty("gag_classification", "MASTER");
+				cad.setProperty("select", "id");
+				return cad;
+			}
+
+			protected Item GetPartCad(Item cad)
+			{
+				Item partCads = _dal.NewItem("Part CAD", "get");
+				partCads.setAttribute("select", "id,source_id(item_number)");
+				partCads.setRelatedItem(cad);
+				return partCads;
+			}
+
+			protected bool IfCountRelationshipsMoreThanAllowed(Item partCad)
+			{
+				return partCad.getRelationships("Part CAD").getItemCount() > AllowedCountWithMasters;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_CADCheckOnlyOneMasterCAD</name>
+ </Item>
+</AML>

@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="BE0EF940845C41ACA01ECC723680B2C3" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var result = true;
+var selectedRelItm = parent.item.selectSingleNode('Relationships/Item[@id="' + relationshipID + '"]');
+
+require({
+	async: false
+}, [
+	'ES/Scripts/Classes/Utils',
+], function(Utils) {
+	var utils = new Utils({
+		arasObj: aras
+	});
+
+	if (!utils.isNullOrUndefined(selectedRelItm)) {
+		var isFacetDefault = aras.getItemProperty(selectedRelItm, 'is_default') === '1';
+
+		if (isFacetDefault) {
+			var defaultFacetLabel = aras.getItemProperty(selectedRelItm, 'property_label');
+			aras.AlertError(utils.getResourceValueByKey('message.facet_can_not_be_deleted').replace('{0}', defaultFacetLabel));
+			result = false;
+		}
+	}
+});
+
+return result;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_OnDeleteTopFacetRow</name>
+ </Item>
+</AML>

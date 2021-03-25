@@ -1,0 +1,19 @@
+﻿<AML>
+ <Item type="Method" id="CFA50A99A33447F38EE44D28FA5266B3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[let tooltipTemplate = target.tooltip_template;
+const itemTypeName = options.itemTypeName;
+const itemTypeDescriptor = aras.getItemTypeForClient(itemTypeName);
+
+const itemTypeId = itemTypeDescriptor.getAttribute('id');
+const canAdd = aras.getPermissions('can_add', itemTypeId);
+const itemTypeLabel = itemTypeDescriptor.getProperty('label') || itemTypeName;
+
+return {
+	tooltip_template: tooltipTemplate.replace('{0}', itemTypeLabel),
+	disabled: !canAdd
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_svcb_new_init</name>
+ </Item>
+</AML>

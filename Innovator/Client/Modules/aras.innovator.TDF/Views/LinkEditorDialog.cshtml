@@ -1,0 +1,459 @@
+﻿@{
+	Layout = null;
+	bool isEditMode = String.IsNullOrEmpty(Request.QueryString["viewonly"]);
+}
+<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2015. -->
+<html>
+<head>
+	<link rel="stylesheet" href="../../javascript/dojo/../dijit/themes/claro/claro.css">
+	<link rel="stylesheet" href="../../styles/controls/toolbar.css">
+	<link rel="stylesheet" href="../../styles/controls/menu.css">
+	<style type="text/css">
+		@@import '@Url.ContentWithSalt("~/Modules/aras.innovator.TDF/Styles/EditorViewTreeGrid.css")';
+	</style>
+	<style type="text/css">
+		html, body {
+			width: 100%;
+			height: 100%;
+			margin: 0;
+			overflow: hidden;
+
+			font-family: Tahoma;
+			color: #444444;
+			font-size: 12px;
+		}
+
+		#borderContainer {
+			width: 100%;
+			height: 100%;
+		}
+
+		#searchBox {
+			border-top-color: #b5bcc7;
+			border-top-width: 1px;
+			border-top-style: solid;
+		}
+
+		#techDocTree *:focus {
+			outline: none;
+		}
+
+		.dijitBorderContainer-dijitContentPane {
+			padding: 0px !important;
+		}
+
+		.dijitEditorIFrameContainer {
+			padding: 0px !important;
+		}
+
+		.arasTDFTree.dojoxGrid .dojoxGridContent > div {
+			width: 100% !important;
+		}
+
+		.techDocEditor .dijitEditor {
+			border-top-color: none;
+			border-bottom-color: none;
+			border-right-color: none;
+			border-top-width: 0px;
+			border-bottom-width: 0px;
+			border-right-width: 0px;
+		}
+
+		.placeholderStyle {
+			color: #C0C0C0;
+			font-style: italic;
+		}
+
+		.dojoxGridHiddenFocus {
+			display: none;
+		}
+
+		.dojoxGridMasterView {
+			position: relative;
+			overflow-y: auto;
+		}
+	</style>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="packages: [{ name: 'TechDoc', location: '../../Modules/aras.innovator.TDF/Scripts' }], isDebug: false, parseOnLoad: false, baseUrl:'../../javascript/dojo'"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=polyfillsBundle"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=XmlDocument"></script>
+	<script type="text/javascript" src='../../javascript/include.aspx?classes=QueryString'></script>
+	<script>
+		var aras = parent.aras || parent.parent.aras,
+			topWindow = aras.getMostTopWindowWithAras(window),
+			dlgArguments = window.frameElement.dialogArguments,
+			initialTitle = dlgArguments.title,
+			dialogWidget = dlgArguments.dialog,
+			dialogControls = {},
+			structuredDocument,
+			toolbarParseredObj,
+			treeGridAdapter;
+
+		function setDialogTitle (/*String*/ titleText) {
+			dialogWidget.dialogNode.querySelector('.aras-dialog__title-bar .aras-dialog__title').textContent = titleText;
+		}
+
+		function applyExternalUrl () {
+			var urlValue = dialogControls.urlAddress.value.toLowerCase();
+
+			if (!urlValue || /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i.test(urlValue)) {
+				structuredDocument.setExternalUrl(!urlValue ? "" : (/^(https?:\/\/)/.test(urlValue) ? urlValue : "http://" + urlValue));
+			}
+			else {
+				aras.AlertError(aras.getResource("../Modules/aras.innovator.TDF", "linkeditordialog.incorrecturl"));
+			}
+		}
+
+		function initInputWithPlaceholder (/*domNode*/ targetInput, /*String*/ placeholderText) {
+			if (targetInput && targetInput.nodeName == "INPUT" && placeholderText) {
+				targetInput.placeholderText = placeholderText;
+				targetInput.isPlaceholderActive = false;
+
+				targetInput.addEventListener("focus", function () {
+					refreshPlaceholder(targetInput, false);
+				});
+
+				targetInput.addEventListener("blur", function () {
+					refreshPlaceholder(targetInput, true);
+				});
+
+				refreshPlaceholder(targetInput, true);
+			}
+		}
+
+		function refreshPlaceholder (/*domNode*/ targetInput, /*Boolean*/ doActive) {
+			if (doActive && !targetInput.isPlaceholderActive && !targetInput.value) {
+				targetInput.value = targetInput.placeholderText;
+				targetInput.isPlaceholderActive = true;
+				toggleCssClass(targetInput, "placeholderStyle", true);
+			}
+			else if (!doActive && targetInput.isPlaceholderActive) {
+				if (targetInput.value == targetInput.placeholderText) {
+					targetInput.value = "";
+				}
+
+				targetInput.isPlaceholderActive = false;
+				toggleCssClass(targetInput, "placeholderStyle", false);
+			}
+		}
+
+		function toggleCssClass (/*domNode*/ targetElement, /*String*/ toggleClassName, /*Boolean*/ addClass) {
+			if (toggleClassName) {
+				var elementClasses = targetElement.className ? targetElement.className.split(" ") : [],
+					classesHash = {},
+					resultClasses = "",
+					className, i;
+
+				for (i = 0; i < elementClasses.length; i++) {
+					className = elementClasses[i];
+
+					if (className) {
+						classesHash[className] = true;
+					}
+				}
+
+				if (addClass) {
+					classesHash[toggleClassName] = true;
+				}
+				else {
+					delete classesHash[toggleClassName];
+				}
+
+				for (className in classesHash) {
+					resultClasses += resultClasses ? " " : "" + className;
+				}
+
+				targetElement.className = resultClasses;
+			}
+		}
+
+		function initializeControls (aras) {
+			dialogControls.contentOverlay = document.getElementById("contentOverlay");
+			dialogControls.documentLinkPanel = document.getElementById("documentLinkPanel");
+			dialogControls.urlLinkPanel = document.getElementById("urlLinkPanel");
+
+			dialogControls.urlAddress = document.getElementById("urlAddress");
+			dialogControls.checkUrlButton = document.getElementById("checkUrlButton");
+			initInputWithPlaceholder(dialogControls.urlAddress, aras.getResource("../Modules/aras.innovator.TDF", "linkeditordialog.enterexternalurl"));
+		}
+
+		function checkUrl () {
+			var urlValue = structuredDocument.getExternalUrl();
+
+			if (urlValue) {
+				window.open(urlValue);
+			}
+		}
+
+		function setControlVisibility (/*DomNode*/ controlNode, /*Boolean*/ doVisible) {
+			if (controlNode) {
+				controlNode.style.display = doVisible ? "" : "none";
+			}
+		}
+
+		function setupDialogStyle (/*String*/ linkType) {
+			var isUrlPanelVisible = false;
+
+			setControlVisibility(dialogControls.urlLinkPanel, linkType == "url");
+			setControlVisibility(dialogControls.contentOverlay, false);
+		}
+
+		require(["dojo/ready", "dojo/parser", "TechDoc/Aras/Client/Controls/TechDoc/Editor", "TechDoc/Aras/Client/Controls/TechDoc/Toolbar", "TechDoc/Aras/Client/Controls/TechDoc/UI/EditorViewTreeGrid/TreeGridAdapter", "TechDoc/Aras/Client/Controls/TechDoc/ViewModel/StructuredDocument", "TechDoc/Aras/Client/Controls/TechDoc/UI/ToolbarParser", "dojo/aspect", "dojo/_base/lang", "dojox/html/entities", "TechDoc/Aras/Client/Controls/TechDoc/ViewModel/DocumentationEnums", "dojo/domReady!"],
+			function (ready, parser, TechDocHtmlEditor, TechDocHtmlToolbar, TreeGridAdapter, TechDocStructuredDocument, ToolbarParser, aspect, lang, entities, Enums) {
+			ready(function () {
+				var tdfSettings = dlgArguments.tdfSettings || {};
+				var thisItem = dlgArguments.thisItem,
+					linkData = dlgArguments.linkData,
+					isDocumentLink = linkData.type == Enums.LinkTypes.ExternalDocument || linkData.type == Enums.LinkTypes.InternalElement,
+					isExternalLink = linkData.type == Enums.LinkTypes.ExternalDocument,
+					isUrlLink = linkData.type == Enums.LinkTypes.Url,
+					defaultLanguageCode = dlgArguments.lang,
+					TechDocStructuredDocumentEx = TechDocStructuredDocument,
+					targetItem;
+
+				this.aras = dlgArguments.aras || aras;
+				targetItem = (isDocumentLink && isExternalLink && this.aras.getItemById(thisItem.getAttribute('type'), linkData.blockId, 0)) || thisItem;
+				setDialogTitle(initialTitle + " - " + aras.getItemProperty(targetItem, "name"));
+				initializeControls(this.aras);
+
+				// check, that link target can be opened in linkDialog
+				if (targetItem && (targetItem.getAttribute("discover_only") == "1")) {
+					aras.AlertError(targetItem.getProperty("name") + ": " + aras.getResource("", "ui_methods_ex.discover_only_item_cannot_be_opened"));
+					targetItem = thisItem;
+				}
+
+				/* Ovverwrites */
+				TechDocStructuredDocumentEx.prototype.IsEditable = function () {
+					return false;
+				};
+
+				TechDocStructuredDocumentEx.prototype.GetThisBlock = function () {
+					return thisItem;
+				};
+
+				TechDocStructuredDocumentEx.prototype._InitializeStructureDocument = function (/*ArasItem*/item) {
+					var documentItem = item || targetItem,
+						uid = documentItem.getAttribute("id"),
+						langDomData = this._multilangcache[uid] || {},
+						isExistsInCache = Boolean(this._multilangcache[uid]),
+						rootWrappedObject, oldWrappedObject;
+
+					this._item = documentItem;
+					this._currentBlockId = uid;
+					this._currentLanguageCode = uid;
+					this._defaultLanguageCodeEx = defaultLanguageCode;
+					this._allUids = {};
+					this._externalUrl = "";
+					this._initialUrl = isUrlLink ? linkData.url : "",
+					this.origin = langDomData.xmlDomOrigin || this._GetXmlDomByLanguage();
+
+					this._InitializeXmlSchema();
+
+					if (langDomData.domObject) {
+						rootWrappedObject = langDomData.domObject;
+					}
+					else {
+						var rootBlockOriginNode = this.origin.selectSingleNode("aras:content/aras:block");
+						rootWrappedObject = this.CreateElement("element", { origin: rootBlockOriginNode });
+					}
+
+					if (!isExistsInCache) {
+						this._multilangcache[uid] = { domObject: rootWrappedObject, xmlDomOrigin: this.origin };
+					}
+
+					oldWrappedObject = this.Dom();
+					if (oldWrappedObject) {
+						rootWrappedObject.Id(oldWrappedObject.Id());
+					}
+
+					this.Dom(rootWrappedObject);
+					this._ResetSelectionAndCursor();
+				};
+
+				TechDocStructuredDocumentEx.prototype._GetXmlDomByLanguage = function () {
+					var newXmlDom = this._GetDocumentXmlDomFromServer(this._defaultLanguageCodeEx),
+						oldXmlDom = this._GetDocumentXmlDomFromClient(this._currentBlockId),
+						resultXml;
+
+					if (oldXmlDom) {
+						this.OriginExternalHelper().UpdateProvider(this._currentBlockId, oldXmlDom);
+					}
+					this.OriginExternalHelper().UpdateProvider(this._currentBlockId, newXmlDom);
+
+					resultXml = oldXmlDom ? oldXmlDom.documentElement : newXmlDom.documentElement;
+					this.saveDocumentXml(resultXml.xml, this._currentBlockId, true);
+					return resultXml;
+				};
+
+				TechDocStructuredDocumentEx.prototype.setExternalUrl = function (/*String*/ urlAddress) {
+					this._externalUrl = urlAddress;
+
+					if (toolbar) {
+						toolbar.updateToolbarHandler();
+					}
+				}
+
+				TechDocStructuredDocumentEx.prototype.getExternalUrl = function (/*String*/ urlAddress) {
+					return this._externalUrl;
+				}
+
+				TechDocStructuredDocumentEx.prototype.getInitialUrl = function (/*String*/ urlAddress) {
+					return this._initialUrl;
+				}
+
+				TechDocStructuredDocumentEx.prototype.GetCurrentBlockId = function () {
+					return this._currentBlockId;
+				};
+
+				TechDocStructuredDocumentEx.prototype.GetExpectedElements = function () {
+					if (!this._cachedRootExElements) {
+						var contextObject = this.Dom();
+						this._cachedRootExElements = this.Schema().GetExpectedElements(contextObject).insert;
+					}
+
+					return this._cachedRootExElements;
+				};
+
+				TechDocStructuredDocumentEx.prototype._RegisterElement = function (/*WrappedObject*/wrappedObject) {
+					var elementId = wrappedObject.Id();
+
+					if (wrappedObject.is("XmlSchemaElement")) {
+						var uid = wrappedObject.Uid();
+
+						if (uid) {
+							this._allUids[uid] = elementId;
+						}
+					}
+
+					this._all[elementId] = wrappedObject;
+					this.OnElementRegistered(this, { registeredObject: wrappedObject });
+				};
+
+				structuredDocument = new TechDocStructuredDocumentEx({aras: aras, item: targetItem, defaultLanguageCode: targetItem, contentBuilderMethod: tdfSettings.contentBuilderMethod, optionFamilies: {}});
+
+				treeGridAdapter = new TreeGridAdapter({
+					connectId: 'techDocTree',
+					viewModel: structuredDocument
+				});
+		@if (isEditMode)
+		{
+			<text>				
+				var customToolbarHandlers = {
+					onInited: function () {
+						toolbar.getItem("tp_link_type").setSelected(isUrlLink ? "url" : "external_document");
+					},
+					onSelect: function (selectToolbarItem, isEditable) {
+						setupDialogStyle(selectToolbarItem.getSelectedItem());
+						toolbar.updateToolbarHandler();
+					}
+				};
+
+				var cached = aras.MetadataCache.GetConfigurableUi({ item_type_id: aras.getItemTypeId(targetItem.getAttribute('type')), location_name: "LinkEditorDialog" });
+				var toolbarDom = cached.results;
+
+				toolbarParseredObj = new ToolbarParser({ xml: toolbarDom, viewmodel: structuredDocument, aras: aras, toolbarContainerName: "LinkEditorDialog" }),
+				toolbar = new TechDocHtmlToolbar({ id: "toolbar", connectId: "toolbarContainer", toolbarObj: toolbarParseredObj, structuredDocument: structuredDocument, customHandlers: customToolbarHandlers });
+				toolbar.startup();
+
+				// Search Frame initialization
+				var itemType = dlgArguments.thisItem.getAttribute("type"),
+					frameNode = document.getElementById("searchBoxFrame");
+
+				window.GetSearchResult = function (returnValue) {
+					if (returnValue && returnValue.itemID) {
+						var srcItem = returnValue.item || aras.getItemById(itemType, returnValue.itemID, 0);
+
+						if (srcItem) {
+							var isDiscoverOnly = srcItem.getAttribute("discover_only") == "1";
+
+							if (!isDiscoverOnly) {
+								structuredDocument._InitializeStructureDocument(srcItem);
+								setDialogTitle(initialTitle + " - " + aras.getItemProperty(srcItem, "name"));
+							}
+							else {
+								aras.AlertError(aras.getResource("", "ui_methods_ex.discover_only_item_cannot_be_opened"));
+							}
+						}
+					} else {
+						dlgArguments.dialog.close();
+					}
+				}
+
+				frameNode.src = "../../Modules/aras.innovator.TDF/SearchDialogFrameInLink";
+				frameNode.onload = function () {
+					var aWindow = frameNode.contentWindow,
+						iframe;
+
+					aWindow.eval("var iframe; require([\"dijit/Dialog\", \"dojo/dom-construct\"], function (Dialog, Dom) {\n" +
+						" iframe = Dom.create(\"IFRAME\", {" +
+						" id: \"iframe4searchDialog\", " +
+						" frameborder: \"0\",\n" +
+						" style: \"width:100%; height: 100%;\"});\n" +
+						" Dom.place(iframe, document.body); \n" +
+						"}); ");
+
+					iframe = aWindow.document.getElementById("iframe4searchDialog");
+					iframe.dialogArguments = {
+						aras: dlgArguments.aras,
+						itemtypeName: itemType,
+						multiselect: false,
+						sourceItemTypeName: itemType,
+						sourcePropertyName: "root_element_name",
+						itemContext: { item: structuredDocument },
+						dialog: {
+							close: window.GetSearchResult
+						}
+					};
+					iframe.src = "../../scripts/searchDialog.html";
+				};
+			</text>
+		}
+		else {
+			<text>
+				setupDialogStyle(isUrlLink ? "url" : "external_document");
+			</text>
+		}
+
+				parser.parse();
+
+				if (isDocumentLink) {
+					structuredDocument.SetSelectedItems(structuredDocument.GetElementsByUid(linkData.elementId));
+				}
+				else if (isUrlLink) {
+					dialogControls.urlAddress.value = linkData.url;
+					refreshPlaceholder(dialogControls.urlAddress, false);
+
+					structuredDocument.setExternalUrl(linkData.url);
+				}
+			});
+		});
+	</script>
+</head>
+<body class="claro techDocEditor">
+	<div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="design:'headline', gutters:false" id="borderContainer">
+		@if (isEditMode)
+		{
+			<div data-dojo-type="dijit/layout/ContentPane" baseClass="dijitContentPaneNoPadding" data-dojo-props="region:'top'" id="toolbarContainer"></div>
+		}
+		<div id="documentLinkPanel">
+			<div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="region:'center', design:'headline', gutters:false" id="centerBorderContainer">
+				<div data-dojo-type="dijit/layout/ContentPane" style="padding:0px 10px 0px 12px; width:300px; height:100%;" data-dojo-props="region:'left', splitter:true" baseClass="dijitContentPaneNoPadding">
+					<div id="techDocTree" style="height:100%; width:300px;"></div>
+				</div>
+				<div data-dojo-type="TechDoc/Aras/Client/Controls/TechDoc/Editor" data-dojo-props="region:'center', splitter:true, structuredDocument: structuredDocument," id="techDocHtmlEditor"></div>
+			@if (isEditMode)
+			{
+				<div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region:'bottom', splitter:false" style="height: 50%;" id="searchBox" baseClass="dijitContentPaneNoPadding">
+					<iframe src="../../scripts/blank.html" frameborder="0" style="overflow: hidden; width:100%; height: 100%;" id="searchBoxFrame"></iframe>
+				</div>
+			}
+			</div>
+		</div>
+		<div id="urlLinkPanel" style="position:absolute; top:30px; left:0px; right:0px; bottom:0px; background-color:#FFFFFF; z-index:5;">
+			<input id="urlAddress" type="text" style="width: 500px; height: 26px; margin:250px 0px 0px 160px; border:1px solid #C0C0C0; font-size:14px;" onchange="applyExternalUrl()"/>
+			<input id="checkUrlButton" class="btn" type="button" value="Check Url" style="width:100px; height:30px; margin:250px 0px 0px 10px;" onclick="checkUrl()"/>
+		</div>
+		<div id="contentOverlay" style="position:absolute; top:0px; left:0px; right:0px; bottom:0px; background-color:#FFFFFF; z-index:10;"></div>
+	</div>
+</body>
+</html>

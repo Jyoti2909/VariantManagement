@@ -1,0 +1,182 @@
+﻿<AML>
+ <Item type="Form" id="3CDF1644DBF3470A8BA6DA71C5D26747" action="add">
+  <category_form>0</category_form>
+  <height>112</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>288</width>
+  <name>dr_RemediateDrfForm</name>
+  <Relationships>
+   <Item type="Body" id="38BB6D2100F14B309E154F0BE100D676" action="add">
+    <sort_order>128</sort_order>
+    <source_id keyed_name="dr_RemediateDrfForm" type="Form">3CDF1644DBF3470A8BA6DA71C5D26747</source_id>
+    <Relationships>
+     <Item type="Field" id="BF3A81EFD2284893B6FDF0569EA8947A" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>button</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>0</is_visible>
+      <label xml:lang="en">Cancel</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>384</sort_order>
+      <source_id keyed_name="38BB6D2100F14B309E154F0BE100D676" type="Body">38BB6D2100F14B309E154F0BE100D676</source_id>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>0</y>
+      <name>cancelButton</name>
+      <Relationships>
+       <Item type="Field Event" id="AB95DEC7BFB24367AF70896CD9A08299" action="add">
+        <field_event>onclick</field_event>
+        <related_id keyed_name="dr_RemediateFormBtnCancelClick" type="Method">
+         <Item type="Method" action="get" select="id">
+          <name>dr_RemediateFormBtnCancelClick</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="cancelButton" type="Field">BF3A81EFD2284893B6FDF0569EA8947A</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+     <Item type="Field" id="17F2FBDE21324ECEA30AD632541D8670" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<button class="aras-button aras-button_secondary-light" onclick="this.ownerDocument.getElementsByClassName('cancelButton')[0].click();">
+	<span class="aras-button__text" style="min-width: 64px;">Cancel</span>
+</button>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>640</sort_order>
+      <source_id keyed_name="38BB6D2100F14B309E154F0BE100D676" type="Body">38BB6D2100F14B309E154F0BE100D676</source_id>
+      <tab_stop>1</tab_stop>
+      <x>185</x>
+      <y>64</y>
+      <name>cancelButtonHtml</name>
+     </Item>
+     <Item type="Field" id="04A91B0CA0F3402586C839746A08D32E" action="add">
+      <border_width>0</border_width>
+      <css />
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>12pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<fieldset class="sys_f_border">
+	<table cellspacing="0" cellpadding="0" class="sys_f_table">
+		<tbody class="sys_f_tbody">
+			<tr class="sys_f_tr">
+				<td class="sys_f_value_container sys_f_value_right">
+					<div class="sys_f_value">
+						<span name="all" style="position:relative;display:block;">
+							<input type="radio" value="all" checked="checked" name="0BB5B81FEB37475BB9C779408080DB61name" class="arasCheckboxOrRadio" onchange="radioButtonListOnChange(this);"/>
+							<label style="color: #333;font: normal 1rem Roboto,'Noto Sans JP',Arial,sans-serif" for="0BB5B81FEB37475BB9C779408080DB61_id" id="allLabel"></label>
+						</span>
+						<span name="particular" style="position:relative;display:block;margin-top: 5px;">
+							<input type="radio" value="particular" name="0BB5B81FEB37475BB9C779408080DB61name" class="arasCheckboxOrRadio" onchange="radioButtonListOnChange(this);"/>
+							<label style="color: #333;font: normal 1rem Roboto,'Noto Sans JP',Arial,sans-serif" for="0BB5B81FEB37475BB9C779408080DB61_id" id="particularLabel"/></label>
+						</span>
+						<input name="departures" type="hidden" value="all"/>
+						<script type="text/javascript">
+							function radioButtonListOnChange(event)
+							{
+								const departuresResultInput = document.getElementsByName("departures")[0];
+								if (event.value != departuresResultInput.value){
+									departuresResultInput.value = event.value;
+								}
+							}
+							document.addEventListener("DOMContentLoaded", function(event) {
+								const allDeparturesOptionName = aras.getResource('../Modules/aras.innovator.DomainAccessControl/', 'remediation_form.all_option');
+								const particularDeparturesOptionName = aras.getResource('../Modules/aras.innovator.DomainAccessControl/', 'remediation_form.particular_option');
+								const allDeparturesLabel = document.getElementById("allLabel");
+								const particularDeparturesLabel = document.getElementById("particularLabel");
+								allDeparturesLabel.textContent = allDeparturesOptionName;
+								particularDeparturesLabel.textContent = particularDeparturesOptionName;
+							});
+						</script>
+					</div>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</fieldset>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>512</sort_order>
+      <source_id keyed_name="38BB6D2100F14B309E154F0BE100D676" type="Body">38BB6D2100F14B309E154F0BE100D676</source_id>
+      <tab_stop>1</tab_stop>
+      <x>3</x>
+      <y>4</y>
+      <name>departureOptionList</name>
+     </Item>
+     <Item type="Field" id="BACCD685AE964ECDB462B2FE91504AD7" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>button</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>0</is_visible>
+      <label xml:lang="en">OK</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>256</sort_order>
+      <source_id keyed_name="38BB6D2100F14B309E154F0BE100D676" type="Body">38BB6D2100F14B309E154F0BE100D676</source_id>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>0</y>
+      <name>okButton</name>
+      <Relationships>
+       <Item type="Field Event" id="76C05B1CAF35413DBDB0F4BB31C2BCA4" action="add">
+        <field_event>onclick</field_event>
+        <related_id keyed_name="dr_RemediateFormBtnOkClick" type="Method">
+         <Item type="Method" action="get" select="id">
+          <name>dr_RemediateFormBtnOkClick</name>
+         </Item>
+        </related_id>
+        <sort_order>128</sort_order>
+        <source_id keyed_name="okButton" type="Field">BACCD685AE964ECDB462B2FE91504AD7</source_id>
+       </Item>
+      </Relationships>
+     </Item>
+     <Item type="Field" id="065C63F6FA9C48F1A65B7EDBCEA26EF7" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<button class="aras-button aras-button_primary" onclick="this.ownerDocument.getElementsByClassName('okButton')[0].click();">
+	<span class="aras-button__text" style="min-width: 64px;">OK</span>
+</button>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>768</sort_order>
+      <source_id keyed_name="38BB6D2100F14B309E154F0BE100D676" type="Body">38BB6D2100F14B309E154F0BE100D676</source_id>
+      <tab_stop>1</tab_stop>
+      <x>97</x>
+      <y>64</y>
+      <name>okButtonHtml</name>
+     </Item>
+    </Relationships>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

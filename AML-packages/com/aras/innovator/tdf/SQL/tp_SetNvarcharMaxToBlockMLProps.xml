@@ -1,0 +1,33 @@
+﻿<AML>
+ <Item type="SQL" id="848FA3186F5A41569F216A31C8CFF86D" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>tp_SetNvarcharMaxToBlockMLProps</old_name>
+  <sqlserver_body><![CDATA[CREATE PROCEDURE [tp_SetNvarcharMaxToBlockMLProps] (@tableName varchar(32) = 'TP_BLOCK')
+AS 
+  BEGIN 
+	DECLARE @SQLString nvarchar(500)
+	DECLARE @suffix nvarchar(4) 
+
+	DECLARE languageSuffixCursor CURSOR FOR  
+	SELECT SUFFIX FROM innovator.[LANGUAGE]
+
+	OPEN languageSuffixCursor   
+	FETCH NEXT FROM languageSuffixCursor INTO @suffix   
+
+	WHILE @@FETCH_STATUS = 0   
+	BEGIN   
+		SET @SQLString = 'ALTER TABLE innovator.' + @tableName +' ALTER COLUMN content' + COALESCE(@suffix, '') + ' nvarchar(max)'
+		EXECUTE sp_executesql @SQLString
+
+		FETCH NEXT FROM languageSuffixCursor INTO @suffix   
+	END   
+
+	CLOSE languageSuffixCursor   
+	DEALLOCATE languageSuffixCursor
+  END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>tp_SetNvarcharMaxToBlockMLProps</name>
+ </Item>
+</AML>

@@ -1,0 +1,44 @@
+﻿<AML>
+ <Item type="Method" id="087C4F30DE7B44BCAF4A11BC458B37BA" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (dijit.byId('viewers').selectTab(inArgs.switchToTabId)) {
+
+	// turn on particular clicked button
+	dijit.byId('sidebar').switchSidebarButton(inArgs.control.id, inArgs.enabledButtonImage, true);
+
+	// get button(s) to inactivate
+	if (!inArgs.disabledButtonIds) {
+		inArgs.disabledButtonIds = [];
+		inArgs.disabledButtonIcons = [];
+		dijit.byId('viewers').getChildren().filter(function(widget) {
+			return widget.id !== inArgs.switchToTabId;
+		}).forEach(function(widget) {
+			widget = widget.getChildren()[0];
+			if (!widget || !widget.getSwitchOffButtonIds) {
+				return;
+			}
+			widget.getSwitchOffButtonIds().forEach(function(id) {
+				inArgs.disabledButtonIds.push(id);
+			});
+			widget.getSwitchOffDisabledButtonIcons().forEach(function(img) {
+				inArgs.disabledButtonIcons.push(img);
+			});
+		});
+	}
+
+	// form tab 'widget' does not provide sidebar info for now
+	if (inArgs.switchToTabId !== 'formTab') {
+		inArgs.disabledButtonIds = ['show_form'];
+		inArgs.disabledButtonIcons = ['../images/ShowFormOff.svg'];
+	}
+
+	// turn off particular one(s) - with disabled image(s); actually only 1 button should be processed
+	inArgs.disabledButtonIds.forEach(function(id, ind) {
+		dijit.byId('sidebar').switchSidebarButton(id, inArgs.disabledButtonIcons[ind], false);
+	});
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ShowTab_ButtonClick</name>
+ </Item>
+</AML>

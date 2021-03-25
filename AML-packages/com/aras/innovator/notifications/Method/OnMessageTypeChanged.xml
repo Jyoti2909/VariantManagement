@@ -1,0 +1,52 @@
+﻿<AML>
+ <Item type="Method" id="5A3E39F239A849D4A31D4B5F66EC8F55" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var itm = document.item;
+if (!itm) {
+	return;
+}
+
+var messageType = aras.getItemProperty(itm, 'is_standard_template');
+var customHtmlElem = getFieldByName('custom_html');
+var widthElem = getFieldByName('width');
+var heightElem = getFieldByName('height');
+var cssElem = getFieldByName('css');
+
+if ('1' == messageType) {
+	if (customHtmlElem) {
+		customHtmlElem.style.visibility = 'hidden';
+	}
+
+	if (widthElem) {
+		widthElem.style.display = 'none';
+	}
+
+	if (heightElem) {
+		heightElem.style.display = 'none';
+	}
+
+	if (cssElem) {
+		cssElem.style.display = 'block';
+	}
+} else {
+	if (widthElem) {
+		widthElem.style.display = 'block';
+	}
+
+	if (heightElem) {
+		heightElem.style.display = 'block';
+	}
+
+	if (cssElem) {
+		cssElem.style.display = 'none';
+	}
+
+	if (customHtmlElem) {
+		customHtmlElem.style.visibility = '';
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>OnMessageTypeChanged</name>
+ </Item>
+</AML>

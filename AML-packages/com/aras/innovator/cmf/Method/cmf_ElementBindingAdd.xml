@@ -1,0 +1,19 @@
+﻿<AML>
+ <Item type="Method" id="BA7FA3A6F1304255B97916498D9578F1" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Item documentTypeQuery = this.newItem("cmf_ElementType", "get");
+documentTypeQuery.setID(this.getProperty("source_id"));
+documentTypeQuery.setAttribute("select", "source_id");
+documentTypeQuery = documentTypeQuery.apply();
+string documentTypeId = documentTypeQuery.getProperty("source_id");
+
+if (!RequestState.Contains(documentTypeId))
+{
+    return this.getInnovator().newError("It's impossible to save certain Element Type or Property Type. Instead save entire Content Type item.");
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_ElementBindingAdd</name>
+ </Item>
+</AML>

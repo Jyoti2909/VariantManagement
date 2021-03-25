@@ -1,0 +1,52 @@
+﻿<AML>
+ <Item type="Method" id="A4103A28AE1B494F842180CC54C516FC" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string itemTypeId = this.getProperty("source_id");
+Item itemType = this.newItem("ItemType", "get");
+itemType.setID(itemTypeId);
+itemType.setAttribute("select", "implementation_type, keyed_name, name");
+itemType = itemType.apply();
+if (itemType.isError())
+{
+	return itemType;
+}
+
+string implType = itemType.getProperty("implementation_type");
+if (implType == "polymorphic" || implType == "federated")
+{
+	return this;
+}
+
+Item ssvcItemTypeInfo = this.newItem("ItemType", "get");
+ssvcItemTypeInfo.setProperty("name", "SSVCItems");
+ssvcItemTypeInfo.setAttribute("select", "id");
+ssvcItemTypeInfo = ssvcItemTypeInfo.apply();
+if (ssvcItemTypeInfo.isError())
+{
+	return ssvcItemTypeInfo;
+}
+
+Item morpItem = this.newItem("Morphae", "get");
+morpItem.setAttribute("select", "id");
+morpItem.setProperty("related_id", itemTypeId);
+morpItem.setProperty("source_id", ssvcItemTypeInfo.getID());
+morpItem = morpItem.apply();
+if (morpItem.isError())
+{
+	if (morpItem.getErrorCode() == "0")
+	{
+		ssvcItemTypeInfo.setAction("edit");
+		ssvcItemTypeInfo.setAttribute("doGetItem", "0");
+		morpItem = this.newItem("Morphae", "add");
+		morpItem.setProperty("related_id", itemTypeId);
+		ssvcItemTypeInfo.addRelationship(morpItem);
+		return ssvcItemTypeInfo.apply();
+	}
+	return morpItem;
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_AddPolysourceToSSVCItems</name>
+ </Item>
+</AML>

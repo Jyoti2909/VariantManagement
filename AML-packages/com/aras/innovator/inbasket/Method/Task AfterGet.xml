@@ -1,0 +1,33 @@
+﻿<AML>
+ <Item type="Method" id="506D5C1DCC1F435DA2F400B639E467CC" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[int count = this.getItemCount();
+if (count < 1) 
+{
+	return this;
+}
+
+string[] identityList = Aras.Server.Security.Permissions.Current.IdentitiesList.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+var identityHash = new HashSet<string>(identityList.Select(id => id.Trim(new[] { '\'' })));
+
+for (int i = 0; i < count; i++)
+{
+	Item itm = this.getItemByIndex(i);
+	string assignedTo = itm.getProperty("assigned_to", "");
+	bool isAssigned = identityHash.Contains(assignedTo);
+	if (isAssigned)
+	{
+		itm.setProperty("classification", "My");
+	}
+	else
+	{
+		itm.removeProperty("classification");
+	}
+	itm.setProperty("my_assignment", isAssigned ? "1" : "0");
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Task AfterGet</name>
+ </Item>
+</AML>

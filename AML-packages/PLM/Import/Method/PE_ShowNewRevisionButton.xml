@@ -1,0 +1,72 @@
+﻿<AML>
+ <Item type="Method" id="A826776C4E8E4BD284B74D23978B696B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if(aras.isLocked(document.item))
+{
+  hideNewRevisionButton(true);
+  return;
+}
+
+const manualReleaseStates = ['Released', 'Production Released'];
+
+if(!manualReleaseStates.includes(aras.getItemProperty(document.item, "state", "")))
+{
+  hideNewRevisionButton(true);
+  return;
+}
+
+var ownedById = aras.getItemProperty(document.item, "owned_by_id","");
+if(!pb_isCurrUserMemberOfIdentityId(ownedById))
+{
+  hideNewRevisionButton(true);
+  return;
+}
+
+var dom = aras.createXMLDocument();
+dom.loadXML(document.item.xml);
+dom.documentElement.setAttribute("action", "PE_CheckChangeItemUsage");
+var res = aras.soapSend("ApplyMethod", dom.xml);
+
+if(aras.hasFault(res.results))
+{
+  hideNewRevisionButton(true);
+  return;
+}
+
+hideNewRevisionButton(false);
+
+function hideNewRevisionButton(hide)
+{ 
+  var button = document.getElementsByName("major_rev_increment")[0];
+  var text = document.getElementsByName("major_rev")[0];
+  if(hide)
+  {
+    text.size = "4";
+    button.style.display = "none";
+  }
+  else
+  {
+    text.size = "1";
+    button.style.display = "inline"; 
+  }
+}
+
+function pb_isCurrUserMemberOfIdentityId(identity_to_check) 
+{
+  if (identity_to_check === "") {return false;}
+    
+  var sessionIdentitites_array = aras.getIdentityList().split(",");
+  // now we have all identities the current user (session) is member of
+  // scan if given identity is in the list - if yes, return true
+  for (var i=0;i<sessionIdentitites_array.length;i++)
+  {
+    if (identity_to_check == sessionIdentitites_array[i]) {return true;}
+  }
+  return false;
+};
+
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PE_ShowCreateNewRevButton</name>
+ </Item>
+</AML>

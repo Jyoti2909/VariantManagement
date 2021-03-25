@@ -1,0 +1,146 @@
+﻿<AML>
+ <Item type="SQL" id="CFCBC3065E17463BA3EB0B76E78026A4" action="add">
+  <execution_count>6</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>update_ACTIVITIES_P_ASAP</old_name>
+  <sqlserver_body><![CDATA[create procedure [update_ACTIVITIES_P_ASAP] 
+  @flag int,
+  @TZ_NAME NVARCHAR(50) = NULL,
+  @isForDebug bit = null,
+  @insertedQ int OUTPUT
+AS 
+BEGIN
+  declare @existingIdsT table (existingId char(32))
+  declare @existingIdQuant int
+  INSERT INTO @existingIdsT
+    SELECT AW.ID
+      FROM #ACTIVITIES_IN_WORK AW
+           INNER JOIN #ACTIVITIES_P AP ON (AW.ID = AP.ID)
+      WHERE AW.FLAG = 1
+
+  set @existingIdQuant = @@ROWCOUNT
+
+  declare @thisCallerName varchar(64),  @thisDbName varchar(64),
+          @thisInCallPars varchar(512), @thisOutCallPars varchar(512), @thisAdditionalInfo NVARCHAR(MAX)
+  if ((not @isForDebug is null) and 1=@isForDebug and exists (select * from [sys].[objects] where [name] = 'schedulingLogSp' and type='P'))
+  begin
+
+      select @thisCallerName = convert(varchar(64), OBJECT_NAME(@@PROCID))
+      select @thisDbName = convert(varchar(64), DB_NAME())
+      set @thisInCallPars = ''
+      set @thisInCallPars = @thisInCallPars + '; @flag int=' + convert(varchar(64), @flag)
+      set @thisInCallPars = @thisInCallPars + '; @TZ_NAME NVARCHAR(50)=' + convert(varchar(64), @TZ_NAME)
+      set @thisInCallPars = @thisInCallPars + '; @isForDebug bin=' + convert(varchar(64), @isForDebug)
+
+      set @thisAdditionalInfo = '"@existingIdQuant=' + convert(varchar(16), @existingIdQuant)
+      if (@existingIdQuant = 0)
+        set @thisAdditionalInfo = @thisAdditionalInfo + '"'
+      else begin
+        declare @existingIdsS varchar(max)
+        set @existingIdsS = ''
+        SELECT @existingIdsS = COALESCE(@existingIdsS + ', ', '') + ISNULL(existingId, 'N/A') FROM @existingIdsT
+        set @thisAdditionalInfo = @thisAdditionalInfo + '; @existingId(s)=' + @existingIdsS + '"'
+      end
+        
+  end
+
+  if (@existingIdQuant > 0) begin /*this is the only new logic, should fix the issue with multiple predecessors*/
+    set @insertedQ = 0
+    declare @existingId as char(32), @prevExistingId as char(32), @exIdNum as int = 0
+    set @prevExistingId = REPLICATE(' ', 32)
+    select @existingId = min(existingId) from @existingIdsT where existingId > @prevExistingId
+    while (not @existingId is null)
+    begin
+      set @exIdNum = @exIdNum + 1
+      set @prevExistingId = @existingId
+
+      declare @updatedDateS datetime, @updatedDateF datetime
+      EXECUTE [innovator].[get_prop_date_ASAP]
+                  @inputId = @existingId,
+                  --@propDateSprev = null,
+                  --@propDateFprev = null,
+                  @TZ_NAME = @TZ_NAME,
+                  @isForDebug = @isForDebug,
+                  @propDateS = @updatedDateS OUTPUT,
+                  @propDateF = @updatedDateF OUTPUT;
+
+    declare @newS as datetime, @newF as datetime
+    select @newS = [innovator].Select_sched_date2
+      (
+        /* early date. 1st argument */
+        A.DATE_ES,
+        /* prop date. 2nd argument */
+        Isnull (@updatedDateS, A.DATE_ES),
+        /* cur date. 3rd argument */
+        A.DATE_START_SCHED,
+        /* target date. 4th argument */
+        A.DATE_START_TARGET,
+        /* late date. 5th argument */
+        A.DATE_LS,
+        /* flag. 6th argument */
+        @flag
+      ),
+      @newF = [innovator].[Business_dateadd_Scalar]
+        (INNOVATOR.Select_sched_date2
+          (
+            /* early date. 1st argument */
+            A.DATE_ES,
+            /* prop date. 2nd argument */
+            Isnull (@updatedDateF, A.DATE_ES),
+            /* cur date. 3rd argument */
+            A.DATE_START_SCHED,
+            /* target date. 4th argument */
+            A.DATE_START_TARGET,
+            /* late date. 5th argument */
+            A.DATE_LS,
+            /* flag. 6th argument */
+            @flag
+          ),
+          A.EXPECTED_DURATION -
+            ( CASE
+              WHEN A.EXPECTED_DURATION = 0 THEN 0
+              ELSE 1
+              END
+            ),
+          @TZ_NAME
+        )
+        FROM   [ACTIVITY2] A
+        where A.id = @existingId
+  
+      if ((not @newS is null) and (not @newF is null))
+      begin
+        update #ACTIVITIES_P set 
+          s = @newS,
+          f = @newF
+          where id = @existingId
+          --where id in (select existingId from @existingIdsT)
+
+          set @insertedQ = @insertedQ + 1
+      end
+      select @existingId = min(existingId) from @existingIdsT where existingId > @prevExistingId
+
+      if ((not @isForDebug is null) and 1=@isForDebug and exists (select * from [sys].[objects] where [name] = 'schedulingLogSp' and type='P'))
+      begin
+        declare @toPr as varchar(128)
+        if (@existingId is null)
+          set @toPr = 'now @existingId is null;  '
+        else
+          set @toPr = 'now @existingId=' + @existingId + ' @newS=' + convert(varchar(32), @newS) + ' @newF=' + convert(varchar(32), @newF)
+          print(@toPr);
+
+
+          set @thisAdditionalInfo = @thisAdditionalInfo + '; @existIdNum=' + convert(varchar(16), @exIdNum) + 
+            '; @insertedQ=' + convert(varchar(16),@insertedQ) + '; ' + @toPr
+
+          exec [innovator].[schedulingLogSp] @callerSpName=@thisCallerName, @dbName=@thisDbName,
+            @inParams=@thisInCallPars, @additionalInfo=@thisAdditionalInfo --, @outParams=@thisOutCallPars
+      end
+    end /*while (not @existingId is null)*/
+  end
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>update_ACTIVITIES_P_ASAP</name>
+ </Item>
+</AML>

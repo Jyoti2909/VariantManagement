@@ -1,0 +1,309 @@
+﻿<AML>
+ <Item type="Form" id="066425C81D074CCC99B7B65588A4AEFD" action="add">
+  <category_form>0</category_form>
+  <description>Form for select file from instance of fileExchangePackage</description>
+  <height>500</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>600</width>
+  <name>FE_SelectFileFromPackage</name>
+  <Relationships>
+   <Item type="Body" id="EC8F8F7FA6894A75A99A247DCA8832DE" action="add">
+    <sort_order>128</sort_order>
+    <source_id keyed_name="FE_SelectFileFromPackage" type="Form">066425C81D074CCC99B7B65588A4AEFD</source_id>
+    <Relationships>
+     <Item type="Field" id="E64216B266C24465AD4469E6C3C75039" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<style type="text/css">
+	@import "../../javascript/include.aspx?classes=arasClaro.css,common.css";
+</style>
+<script type="text/javascript">
+	var dlgArgs = aras.getMostTopWindowWithAras(window).window.dialogArguments,
+		statusbar,
+		grid,
+		toolbar;
+	aras.getMostTopWindowWithAras(window).window.returnValue = undefined;
+
+	if (dlgArgs) {
+		aras = dlgArgs.aras;
+		var requestedPropertiesLabels = dlgArgs.requestedPropertiesLabels,
+			requestedPropertiesColumnsWidth = dlgArgs.requestedPropertiesColumnsWidth,
+			requestedPropertiesColumnsAligns = dlgArgs.requestedPropertiesColumnsAligns,
+			multiselect = dlgArgs.multiselect;
+	}
+
+	var inputRowTdVals = [],
+		propNames = ["keyed_name", "filename"],
+		prevRelatedXml,
+		prevSourceXml,
+		filesArray = [],
+		maxCount = 0,
+		pageSize = 0,
+		currentPage = 0;
+
+	function onLoadGrid (isReload) {
+		var relatedXml = "";
+		var sourceXml = "";
+		for (var i = 0; i < inputRowTdVals.length; i++) {
+			if (inputRowTdVals[i] && i < propNames.length) {
+				const cond = aras.getMainWindow().ArasCore.searchConverter.simpleToAml(grid.inputRow.get(i, 'value'), propNames[i], {condition: 'like'});
+				if (!cond) {
+					return;
+				}
+
+				if (propNames[i] == "keyed_name") {
+					sourceXml = cond;
+				} 
+				else if (propNames[i] == "filename") {
+					relatedXml = cond;
+				}
+			}
+		}
+
+		var isChangeSize = toolbar.getItem("page_size").getText() == pageSize;
+		if (!isCorrectPageSize() || (isReload && prevRelatedXml === relatedXml && prevSourceXml === sourceXml && isChangeSize)) {
+			return;
+		}
+		if (prevRelatedXml != relatedXml || prevSourceXml != sourceXml) {
+			var query = new Item(),
+				aml = 	"<Item type='FileExchangePackage' action='get' >" +
+						"	<classification>Download</classification>" +
+							sourceXml +
+						"	<Relationships>" +
+						"		<Item type='FileExchangePackageFile' action='get'>" +
+						"		<related_id>" + 
+						"			<Item type='File' action='get'>" +
+										relatedXml +
+						"			</Item>" +
+						"		</related_id>" +
+						"		</Item>" +
+						"	</Relationships>" +
+						"</Item>";
+			query.loadAML(aml);
+			query = query.apply();
+			filesArray = [];
+			for (var i = 0; i < query.getItemCount(); i++) {
+				var row = query.getItemByIndex(i),
+					relationships = row.getRelationships();
+				for (var j = 0; j < relationships.getItemCount(); j++) {
+					filesArray.push(relationships.getItemByIndex(j));
+				}
+			}
+			maxCount = filesArray.length;
+		}
+		prevSourceXml = sourceXml;
+		prevRelatedXml = relatedXml;
+
+		addRowsToGrid();
+	}
+
+	function addRowsToGrid () {
+		if (!isCorrectPageSize()) {
+			return;
+		}
+
+		grid.removeAllRows();
+		var size = (currentPage + 1) * pageSize;
+		size = (size >= maxCount) ? maxCount : size;
+		for (var i = currentPage * pageSize; i < size; i++) {
+			var row = filesArray[i];
+			var rowId = row.getRelatedItem().getId();
+			grid.addRow(rowId, "", true);
+
+			for (var j = 0; j < propNames.length; j++) {
+				var cell = grid.cells(rowId, j);
+				if (cell) {
+					var property = propNames[j] == "keyed_name" ? "source_id" : "related_id";
+					cell.setValue(row.getPropertyAttribute(property, "keyed_name", ""));
+				}
+			}
+		}
+		toolbar.getItem("prev_page").setEnabled(currentPage !== 0);
+		toolbar.getItem("next_page").setEnabled((currentPage + 1) * pageSize < maxCount);
+
+		currentItems = size;
+		var statusMsg = maxCount !== 0 ? aras.getResource("", "search.how_much_items_on_page", currentPage * pageSize + 1, size, maxCount, currentPage + 1, Math.ceil(maxCount / pageSize)) : aras.getResource("", "search.n_items_found", maxCount);
+		if (statusMsg) {
+			statusbar.setStatus("page_status", statusMsg, "");
+		}
+	}
+
+	function onClick () {
+		var rowId = grid.getSelectedId();
+		if (rowId) {
+			aras.getMostTopWindowWithAras(window).window.returnValue = rowId;
+		}
+	}
+
+	function onKeyPressed (event) {
+		if (event.keyCode == 13) { // Enter
+			var tbItem = toolbar.getItem("search");
+			if (tbItem) {
+				onClickItem(tbItem);
+			}
+		}
+	}
+
+	function onApplyEdit (id, field) {
+		var columnIndex = grid.GetColumnIndex(field);
+		if (!validateSearchCriteria(grid.inputRow.get(columnIndex, "value"))) {
+			return false;
+		}
+		inputRowTdVals = [];
+		for (var i = 0; i < propNames.length; i++) {
+			var cellVal = grid.inputRow.get(i, "value");
+			inputRowTdVals.push(cellVal ? cellVal : "");
+		}
+	}
+
+	function onClickItem (tbItem) {
+		tbItem.setEnabled(false);
+		switch (tbItem.getId()) {
+			case "select":
+				var fileId = grid.getSelectedId();
+				if (!fileId) {
+					aras.AlertError(aras.getResource("", "searchdlg.select_item"));
+					tbItem.setEnabled(true);
+					return;
+				}
+				aras.getMostTopWindowWithAras(window).window.returnValue = fileId;
+				aras.getMostTopWindowWithAras(window).window.close();
+				break;
+			case "clear":
+				for (var i = 0; i < inputRowTdVals.length; i++) {
+					grid.inputRow.set(i, "value", "");
+				}
+				inputRowTdVals = [];
+				tbItem.setEnabled(true);
+				break;
+			case "search":
+				currentPage = 0;
+				onLoadGrid(true);
+				tbItem.setEnabled(true);
+				break;
+			case "prev_page":
+				currentPage--;
+				addRowsToGrid();
+				break;
+			case "next_page":
+				currentPage++;
+				addRowsToGrid();
+				break;
+		}
+	}
+
+	function isCorrectPageSize() {
+		var size = toolbar.getItem("page_size").getText();
+		if ("" == size || aras.isPositiveInteger(size)) {
+			if (size != pageSize) {
+				currentPage = 0;
+			}
+			pageSize = size != "" ? size : maxCount;
+			return true;
+		}
+		else {
+			aras.AlertError(aras.getResource("", "search.page_size_should_positive_integer"), "", "", window);
+			toolbar.getItem("page_size").setText("");
+			pageSize = maxCount;
+			return false;
+		}
+	}
+
+	function validateSearchCriteria (cellValue) {
+		const criteriaAML = aras.getMainWindow().ArasCore.searchConverter.simpleToAml(cellValue, 'validation');
+		if (criteriaAML) {
+			return true;
+		} 
+
+		if (aras.confirm(aras.getResource("", "search.invalid_criteria"))) {
+			grid.requestFocus();
+		} 
+		else {
+			cell.setValue("");
+			return true;
+		}
+		return false;
+	}
+
+	function initGrid() {
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", undefined, function(control) {
+			grid = control;
+			var countColumn = requestedPropertiesLabels.length;
+			if (requestedPropertiesColumnsWidth.length !== countColumn || requestedPropertiesColumnsAligns.length !== countColumn) {
+				aras.AlertError(aras.getResource("", "fe.wrong_input_error"), "", "", window);
+				return;
+			}
+			var headers = [];
+			for (var i = 0; i < countColumn; i++) {
+				headers.push({
+					field: propNames[i],
+					name: requestedPropertiesLabels[i],
+					headerStyles: "text-align: center;",
+					width: requestedPropertiesColumnsWidth[i] + "%",
+					styles: "text-align: " + requestedPropertiesColumnsAligns[i] + ";"
+				});
+			}
+			grid.setLayout_Experimental(headers);
+			grid.setMultiselect(multiselect);
+			grid.ShowInputRow(true);
+			clientControlsFactory.on(grid, {
+				"gridClick": onClick,
+				"onApplyEdit_Experimental": onApplyEdit,
+				"gridDoubleClick": function (rowId) {
+					onClick(rowId);
+					aras.getMostTopWindowWithAras(window).window.close();
+				}
+			});
+		});
+	}
+
+	function onload_handler() {
+		if (!dlgArgs) {
+			return;
+		}
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", { connectId: "top" }, function(control) {
+			toolbar = control;
+			toolbar.loadXml(aras.getI18NXMLResource("selectFileFromPackage_toolbar.xml", aras.getBaseURL()));
+			toolbar.show();
+			clientControlsFactory.on(toolbar, {
+				"onClick": onClickItem
+			});
+		});
+
+		clientControlsFactory.createControl("Aras.Client.Controls.Experimental.StatusBar", { aras: aras, resourceUrl: aras.getI18NXMLResource("defaultstatusbar2.xml", aras.getBaseURL())}, function(control){
+			statusbar = control;
+			document.getElementById("bottom").appendChild(statusbar.domNode);
+		});
+		initGrid();
+		onLoadGrid();
+	}
+	window.addEventListener("load", onload_handler, false);
+</script>
+<div style="width: 100%; height: 100%; position: fixed; top: 0px; left: 0px; margin: 0px; padding: 0px;" id="BorderContainer">
+	<div id="top" style="height: 30px; width: 100%"></div>
+	<div id="gridTD" style="padding: 0px; top: 30px; bottom: 20px; width: 100%; position: fixed;"></div>
+	<div id="bottom" style="height: 20px; position: fixed; bottom: 0px; width: 100%"></div>
+</div>
+]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <positioning>absolute</positioning>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="EC8F8F7FA6894A75A99A247DCA8832DE" type="Body">EC8F8F7FA6894A75A99A247DCA8832DE</source_id>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>0</y>
+      <name>html0</name>
+     </Item>
+    </Relationships>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

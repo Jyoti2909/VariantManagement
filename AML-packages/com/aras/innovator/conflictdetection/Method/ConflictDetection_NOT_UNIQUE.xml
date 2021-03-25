@@ -1,0 +1,188 @@
+﻿<AML>
+ <Item type="Method" id="F7923438618F432CB88966A27E766142" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=ConflictDetectionLocalRuleCSharp.version:1;
+
+public class $(clsname) : LocalConflictDetectionRule
+{
+	Aras.Server.Core.CallContext CCO;
+
+	public $(clsname)(IServerConnection serverConnection, String name)
+		: base(serverConnection, name)
+	{
+		this.CCO = ((Aras.Server.Core.IOMConnection)serverConnection).CCO;
+	}
+
+	public override IList<ConflictDetectionResult> Execute(Item configuration)
+	{
+		List<ConflictDetectionResult> ConflictList = new List<ConflictDetectionResult>();
+
+		ConflictList = CheckUniqueValues(ConflictList, configuration);
+
+		ConflictList = CheckEditAction(ConflictList, configuration);
+
+		return ConflictList;
+	}
+
+	private List<ConflictDetectionResult> CheckUniqueValues(List<ConflictDetectionResult> conflicts, Item configuration)
+	{
+		Item items = configuration.getItemsByXPath("//Item[@action='add' or @action='update' or @action='version']");
+		int ItemsCount = items.getItemCount();
+		List<string> types = new List<string>();
+
+		if (ItemsCount > 0)
+		{
+			for (int itemIndex = 0; itemIndex < ItemsCount; itemIndex++)
+			{
+				Item itemForCheck = items.getItemByIndex(itemIndex);
+				String type = itemForCheck.getType();
+				if (!types.Contains(type))
+				{
+					types.Add(type);
+				}
+			}
+
+			Dictionary<string, List<string>> definitions = GetITDefinitions(types);
+
+			for (int itemIndex = 0; itemIndex < ItemsCount; itemIndex++)
+			{
+				/*
+				<Item type="type" action="get">
+					<AND>
+						<unique1>value1</unique1>
+						<unique2>value2</unique2>
+						<NOT>
+							<config_id>currentConfigId</config_id>
+						</NOT>
+					</AND>
+				</Item>
+				*/
+				Item itemForCheck = items.getItemByIndex(itemIndex);
+				String type = itemForCheck.getType();
+				//if definition doesn't contain type key - type def doesn't have unique fields.
+				if (definitions.ContainsKey(type))
+				{
+					Item checker = this.Innovator.newItem(type, "get");
+					Item checkerAnd = checker.newAND();
+					foreach (string p in definitions[type])
+					{
+						string value = itemForCheck.getProperty(p);
+						if (!String.IsNullOrEmpty(value))
+						{
+							checkerAnd.setProperty(p, value);
+						}
+					}
+					//check that Item's with another configId doesn't have same values.
+					Item checkerAndNot = checkerAnd.newNOT();
+					checkerAndNot.setProperty("config_id", GetItemConfigId(itemForCheck));
+
+					Item result = checker.apply();
+					if (result.getItemCount() != 0)
+					{
+						ConflictDetectionResult conflictResult = this.CreateConflict(itemForCheck, "Unique property contains not unique value!");
+						conflicts.Add(conflictResult);
+					}
+				}
+			}
+		}
+		return conflicts;
+	}
+
+	private List<ConflictDetectionResult> CheckEditAction(List<ConflictDetectionResult> conflicts, Item configuration)
+	{
+		Item itemsWithEdit = configuration.getItemsByXPath("//Item[@action='edit']");
+		for (int itemIndex = 0; itemIndex < itemsWithEdit.getItemCount(); itemIndex++)
+		{
+			Item itemForCheck = itemsWithEdit.getItemByIndex(itemIndex);
+			conflicts.Add(this.CreateConflict(itemForCheck, "Action \"edit\" isn't supported in checkin configuration and was ignored during check for conflicts."));
+		}
+		return conflicts;
+	}
+
+	private string GetItemConfigId(Item itemForCheck)
+	{
+		string configID = itemForCheck.getProperty("config_id");
+		if (!String.IsNullOrEmpty(configID))
+		{
+			return configID;
+		}
+		else
+		{
+			string type = itemForCheck.getType();
+			string id = itemForCheck.getID();
+			Item request = this.Innovator.newItem(type, "get");
+			request.setAttribute("id", id);
+			request.setAttribute("select", "config_id");
+			Item result = request.apply();
+
+			if (result.isError())
+			{
+				return id;
+			}
+			else {
+				return result.getProperty("config_id");
+			}
+		}
+	}
+
+	private Dictionary<string, List<string>> GetITDefinitions(List<string> types)
+	{
+		Dictionary<string, List<string>> result = new Dictionary<string, List<string>>();
+		/*
+			<Item type="ItemType" action="get" select="name, id">
+				<name condition="in">'part', 'property'</name>
+				<Relationships>
+					<Item type="Property" action="get" select="data_type, id, name">
+						<is_keyed>1</is_keyed>
+					</Item>
+				</Relationships>
+			</Item>
+		*/
+		Item query = this.Innovator.newItem("ItemType", "get");
+		query.setAttribute("select", "name, id");
+		query.setProperty("name", FormInStringForRequest(types));
+		query.setPropertyAttribute("name", "condition", "in");
+		Item related = this.Innovator.newItem("Property", "get");
+		related.setAttribute("select", "data_type, id, name");
+		related.setProperty("is_keyed", "1");
+		query.addRelationship(related);
+		Item definitions = query.apply();
+
+		for (int i = 0; i < definitions.getItemCount(); i++)
+		{
+			Item current = definitions.getItemByIndex(i);
+			string type = current.getProperty("name");
+			string id = current.getProperty("id");
+
+			if (!result.ContainsKey(type))
+			{
+				List<string> value = new List<string>();
+				Item properties = current.getItemsByXPath("//Item[@id='" + id + "']/Relationships/Item[@type='Property']");
+
+				for (int j = 0; j < properties.getItemCount(); j++)
+				{
+					Item property = properties.getItemByIndex(j);
+					value.Add(property.getProperty("name"));
+				}
+				result.Add(type, value);
+			}
+		}
+		return result;
+	}
+
+	private string FormInStringForRequest(List<string> types)
+	{
+		string result = "";
+		int count = types.Count - 1;
+		for (var i = 0; i < count; i++)
+		{
+			result += "'" + CCO.DB.InnDatabase.QuoteValue(types[i]) + "',";
+		}
+		result += "'" + CCO.DB.InnDatabase.QuoteValue(types[count]) + "'";
+		return result;
+	}
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>ConflictDetection_NOT_UNIQUE</name>
+ </Item>
+</AML>

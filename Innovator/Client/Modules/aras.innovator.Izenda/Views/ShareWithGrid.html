@@ -1,0 +1,257 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<script type="text/javascript" src="../../../javascript/dialog.js"></script>
+		<link rel="stylesheet" type="text/css" href="../../../javascript/include.aspx?classes=ShareWithGrid.css"/>
+		<style type="text/css">
+		body {
+			width: 100%;
+			height: 100%;
+			padding: 0;
+			margin: 0;
+			overflow: hidden;
+		}
+		img {
+			cursor: pointer;
+		}
+		.claro .dojoxGridHeader {
+			border-top: none!important;
+		}
+		.dojoxGridRowTable {
+			border-top: 1px solid #CCC;
+		}
+
+		.grayFilter {
+			filter: url('../styles/controls/../grayscale.svg#grayscale');
+			-webkit-filter: grayscale(100%);
+			-webkit-opacity: 0.5;
+			filter: alpha(opacity=50), gray;
+			opacity:0.5;
+		}
+
+		div.grayFilter > svg > g, div.grayFilter > svg > path {
+			 filter: url(#ShareWithGrayFilter);
+		}
+		</style>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../../../javascript/dojo'"></script>
+		<script type="text/javascript">
+			var aras = parent.parent.aras;
+			var identityGridControl;
+			var index = 0;
+			var controlsDisabled = false;
+			var maping = [];
+			const restrictedTextColor = '#ff0000';
+
+			function getItems(nodes, array) {
+				if (!nodes) {
+					return;
+				}
+				for (let i = 0; i < nodes.childNodes.length; i++) {
+					const node = nodes.childNodes[i];
+					if (node.getAttribute('type') !== 'SelfServiceReportSharedWith' || node.getAttribute('action') === 'delete') {
+						continue;
+					}
+					const isRestricted = aras.getItemPropertyAttribute(node, 'related_id', 'is_null') === '0';
+					const identityName = isRestricted ? aras.getResource("", "common.restricted_property_warning") : aras.getItemPropertyAttribute(node, 'related_id', 'keyed_name');
+					const style = {
+						identityName: (isRestricted ? {color: restrictedTextColor} : '')
+					};
+					array.push({
+						uniqueId: index,
+						permission: aras.getItemProperty(node, 'access_rights'),
+						identityName: identityName,
+						identityId: aras.getItemProperty(node, 'related_id'),
+						style: style
+					});
+					maping[index] = node;
+					index++;
+				}
+				return array;
+			}
+
+			window.onload = function () {
+				var listValues = aras.getListValues(aras.getListId('User Report Access'), false);
+				var values = [];
+				var labels = [];
+				Array.prototype.forEach.call(listValues, function (type) {
+					values.push(aras.getItemProperty(type, 'value'));
+					labels.push(aras.getItemProperty(type, 'label'));
+				});
+
+				var tooltipPref = {
+					connectId: document.getElementById('controls'),
+					selector: 'div',
+					position: ['below', 'above'],
+					getContent: function (target) {
+						if (target.id === 'new') {
+							return aras.getResource('../Modules/aras.innovator.Izenda', 'sharewith.new_item');
+						} else if (target.id === 'remove') {
+							return aras.getResource('../Modules/aras.innovator.Izenda', 'sharewith.remove');
+						} else {
+							return;
+						}
+					},
+					showDelay: 500
+				};
+				clientControlsFactory.createControl('dijit/Tooltip', tooltipPref, function(tooltip) {});
+
+				setupIdentityGridControl();
+
+				var ssrItem = parent.parent.item;
+				var creatorId = aras.getItemProperty(ssrItem, 'created_by_id');
+				var ownerId = aras.getItemProperty(ssrItem, 'owned_by_id');
+				var currentUserId = aras.getCurrentUserID();
+				var userIdentityList = aras.getIdentityList();
+				if (creatorId !== currentUserId && userIdentityList.indexOf(ownerId) < 0 && !aras.isAdminUser()) {
+					identityGridControl.disable();
+					var controls = document.getElementById('controls');
+					controls.setAttribute('disabled', 'true');
+					if (aras.Browser.isFf()) {
+						controls.classList.add('grayImage');
+					} else {
+						var newButton = document.getElementById('new');
+						newButton.classList.add('grayFilter');
+						var removeButton = document.getElementById('remove');
+						removeButton.classList.add('grayFilter');
+					}
+					controlsDisabled = true;
+				}
+
+				function setupIdentityGridControl()
+				{
+					clientControlsFactory.createControl('Aras.Client.Controls.Public.GridContainer', {}, function(control) {
+						identityGridControl = grid = control;
+						clientControlsFactory.on(identityGridControl, {
+							onApplyEdit_Experimental: function (rowId, column, value) {
+								aras.setItemProperty(maping[rowId], 'access_rights', value);
+								var relId = aras.getItemProperty(maping[rowId], 'id');
+								var ssrItem = window.parent.parent.item;
+								var rel = aras.getItemRelationship(ssrItem, 'SelfServiceReportSharedWith', relId, false);
+								if (rel != null) {
+									var itemRels = ssrItem.selectSingleNode('Relationships');
+									itemRels.removeChild(rel);
+								}
+
+								if (!maping[rowId].getAttribute('action')) {
+									maping[rowId].setAttribute('action', 'edit');
+								}
+
+								if (!ssrItem.selectSingleNode('Relationships')) {
+									ssrItem.appendChild(ssrItem.ownerDocument.createElement('Relationships'));
+								}
+								ssrItem.selectSingleNode('Relationships').appendChild(maping[rowId]);
+							}
+						});
+						initIdentityGrid(identityGridControl);
+					});
+
+					function initIdentityGrid(grid) {
+						const identityLabel = aras.getResource('../Modules/aras.innovator.Izenda', 'sharewith.identity');
+						const permissionLabel = aras.getResource('../Modules/aras.innovator.Izenda', 'sharewith.permission');
+						grid.setLayout_Experimental([{
+								field: 'identityName',
+								name: identityLabel,
+								width: '210px',
+								styles: "text-align: left;",
+								headerStyles: "text-align: center;",
+								editableType: 'InputHelper'
+							},
+							{
+								field: 'permission',
+								name: permissionLabel,
+								width: '150px',
+								styles: "text-align: left;",
+								headerStyles: "text-align: center;",
+								editable: true,
+								editableType: 'FilterComboBox',
+								optionsLables: labels,
+								options: values
+							}
+						]);
+
+						var items = [];
+						getItems(parent.sharedWithRelationship, items);
+						getItems(parent.parent.item.selectSingleNode('./Relationships'), items);
+						for (let i = 0; i < items.length; i++) {
+							grid.items_Experimental.add(items[i], '');
+						}
+						grid.rowCount = items.length;
+					}
+				}
+
+				if (!controlsDisabled) {
+					document.getElementById('new').addEventListener('click', function () {
+						var itemTypeName = 'Identity'; //set itemtype for search dialog, do not translate here
+
+						var dialog = aras.getMostTopWindowWithAras(window).ArasModules.MaximazableDialog.show('iframe', {
+							aras: aras,
+							itemtypeName: itemTypeName,
+							multiselect: true,
+							type: 'SearchDialog'
+						});
+						dialog.promise.then(function (values) {
+							if (!values || values.length === 0) {
+								return;
+							}
+							for (var i = 0; i < values.length; i++) {
+								var item = aras.getItemById(itemTypeName, values[i], 0);
+								var keyedName = aras.getItemProperty(item, 'keyed_name')//item.getAttribute('keyed_name');
+								identityGridControl.items_Experimental.add({ uniqueId: index, identityName: keyedName, identityId: item.id, permission: 'viewonly' });
+								var RelTypeId = aras.getRelationshipTypeId('SelfServiceReportSharedWith');
+								var identity = aras.newRelationship(RelTypeId, parent.parent.item, false, null, null);
+								maping[index] = identity;
+								aras.setItemProperty(identity, 'related_id', item.getAttribute('id'));
+								aras.setItemPropertyAttribute(identity, 'related_id', 'keyed_name', keyedName);
+								aras.setItemProperty(identity, 'access_rights', 'viewonly');
+								index++;
+							}
+						});
+					});
+					document.getElementById('remove').addEventListener('click', function () {
+						var items = identityGridControl.selection_Experimental.get('ids');
+						items.forEach(function (id) {
+							var item = maping[id];
+							if (item.getAttribute('action') === 'add') {
+								item.parentNode.removeChild(item);
+							} else {
+								item.setAttribute('action', 'delete');
+								var RelTypeId = aras.getRelationshipTypeId('SelfServiceReportSharedWith');
+								var newItem = aras.newRelationship(RelTypeId, parent.parent.item, false, null, null);
+								newItem.setAttribute('action', 'delete');
+								newItem.setAttribute('id', item.getAttribute('id'));
+								aras.setItemProperty(newItem, 'access_rights', aras.getItemProperty(item, 'access_rights'));
+							}
+							identityGridControl.items_Experimental.remove(id);
+						});
+					});
+				}
+			}
+		</script>
+	</head>
+<body class="claro">
+<div style="width: 0px; height: 0px; display: none;"><svg xmlns="http://www.w3.org/2000/svg" version="1.1"><def><filter id="ShareWithGrayFilter"><feColorMatrix type="saturate" values="0" /></filter></def></svg></div>
+<div id="controls">
+	<div id="new" align="left" style="display: inline-block; max-height: 22px; max-width: 22px; min-height: 22px; min-width: 22px; cursor: pointer;">
+		<svg xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 64 64" viewBox="0 0 64 64" width="100%" height="22px">
+			<path fill="none" stroke="#505150" stroke-miterlimit="10" stroke-width="2" d="M 23 55 H 11 V 6 h 39 v 22"/>
+			<g fill="#206d42">
+				<path d="M 35 29 h 8 v 30 h -8 V 29 Z"/>
+				<path d="M 24 40 h 30 v 8 H 24 V 40 Z"/>
+			</g>
+		</svg>
+	</div>
+	<div id="remove" align="left" style="display: inline-block; max-height: 22px; max-width: 22px; min-height: 22px; min-width: 22px; cursor: pointer;">
+		<svg xmlns="http://www.w3.org/2000/svg" id="id1" enable-background="new 0 0 64 64" viewBox="0 0 64 64" x="0px" y="0px" width="100%" height="22px" version="1.1" xmlns:xml="http://www.w3.org/XML/1998/namespace" xml:space="preserve">
+			<path fill="none" stroke="#505150" stroke-miterlimit="10" stroke-width="2" d="M 22 55 H 11 V 6 h 39 v 21"/>
+			<g>
+				<path fill="#b83d19" d="M 29 59 l -5 -5 l 25 -25 l 5 5 L 29 59 Z"/>
+				<path fill="#b83d19" d="M 54 54 l -5 5 L 24 34 l 5 -5 L 54 54 Z"/>
+			</g>
+		</svg>
+	</div>
+</div>
+<div id="gridTD" style="height: 128px;"></div>
+</body>
+</html>

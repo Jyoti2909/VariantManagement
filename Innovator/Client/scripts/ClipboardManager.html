@@ -1,0 +1,300 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../javascript/dojox/form/resources/CheckedMultiSelect.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/default.css";
+
+		html, body {
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+		fieldset {
+			padding-top: 0px;
+			padding-bottom: 0px;
+			padding-left: 7px;
+			padding-right: 7px;
+			margin-left: 0px;
+			margin-right: 0px;
+			border-style: solid;
+			border-width: 1px;
+			border-color: #b3b3b3;
+			border-radius: 5px;
+		}
+		.textStyle {
+			font-size: 12pt;
+			font-family: 'Times New Roman';
+		}
+		input[type="button"] {
+			margin: 1px;
+		}
+		#gridTD {
+			position: fixed;
+			top: 0px;
+			left:0px;
+			bottom: 0px;
+			right: 0px;
+		}
+		
+	</style>
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=XmlDocument"></script>
+	<script>
+		window.dialogArguments = window.frameElement.dialogArguments;
+		var aras = dialogArguments.aras;
+		document.title = aras.getResource("", "clipboardmanager.clipboard_manager");
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript" src="../javascript/PopulateDocByLabels.js"></script>
+	<script>
+		var grid = null,
+			itemsArr = dialogArguments.itemsArr,
+			srcItemTypeId = dialogArguments.srcItemTypeId,
+			targetRelationshipTN = dialogArguments.targetRelationshipTN,
+			targetRelatedTN = dialogArguments.targetRelatedTN,
+			clipboardItems,
+			menu = null;
+
+		onload = function() {
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", undefined, function(control) {
+				grid = control;
+				clientControlsFactory.on(grid, {
+					"gridMenuClick": processCommand,
+					"gridMenuInit": onMenuCreate,
+					"gridClick": onSelectItem,
+					"gridLinkClick": onLink
+				});
+				grid.setEditable(false);
+				menu = grid.getMenu();
+			});
+			initGrid();
+			fillGrid();
+
+			PopulateDocByLabels();
+
+			if (itemsArr) {
+				var itemTypeName = itemsArr[0].getAttribute("type");
+				var	itemType = aras.getItemFromServerByName("ItemType", itemTypeName, "name, label").node;
+
+				setButtonDisabled(document.getElementById("paste"), true);
+				document.getElementById("as_is").disabled = false;
+				if (targetRelatedTN !== "File") {
+					document.getElementById("as_new").disabled = false;
+				}
+				var targetKeyedname = document.getElementById("target_keyedname");
+				for (var i = 0; i < itemsArr.length; i++) {
+					var item = itemsArr[i];
+					var option = document.createElement("option");
+					option.innerHTML = aras.getKeyedNameEx(item);
+					targetKeyedname.appendChild(option);
+				}
+				targetKeyedname.style.width = "100%";
+				var span = document.createElement("span");
+				span.setAttribute("id", "selected_option_target_keyedname");
+				span.setAttribute("class", "sys_f_span_select");
+				targetKeyedname.parentNode.appendChild(span);
+
+				var itemTypeLabel = aras.getItemProperty(itemType, "label");
+				if (itemTypeLabel == "") {
+					itemTypeLabel = aras.getItemProperty(itemType, "name");
+				}
+				document.getElementById("target_type").innerHTML = itemTypeLabel;
+				document.getElementById("showclipboard_options").style.display = "none";
+				aras.updateDomSelectLabel(targetKeyedname);
+
+			}
+			else {
+				document.getElementById("paste_options").style.display = "none";
+			}
+			aras.fixLiquidContainerHeight(document, document.getElementById("gridTD"));
+			var gridTop = document.getElementById("paste_options").getBoundingClientRect().bottom + 1;
+			if (gridTop < document.getElementById("showclipboard_options").getBoundingClientRect().bottom) {
+				gridTop = document.getElementById("showclipboard_options").getBoundingClientRect().bottom +1;
+			}
+			document.getElementById("gridTD").style.top = gridTop + "px";
+		}
+
+		function onMenuCreate() {
+			menu.removeAll();
+			if (itemsArr) {
+				menu.add("paste", aras.getResource("", "clipboardmanager.paste"));
+			}
+			menu.add("remove", aras.getResource("", "clipboardmanager.remove"));
+		}
+
+		function initGrid() {
+			var gridXml = '' +
+			'<table multiselect="true">' +
+			'	<thead>' +
+			'		<th align="c">' + aras.getResource("", "clipboardmanager.source_type") + '</th>' +
+			'		<th align="c">' + aras.getResource("", "clipboardmanager.source_item") + '</th>' +
+			'		<th align="c">' + aras.getResource("", "clipboardmanager.relationship_type") + '</th>' +
+			'		<th align="c">' + aras.getResource("", "clipboardmanager.related_type") + '</th>' +
+			'		<th align="c">' + aras.getResource("", "clipboardmanager.related_item") + '</th>' +
+			'	</thead>' +
+			'	<columns>' +
+			'		<column width="130" order="0" />' +
+			'		<column width="130" order="1" />' +
+			'		<column width="130" order="2" />' +
+			'		<column width="130" order="3" />' +
+			'		<column width="130" order="4" />' +
+			'	</columns>' +
+			'</table>';
+			grid.InitXML_Experimental(gridXml);
+		}
+
+		function fillGrid() {
+			var lastCopyIndex,
+			i,
+			clItem,
+			cell;
+			clipboardItems = aras.clipboard.clItems;
+
+			grid.removeAllRows();
+
+			lastCopyIndex = aras.clipboard.getLastCopyIndex();
+			for (i = 0; i < clipboardItems.length; i++) {
+				clItem = clipboardItems[i];
+				// In case of copy No Related item clItem.related_itemtype will be empty and isClItemCompatibleWithRT will always fail.
+				if (targetRelatedTN && clItem.related_itemtype && !aras.isClItemCompatibleWithRT(clItem, targetRelatedTN) && targetRelatedTN != "Deliverable") {
+					continue;
+				}
+				grid.addRow(i, clItem.source_itemtype + "$" + clItem.source_keyedname + "$" + clItem.relationship_itemtype + "$" + clItem.related_itemtype + "$" + clItem.related_keyedname, true);
+				cell = grid.cells(i, 1);
+				cell.setLink("'" + clItem.source_itemtype + "','" + clItem.source_id + "'");
+				cell = grid.cells(i, 4);
+				cell.setLink("'" + clItem.related_itemtype + "','" + clItem.related_id + "'");
+			}
+			refreshButtonsStatus();
+		}
+
+		function onSelectItem() {
+			refreshButtonsStatus();
+		}
+
+		function onLink(link) {
+			var it = link.replace(/'/g, '').split(',');
+			aras.uiShowItem(it[0], it[1]);
+		}
+
+		function sortFunction(a, b) {
+			a = parseInt(a);
+			b = parseInt(b);
+			return a - b;
+		}
+
+		function onRemove() {
+			var ids = grid.getSelectedItemIds();
+			for (var i = 0; i < ids.length; i++) ids[i] = parseInt(ids[i]);
+			ids = ids.sort(sortFunction);
+			for (var i = ids.length - 1; i >= 0; i--) {
+				aras.clipboard.removeItem(ids[i]);
+			}
+			if (aras.clipboard.isEmpty()) {
+				closeWindow(true);
+			}
+			else {
+				fillGrid();
+			}
+		}
+
+		function onPaste() {
+			var ids = grid.GetSelectedItemIDs();
+			var as_is = document.getElementById("as_is").checked;
+			var as_new = document.getElementById("as_new").checked;
+
+			var ret;
+			if (ids.length > 0) {
+				ret = {
+					ids: ids,
+					as_is: as_is,
+					as_new: as_new
+				};
+			}
+			closeWindow(ret);
+		}
+
+		function closeWindow(value) {
+			if (dialogArguments.dialog) {
+				dialogArguments.dialog.close(value);
+			} else {
+				window.returnValue = value;
+				window.close();
+			}
+		}
+
+		function onSelectAll() {
+			grid.selectAll();
+			refreshButtonsStatus();
+		}
+
+		function processCommand(cmdId) {
+			if (cmdId == "paste") {
+				onPaste();
+			}
+			else if (cmdId == "remove") {
+				onRemove();
+			}
+		}
+
+		function refreshButtonsStatus() {
+			var isDisabled = (grid.GetSelectedItemIDs().length === 0);
+			var buttons = document.getElementsByName("remove");
+			for (var i = 0; i < buttons.length; i++) {
+				setButtonDisabled(buttons[i], isDisabled);
+			}
+			setButtonDisabled(document.getElementById("paste"), isDisabled);
+		}
+		
+		function setButtonDisabled(btn, isDisabled) {
+			btn.disabled = isDisabled;
+			btn.className = isDisabled ? "btn disabled" : "btn";
+		}
+	</script>
+</head>
+<body class="claro">
+	<table id="paste_options">
+		<tr>
+			<td width="35%">
+				<fieldset>
+					<legend class="textStyle" aras_ui_resource_key="clipboardmanager.paste_target"></legend>
+					<span class="textStyle" id="target_type"></span>
+					<br />
+					<div id="div_select_target_keyedname" class="sys_f_div_select" style="width: 100%">
+						<select style="font-size: 10pt;" class="sys_f_select" id="target_keyedname" onchange="aras.updateDomSelectLabel(event.target);" />
+					</div>
+				</fieldset>
+			</td>
+			<td align="justify" width="60%">
+				<fieldset>
+					<legend class="textStyle" aras_ui_resource_key="clipboardmanager.paste_options">
+					</legend>
+					<input class="arasCheckboxOrRadio" type="checkbox" id="as_is" disabled="true" />
+					<label class="textStyle" aras_ui_resource_key="clipboardmanager.copy_permissions"></label>
+					<br />
+					<input class="arasCheckboxOrRadio" type="checkbox" id="as_new" disabled="true" />
+					<label class="textStyle" aras_ui_resource_key="clipboardmanager.create_related"></label>
+				</fieldset>
+			</td>
+			<td align="justify" width="5%">
+				<input type="button" id="paste" disabled="true" class="btn disabled" onclick="onPaste()" aras_ui_resource_key="clipboardmanager.paste_html_value" />
+				<input type="button" id="select_all" class="btn" onclick="onSelectAll()" aras_ui_resource_key="clipboardmanager.select_all_html_value" />
+				<input type="button" name="remove" class="btn" onclick="onRemove()" aras_ui_resource_key="clipboardmanager.remove_html_value" /><br />
+			</td>
+		</tr>
+	</table>
+	<div id="showclipboard_options">
+		<input type="button" name="remove" class="btn" onclick="onRemove()" aras_ui_resource_key="clipboardmanager.remove_html_value" />
+		<input type="button" id="select_all" class="btn" onclick="onSelectAll()" aras_ui_resource_key="clipboardmanager.select_all_html_value" /><br />
+	</div>
+	<div id="gridTD">
+	</div>
+</body>
+</html>

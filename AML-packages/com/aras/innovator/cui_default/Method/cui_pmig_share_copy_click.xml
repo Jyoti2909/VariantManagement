@@ -1,0 +1,39 @@
+﻿<AML>
+ <Item type="Method" id="DAE67D13FF4B4717BBC7CA7D497BC301" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+let textToCopy;
+let notifyMessageKey;
+
+if (target.name.endsWith('CopyID')) {
+	textToCopy = options.rowId;
+	notifyMessageKey = 'common.copy_notification_id';
+} else {
+	const row = options.rows.get(options.rowId);
+	const itemTypeName = aras.getItemTypeName(row.itemtype) || options.itemTypeName;
+	let itemId = row.id;
+	let version = '';
+
+	if (target.name.endsWith('Version')) {
+		itemId = row.config_id;
+		version = ':current';
+	} else if (target.name.endsWith('Release')) {
+		itemId = row.config_id;
+		version = ':released';
+	}
+
+	const url = new URL(aras.getInnovatorUrl());
+    url.searchParams.set('StartItem', `${itemTypeName}:${itemId}${version}`);
+
+    textToCopy = url.toString();
+	notifyMessageKey = 'common.copy_notification_link';
+}
+
+ArasModules.copyTextToBuffer(textToCopy);
+const notify = aras.getNotifyByContext(window);
+notify(aras.getResource('', notifyMessageKey));
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_pmig_share_copy_click</name>
+ </Item>
+</AML>

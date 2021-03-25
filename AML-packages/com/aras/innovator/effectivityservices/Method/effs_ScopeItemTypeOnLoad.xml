@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="0AD9F1F9A54D4168987DE7260F4212D3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[function getEffExpressionItemTypeId(relatedId) {
+	var effScopeItemType = aras.newIOMItem('effs_scope_itemtype', 'get');
+	effScopeItemType.setAttribute('select', 'effs_expression_itemtype_id');
+	effScopeItemType.setAttribute('maxRecords', '1');
+	effScopeItemType.setProperty('related_id', relatedId);
+	effScopeItemType = effScopeItemType.apply();
+	if (!effScopeItemType.isError()) {
+		return effScopeItemType.getProperty('effs_expression_itemtype_id');
+	}
+}
+
+var topWnd = aras.getMostTopWindowWithAras();
+var isTemp = inDom.getAttribute('isTemp') == '1';
+
+var relatedId = aras.getItemProperty(inDom, 'related_id');
+var effExpressionItemTypeId = getEffExpressionItemTypeId(relatedId);
+
+if (effExpressionItemTypeId) {
+	aras.setItemProperty(inDom, 'effs_expression_itemtype_id', effExpressionItemTypeId);
+}
+
+return aras.evalMethod('OnShowItemDefault', inDom, inArgs);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_ScopeItemTypeOnLoad</name>
+ </Item>
+</AML>

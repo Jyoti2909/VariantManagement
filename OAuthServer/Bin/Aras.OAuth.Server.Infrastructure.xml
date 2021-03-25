@@ -1,0 +1,216 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.OAuth.Server.Infrastructure</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.OAuth.Server.Infrastructure.ConfigurationExtensions">
+            <summary>
+            Extension methods for <see cref="T:Microsoft.Extensions.Configuration.IConfiguration"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.ConfigurationExtensions.GetPluginConfiguration(Microsoft.Extensions.Configuration.IConfiguration,System.Reflection.Assembly)">
+            <summary>
+            Provides <see cref="T:Microsoft.Extensions.Configuration.IConfiguration"/> instance with options for specified plugin by its assembly name.
+            </summary>
+            <param name="configuration">Instance of <see cref="T:Microsoft.Extensions.Configuration.IConfiguration"/>.</param>
+            <param name="pluginAssembly">Plugin assembly to search for plugin configuration by its assembly name.</param>
+            <returns>Options for plugin as <see cref="T:Microsoft.Extensions.Configuration.IConfiguration"/> instance.</returns>
+            <exception cref="T:System.ArgumentNullException"></exception>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.ConfigurationExtensions.GetSignInScheme(Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            Returns sign in scheme for external authentication.
+            </summary>
+            <returns>Sign in scheme.</returns>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.ConfigurationExtensions.GetSignOutScheme(Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            Returns sign out scheme for external authentication.
+            </summary>
+            <returns>Sign out scheme.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.Constants">
+            <summary>
+            Infrastructure constants.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.Constants.ConfigurationKeys">
+            <summary>
+            Configuration constants.
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Server.Infrastructure.Constants.ConfigurationKeys.CookieNameKey">
+            <summary>
+            Default cookie authentication type.
+            </summary>
+        </member>
+        <member name="F:Aras.OAuth.Server.Infrastructure.Constants.ConfigurationKeys.ExternalCookieNameKey">
+            <summary>
+            External cookie authentication type.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.ExternalUserMappingContext">
+            <summary>
+            Context for external user mapping.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.ExternalUserMappingContext.Database">
+            <summary>
+            Gets or sets the database.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.ExternalUserMappingContext.ExternalUser">
+            <summary>
+            Gets or sets the external user.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.ExternalUserMappingContext.ExternalUserMappingResult">
+            <summary>
+            Gets or sets the external user mapping result.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.ExternalUserMappingContext.ReturnUrl">
+            <summary>
+            Gets or sets the return url.
+            </summary>
+            <remarks>
+            Return url contains additinal information, which can be useful while mapping (e.g. clientId).
+            The url can be converted to AuthorizationRequest class from IdentityServer4.Models namespace
+            with help of IIdentityServerInteractionService.GetAuthorizationContextAsync(string returnUrl).
+            </remarks>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.ExternalUserMappingResult">
+            <summary>
+            Result of external user mapping.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.IExternalUserMapper">
+            <summary>
+            Interface for getting Innovator user name by external user credentials.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.IExternalUserMapper.TryMapExternalUserAsync(Aras.OAuth.Server.Infrastructure.ExternalUserMappingContext)">
+            <summary>
+            Maps external user to Innovator user.
+            </summary>
+            <param name="context">Context of external user mapping.</param>
+            <returns>True if mapping was successful, otherwise false.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.IInnovatorUserCredentialsValidator">
+            <summary>
+            Interface for validating Innovator user credentials.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.IInnovatorUserCredentialsValidator.ValidateInnovatorUserCredentialsAsync(Aras.OAuth.Server.Infrastructure.InnovatorUserCredentialsValidationContext)">
+            <summary>
+            Validates Innovator user credentials.
+            </summary>
+            <param name="context">Context of Innovator user credentials validation.</param>
+            <returns>Result of Innovator user credentials validation.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.IInnovatorUserNameValidator">
+            <summary>
+            Interface for validating Innovator user name.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.IInnovatorUserNameValidator.ValidateInnovatorUserNameAsync(Aras.OAuth.Server.Infrastructure.InnovatorUserNameValidationContext)">
+            <summary>
+            Validates Innovator user name.
+            </summary>
+            <param name="context">Context of Innovator user name validation.</param>
+            <returns>Result of Innovator user name validation.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.InnovatorUserCredentialsValidationContext">
+            <summary>
+            Context for Innovator user credentials validation.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.InnovatorUserCredentialsValidationContext.Database">
+            <summary>
+            Gets or sets the database.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.InnovatorUserCredentialsValidationContext.UserName">
+            <summary>
+            Gets or sets the user name.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.InnovatorUserCredentialsValidationContext.Password">
+            <summary>
+            Gets or sets the password.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.InnovatorUserNameValidationContext">
+            <summary>
+            Context for Innovator user name validation.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.InnovatorUserNameValidationContext.Database">
+            <summary>
+            Gets or sets the database.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.InnovatorUserNameValidationContext.UserName">
+            <summary>
+            Gets or sets the user name.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.InnovatorUserValidationResult">
+            <summary>
+            Result of Innovator user validation.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.InnovatorUserValidationResult.Database">
+            <summary>
+            Gets or sets the database.
+            </summary>
+        </member>
+        <member name="P:Aras.OAuth.Server.Infrastructure.InnovatorUserValidationResult.UserName">
+            <summary>
+            Gets or sets the user name.
+            </summary>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.IProtocolInfoProvider">
+            <summary>
+            Interface for getting current <see cref="T:Aras.OAuth.Model.ProtocolInfo"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.IProtocolInfoProvider.GetProtocolInfo">
+            <summary>
+            Provides <see cref="T:Aras.OAuth.Model.ProtocolInfo"/> with Standard or Custom <see cref="T:Aras.OAuth.Model.ProtocolType"/> depends on implementation.
+            </summary>
+            <returns>Current <see cref="T:Aras.OAuth.Model.ProtocolInfo"/>.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.IServerConnectionProvider">
+            <summary>
+            Interface for providing instance of <see cref="T:Aras.IOM.IServerConnection"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.IServerConnectionProvider.GetServerConnectionAsync(System.String)">
+            <summary>
+            Provides instance of <see cref="T:Aras.IOM.IServerConnection"/>.
+            </summary>
+            <param name="database">Database of connection.</param>
+            <returns><see cref="T:Aras.IOM.IServerConnection"/> instance.</returns>
+        </member>
+        <member name="T:Aras.OAuth.Server.Infrastructure.StartupFilter">
+            <summary>
+            Class is used for adding additional configuration for <see cref="T:Microsoft.AspNetCore.Builder.IApplicationBuilder"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.StartupFilter.#ctor(System.Func{System.Action{Microsoft.AspNetCore.Builder.IApplicationBuilder},System.Action{Microsoft.AspNetCore.Builder.IApplicationBuilder}})">
+            <summary>
+            Creates an instance of <see cref="T:Aras.OAuth.Server.Infrastructure.StartupFilter"/> class.
+            </summary>
+            <param name="configueAction">Delegate for configuring <see cref="T:Microsoft.AspNetCore.Builder.IApplicationBuilder"/>.</param>
+        </member>
+        <member name="M:Aras.OAuth.Server.Infrastructure.StartupFilter.Configure(System.Action{Microsoft.AspNetCore.Builder.IApplicationBuilder})">
+            <summary>
+            Adds additional configuration for <see cref="T:Microsoft.AspNetCore.Builder.IApplicationBuilder"/>.
+            </summary>
+            <param name="next">The next delegate for configuring <see cref="T:Microsoft.AspNetCore.Builder.IApplicationBuilder"/>.</param>
+            <returns>Delegate for configuring <see cref="T:Microsoft.AspNetCore.Builder.IApplicationBuilder"/>.</returns>
+        </member>
+    </members>
+</doc>

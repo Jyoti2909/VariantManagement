@@ -1,0 +1,49 @@
+﻿<AML>
+ <Item type="Method" id="2B82C149D8B04DF3A053084B9E07AB77" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	var copyId = this.getID();
+	var definition = this.getProperty("definition");
+	if (!string.IsNullOrEmpty(definition))
+	{
+		var idPos = definition.IndexOf(" ID=\"");
+		var oldId = definition.Substring(idPos + 5, 32); // 32 GUID length
+		definition = definition.Replace(oldId, copyId);
+		var itemCopy = this.newItem(this.getType(), "edit");
+		itemCopy.setID(copyId);
+		itemCopy.setProperty("definition", definition);
+		
+		bool permissionWasSet = false;
+		Aras.Server.Security.Identity administratorsIdentity = null;
+		try
+		{
+			administratorsIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+			permissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(administratorsIdentity);
+		}
+		finally
+		{
+			if (permissionWasSet)
+			{
+				Aras.Server.Security.Permissions.RevokeIdentity(administratorsIdentity);
+			}
+		}
+
+		itemCopy = itemCopy.apply();
+		var sharedWith = this.newItem("SelfServiceReportSharedWith", "delete");
+		sharedWith.setAttribute("where", "source_id='" + CCO.DB.InnDatabase.QuoteValue(itemCopy.getID()) + "'");
+		sharedWith.setAttribute("ignoreUpdatePermission", "1");
+		sharedWith = sharedWith.apply();
+		if (sharedWith.isError()){
+			return sharedWith;
+		}
+
+		var status = itemCopy.getLockStatus();
+		if (status == 0)
+		{
+			itemCopy.lockItem();
+		}
+	}
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>SelfServiceReportOnCopy</name>
+ </Item>
+</AML>

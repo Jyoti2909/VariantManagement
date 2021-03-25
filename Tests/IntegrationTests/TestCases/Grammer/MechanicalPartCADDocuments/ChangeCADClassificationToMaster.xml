@@ -1,0 +1,198 @@
+﻿<TestCase author='pponkrashov@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>Create Item of Item Type Part with Mechanical Part/Component classification as Product Engineer, created in 'Setup Test.xml'</Description>
+	<Request runAs='cadMPUser1:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer and CAD-Designer identity
+			When:
+				The user tries to create
+					a part with Mechanical Part/Component classification.
+					a cad with Mechanical/Assembly classification and empty subclassification.
+					a cad with Mechanical/Assembly classification and MASTER subclassification.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='34C0C64F9C0B4573A15DC7AFCD218FB3' doGetItem='0'>
+					<classification>Mechanical Part/Component</classification>
+					<name>TestName</name>
+				</Item>
+				<Item type='CAD' action='add' id='F177DD82AB9A476B9D639A4AB1CA9C30' doGetItem='0'>
+					<classification>Mechanical/Assembly</classification>
+					<gag_classification></gag_classification>
+					<name>CAD1-For-MP</name>
+				</Item>
+				<Item type='CAD' action='add' id='AC51942957274773B164E9855E13E954' doGetItem='0'>
+					<classification>Mechanical/Assembly</classification>
+					<gag_classification>MASTER</gag_classification>
+					<name>CAD2-For-MP</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='34C0C64F9C0B4573A15DC7AFCD218FB3' />
+						<Item type='CAD' id='F177DD82AB9A476B9D639A4AB1CA9C30' />
+						<Item type='CAD' id='AC51942957274773B164E9855E13E954' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadMPUser1:1'>
+		<Comments>
+			<![CDATA[
+	Given:
+				An user with Product Engineer and CAD-Designer identity
+			When:
+				The user tries to assign two cads to Part.
+			Then:
+				The user should add two Cads to Part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part CAD' action='add' doGetItem='0' id='E8A49F000AD04BFABB33205EEF05A1DC'>
+					<source_id>34C0C64F9C0B4573A15DC7AFCD218FB3</source_id>
+					<related_id>F177DD82AB9A476B9D639A4AB1CA9C30</related_id>
+				</Item>
+				<Item type='Part CAD' action='add' doGetItem='0' id='012498CACD2A42C683D03A6393134EE3'>
+					<source_id>34C0C64F9C0B4573A15DC7AFCD218FB3</source_id>
+					<related_id>AC51942957274773B164E9855E13E954</related_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part CAD' id='E8A49F000AD04BFABB33205EEF05A1DC'>
+							<related_id>F177DD82AB9A476B9D639A4AB1CA9C30</related_id>
+						</Item>
+						<Item type='Part CAD' id='012498CACD2A42C683D03A6393134EE3'>
+							<related_id>AC51942957274773B164E9855E13E954</related_id>
+						</Item>
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadMPUser1:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer and CAD-Designer identity
+			When:
+				The user tries to set MASTER subsclassification to CAD
+			Then:
+				The user should get error
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='CAD' action='edit' id='F177DD82AB9A476B9D639A4AB1CA9C30' doGetItem='0'>
+					<gag_classification>MASTER</gag_classification>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af='http://www.aras.com/InnovatorFault'>
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring>
+							<![CDATA[error in GP00003:
+Only one MASTER 3D-Doc allowed!
+
+]]>
+						</faultstring>
+						<detail>
+							<af:legacy_detail>
+								<![CDATA[error in GP00003:
+Only one MASTER 3D-Doc allowed!
+
+]]>
+							</af:legacy_detail>
+							<af:exception message='error in GP00003:&#xD;&#xA;Only one MASTER 3D-Doc allowed!&#xD;&#xA;&#xD;&#xA;' type='Aras.Ark.Common.ItemException' />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/faultstring' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_detail' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_detail' />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:exception" />
+		</Comparison>
+	</Request>
+	<Request runAs='cadMPUser1:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer and CAD-Designer identity
+			When:
+				The user tries to swap MASTER subclassification between cads
+			Then:
+				The user should swap MASTER subclassification
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='CAD' action='edit' id='AC51942957274773B164E9855E13E954' doGetItem='0'>
+					<gag_classification></gag_classification>
+				</Item>
+				<Item type='CAD' action='edit' id='F177DD82AB9A476B9D639A4AB1CA9C30' doGetItem='0'>
+					<gag_classification>MASTER</gag_classification>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='CAD' id='AC51942957274773B164E9855E13E954' />
+						<Item type='CAD' id='F177DD82AB9A476B9D639A4AB1CA9C30' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/faultstring' />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='Part CAD' id='E8A49F000AD04BFABB33205EEF05A1DC' action='delete'></Item>
+				<Item type='Part CAD' id='012498CACD2A42C683D03A6393134EE3' action='delete'></Item>
+
+				<Item type='Part' id='34C0C64F9C0B4573A15DC7AFCD218FB3' action='delete' />
+				<Item type='CAD' id='F177DD82AB9A476B9D639A4AB1CA9C30' action='delete' />
+				<Item type='CAD' id='AC51942957274773B164E9855E13E954' action='delete' />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

@@ -1,0 +1,100 @@
+﻿<AML>
+ <Item type="Method" id="F32C2178B8D847ABB5766A156383632D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var selectElement = document.getElementById('3C7AA413976347CCAFCF2B4F90A241FB');
+var identityId = getPreferenceIdentityId();
+var user = getUserByIdentityId(identityId);
+
+if (user.isError() && user.getErrorCode() !== '0') {//if error == 0 then user is not found (identity without alias)
+	aras.AlertError(user.getErrorString());
+	return;
+}
+var userId = user.isError() ? '' : user.getAttribute('id'); //if identity without alias - user id is empty
+var forumsOptionsString = getForumsOptions(userId);
+var currentBookmark = aras.getItemProperty(document.item, 'default_bookmark');
+//populating select and attaching change handling
+setupSelect(selectElement, forumsOptionsString, currentBookmark);
+
+/*
+	Functions:
+*/
+
+function getPreferenceIdentityId() {
+	return aras.getItemProperty(window.parent.parent.getItem(), 'identity_id');
+}
+
+function getUserByIdentityId(id) {
+	var userItem = aras.newIOMItem('User', 'get');
+	userItem.setAttribute('select', 'id');
+	var aliasItem = aras.newIOMItem('Alias', 'get');
+	aliasItem.setAttribute('select', 'id');
+	aliasItem.setProperty('related_id', id);
+	userItem.addRelationship(aliasItem);
+
+	return userItem.apply();
+}
+
+function getForumsForUser(userId) {
+	var forums = aras.newIOMItem('User', 'VC_GetForumsForUser');
+	forums.setAttribute('id', userId);
+	return forums.apply();
+}
+
+function getForumsOptions(userId) {
+	var forumsOptionsString;
+	var forumsItem;
+
+	if (userId) {
+		forumsItem = getForumsForUser(userId);
+		if (forumsItem.isError()) {
+			if (!forumsItem.isEmpty()) {
+				throw new Error(forumsItem.getErrorString());
+			} else {
+				forumsItem = aras.newIOMItem('Forum');
+				forumsItem.setProperty('forum_type', 'MyBookmarks');
+			}
+		} else {
+			var myBookmarkForum = forumsItem.getItemsByXPath('//Item[@type=\'Forum\'][forum_type=\'MyBookmarks\']');
+			myBookmarkForum.setAttribute('currentUser', userId);
+		}
+	} else {
+		forumsItem = aras.newIOMItem('Forum');
+		forumsItem.setProperty('forum_type', 'MyBookmarks');
+	}
+
+	return aras.applyXsltFile(forumsItem.dom, aras.getScriptsURL() + '../Modules/aras.innovator.SSVC/styles/bookmarksPreferences.xslt');
+}
+
+function setupSelect(selectElement, forumsOptionsString, defaultId) {
+	var list = [];
+	var dropdown = window.field3C7AA413976347CCAFCF2B4F90A241FBComponent;
+	var forumsDocument = aras.createXMLDocument();
+	//Parsing options with xml document cause you just cannot add them
+	//directly to dom without creation of option elements.
+	forumsDocument.loadXML(forumsOptionsString);
+	var optionsNodes = forumsDocument.documentElement.childNodes;
+
+	for (var i = 0, count = optionsNodes.length; i < count; i++) {
+		var optionValue = optionsNodes[i].getAttribute('value');
+		list.push({label: optionsNodes[i].text, value: optionValue});
+
+		if (optionValue === defaultId) {
+			selectedIndex = i;
+		}
+	}
+
+	//'calculatedWidth' property should be deleted in order to a width of
+	//dropdown field will be recalculated after new values have been added
+	//to dropdown options, otherwise, dropdown field will have old width, which
+	//has been calculated when options were empty
+	dropdown.component.setState({
+		calculatedWidth: '',
+		list: list,
+		value: list[selectedIndex].value
+	});
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VC_PopulatePreferencesBookmarks</name>
+ </Item>
+</AML>

@@ -1,0 +1,40 @@
+﻿<AML>
+ <Item type="Method" id="990F4536F402411B8957B1F719DE98F6" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var affectedId = getRelatedItemProperty(relationshipID, 'affected_id');
+var newItemId = getRelatedItemProperty(relationshipID, 'new_item_id');
+if(!affectedId || !newItemId) return;
+
+function getType(id)
+{
+  var qryXml = "<Item type='Change Controlled Item' id='" + id + "' action='get' select='id'/>";
+  var qry = new Item();
+  qry.loadAML(qryXml);
+  var result = qry.apply();
+  if(result.isError()) { aras.AlertError(aras.getResource("plm", "checkaffectedtype.can_not_get", id)); return null; }
+  return result.getAttribute("type");
+}
+
+var affectedIdType = getType(affectedId);
+if(!affectedIdType) return;
+var newItemIdType = getType(newItemId);
+if(!newItemIdType) return;
+
+if(affectedIdType != newItemIdType)
+{
+  aras.AlertError(aras.getResource("plm", "checkaffectedtype.same_affected_superseding_numbers", affectedIdType, newItemIdType));
+  setRelatedItemProperty(relationshipID, 'affected_type','<img src="../images/Delete.svg">');
+}
+else
+{
+  var qryXml = "<Item type='ItemType' action='get' select='open_icon'><name>" + affectedIdType + "</name></Item>";
+  var qry = new Item();
+  qry.loadAML(qryXml);
+  var result = qry.apply();
+  var icon = result.getProperty("open_icon");
+  setRelatedItemProperty(relationshipID, 'affected_type','<img src="' + icon + '">');
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>checkAffectedType</name>
+ </Item>
+</AML>

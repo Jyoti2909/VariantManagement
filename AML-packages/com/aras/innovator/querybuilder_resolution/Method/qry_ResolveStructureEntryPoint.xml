@@ -1,0 +1,354 @@
+﻿<AML>
+ <Item type="Method" id="72FD40DA78964EF3BA403C9D5832DC77" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[XmlDocument tmpDoc = null;
+ResolutionMode resolutionMode = null;
+do
+{
+	resolutionMode = null;
+	foreach (XmlElement filterXmlNode in this.node.SelectNodes("//filter_xml"))
+	{
+		string filter = filterXmlNode.InnerText;
+		if (filter.IndexOf(entryPointIndicator, StringComparison.OrdinalIgnoreCase) < 0)
+		{
+			continue;
+		}
+
+		if (tmpDoc == null)
+		{
+			tmpDoc = getInnovator().newXMLDocument();
+		}
+		tmpDoc.LoadXml(filter);
+		foreach (XmlNode constantNode in tmpDoc.SelectNodes("//constant"))
+		{
+			resolutionMode = ValidateAndParse(constantNode.InnerText);
+			if (resolutionMode != null)
+			{
+				string qdName = resolutionMode.GetTemplateQueryDefinitionName();
+				if (!string.IsNullOrEmpty(qdName))
+				{
+					Item qd = getInnovator().newItem("qry_QueryDefinition", "get");
+					qd.setProperty("name", qdName);
+					qd.setAttribute("levels", "2");
+					qd = qd.apply();
+					if (qd.isError())
+					{
+						throw new InvalidOperationException("Cannot find Query Definition: " + qd.ToString());
+					}
+					resolutionMode.TemplateQueryDefinition = new TemplateQueryDefinition(qd);
+				}
+				var constantElement = (XmlElement)constantNode;
+				resolutionMode.Validate(filterXmlNode);
+				resolutionMode.TransformConstantNode(constantElement);
+				filterXmlNode.InnerText = tmpDoc.OuterXml;
+				resolutionMode.TransformQueryDefinitionByFilterXmlNode(filterXmlNode);
+				break;
+			}
+		}
+		if (resolutionMode != null)
+		{
+			break;
+		}
+	}
+}
+while (resolutionMode != null);
+
+return this;
+}
+
+		const string entryPointIndicator = ".Resolution.EntryPoint";
+		internal static ResolutionMode ValidateAndParse(string constantValue)
+		{
+			string[] splittedConstantValue = constantValue.Split(new[] { ";" }, StringSplitOptions.None);
+			
+			int firstDotIndex = splittedConstantValue[0].IndexOf('.');
+			if (firstDotIndex < 1)
+			{
+				return null;
+			}
+
+			string companyName = splittedConstantValue[0].Substring(0, firstDotIndex);
+
+			string entryPointPrefix = companyName + entryPointIndicator;
+			if (!splittedConstantValue[0].StartsWith(entryPointPrefix, StringComparison.OrdinalIgnoreCase))
+			{
+				return null;
+			}
+
+			if (splittedConstantValue.Length < 3)
+			{
+				throw new InvalidOperationException("Must have semicolon (;) in " + constantValue);
+			}
+
+			string modeName = splittedConstantValue[1];
+			string parentPropertyName = splittedConstantValue[2];
+			if (parentPropertyName.IndexOf(".", StringComparison.OrdinalIgnoreCase) > -1)
+			{
+				string[] split = parentPropertyName.Split(new[] { "." }, StringSplitOptions.None);
+				if (split.Length != 2)
+				{
+					throw new InvalidOperationException("Incorrect number of dots");
+				}
+				if (!split[0].Equals("parent", StringComparison.OrdinalIgnoreCase))
+				{
+					throw new InvalidOperationException("'parent' key must be the first portion");
+				}
+				parentPropertyName = split[1];
+			}
+
+			bool isApplyChildWhereMode = false;
+			if (splittedConstantValue.Length > 3)
+			{
+				string[] split = splittedConstantValue[3].Split(new[] { "=" }, StringSplitOptions.None);
+				if (split.Length != 2)
+				{
+					throw new InvalidOperationException("Incorrect parameters set");
+				}
+				if (!split[0].Equals("ApplyChildWhereMode", StringComparison.OrdinalIgnoreCase))
+				{
+					throw new InvalidOperationException("Unknown optional parameter with name '" + split[0] + "'");
+				}
+				if (split[1].Equals("ResolutionTargetResolved", StringComparison.OrdinalIgnoreCase))
+				{
+					isApplyChildWhereMode = true;
+				}
+			}
+			var matchOptions =
+				System.Text.RegularExpressions.RegexOptions.IgnoreCase
+					| System.Text.RegularExpressions.RegexOptions.CultureInvariant
+						| System.Text.RegularExpressions.RegexOptions.Compiled
+							| System.Text.RegularExpressions.RegexOptions.ECMAScript;
+			bool isValidPropertyName = System.Text.RegularExpressions.Regex.IsMatch(parentPropertyName, @"^\w+$", matchOptions);
+			if (!isValidPropertyName)
+			{
+				throw new InvalidOperationException("Property name is invalid");
+			}
+
+			ResolutionMode mode;
+			switch (modeName.ToUpperInvariant())
+			{
+				case "DEFAULT":
+					mode = new DefaultMode(companyName, parentPropertyName);
+					break;
+				default:
+					mode = new TemplateQueryDefinitionBasedMode(companyName, parentPropertyName, modeName, isApplyChildWhereMode);
+					break;
+			}
+
+			return mode;
+		}
+
+		internal class TemplateQueryDefinition
+		{
+			private readonly Item _templateQueryDefinition;
+			private readonly string _rootRefId;
+			private readonly string _rootResolvedRefId;
+			internal TemplateQueryDefinition(Item templateQueryDefinition)
+			{
+				Item tmp = templateQueryDefinition.getItemsByXPath("Relationships/Item[alias='ResolutionTarget']");
+				if (tmp.getItemCount() != 1)
+				{
+					throw new InvalidOperationException("Resolution Target Query Item is not found");
+				}
+				_rootRefId = tmp.getProperty("ref_id");
+				tmp = templateQueryDefinition.getItemsByXPath("Relationships/Item[alias='ResolutionTargetResolved']");
+				if (tmp.getItemCount() != 1)
+				{
+					throw new InvalidOperationException("Resolution Target Resolved Query Item is not found");
+				}
+				_rootResolvedRefId = tmp.getProperty("ref_id");
+
+				Item queryReferences = templateQueryDefinition.getItemsByXPath($"Relationships/Item[child_ref_id='{_rootResolvedRefId}']");
+				if (queryReferences.getItemCount() != 1)
+				{
+					throw new InvalidOperationException("Only 1 Query Reference that leads to Resolution Target Resolved is allowed");
+				}
+				string resolutionModeQueryReferenceRefId = queryReferences.getItemByIndex(0).getProperty("ref_id");
+				string filterXml = tmp.getProperty("filter_xml");
+				if (!string.IsNullOrEmpty(filterXml))
+				{
+					var doc = queryReferences.getInnovator().newXMLDocument();
+					doc.LoadXml(filterXml);
+					var originalCondition = doc.SelectSingleNode("condition");
+					string newFilterXml = string.Format(CultureInfo.InvariantCulture, "<condition><or><ne><property name='QB_query_reference_ref_id'/><constant>{0}</constant></ne>{1}</or></condition>", resolutionModeQueryReferenceRefId, originalCondition?.InnerXml);
+					tmp.setProperty("filter_xml", newFilterXml);
+				}
+
+				tmp = templateQueryDefinition.getItemsByXPath("Relationships/Item[child_ref_id='" + _rootRefId + "' and string(parent_ref_id)='']");
+				if (tmp.getItemCount() != 1)
+				{
+					throw new InvalidOperationException("Cannot find correct root Query Reference Item");
+				}
+				tmp.node.ParentNode.RemoveChild(tmp.node); // remove root query reference, this is no longer needed
+
+				_templateQueryDefinition = templateQueryDefinition;
+			}
+
+			internal void MergeInto(XmlElement filterXmlNode, bool isApplyChildWhereMode)
+			{
+				var originalQueryReference = (XmlElement)filterXmlNode.ParentNode;
+				var originalQueryDefinitionItem = (XmlElement)originalQueryReference.ParentNode.ParentNode;
+				string originalChildQueryItemRefId = originalQueryReference.SelectSingleNode("child_ref_id").InnerText;
+				var originalChildQueryItem = (XmlElement)originalQueryReference.ParentNode.SelectSingleNode("Item[ref_id='" + originalChildQueryItemRefId + "']");
+				XmlNode originalChildQueryItemFilterNode = originalChildQueryItem.SelectSingleNode("filter_xml");
+				if (originalChildQueryItemFilterNode == null)
+				{
+					originalChildQueryItemFilterNode =
+						originalChildQueryItem.AppendChild(originalChildQueryItem.OwnerDocument.CreateElement("filter_xml"));
+				}
+				string originalChildQueryItemFilterXml = originalChildQueryItemFilterNode.InnerText;
+				string originalChildItemTypeId = originalChildQueryItem.SelectSingleNode("item_type").InnerText;
+
+				// Set appropriate item_type property instead of qry_StructureResolutionModel. TODO: set item_type property attributes
+				Item tmp = _templateQueryDefinition.getItemsByXPath("Relationships/Item[@type='qry_QueryItem' and item_type='F67FCAABD4774D2CBD34739FEFB5B83A']");
+				int c = tmp.getItemCount();
+				for (int i = 0; i < c; i++)
+				{
+					tmp.getItemByIndex(i).setProperty("item_type", originalChildItemTypeId);
+				}
+
+				// Set appropriate child_ref_id values instead of "Resolved" node
+				tmp = _templateQueryDefinition.getItemsByXPath("Relationships/Item[@type='qry_QueryReference' and child_ref_id='" + _rootResolvedRefId + "']");
+				c = tmp.getItemCount();
+				for (int i = 0; i < c; i++)
+				{
+					tmp.getItemByIndex(i).setProperty("child_ref_id", originalChildQueryItemRefId);
+				}
+
+				// Set appropriate parent_ref_id values instead of "Resolved" node
+				tmp = _templateQueryDefinition.getItemsByXPath("Relationships/Item[@type='qry_QueryReference' and parent_ref_id='" + _rootResolvedRefId + "']");
+				c = tmp.getItemCount();
+				for (int i = 0; i < c; i++)
+				{
+					tmp.getItemByIndex(i).setProperty("parent_ref_id", originalChildQueryItemRefId);
+				}
+
+				// Move filter_xml from "Resolved" node and remove the node at all because this is no longer needed
+				tmp = _templateQueryDefinition.getItemsByXPath("Relationships/Item[@type='qry_QueryItem' and ref_id='" + _rootResolvedRefId + "']");
+				string newFilterXml = tmp.getProperty("filter_xml");
+				if (isApplyChildWhereMode)
+				{
+					if (!string.IsNullOrEmpty(originalChildQueryItemFilterNode.InnerText))
+					{
+						var existedFilterXml = tmp.getInnovator().newXMLDocument();
+						var originalFilterXml = tmp.getInnovator().newXMLDocument();
+						existedFilterXml.LoadXml(newFilterXml);
+						originalFilterXml.LoadXml(originalChildQueryItemFilterNode.InnerText);
+
+						string existedCondition = existedFilterXml.SelectSingleNode("condition")?.InnerXml;
+						string originalCondition = originalFilterXml.SelectSingleNode("condition")?.InnerXml;
+
+						newFilterXml = string.Format(CultureInfo.InvariantCulture,
+							@"<condition><and>{0}{1}</and></condition>", existedCondition, originalCondition);
+					}
+				}
+				originalQueryDefinitionItem
+					.SelectSingleNode("Relationships/Item[ref_id='" + originalChildQueryItemRefId + "']/filter_xml")
+					.InnerText = newFilterXml;
+				tmp.node.ParentNode.RemoveChild(tmp.node);
+
+				// Set is_filtering to not change Aml Output for the Original Query Definition
+				tmp = _templateQueryDefinition.getItemsByXPath("Relationships/Item[@type='qry_QueryItem']");
+				c = tmp.getItemCount();
+				for (int i = 0; i < c; i++)
+				{
+					tmp.getItemByIndex(i).setProperty("is_filtering", "1");
+				}
+
+				// Import _templateQueryDefinition into original document
+				foreach (XmlElement item in _templateQueryDefinition.node.SelectNodes("Relationships/Item"))
+				{
+					var itemImported = originalQueryDefinitionItem.OwnerDocument.ImportNode(item, true);
+					originalQueryDefinitionItem.SelectSingleNode("Relationships").AppendChild(itemImported);
+				}
+
+				// Set appropriate filter_xml to _rootRefId Query Item
+				originalQueryReference.SelectSingleNode("child_ref_id").InnerText = _rootRefId;
+				if (!isApplyChildWhereMode)
+				{
+					var rootItem =
+						(XmlElement) originalQueryDefinitionItem
+							.SelectSingleNode("Relationships/Item[ref_id='" + _rootRefId + "']");
+					if (rootItem.SelectSingleNode("filter_xml") == null)
+					{
+						rootItem.AppendChild(rootItem.OwnerDocument.CreateElement("filter_xml"));
+					}
+					rootItem.SelectSingleNode("filter_xml").InnerText = originalChildQueryItemFilterXml;
+				}
+			}
+		}
+
+		internal abstract class ResolutionMode
+		{
+			internal readonly string ParsedParentPropertyName;
+			internal readonly string ParsedCompanyName;
+
+			internal ResolutionMode(string parsedCompanyName, string parsedParentPropertyName)
+			{
+				ParsedCompanyName = parsedCompanyName;
+				ParsedParentPropertyName = parsedParentPropertyName;
+			}
+
+			internal virtual void Validate(XmlElement filterXmlNode)
+			{
+				const string queryReferenceTypeName = "qry_QueryReference";
+				if (filterXmlNode.ParentNode.Attributes["type"].Value != queryReferenceTypeName)
+				{
+					throw new InvalidOperationException("'type' attribute must be " + queryReferenceTypeName + " in " + filterXmlNode.ParentNode.OuterXml);
+				}
+			}
+
+			internal virtual string GetTemplateQueryDefinitionName()
+			{
+				return null;
+			}
+
+			internal TemplateQueryDefinition TemplateQueryDefinition { get; set; }
+
+			internal virtual void TransformConstantNode(XmlElement constantNode)
+			{
+				var newProperty = (XmlElement)constantNode.ParentNode.AppendChild(constantNode.OwnerDocument.CreateElement("property"));
+				constantNode.ParentNode.RemoveChild(constantNode);
+				newProperty.SetAttribute("name", ParsedParentPropertyName);
+				newProperty.SetAttribute("query_items_xpath", "parent::Item");
+			}
+
+			internal virtual void TransformQueryDefinitionByFilterXmlNode(XmlElement filterXmlNode)
+			{
+			}
+		}
+
+		internal class DefaultMode : ResolutionMode
+		{
+			internal DefaultMode(string parsedCompanyName, string parsedParentPropertyName)
+				: base(parsedCompanyName, parsedParentPropertyName)
+			{
+			}
+		}
+
+		internal class TemplateQueryDefinitionBasedMode : ResolutionMode
+		{
+			private readonly string _resolutionModeName;
+			internal readonly bool ApplyChildWhereMode;
+
+			internal TemplateQueryDefinitionBasedMode(string parsedCompanyName, string parsedParentPropertyName, string resolutionModeName, bool applyChildWhereMode)
+				: base(parsedCompanyName, parsedParentPropertyName)
+			{
+				_resolutionModeName = resolutionModeName;
+				ApplyChildWhereMode = applyChildWhereMode;
+			}
+
+			internal override string GetTemplateQueryDefinitionName()
+			{
+				return ParsedCompanyName + ".Resolution." + _resolutionModeName;
+			}
+
+			internal override void TransformQueryDefinitionByFilterXmlNode(XmlElement filterXmlNode)
+			{
+				TemplateQueryDefinition.MergeInto(filterXmlNode, ApplyChildWhereMode);
+			}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>qry_ResolveStructureEntryPoint</name>
+ </Item>
+</AML>

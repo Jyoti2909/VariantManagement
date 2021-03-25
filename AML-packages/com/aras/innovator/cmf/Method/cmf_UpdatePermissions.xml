@@ -1,0 +1,84 @@
+﻿<AML>
+ <Item type="Method" id="DA952ADAA54241328424804DC465F19E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (this.getType() != 'cmf_PropertyType') {
+	return Promise.reject();
+}
+
+var innovator = aras.newIOMInnovator();
+var contentTypeItem;
+var elementTypeId;
+var propertyTypeId;
+var documentId;
+
+propertyTypeId = this.getID();
+elementTypeId = this.getProperty('source_id');
+
+var aml = '<Item type=\'cmf_ElementType\' action=\'get\' select=\'id, source_id\' id=\'' + elementTypeId + '\'>' +
+			'<source_id>' +
+				'<Item type=\'cmf_ContentType\' action=\'get\' select=\'id, linked_item_type\'></Item>' +
+			'</source_id>' +
+		'</Item>';
+contentTypeItem = innovator.newItem();
+contentTypeItem.loadAML(aml);
+contentTypeItem = contentTypeItem.apply().getPropertyItem('source_id');
+
+var promise;
+var allPromt = aras.getResource('../Modules/aras.innovator.CMF/', 'cmf_migrate_all_permissions');
+if (aras.confirm(allPromt)) {
+	promise = Promise.resolve({'itemID': null});
+} else {
+	var params = {
+		aras: aras,
+		itemtypeID: contentTypeItem.getProperty('linked_item_type'),
+		multiselect: false,
+		type: 'SearchDialog'
+	};
+	promise = ArasModules.MaximazableDialog.show('iframe', params).promise;
+}
+
+return promise.then(function(dialogResult) {
+	if (!dialogResult) {
+		return Promise.reject();
+	}
+
+	documentId = dialogResult.itemID;
+
+	var msg = aras.getResource('../Modules/aras.innovator.CMF/', 'cmf_migrate_permissions_select_permission');
+	return ArasModules.Dialog.alert(msg, {type: 'warning'});
+}).then(function() {
+	var params = {
+		aras: aras,
+		itemtypeName: 'Permission',
+		multiselect: false,
+		type: 'SearchDialog'
+	};
+	return ArasModules.MaximazableDialog.show('iframe', params).promise;
+}).then(function(dialogResult) {
+	if (!dialogResult || !dialogResult.itemID) {
+		return Promise.reject();
+	}
+
+	var item = innovator.newItem('cmf_ContentType', '');
+	item.setID(contentTypeItem.getID());
+	item.setAttribute('method_action', 'UpdateDefaultPermission');
+	item.setProperty('property_id', propertyTypeId);
+	item.setProperty('element_id', elementTypeId);
+	item.setProperty('document_id', documentId);
+	item.setProperty('old_permission_id', dialogResult.itemID);
+	item = item.apply('cmf_SchemaDefinitionHandler');
+
+	var promise;
+	if (item.isError()) {
+		promise = aras.AlertError(item);
+	} else {
+		promise = Promise.resolve(aras.AlertSuccess(aras.getResource('../Modules/aras.innovator.CMF/', 'cmf_automigration_success')));
+	}
+
+	return promise;
+});
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cmf_UpdatePermissions</name>
+ </Item>
+</AML>

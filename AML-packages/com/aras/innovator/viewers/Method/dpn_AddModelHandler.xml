@@ -1,0 +1,22 @@
+﻿<AML>
+ <Item type="Method" id="2DEFABDA25594EA1B6522F83FA3ED154" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const dpnContext = inArgs.contextParams.dpnContext;
+const params = {
+	aras: parent.aras,
+	itemtypeName: dpnContext.getRootItemTypeName(),
+	type: 'SearchDialog',
+	multiselect: true
+};
+
+ArasModules.MaximazableDialog.show('iframe', params).promise.then(function (values) {
+	if (!values || values.length === 0) {
+		return;
+	}
+
+	dpnContext.addModel(values);
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>dpn_AddModelHandler</name>
+ </Item>
+</AML>

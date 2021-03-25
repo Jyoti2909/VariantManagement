@@ -1,0 +1,76 @@
+﻿<AML>
+ <Item type="Method" id="31F418CE311A438281B8C43BF57FB4B9" action="add">
+  <comments>This is editable server method that illustrates how to create a WM configuration lookup method</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[String wmContext = this.getProperty("watermark_context");
+String eventContext = this.getProperty("event_context");
+String wmType = this.getProperty("wm_type");
+Item resultItem = this.newItem();
+bool foundPDFWMConfiguration = false;
+
+Item wmSet  = this.newItem("WMSet", "get");
+wmSet.setAttribute("where", "[WMSet].wm_type='" + CCO.DB.InnDatabase.QuoteValue(wmType) 
+	+ "'and[WMSet].event_context='" + CCO.DB.InnDatabase.QuoteValue(eventContext) + "'");
+wmSet = wmSet.apply();
+
+if (wmSet.isEmpty()) {
+    Item itemType = this.newItem("ItemType", "get");
+    itemType.setProperty("name", this.getProperty("context_item_type"));
+    itemType = itemType.apply();
+
+    if (!itemType.isEmpty()) {
+        Item wmSettings = this.newItem("WMSettings", "get");
+        wmSettings.setAttribute("where", "[WMSettings].item_type='" + CCO.DB.InnDatabase.QuoteValue(itemType.getID()) + "'");
+        wmSettings = wmSettings.apply();
+
+        if (!wmSettings.isEmpty()) {
+            wmSet = this.newItem("WMSet", "get");
+            wmSet.setProperty("id", wmSettings.getProperty("default_wm_set"));
+            wmSet = wmSet.apply();
+        }
+    }
+}
+
+if (wmSet.isEmpty()) {
+    resultItem.setProperty("wm_container_id", null);
+    resultItem.setProperty("log_message", "Specified WMConfiguration not defined.");
+}
+else 
+{
+    Item wmSetConfigurations = this.newItem("WMSet", "get");
+    wmSetConfigurations.setProperty("id", wmSet.getID());
+    Item isRelationship = this.newItem("WMSetConfigurations", "get");
+    wmSetConfigurations.addRelationship(isRelationship);
+    wmSetConfigurations = wmSetConfigurations.apply();
+
+    Item relationships = wmSetConfigurations.getRelationships("WMSetConfigurations");
+    for (int i = 0; i < relationships.getItemCount(); i++) {
+        Item curRel = relationships.getItemByIndex(i);
+        String wmConfigurationID = curRel.getProperty("related_id");
+
+        Item PDFWMConfigurations = this.newItem("PDFWMConfiguration", "get");
+        PDFWMConfigurations.setAttribute("id", wmConfigurationID);
+        PDFWMConfigurations = PDFWMConfigurations.apply();
+
+        if (!PDFWMConfigurations.isEmpty()) {
+            if (PDFWMConfigurations.getProperty("watermark_context") == wmContext) {
+                resultItem.setProperty("wm_container_id", PDFWMConfigurations.getID());
+                resultItem.setProperty("log_message", "Specified WMConfiguration located.");
+                foundPDFWMConfiguration = true;
+                break;
+            }
+        }
+    }
+
+    if (!foundPDFWMConfiguration) 
+    {
+        resultItem.setProperty("wm_container_id", null);
+        resultItem.setProperty("log_message", "Specified WMConfiguration not defined.");
+    }
+}
+
+return resultItem;]]></method_code>
+  <method_type>C#</method_type>
+  <name>wm_GetWMConfigurationTemplate</name>
+ </Item>
+</AML>

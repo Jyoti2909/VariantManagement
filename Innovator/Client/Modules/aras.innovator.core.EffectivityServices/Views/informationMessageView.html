@@ -1,0 +1,33 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" href="../../../javascript/include.aspx?classes=common.min.css" />
+	<link rel="stylesheet" href="../Styles/EffectivityStyles.min.css" />
+	<script src="../../../javascript/include.aspx?classes=pageReturnBlocker"></script>
+	<script src="../Scripts/informationMessageViewController.js"></script>
+	<script>
+		window.addEventListener('DOMContentLoaded', function() {
+			const dialogArguments = window.frameElement.dialogArguments;
+
+			const parameters = {
+				aras: dialogArguments.aras,
+				informationMessage: dialogArguments.informationMessage,
+				informationMessageElement: document.querySelector('.effs-information-message__text'),
+				closeButtonElement: document.querySelector('.effs-titlebar__close-button'),
+				closeButtonClickHandler: dialogArguments.closeButtonClickHandler
+			};
+			new InformationMessageViewController(parameters);
+		});
+	</script>
+</head>
+<body class="effs-information-message aras-flex aras-flex_column">
+	<div class="effs-titlebar aras-titlebar aras-titlebar_c aras-flex">
+		<span class="effs-titlebar__close-button aras-toolbar__item aras-toolbar__icon aras-hide aras-dialog__close-button aras-icon-close"></span>
+	</div>
+	<div class="effs-information-message__container">
+		<img src="../../../images/Information.svg">
+		<span class="effs-information-message__text"></span>
+	</div>
+</body>
+</html>

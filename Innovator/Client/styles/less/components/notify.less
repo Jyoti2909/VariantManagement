@@ -1,0 +1,93 @@
+﻿@import '../core/variables';
+@maxNotificationWidth: 400px;
+@defaultIndentSize: 8px;
+
+.aras-notify {
+	max-width: @maxNotificationWidth;
+	position: fixed;
+	z-index: 10000;
+	&__notification-container {
+		transform: translate3d(0, 0, 0);
+		transition: opacity 0.3s ease-in-out, margin 0.3s ease-in-out;
+		opacity: 0;
+		&_visible {
+			opacity: 1;
+		}
+	}
+
+	&_bottom-left,
+	&_bottom-right {
+		bottom: @defaultIndentSize;
+	}
+	&_top-left,
+	&_top-right {
+		top: @defaultIndentSize;
+	}
+	&_bottom-left,
+	&_top-left {
+		left: @defaultIndentSize;
+	}
+	&_bottom-right,
+	&_top-right {
+		right: @defaultIndentSize;
+		.aras-notify__notification-container {
+			display: flex;
+			flex-direction: row-reverse;
+		}
+	}
+	&_bottom-left,
+	&_bottom-right {
+		.aras-notify__notification-container {
+			margin-bottom: -37px;
+			padding-top: @defaultIndentSize;
+			&_visible {
+				margin-bottom: 0;
+			}
+		}
+	}
+	&_top-left,
+	&_top-right {
+		.aras-notify__notification-container {
+			margin-top: -37px;
+			padding-bottom: @defaultIndentSize;
+			&_visible {
+				margin-top: 0;
+			}
+		}
+	}
+}
+
+.aras-notification {
+	align-items: center;
+	background-color: @blue-700;
+	border-radius: 4px;
+	box-shadow: @shadow-d;
+	color: @white;
+	cursor: pointer;
+	display: inline-flex;
+	user-select: none;
+	padding: @defaultIndentSize 12px @defaultIndentSize @defaultIndentSize;
+
+	&_error {
+		background-color: @red-700;
+	}
+
+	&_success {
+		background-color: @green-700;
+	}
+
+	&_warning {
+		background-color: @orange-700;
+	}
+
+	&__icon {
+		flex-shrink: 0;
+		height: @icon-32;
+		width: @icon-32;
+	}
+
+	&__message {
+		font: @font-16-bold;
+		margin-left: @defaultIndentSize;
+	}
+}

@@ -1,0 +1,46 @@
+﻿<AML>
+ <Item type="Method" id="30C7228DA4E04D308F11DB4045A4EDBB" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[            string requestStateDictionaryKey =
+				string.Format(CultureInfo.InvariantCulture, "{0}_PresentationConfigurations", this.getID());
+
+			if (RequestState.Contains(requestStateDictionaryKey))
+			{
+				IDictionary<string, IList<string>> presentationConfigurations = (IDictionary<string, IList<string>>)RequestState[requestStateDictionaryKey];
+				foreach (KeyValuePair<string, IList<string>> presentationConfiguration in presentationConfigurations)
+				{
+					Item presentationConfigurationWhereUsed = this.newItem("PresentationConfiguration", "getItemWhereUsed");
+					presentationConfigurationWhereUsed.setID(presentationConfiguration.Key);
+					presentationConfigurationWhereUsed = presentationConfigurationWhereUsed.apply();
+					Item presentationConfigurationWhereUsedItems = presentationConfigurationWhereUsed.getItemsByXPath("//Result/Item/relatedItems/Item");
+
+					if (presentationConfigurationWhereUsedItems.getItemCount() == 0)
+					{
+						Item presentationConfigurationItem = this.newItem("PresentationConfiguration", "delete");
+						presentationConfigurationItem.setID(presentationConfiguration.Key);
+						presentationConfigurationItem = presentationConfigurationItem.apply();
+
+						foreach (string commandBarSectionId in presentationConfiguration.Value)
+						{
+							Item commandBarSectionWhereUsed = this.newItem("CommandBarSection", "getItemWhereUsed");
+							commandBarSectionWhereUsed.setID(commandBarSectionId);
+							commandBarSectionWhereUsed = commandBarSectionWhereUsed.apply();
+							Item CommandBarSectionWhereUsedItems = commandBarSectionWhereUsed.getItemsByXPath("//Result/Item/relatedItems/Item");
+
+							if (CommandBarSectionWhereUsedItems.getItemCount() == 0)
+							{
+								Item commandBarSectionItem = this.newItem("CommandBarSection", "delete");
+								commandBarSectionItem.setID(commandBarSectionId);
+								commandBarSectionItem.apply();
+							}
+						}
+					}
+				}
+
+				RequestState.Remove(requestStateDictionaryKey);
+			}
+			return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>ti_AfterDeleteItemType</name>
+ </Item>
+</AML>

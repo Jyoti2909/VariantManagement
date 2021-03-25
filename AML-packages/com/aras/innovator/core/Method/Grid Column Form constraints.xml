@@ -1,0 +1,62 @@
+﻿<AML>
+ <Item type="Method" id="5453FAA8A1A14316AD2D38D4AC7383BF" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*version:1*/
+/*
+This method implements logical constraints for "Grid Column" Form according to the
+specification:
+"The user interface must be programmatically constrained to allow only one of these
+to be selected: xpath or method, and also allow only one in: select query, select method."
+*/
+
+// +++ check if basic functionality is available
+var el = window.event ? window.event.srcElement : event.srcElement;
+if (!el) {
+	return true;
+}
+
+if (!window.handleItemChange) {
+	return true;
+}
+// +++ check if basic functionality is available
+
+var propNm  = el.name;
+var propVal = el.value;
+
+function getExclusionsSet(propNm) {
+	var set1 = {'select_query': 1, 'select_method': 1};
+
+	function isInSet(set) {
+		for (var p in set) {
+			if (p == propNm) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	if (isInSet(set1)) {
+		return set1;
+	}
+
+	return null;
+}
+
+var exclusionsSet = getExclusionsSet(propNm);
+if (!exclusionsSet) {
+	return true;
+}
+
+delete exclusionsSet[propNm];
+
+//empty all excluded properties
+for (var pN in exclusionsSet) {
+	window.handleItemChange(pN, '');
+}
+
+return true;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Grid Column Form constraints</name>
+ </Item>
+</AML>

@@ -1,0 +1,98 @@
+﻿<AML>
+ <Item type="Method" id="5CE60A547AA84D6FAF2636935DB53010" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	Innovator inn = this.getInnovator();
+	return Validate(inn, CCO.ErrorLookup);
+}
+
+internal Item Validate(Innovator innovator, Aras.Server.Core.ErrorLookup errorLookup) 
+{
+	var thisItem = this.newItem("dr_RelationshipFamily", "get");
+	thisItem.setID(this.getID());
+	thisItem.setAttribute("idlist", this.getAttribute("idlist"));
+	thisItem.setAttribute("select", "id, query_definition_id");
+	thisItem = thisItem.apply();
+
+	var queryDefinitionId = thisItem.getProperty("query_definition_id");
+	var queryDefinition = this.newItem();
+	var queryAml = @"<AML>
+	<Item action='get' id='{0}' select='id, name' type='qry_QueryDefinition'>
+		<Relationships>
+			<Item type='qry_QueryItem' action='get' select='id,alias,ref_id,item_type' />
+			<Item type='qry_QueryReference' action='get' select='id,ref_id,parent_ref_id,child_ref_id' />
+		</Relationships>
+	</Item>
+</AML>";
+	queryDefinition.loadAML(string.Format(CultureInfo.InvariantCulture, queryAml, System.Security.SecurityElement.Escape(queryDefinitionId)));
+	queryDefinition = queryDefinition.apply();
+	if (queryDefinition.isError()) {
+		return queryDefinition;
+	}
+
+	thisItem.fetchRelationships("dr_FamilyElement");
+	var familyElements = thisItem.getRelationships("dr_FamilyElement");
+	for (var i = 0; i < familyElements.getItemCount(); i++)
+	{
+		HashSet<string> parentQueryReferenceRefIds = new HashSet<string>();
+		HashSet<string> parentQueryReferenceRefIdsByQueryItemRefId = new HashSet<string>(); 
+		var familyElement = familyElements.getItemByIndex(i);
+		familyElement.fetchRelationships("dr_FamilyElement qry_QueryItem");
+		var familyElementQueryItems = familyElement.getRelationships("dr_FamilyElement qry_QueryItem");
+
+		for (var j = 0; j < familyElementQueryItems.getItemCount(); j++)
+		{
+			var familyElementQueryItem = familyElementQueryItems.getItemByIndex(j);
+			var parentQueryReferenceRefId = familyElementQueryItem.getProperty("parent_query_reference_ref_id");
+			parentQueryReferenceRefIds.Add(parentQueryReferenceRefId);
+			var parentQueryReference =
+				queryDefinition.getItemsByXPath(
+					"//Relationships/Item[@type=\"qry_QueryReference\" and ref_id=\"" + parentQueryReferenceRefId + "\"]");
+			var familyElementQueryItemRefId = parentQueryReference.getProperty("child_ref_id");
+
+			var parentQueryReferencesByQueryItemRefId =
+				queryDefinition.getItemsByXPath(
+					"//Relationships/Item[@type=\"qry_QueryReference\" and child_ref_id=\"" + familyElementQueryItemRefId + "\"]");
+			for (var k = 0; k < parentQueryReferencesByQueryItemRefId.getItemCount(); k++)
+			{
+				var parentQueryReferenceByQueryItemRefId = parentQueryReferencesByQueryItemRefId.getItemByIndex(k);
+				var refId = parentQueryReferenceByQueryItemRefId.getProperty("ref_id");
+				parentQueryReferenceRefIdsByQueryItemRefId.Add(refId);
+			}
+		}
+		
+		if (!parentQueryReferenceRefIds.SetEquals(parentQueryReferenceRefIdsByQueryItemRefId))
+		{
+			var queryReference = queryDefinition.getItemsByXPath(
+				"//Relationships/Item[@type=\"qry_QueryReference\" and ref_id=\"" + parentQueryReferenceRefIds.First() + "\"]");
+			var queryItemRefId = queryReference.getProperty("child_ref_id");
+			var queryItem = queryDefinition.getItemsByXPath("//Relationships/Item[@type=\"qry_QueryItem\" and ref_id=\"" + queryItemRefId + "\"]");
+			string message = string.Format(
+				CultureInfo.InvariantCulture,
+				errorLookup.Lookup("dr_AllPathShouldBeExistsInParentQryRefId"),
+				string.Join(", ", parentQueryReferenceRefIdsByQueryItemRefId),
+				string.Join(", ", parentQueryReferenceRefIds),
+				queryItem.getProperty("alias"));
+			return innovator.newError(message);
+		}
+	}
+
+	var rootQueryReference = queryDefinition.getItemsByXPath("//Relationships/Item[@type=\"qry_QueryReference\" and string(parent_ref_id)='']");
+	var childRefId = rootQueryReference.getProperty("child_ref_id");
+	var queryReferenceWithSameChildRefId = queryDefinition.getItemsByXPath("Relationships/Item[child_ref_id=\"" + childRefId + "\"]");
+	if (queryReferenceWithSameChildRefId.getItemCount() > 1)
+	{
+		var reusedQueryItem = queryDefinition.getItemsByXPath(
+			"//Relationships/Item[@type=\"qry_QueryItem\" and ref_id=\"" + childRefId + "\"]");
+		
+		string message = string.Format(
+			CultureInfo.InvariantCulture,
+			errorLookup.Lookup("dr_UnableToUseQueryDefinitionWithReusedDepartureQueryItem"),
+			queryDefinition.getProperty("name"),
+			reusedQueryItem.getProperty("alias"));
+		return innovator.newError(message);
+	}
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_ValidateParentQryRefIdPaths</name>
+ </Item>
+</AML>

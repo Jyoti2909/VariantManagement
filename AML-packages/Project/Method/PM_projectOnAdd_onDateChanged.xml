@@ -1,0 +1,55 @@
+﻿<AML>
+ <Item type="Method" id="1BEC467E78AD471AAEB36B29101D08F2" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var startPropNm = "date_start_target";
+var duePropNm = "date_due_target";
+var curNm = this.name;
+var dualNm = (curNm == duePropNm ? startPropNm : duePropNm);
+if (event.type === "change" && event.propertyDef && window.handleItemChange){
+	if(!top.aras.isPropertyValueValid(event.propertyDef, srcElement.value)){
+		return;
+	}
+	window.handleItemChange(curNm,  srcElement.value, event.propertyDef.data_type , event.propertyDef.pattern);
+}
+var dualVal = top.aras.getItemProperty(document.item, dualNm);
+var newDate = top.aras.getItemProperty(document.item, curNm);
+var sign2Compare = (curNm == duePropNm ? -1 : 1);
+var errMsg = (curNm == duePropNm ? "pr_methods.tf_cannot_be_earlier_ts" : "pr_methods.ts_cannot_be_later_tf");
+errMsg = top.aras.getResource("project", errMsg);
+var prevValsHashKey = "prevValsHashKey_7984655F176B40388EBBC2F3A8D750D2";
+var doBckpDts = true;
+
+if (newDate)
+{
+  if (dualVal)
+  {
+    if (sign2Compare * parent.compareDates(newDate, dualVal) > 0)
+    {
+      top.aras.AlertError(errMsg, null, null, top);
+      var backupVal = (document[prevValsHashKey] ? document[prevValsHashKey][curNm] : "");
+      if (!backupVal) {backupVal = "";}
+      top.aras.setItemProperty(document.item, curNm, backupVal);
+      doBckpDts = false;
+    }
+  }
+  else
+  {
+    var newDualVal = (curNm == duePropNm ? parent.decDateToFirstWorking(newDate) : parent.incDateToFirstWorking(newDate));
+    top.aras.setItemProperty(document.item, dualNm, newDualVal);
+  }
+}
+
+if (doBckpDts)
+{
+  if (!document[prevValsHashKey]) {document[prevValsHashKey] = new Object();}
+  document[prevValsHashKey][curNm] = newDate;
+  document[prevValsHashKey][dualNm] = dualVal;
+}
+
+var form = document.forms.MainDataForm;
+if (!form) {return false;}
+top.aras.uiPopulateFormWithItemEx(form, document.item, document.itemType, document.isEditMode);]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PM_projectOnAdd_onDateChanged</name>
+ </Item>
+</AML>

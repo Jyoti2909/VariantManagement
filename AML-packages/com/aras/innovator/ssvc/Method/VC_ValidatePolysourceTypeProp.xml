@@ -1,0 +1,255 @@
+﻿<AML>
+ <Item type="Method" id="D0D9F363C7CA4A3A9F5A52D763C78591" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	const string FakedDataSource = "00000000000000000000000000000000";
+	Innovator inn = this.getInnovator();
+	string reference = this.getProperty("reference");
+	if (!string.IsNullOrEmpty(reference))
+	{
+		string idProp = "source_id";
+		Item item;
+		if (string.IsNullOrEmpty(this.getAttribute("discussType")))
+		{
+			item = this.newItem("DiscussionTemplate", "get");
+			item.setAttribute("id", this.getProperty(idProp));
+		}
+		else
+		{
+			idProp = "id";
+			var itemTypeName = this.getProperty("item_type_name");
+			if (string.IsNullOrEmpty(itemTypeName))
+			{
+				return inn.newError(CCO.ErrorLookup.Lookup("SSVC_ItemTypeNameEmpty"));
+			}
+
+			item = this.newItem("ItemType", "get");
+			item.setProperty("name", itemTypeName);
+		}
+
+		item.setAttribute("select", idProp);
+		item = item.apply();
+		if (item.isError())
+		{
+			return inn.newError(item.getErrorString());
+		}
+
+		string itemTypeId = item.getProperty(idProp);
+
+		try
+		{
+			var refType = DefineReferenceType(reference);
+			switch (refType)
+			{
+				case RefernceType.ThisReference:
+				{
+					Item itemType = this.newItem("ItemType", "get");
+					itemType.setAttribute("id", itemTypeId);
+					itemType = itemType.apply();
+					if (itemType.isError())
+					{
+						return inn.newError(itemType.getErrorString());
+					}
+
+					return HandlePolysourceRequest(this, itemType.getProperty("implementation_type"), itemType.getProperty("id"), CCO);
+				}
+				case RefernceType.Property:
+				{
+					const string datasourceXPath = "//Result/Item/Relationships/Item/data_source";
+					Item itemType = this.newItem("ItemType", "get");
+					itemType.setAttribute("id", itemTypeId);
+					Item propRelItem = this.newItem("Property", "get");
+					propRelItem.setProperty("name", reference);
+					propRelItem.setAttribute("select", "data_source(*)");
+					itemType.addRelationship(propRelItem);
+					itemType = itemType.apply();
+					if (itemType.isError())
+					{
+						return inn.newError(itemType.getErrorString());
+					}
+
+					XmlNode propDatasource = itemType.dom.SelectSingleNode(datasourceXPath);
+					if (propDatasource == null)
+					{
+						throw new Exception();
+					}
+
+					if (propDatasource.InnerText == FakedDataSource)
+					{
+						return this;
+					}
+					XmlNode itemByReference = propDatasource.SelectSingleNode("Item");
+					if (itemByReference == null)
+					{
+						throw new Exception();
+					}
+
+					return HandlePolysourceRequest(this, CCO.XML.GetItemProperty(itemByReference, "implementation_type"), CCO.XML.GetItemProperty(itemByReference, "id"), CCO);
+				}
+
+				case RefernceType.Aml:
+				{
+					var regex = new System.Text.RegularExpressions.Regex("action=[\\'|\\\"](?:(?!\\bget\\b).)*?[\\'|\\\"]|type=[\\'|\\\"]\\$\\{.*?");
+					if (regex.IsMatch(reference))
+					{
+						return this;
+					}
+					regex = new System.Text.RegularExpressions.Regex("(?!type=)[\\'|\\\"](?:.*?)?[\\'|\\\"]");
+					string itemName = System.Text.RegularExpressions.Regex.Replace(regex.Match(reference).Value, "(\\'|\\\")", "");
+					Item itemType = this.newItem("ItemType", "get");
+					itemType.setProperty("name", itemName);
+					itemType = itemType.apply();
+					if (itemType.isError())
+					{
+						return inn.newError(itemType.getErrorString());
+					}
+
+					return HandlePolysourceRequest(this, itemType.getProperty("implementation_type"), itemType.getProperty("id"), CCO);
+				}
+
+				case RefernceType.Relationships:
+				{
+					var property = System.Text.RegularExpressions.Regex.Match(reference, @"\(.*\)").Value;
+					string tempReference = reference.Replace(property, "");
+					property = System.Text.RegularExpressions.Regex.Replace(property, @"[\(\)]", "");
+					var refArray = tempReference.Split('/');
+					string xPath = "//Result/Item";
+					Item tempItem = null;
+
+					for (var i = refArray.Length - 1; i >= 0; i--)
+					{
+						Item targetItem = this.newItem("ItemType", "get");
+						targetItem.setProperty("name", refArray[i]);
+						Item relationshipTypeItem = this.newItem("RelationshipType", "get");
+						relationshipTypeItem.setProperty("name", refArray[i]);
+						relationshipTypeItem.setPropertyItem("relationship_id", targetItem);
+						
+						if (tempItem != null)
+						{
+							targetItem.addRelationship(tempItem);
+							tempItem = relationshipTypeItem;
+						}
+						else
+						{
+							targetItem.setAttribute("select", property + "(*)");
+							Item propertyItem = this.newItem("Property", "get");
+							propertyItem.setAttribute("select", "data_source(*)");
+							propertyItem.setProperty("name", property);
+							targetItem.addRelationship(propertyItem);
+							tempItem = relationshipTypeItem;
+						}
+
+						xPath += "/Relationships/Item/relationship_id/Item";
+					}
+
+					xPath += "/Relationships/Item/data_source";
+
+					Item itemType = this.newItem("ItemType", "get");
+					itemType.setAttribute("id", itemTypeId);
+					itemType.addRelationship(tempItem);
+					itemType = itemType.apply();
+					if (itemType.isError())
+					{
+						return inn.newError(itemType.getErrorString());
+					}
+
+					XmlNode propDatasource = itemType.dom.SelectSingleNode(xPath);
+					if (propDatasource == null)
+					{
+						throw new Exception();
+					}
+
+					if (propDatasource.InnerText == FakedDataSource)
+					{
+						return this;
+					}
+					XmlNode itemByReference = propDatasource.SelectSingleNode("Item");
+					if (itemByReference == null)
+					{
+						throw new Exception();
+					}
+
+					return HandlePolysourceRequest(this, CCO.XML.GetItemProperty(itemByReference, "implementation_type"), CCO.XML.GetItemProperty(itemByReference, "id"), CCO);
+				}
+			}
+		}
+		catch (Exception ex)
+		{
+			return inn.newError(string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("SSVC_InvalidReference"), this.getType(), this.getID()));
+		}
+	}
+	return this;
+}
+
+private enum RefernceType
+{
+	ThisReference,
+	Property,
+	Relationships,
+	Aml
+}
+
+private RefernceType DefineReferenceType(string reference)
+{
+	// Case 1. Check if refernce = this;
+	var regex = new System.Text.RegularExpressions.Regex(@"^(?i)this(?-i)$");
+	if (regex.IsMatch(reference))
+	{
+		return RefernceType.ThisReference;
+	}
+
+	// Case 2. Check if refernce is AML;
+	regex = new System.Text.RegularExpressions.Regex("(?:<Item(.*)action=(\'|\").*(\'|\"))");
+	if (regex.IsMatch(reference))
+	{
+		return RefernceType.Aml;
+	}
+	
+	// Case 3. Check if refernce = Rn/.../R0(prop);
+	regex = new System.Text.RegularExpressions.Regex(@"\(.*\)");
+	if (regex.IsMatch(reference))
+	{
+		return RefernceType.Relationships;
+	}
+	
+	// Case 4. Check not needed. It will be property reference or invalid reference;
+	return RefernceType.Property;
+}
+
+private Item HandlePolysourceRequest(Item item, string implType, string id, Aras.Server.Core.CallContext CCO)
+{
+	Innovator inn = item.getInnovator();
+	var polyFromFeed = item.getProperty("polysource_type_name");
+	if (implType == "polymorphic")
+	{
+		if (string.IsNullOrEmpty(polyFromFeed))
+		{
+			return inn.newError(CCO.ErrorLookup.Lookup("SSVC_PolysourceTypeNameEmpty"));
+		}
+		Item itemType = item.newItem("ItemType", "get");
+		itemType.setAttribute("id", id);
+		Item morphItem = item.newItem("Morphae", "get");
+		morphItem.setProperty("source_id", id);
+		Item relatedItem = item.newItem("ItemType", "get");
+		relatedItem.setProperty("name", polyFromFeed);
+		morphItem.setRelatedItem(relatedItem);
+		itemType.addRelationship(morphItem);
+		itemType = itemType.apply();
+		if (itemType.isError())
+		{
+			return inn.newError(itemType.getErrorString());
+		}
+
+		if (itemType.dom.SelectSingleNode("//Result/Item/Relationships/Item[@type='Morphae']/related_id/Item") == null)
+		{
+			return inn.newError(CCO.ErrorLookup.Lookup("SSVC_InvalidPolysourceTypeName"));
+		}
+	}
+	else if (!string.IsNullOrEmpty(polyFromFeed))
+	{
+		return inn.newError(CCO.ErrorLookup.Lookup("SSVC_NotPolymorphicItemType"));
+	}
+	return item;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_ValidatePolysourceTypeProp</name>
+ </Item>
+</AML>

@@ -1,0 +1,76 @@
+﻿<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+<head>
+	<script>
+		/*
+			This page is a copy of globalLayout.html with dynamic type selection.
+			It use parent.getItem() that's not an IOM item but the xml element.
+			By the time this code written it's impossible to tranform this item to IOM item on this page
+			because uiShowItemInFrameEx and form expect xml element.
+			When it will be possible to changed xml to the IOM item make sure to change code properly.
+		*/
+		var itemType = window.location.search.substring(1);
+		var aras;
+
+		onload = function () {
+			loadForm();
+		}
+
+		function setEditMode() {
+			loadForm(true);
+		}
+
+		function setViewMode() {
+			loadForm(false);
+		}
+
+		function loadForm(isEditMode) {
+			var tItem = parent.getItem();
+			aras = parent.aras;
+
+			if (!tItem) {
+				setTimeout(loadForm, 50);
+				return;
+			}
+
+			var frameItem = tItem.selectSingleNode("Relationships/Item[@type='" + itemType + "']");
+
+			if (!frameItem) {
+				var prefId = aras.getItemProperty(tItem, "id");
+
+				var xml = '' +
+					'<Item type="' + itemType + '" action="get" page="1" pagesize="1">' +
+					'  <source_id>' + prefId + '</source_id>' +
+					'</Item>';
+
+				var res = aras.applyItem(xml);
+				var resDom = aras.createXMLDocument();
+
+				resDom.loadXML(res);
+				var frameItem = resDom.selectSingleNode("//Item");
+				if (frameItem) {
+					var tRels = tItem.selectSingleNode("Relationships");
+					if (!tRels) tRels = tItem.appendChild(tItem.ownerDocument.createElement("Relationships"));
+					tRels.appendChild(frameItem);
+				}
+				else return;
+			}
+
+			var formType = "view";
+			isEdit = isEditMode == undefined ? parent.isEditMode : isEditMode;
+
+			if (isEdit) {
+				formType = "edit";
+				act = frameItem.getAttribute("action");
+				if (!act) frameItem.setAttribute("action", "edit");
+			}
+
+			aras.uiShowItemInFrameEx(frames[0], frameItem, formType);
+		}
+	</script>
+</head>
+<body style="margin: 0px">
+	<iframe id="global_layout" width="100%" height="100%" scrolling="auto" frameborder="0" src="../blank.html">
+	</iframe>
+</body>
+</html>

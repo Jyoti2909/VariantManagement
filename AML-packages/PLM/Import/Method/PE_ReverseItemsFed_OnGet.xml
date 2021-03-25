@@ -1,0 +1,218 @@
+﻿<AML>
+ <Item type="Method" id="928B92A57FA845868DA7BA77D9165AA7" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	return Execute(this, CCO.ErrorLookup.Lookup, CCO.ErrorLookup.Lookup, CCO.DB.InnDatabase.QuoteName, CCO.DB.InnDatabase.QuoteValue);
+}
+
+internal static Item Execute(Item thisItem, Func<string, string, string> GetResource, Func<string, string, string, string> GetResourceWithTwoArgs,
+	Func<string, string> QuoteName, Func<string, string> QuoteValue)
+{
+	string startItemId = null;
+	string sourceItemTypeName = null;
+	string relationshipItemTypeName = null;
+
+	XmlNodeList idNodes = thisItem.node.SelectNodes("id");
+	bool isStandardResolution = false;
+	if (idNodes != null)
+	{
+		foreach (XmlNode idNode in idNodes)
+		{
+			string queryBuilderConditionString = "/*Condition will be added onGet of ItemType*/";
+			string idNodeText = idNode.InnerText;
+			if (idNodeText.StartsWith(queryBuilderConditionString, StringComparison.Ordinal))
+			{
+				string parametersJson = idNodeText.Replace(queryBuilderConditionString, String.Empty);
+				var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+				Dictionary<string, string> parameters = serializer.Deserialize<Dictionary<string, string>>(parametersJson);
+				string resolution;
+				const string standardResolution = "Standard";
+				const string versionResolution = "Version";
+				string possibleResolutionsForMessage = string.Format(CultureInfo.InvariantCulture, "'{0}', '{1}'", standardResolution, versionResolution);
+				const string resolutionParamName = "resolution";
+				if (!parameters.TryGetValue(resolutionParamName, out resolution))
+				{
+					resolution = versionResolution;
+				}
+				isStandardResolution = resolution == standardResolution;
+				if (!isStandardResolution && resolution != versionResolution)
+				{
+					throw new ArgumentException(GetResourceWithTwoArgs("PE_ReverseItems_WrongResolution", resolutionParamName, possibleResolutionsForMessage));
+				}
+						
+				parameters.TryGetValue("itemID", out startItemId);
+						
+				if (Aras.Server.Core.GuidModule.IsIdValid(startItemId, false))
+				{
+					const string reverseItNameParamName = "reverseITName";
+					const string userMessageEmptyParameterName = "PE_ReverseItems_EmptyParameter";
+					if (!parameters.TryGetValue(reverseItNameParamName, out sourceItemTypeName) || string.IsNullOrEmpty(sourceItemTypeName))
+					{
+						throw new ArgumentException(GetResource(userMessageEmptyParameterName, reverseItNameParamName));
+					}
+					string sourceTableName = GetDbTableName(sourceItemTypeName);
+
+					const string reverseRelNameParamName = "reverseRelationshipName";
+					if (!parameters.TryGetValue(reverseRelNameParamName, out relationshipItemTypeName) || string.IsNullOrEmpty(relationshipItemTypeName))
+					{
+						throw new ArgumentException(GetResource(userMessageEmptyParameterName, reverseRelNameParamName));
+					}
+					string relationshipTableName = GetDbTableName(relationshipItemTypeName);
+				
+					string sql;
+					if (isStandardResolution)
+					{
+						string startItemItemTypeName = null;
+						const string itNameParamName = "ITName";
+						if (!parameters.TryGetValue(itNameParamName, out startItemItemTypeName) || string.IsNullOrEmpty(startItemItemTypeName))
+						{
+							throw new ArgumentException(GetResource(userMessageEmptyParameterName, itNameParamName));
+						}
+						string startItemTableName = GetDbTableName(startItemItemTypeName);
+
+						sql = string.Format(CultureInfo.InvariantCulture,
+							@"SELECT part_finish.id
+FROM
+	(
+	SELECT MAX(part_cad.gen) OVER(PARTITION BY part_cad.config_id) AS Max_GENERATION_part,part_cad.id,part_cad.gen generation_part
+	FROM (
+		SELECT MAX(related_version_set.GENERATION) OVER(PARTITION BY source_item.config_id) AS Max_GENERATION,
+		related_version_set.GENERATION GENERATION_CAD,source_item.generation gen,source_item.id,source_item.config_id config_id
+		FROM {3} related_config
+		INNER JOIN {3} current_related ON current_related.id = '{0}'
+		INNER JOIN {3} related_version_set ON related_version_set.CONFIG_ID = current_related.CONFIG_ID
+		AND related_version_set.GENERATION <= current_related.GENERATION
+		INNER JOIN {1} item_relship ON item_relship.RELATED_ID = related_version_set.ID					
+		INNER JOIN {2} source_item ON source_item.id = item_relship.SOURCE_ID
+		WHERE
+		related_config.id = item_relship.RELATED_ID
+		) as part_cad
+	WHERE part_cad.GENERATION_CAD = part_cad.Max_GENERATION
+	) as part_finish
+WHERE part_finish.generation_part = part_finish.Max_GENERATION_part",
+							startItemId, QuoteName(relationshipTableName), QuoteName(sourceTableName), QuoteName(startItemTableName));
+					}
+					else
+					{
+						sql = string.Format(CultureInfo.InvariantCulture,
+							@"SELECT item.id FROM {2} item
+INNER JOIN
+(
+SELECT item.CONFIG_ID, MAX(item.GENERATION) GENERATION FROM {2} item 
+INNER JOIN {1} relationshipItem ON item.ID = relationshipItem.SOURCE_ID AND relationshipItem.RELATED_ID = '{0}'
+GROUP BY item.CONFIG_ID
+) groupeditem ON groupeditem.CONFIG_ID = item.CONFIG_ID AND groupeditem.GENERATION = item.GENERATION",
+							startItemId, QuoteName(relationshipTableName), QuoteName(sourceTableName));
+					}
+							 
+					idNode.InnerText = sql;
+					((XmlElement) idNode).SetAttribute("condition", "in");
+				}
+			}
+		}
+	}
+
+	if (!Aras.Server.Core.GuidModule.IsIdValid(startItemId, false))
+	{
+		throw new ArgumentException(GetResourceWithTwoArgs("PE_ReverseItems_WrongItemId", startItemId, "StartItemId"));
+	}
+
+	//logic to get item with the same settings like 'thisItem' object (e.g., fetch-offset configuration, conditions)
+	thisItem.setType(sourceItemTypeName);
+
+	//TODO: performance can be improved by: 1) do apply of Part without relationshipRequest, 2) filtering it by fetch-offset and getting Part CAD for them.
+	if (isStandardResolution)
+	{
+		Item relationshipRequest = thisItem.createRelationship(relationshipItemTypeName, "get");
+		relationshipRequest.setAttribute("select", "related_id(id)");
+	}
+	//'thisItem.apply()' is used to pass QueryBuilder attributes and properties, e.g., properties which are set because of Conditions.
+	//note that fetch, offset attributes are passed too, but, they are ignored by Core here (they are used only in QueryBuilder)
+	string fetchStr = thisItem.getAttribute("fetch");
+	string offsetStr = thisItem.getAttribute("offset");
+	int? fetch = string.IsNullOrEmpty(fetchStr) ? (int?) null : int.Parse(fetchStr, CultureInfo.InvariantCulture);
+	int offset = string.IsNullOrEmpty(offsetStr) ? 0 : int.Parse(offsetStr, CultureInfo.InvariantCulture);
+	Item partResult = thisItem.apply();
+	int itemsCountToReturn = partResult.getItemCount();
+	if (itemsCountToReturn == 0)
+	{
+		return partResult;
+	}
+	if (fetch != null)
+	{
+		itemsCountToReturn = Math.Min((int) fetch + offset, itemsCountToReturn);
+	}
+
+	Item result = thisItem.getInnovator().newResult(string.Empty);
+	string icon = null;
+	for (int itemIndex = offset; itemIndex < itemsCountToReturn; itemIndex++)
+	{
+		Item item = partResult.getItemByIndex(itemIndex);
+		if (itemIndex == offset)
+		{
+			icon = GetItemTypeIcon(sourceItemTypeName, thisItem.getInnovator(), QuoteValue);
+		}
+		//add link status to item
+		string linkStatus = null;
+		string xPath = string.Format(CultureInfo.InvariantCulture, "Relationships/Item[@type='{0}']/related_id/Item[@id='{1}']",
+			relationshipItemTypeName, startItemId);
+		if (!isStandardResolution || item.node.SelectSingleNode(xPath) != null)
+		{
+			linkStatus = "../images/HasRelationship.svg";
+		}
+		else
+		{
+			linkStatus = "../images/NoRelationship.svg";
+		}
+		item.setProperty("link_status", linkStatus);
+
+		item.setProperty("it_open_icon", icon);
+
+		item.setProperty("real_it_name", sourceItemTypeName);
+
+		Item relationships = item.getRelationships();
+		int relationshipCount = relationships.getItemCount();
+		for (int i = 0; i < relationshipCount; i++)
+		{
+			Item relationship = relationships.getItemByIndex(i);
+			item.removeRelationship(relationship);
+		}
+
+		if (itemIndex == offset)
+		{
+			// thisItem is a trick to setup Items in Result node
+			result.dom.SelectSingleNode(Item.XPathResult).InnerXml = item.node.OuterXml;
+			result.node = (XmlElement) result.dom.SelectSingleNode(Item.XPathResult + "/Item");
+		}
+		else
+		{
+			result.appendItem(item);
+		}
+	}
+
+	return result;
+}
+
+internal static string GetItemTypeIcon(string itemTypeName, Innovator innovator, Func<string, string> QuoteValue)
+{
+	const string DefaultItemTypeIcon = "../images/DefaultItemType.svg";
+	const string DefaultRelationshipTypeIcon = "../images/RelationshipType.svg";
+	Item itemTypeRequest = innovator.newItem("ItemType", "get");
+	itemTypeRequest.setAttribute("where", "name='" + QuoteValue(itemTypeName) + "'");
+	itemTypeRequest.setAttribute("select", "open_icon, is_relationship");
+	Item itemType = itemTypeRequest.apply();
+	string icon = itemType.getProperty("open_icon");//it's an property with label "Small Icon".
+	if (string.IsNullOrEmpty(icon))
+	{
+		bool isRelationship = itemType.getProperty("is_relationship") == "1";
+		icon = isRelationship ? DefaultRelationshipTypeIcon : DefaultItemTypeIcon;
+	}
+	return icon;
+}
+
+internal static string GetDbTableName(string itemTypeName)
+{
+	return itemTypeName.Replace(" ", "_").ToUpper(CultureInfo.InvariantCulture);]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_ReverseItemsFed_OnGet</name>
+ </Item>
+</AML>

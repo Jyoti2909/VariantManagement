@@ -1,0 +1,15 @@
+﻿<AML>
+ <Item type="Method" id="3001604271EC4D338EA25FB15939C56C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var mainWindow = aras.getMainWindow();
+var targetWindow = window === mainWindow ? mainWindow.main : window;
+var root = targetWindow.tree && targetWindow.tree.getTreeElementById ? targetWindow.tree.getTreeElementById('root') : null;
+if (!root) {
+	aras.AlertError(aras.getResource('../Modules/aras.innovator.QueryBuilder/', 'item.action.execute_in_tearoff.warning'));
+	return;
+}
+targetWindow.tree.startExecuteAction(root);]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>qry_ShowExecuteForm</name>
+ </Item>
+</AML>

@@ -1,0 +1,35 @@
+﻿<AML>
+ <Item type="Method" id="453C6D6031634E1183095440031DAF3A" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const classification = getClassification();
+let iconPath = '../Images/';
+switch (classification) {
+	case 'Mechanical Part/D-Phantom':
+		iconPath += 'Part_light.svg';
+		break;
+	case 'Mechanical Part/M-Phantom':
+		iconPath += 'Part_light_green.svg';
+		break;
+	case 'Mechanical Part/MBOM only Part':
+		iconPath += 'Part_green.svg';
+		break;
+	default:
+		iconPath += 'Part.svg';
+		break;
+}
+
+document.thisItem.SetProperty('gag_icon', iconPath);
+return this;
+
+function getClassification() {
+	const classificationField = getFieldByName('classification');
+	const classificationFieldInput = classificationField.getElementsByTagName(
+		'input'
+	)[0];
+	return classificationFieldInput.value;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_UpdateMechPartIcon</name>
+ </Item>
+</AML>

@@ -1,0 +1,18 @@
+﻿<AML>
+ <Item type="Method" id="19C0B9D2BB0046638F3C1DFA5F313582" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Aras.Server.Core.InnovatorDatabase conn = CCO.Variables.InnDatabase;
+string savedSearchId = conn.QuoteValue(this.getID());
+Aras.Server.Core.InnovatorDataSet result;
+
+string sqlCommand = String.Format("SELECT id FROM {0} WHERE related_id = '{1}'", conn.GetTableName("ForumSearch"), savedSearchId);
+result = conn.ExecuteSelectCommand(sqlCommand);
+if (!result.Eof)
+{
+	throw new Exception(CCO.ErrorLookup.Lookup("SSVC_FailedToDeleteSavedSearch"));
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_OnBeforeDeleteSavedSearch</name>
+ </Item>
+</AML>

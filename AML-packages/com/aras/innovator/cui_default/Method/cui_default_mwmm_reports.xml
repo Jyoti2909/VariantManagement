@@ -1,0 +1,40 @@
+﻿<AML>
+ <Item type="Method" id="6FF7BD1B2A7E4BA0B06F3ACCC6293B39" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const type = target.type;
+const reportId = target.reportId;
+const itemTypeId = target.itemTypeId || '';
+const commandId = target.id;
+
+const cmdHandlerName = 'on' + type.substr(0, 1).toUpperCase() + type.substr(1) + ':' + reportId + ':' + itemTypeId + 'Command';
+const cmdHandler = window[cmdHandlerName];
+if (cmdHandler) {
+	cmdHandler(commandId);
+	return;
+}
+
+const itemIDs = options.selectedRowsIds;
+if (type === 'report') {
+	const report = aras.getItemFromServer('Report', reportId, 'name,target,location,report_query');
+	if (report) {
+		const itemTypeName = options.itemTypeName || '';
+		const itemNode = aras.createXMLDocument();
+		if (target.reportType === 'item') {
+			for (let i = 0; i < itemIDs.length; i++) {
+				itemNode.loadXML('<Item type="' + itemTypeName + '" id="' + itemIDs[i] + '" />');
+				aras.runReport(report.node, itemTypeId, itemNode.documentElement);
+			}
+		} else {
+			itemNode.loadXML('<Item type="' + itemTypeName + '" />');
+			aras.runReport(report.node, itemTypeId, itemNode.documentElement);
+		}
+	}
+} else if (type === 'userreport') {
+	const ids = '\'' + itemIDs.join('\',\'') + '\'';
+	window.runUserReport(aras, commandId, ids);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_svicm_reports_click</name>
+ </Item>
+</AML>

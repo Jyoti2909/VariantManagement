@@ -1,0 +1,68 @@
+﻿<AML>
+ <Item type="Method" id="A87F2E8FA31540979FF3D8C070368DEC" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				Item partCad = GetPartCad(contextItem.getID());
+				Item partCadsWithMasterSubClassification =
+					GetPartCadsWithMasterSubClassification(partCad);
+				if (partCadsWithMasterSubClassification.getItemCount() > 1)
+				{
+					throw new ItemException(_dal.NewError("Only one MASTER 3D-Doc allowed!"));
+				}
+
+				return contextItem;
+			}
+
+			protected Item GetPartCad(string partCadId)
+			{
+				Item partCad = _dal.NewItem("Part CAD", "get");
+				partCad.setID(partCadId);
+				partCad.setProperty("select", "source_id");
+				partCad = _dal.ApplyItem(partCad);
+				Contract.ThrowIfError(partCad);
+				return partCad;
+			}
+
+			protected Item GetCadWithMasterClassification()
+			{
+				Item cadWithMasterClassification = _dal.NewItem("CAD", "get");
+				cadWithMasterClassification.setProperty("gag_classification", "MASTER");
+				return cadWithMasterClassification;
+			}
+
+			protected Item GetPartCadsWithMasterSubClassification(Item partCad)
+			{
+				Item cadWithMasterClassification = GetCadWithMasterClassification();
+				Item partCadsWithMasterSubClassification = _dal.NewItem("Part CAD", "get");
+				partCadsWithMasterSubClassification.setAttribute("select", "id,related_id(id)");
+				partCadsWithMasterSubClassification.setProperty("source_id", partCad.getProperty("source_id"));
+				partCadsWithMasterSubClassification.setRelatedItem(cadWithMasterClassification);
+				partCadsWithMasterSubClassification = _dal.ApplyItem(partCadsWithMasterSubClassification);
+				if (partCadsWithMasterSubClassification.isEmpty())
+				{
+					return partCadsWithMasterSubClassification;
+				}
+				Contract.ThrowIfError(partCadsWithMasterSubClassification);
+				return partCadsWithMasterSubClassification;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_PartCheckOnlyOneMasterCAD</name>
+ </Item>
+</AML>

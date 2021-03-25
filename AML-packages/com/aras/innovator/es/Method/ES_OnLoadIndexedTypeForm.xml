@@ -1,0 +1,88 @@
+﻿<AML>
+ <Item type="Method" id="47AB1D32284B4576BAE888585195EE7E" action="add">
+  <comments>Modify relationship command bar to call custom dialog window on item select</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var item;
+var selectButtonId = 'itemview.relationshipscommandbar.default.selectitems';
+var addRowButtonId = 'itemview.relationshipcommandbar.addrow';
+
+// Fetch ES_IndexedProperty relationship type id
+item = new Item('RelationshipType', 'get');
+item.setProperty('name', 'ES_IndexedProperty');
+item = item.apply();
+
+if (item.isError()) {
+	aras.AlertError(item.getErrorString());
+	return;
+}
+
+var indexedPropertiesTabId = item.getID();
+
+// Fetch select button click handler method id
+var selectButtonClickMethodName = 'ES_OnIndexedPropertySelectClick';
+item = new Item('Method', 'get');
+item.setProperty('name', selectButtonClickMethodName);
+item = item.apply();
+
+if (item.isError()) {
+	aras.AlertError(item.getErrorString());
+	return;
+}
+
+var selectButtonClickMethodId = item.getID();
+
+var interval = setInterval(checkTab, 100);
+
+function checkTab() {
+	if (!parent.relationships) {
+		return;
+	}
+
+	var tabbar = parent.relationships.relTabbar;
+	if (tabbar) {
+		clearInterval(interval);
+		if (tabbar.GetSelectedTab() === indexedPropertiesTabId) {
+			if (isCommandbarReady()) {
+				modifyCommandbar();
+			} else {
+				interval = setInterval(function() {
+					if (isCommandbarReady()) {
+						clearInterval(interval);
+						modifyCommandbar();
+					}
+				}, 100);
+			}
+		}
+	}
+}
+
+function getCommandbar() {
+	var ifrm = parent.relationships.iframesCollection[indexedPropertiesTabId];
+	return ifrm ? ifrm.contentDocument.querySelector('aras-toolbar.aras-commandbar') : null;
+}
+
+function isCommandbarReady() {
+	var commandbar = getCommandbar();
+	return commandbar && commandbar.data.size > 0;
+}
+
+function modifyCommandbar() {
+	var commandbar = getCommandbar();
+
+	commandbar.render = function() {
+		var addRowButton = this.data.get(addRowButtonId);
+		var selectButton = this.data.get(selectButtonId);
+
+		addRowButton.hidden = true;
+		selectButton.hidden = false;
+		selectButton.on_click_handler = selectButtonClickMethodId;
+		selectButton['on_click_handler@keyed_name'] = selectButtonClickMethodName;
+		this.constructor.prototype.render.call(this);
+	};
+	commandbar.render();
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_OnLoadIndexedTypeForm</name>
+ </Item>
+</AML>

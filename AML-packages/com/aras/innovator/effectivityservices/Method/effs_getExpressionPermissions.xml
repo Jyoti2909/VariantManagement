@@ -1,0 +1,47 @@
+﻿<AML>
+ <Item type="Method" id="D299F519CE3D4EC69B6C0294A3A40B2C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string accessType = this.getProperty("access_type");
+string effectiveItemId = this.getProperty("effective_item_id");
+string effectiveItemTypeId = this.getProperty("effective_itemtype_id");
+string expressionItemId = this.getProperty("expression_item_id");
+string expressionItemTypeId = this.getProperty("expression_itemtype_id");
+
+string extraAccessControlProviderMethodName = this.getProperty("extra_access_control_provider");
+if (!string.IsNullOrWhiteSpace(extraAccessControlProviderMethodName))
+{
+	Item extraAccessControl = this.newItem("Method", extraAccessControlProviderMethodName);
+	extraAccessControl.setProperty("access_type", accessType);
+	extraAccessControl.setProperty("effective_item_id", effectiveItemId);
+	extraAccessControl.setProperty("effective_itemtype_id", effectiveItemTypeId);
+	extraAccessControl.setProperty("expression_item_id", expressionItemId);
+	extraAccessControl.setProperty("expression_itemtype_id", expressionItemTypeId);
+
+	extraAccessControl = extraAccessControl.apply();
+
+	if (extraAccessControl.isError())
+	{
+		return extraAccessControl;
+	}
+
+	string extraAccessControlResult = extraAccessControl.getResult();
+	bool isExtraAccessControlForbidsAccessType = !string.Equals("1", extraAccessControlResult, StringComparison.OrdinalIgnoreCase);
+
+	if (isExtraAccessControlForbidsAccessType)
+	{
+		return this.getInnovator().newResult("0");
+	}
+}
+
+bool isCanAddAccessType = string.Equals("can_add", accessType, StringComparison.OrdinalIgnoreCase);
+
+Item expressionItemTypeRoleBasedPermissions = this.newItem();
+expressionItemTypeRoleBasedPermissions.setAttribute("access_type", accessType);
+expressionItemTypeRoleBasedPermissions.setAttribute("id", isCanAddAccessType ? expressionItemTypeId : expressionItemId);
+expressionItemTypeRoleBasedPermissions.setAttribute("typeId", expressionItemTypeId);
+
+return expressionItemTypeRoleBasedPermissions.apply("getPermissions");]]></method_code>
+  <method_type>C#</method_type>
+  <name>effs_getExpressionPermissions</name>
+ </Item>
+</AML>

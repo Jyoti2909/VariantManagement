@@ -1,0 +1,46 @@
+﻿<AML>
+ <Item type="Method" id="F84365ECF8CB4375828DDFBF07F3E80B" action="add">
+  <comments>clear the project from the cache and refresh it after server update method</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+function refreshingly(itemNd,action_method_results) {
+ var locked_by_id = top.aras.getItemProperty(itemNd,"locked_by_id");
+ var user_id = top.aras.getUserID();
+ var win = top.aras.uiFindWindowEx2(itemNd);
+ var itemID = itemNd.getAttribute('id');
+ var itemTypeName = itemNd.getAttribute('type');
+
+ // There must be a better way to tell if an item is in edit mode.
+ // Do not refresh if being edited. Update will have failed anyway.
+ if (locked_by_id == user_id) return;
+
+ top.aras.removeFromCache(itemID);
+ var msgId = top.aras.showStatusMessage(0, top.aras.getResource("project", "pr_methods.getting_result"), 
+                                    "../images/Progress.gif");
+ var res = top.aras.getItemById(itemTypeName, itemID, 0);
+ top.aras.clearStatusMessage(msgId);
+ if (!res) return null;
+
+ var oldParent = itemNd.parentNode;
+ top.aras.updateInCacheEx(itemNd, res);
+  
+ if (oldParent) res = oldParent.selectSingleNode('Item[@id="'+itemID+'"]');
+  else res = top.aras.getFromCache(itemID);
+ // this part is different. it works, at least up to the first
+ // level, which is what I need now for debugging -gjcarrette
+
+ if (win.updateRootItem) win.updateRootItem(res);
+ if (win.updateItemsGrid) win.updateItemsGrid(res);
+ 
+ var instanceFrame = win.instance;
+ if (instanceFrame && instanceFrame.initDashboard) instanceFrame.initDashboard();
+}
+
+refreshingly(inDom,inArgs.results);
+return(inArgs.results);
+
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>AfterProjectUpdateClient</name>
+ </Item>
+</AML>

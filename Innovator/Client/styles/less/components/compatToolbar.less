@@ -1,0 +1,252 @@
+﻿@import '../core/variables';
+@import '../mixins/toolbar';
+
+@compat-toolbar-height: 2.3333333rem;
+@compat-toolbar-hover-color: #dde7f5;
+@compat-toolbar-border-color: #d4d4d4;
+@compat-toolbar-font-color: #444444;
+@dropdown-arrow-color: #787878;
+
+.aras-compat-toolbar {
+	display: flex;
+	flex-wrap: nowrap;
+	height: @compat-toolbar-height;
+	padding: 1px;
+	border-top: 1px solid @compat-toolbar-border-color;
+	border-bottom: 1px solid @compat-toolbar-border-color;
+	color: @compat-toolbar-font-color;
+	&_disabled {
+		opacity: 0.5;
+		filter: grayscale(100%);
+		cursor: default;
+	}
+	&:not(.aras-compat-toolbar_labeled) {
+		.aras-compat-toolbar__button::after {
+			display: none;
+		}
+		.aras-compat-toolbar__dropdown .aras-compat-toolbar__button::after {
+			display: inline-block;
+		}
+	}
+	&__content {
+		display: flex;
+		justify-content: space-between;
+		flex-grow: 1;
+	}
+	&__container {
+		display: inline-block;
+		font-size: 0; //remove spaces betweeen children
+		white-space: nowrap;
+		> span {
+			display: inline-block;
+			font-size: 1rem;
+			vertical-align: middle;
+			user-select: none;
+		}
+	}
+	&__dropdown {
+		position: relative;
+		> .aras-dropdown {
+			border-width: 0;
+			> .aras-list > li > .aras-compat-toolbar__button:hover {
+				background-color: transparent;
+			}
+		}
+		&-button {
+			height: @compat-toolbar-height;
+			width: 2.16rem;
+			cursor: pointer;
+			transition: background-color 300ms;
+			&::before {
+				border-left-color: @dropdown-arrow-color;
+			}
+			&:hover {
+				background-color: @compat-toolbar-hover-color;
+			}
+		}
+		.html-selector__label-wrapper {
+			vertical-align: top;
+		}
+	}
+	&__separator {
+		height: ~'calc(' @compat-toolbar-height~ '- 4px)';
+		width: 1px;
+		margin: 0 1px;
+		background-color: @compat-toolbar-border-color;
+	}
+	&__button {
+		height: @compat-toolbar-height;
+		line-height: 2.1rem;
+		padding: 0 5px;
+		transition: background-color 300ms;
+		cursor: pointer;
+		&:not(.aras-compat-toolbar_disabled):hover {
+			background-color: @compat-toolbar-hover-color;
+		}
+		&::after {
+			vertical-align: middle;
+			content: attr(title);
+		}
+		> svg,
+		> span,
+		img {
+			vertical-align: middle;
+			height: 1.834rem;
+			width: 1.834rem;
+		}
+		> span {
+			display: inline-block;
+			background-size: 1.834rem;
+			background-position: center;
+			background-repeat: no-repeat;
+		}
+	}
+	&__form {
+		padding: 0 8px;
+		color: @compat-toolbar-font-color;
+	}
+	&__textbox {
+		padding: 0 7px;
+	}
+	& &-component__label {
+		display: inline-block;
+		padding-right: 3px;
+	}
+	&__dropdown-selector {
+		height: @compat-toolbar-height;
+		position: relative;
+		& .dropdown-selector__label-wrapper {
+			height: @compat-toolbar-height;
+			display: inline-flex;
+			align-items: center;
+			vertical-align: top;
+			padding: 0 3px;
+			& span {
+				font-weight: bold;
+				padding: 0 3px;
+			}
+		}
+		& .aras-compat-toolbar__dropdown {
+			display: inline-block;
+			& .aras-compat-toolbar__dropdown-button {
+				cursor: pointer;
+				display: inline-block;
+				&:focus {
+					.displayDropdown();
+				}
+			}
+			.arasDropdown();
+			& .aras-dropdown {
+				top: 100%;
+				right: 100%;
+			}
+		}
+	}
+	&__toggle-button {
+		outline: 1px solid @blue;
+	}
+	&__html-selector {
+		padding: 0 8px;
+		position: relative;
+		display: inline-block;
+		vertical-align: middle;
+		& .aras-compat-toolbar__dropdown {
+			cursor: default;
+			min-width: 8rem;
+			background-color: white;
+			border: 1px solid @border-color;
+			height: 1.667rem;
+			box-sizing: border-box;
+			& .aras-compat-toolbar__dropdown-button {
+				cursor: default;
+				width: ~'calc(1.667rem - 2px)';
+				height: ~'calc(1.667rem - 2px)';
+				background-color: @blue;
+				position: absolute;
+				right: 0;
+				pointer-events: none;
+				&::before {
+					border-left-color: white;
+					border-width: 0.333rem;
+					top: ~'calc(50% - 0.333rem)';
+					left: ~'calc(50% - 0.333rem/2)';
+				}
+			}
+			& .html-selector__label-wrapper {
+				line-height: 1.667rem;
+				padding: 0 2.00033333rem 0 0.33333333rem;
+			}
+			&:focus {
+				outline: none;
+				& .aras-compat-toolbar__dropdown-button {
+					background-color: @blue-hover;
+				}
+				.displayDropdown();
+			}
+			&:hover .aras-compat-toolbar__dropdown-button {
+				background-color: @blue-hover;
+			}
+		}
+		.arasDropdown();
+		& .aras-dropdown {
+			position: relative;
+			height: 0;
+			box-shadow: none;
+			border-width: 0;
+		}
+		& .aras-list {
+			display: block;
+			border: 1px solid @dropdown-border-color;
+			border-top-width: 0;
+			box-sizing: border-box;
+			li:not(.separator) {
+				min-height: 1.667rem;
+				padding: 0.15rem 1.5rem 0.15rem 0.5rem;
+			}
+		}
+		& &__wrapper {
+			display: inline-block;
+			vertical-align: middle;
+		}
+		& .aras-compat-toolbar-component__label {
+			vertical-align: middle;
+		}
+	}
+
+	&__action-dropdown-button {
+		padding-left: 0.3em;
+		& .aras-compat-toolbar__dropdown {
+			cursor: pointer;
+			position: relative;
+			transition: background-color 300ms;
+			line-height: 2.33333rem;
+			& .aras-compat-toolbar__dropdown-button {
+				pointer-events: none;
+				position: absolute;
+				right: 0;
+				&::before {
+					border-width: 0.333rem;
+					top: ~'calc(50% - 0.333rem)';
+					left: ~'calc(50% - 0.333rem/2)';
+				}
+				&:hover {
+					background-color: transparent;
+				}
+			}
+			& .action-dropdown-button__label-wrapper {
+				padding: 0 1.7rem 0 0.7rem;
+			}
+			&:focus {
+				outline: none;
+				.displayDropdown();
+			}
+			&:hover {
+				background-color: @compat-toolbar-hover-color;
+			}
+		}
+		.arasDropdown();
+		& .aras-list {
+			display: block;
+		}
+	}
+}

@@ -1,0 +1,40 @@
+﻿<AML>
+ <Item type="Method" id="3FE55D65195F43818A3A9DF9F10B979F" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Dictionary<string, string> requestState = new Dictionary<string, string>();
+Item oldValuesQuery = this.newItem("cmf_PropertyType", "get");
+oldValuesQuery.setID(this.getID());
+oldValuesQuery.setAttribute("select", "default_permission,source_id");
+oldValuesQuery = oldValuesQuery.apply();
+string documentElementTypeId = oldValuesQuery.getProperty("source_id");
+
+Item documentTypeQuery = this.newItem("cmf_ElementType", "get");
+documentTypeQuery.setID(documentElementTypeId);
+documentTypeQuery.setAttribute("select", "source_id");
+documentTypeQuery = documentTypeQuery.apply();
+string documentTypeId = documentTypeQuery.getProperty("source_id");
+
+if (!RequestState.Contains(documentTypeId))
+{
+    return this.getInnovator().newError("It's impossible to save certain Element Type or Property Type. Instead save entire Content Type item.");
+}
+
+if (this.node.SelectSingleNode("default_permission") != null)
+{
+	string oldPermission = oldValuesQuery.getProperty("default_permission");
+	if (oldPermission != this.getProperty("default_permission"))
+	{
+		requestState["default_permission"] = oldPermission;
+	}
+}
+
+if (requestState.Count > 0)
+{
+    RequestState[this.getID()] = requestState;
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_PropertyBeforeUpdate</name>
+ </Item>
+</AML>

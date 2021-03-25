@@ -1,0 +1,1360 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.Ark.Common</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.Ark.Common.Contract">
+            <summary>
+            Implements methods to operate with Error Item check and Exceptions.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.Contract.ThrowIf``1(System.Boolean,System.String)">
+            <summary>
+            Throws <see cref="T:System.Exception"/> of type <typeparamref name="T"/> with <paramref name="errorMessage"/> if <paramref name="condition"/> is true.
+            </summary>
+            <typeparam name="T"><see cref="T:System.Exception"/> type.</typeparam>
+            <param name="condition">Condition for error check.</param>
+            <param name="errorMessage"><see cref="T:System.String"/> that should be provided as <see cref="P:System.Exception.Message"/>.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.Contract.Require``1(System.Object,System.String)">
+            <summary>
+            Throws <see cref="T:System.Exception"/> of type <typeparamref name="T"/> with <paramref name="errorMessage"/> if <paramref name="subject"/> is null.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="subject"><see cref="T:System.Object"/> for check.</param>
+            <param name="errorMessage"><see cref="T:System.String"/> that should be provided as <see cref="P:System.Exception.Message"/>.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.Contract.ThrowIfError(Aras.IOM.Item)">
+            <summary>
+            Throw an <see cref="T:System.Exception"/> if <paramref name="item"/> is error <see cref="T:Aras.IOM.Item"/> or <paramref name="item"/> is empty.
+            </summary>
+            <param name="item"><see cref="T:Aras.IOM.Item"/> for check.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.Contract.ThrowIfError(Aras.IOM.Item,System.Boolean)">
+            <summary>
+            Throw an <see cref="T:System.Exception"/> if <paramref name="item"/> is error <see cref="T:Aras.IOM.Item"/>.
+            </summary>
+            <param name="item"><see cref="T:Aras.IOM.Item"/> for check.</param>
+            <param name="treatEmptyAsError">If empty <see cref="T:Aras.IOM.Item"/> equals to error - should be true.</param>
+            <remarks>
+            Throw an <see cref="T:System.Exception"/> if <paramref name="item"/> is empty when <paramref name="treatEmptyAsError"/> is true.
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.Contract.ThrowIfError(Aras.IOM.Item,System.String)">
+            <summary>
+            Throw an <see cref="T:System.Exception"/> with <paramref name="errorMessage"/> if <paramref name="item"/> is error <see cref="T:Aras.IOM.Item"/> or <paramref name="item"/> is empty.
+            </summary>
+            <param name="item"><see cref="T:Aras.IOM.Item"/> for check.</param>
+            <param name="errorMessage"><see cref="T:System.String"/> that should be provided as <see cref="P:System.Exception.Message"/>.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.Contract.ThrowIfError(Aras.IOM.Item,System.String,System.Boolean)">
+            <summary>
+            Throw an <see cref="T:System.Exception"/> with <paramref name="errorMessage"/> if <paramref name="item"/> is error <see cref="T:Aras.IOM.Item"/>.
+            </summary>
+            <param name="item"><see cref="T:Aras.IOM.Item"/> for check.</param>
+            <param name="errorMessage"><see cref="T:System.String"/> that should be provided as <see cref="P:System.Exception.Message"/>.</param>
+            <param name="treatEmptyAsError">If empty <see cref="T:Aras.IOM.Item"/> equals to error - should be true.</param>
+            <remarks>
+            Throw an <see cref="T:System.Exception"/> with <paramref name="errorMessage"/> if <paramref name="item"/> is empty when <paramref name="treatEmptyAsError"/> is true.
+            </remarks>
+        </member>
+        <member name="T:Aras.Ark.Common.BaseDataAccessLayer">
+            <summary>
+            Implements base methods to operate with data.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.#ctor(Aras.IOM.Innovator,Aras.Server.Core.CallContext)">
+            <summary>
+            <see cref="T:Aras.Ark.Common.BaseDataAccessLayer"/> constructor.
+            </summary>
+            <param name="innovator"><see cref="T:Aras.IOM.Innovator"/> object.</param>
+            <param name="callContext"><see cref="T:Aras.Server.Core.CallContext"/> object.</param>
+            <remarks>Provide <see cref="T:Aras.IOM.Innovator"/> and <see cref="T:Aras.Server.Core.CallContext"/> for wich <see cref="T:Aras.Ark.Common.BaseDataAccessLayer"/> should be created</remarks>
+        </member>
+        <member name="P:Aras.Ark.Common.BaseDataAccessLayer.Identities">
+            <inheritdoc />
+        </member>
+        <member name="P:Aras.Ark.Common.BaseDataAccessLayer.RequestState">
+            <inheritdoc />
+        </member>
+        <member name="P:Aras.Ark.Common.BaseDataAccessLayer.I18N">
+            <inheritdoc />
+        </member>
+        <member name="P:Aras.Ark.Common.BaseDataAccessLayer.Emails">
+            <inheritdoc />
+        </member>
+        <member name="P:Aras.Ark.Common.BaseDataAccessLayer.ConversionServer">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.NewResult(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.NewError(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.NewItem">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.NewItem(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.NewItem(System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.NewItemWithoutAttribute">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.NewItemWithoutAttribute(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.NewItemWithoutAttribute(System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.ApplyItem(Aras.IOM.Item)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.ApplyAml(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.ApplySql(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.ApplyMethod(System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.GetNewId">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.GetCurrentUserId">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.LockItem(Aras.IOM.Item)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.UnlockItem(Aras.IOM.Item)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.PromoteItem(Aras.IOM.Item,System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.GetConnection">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.ApplyItemWithGrantIdentity(Aras.IOM.Item,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.ApplyActionWithGrantIdentity(System.Func{Aras.IOM.Item},System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.GetErrorMessage(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.BaseDataAccessLayer.GetErrorMessage(System.String,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="T:Aras.Ark.Common.ConversionServerApi">
+            <summary>
+            Implements methods to operate with conversion server.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.#ctor(Aras.IOM.Innovator)">
+            <summary>
+            ConversionServerApi contructor.
+            </summary>
+            <param name="innovator"><see cref="T:Aras.IOM.Innovator"/> object.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.CreateConversionTask(System.String,System.Action{Aras.ConversionFramework.Models.ConversionTask},System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.CreateConversionTask(System.String,System.Action{Aras.ConversionFramework.Models.ConversionTask})">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.CreateConversionTaskWithOnConvertUserData(System.String,System.Action{Aras.ConversionFramework.Models.ConversionTask},System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.CreateConversionTaskWithOnConvertUserData(System.String,System.Action{Aras.ConversionFramework.Models.ConversionTask},System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.ProcessFileAsVault(System.String,Aras.IOM.Item,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.ProcessFileAsVault(System.String,Aras.IOM.Item)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.ProcessFileAsVault(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.OnConvertCompletedSuccess(System.String,System.Collections.Generic.IEnumerable{Aras.ConversionFramework.Converter.FileConversionResult})">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.OnConvertCompletedSuccess(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.OnConvertCompletedSuccess(Aras.ConversionFramework.Models.ConversionTask,System.Collections.Generic.IEnumerable{Aras.ConversionFramework.Converter.FileConversionResult})">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.OnConvertCompletedSuccess(Aras.ConversionFramework.Models.ConversionTask)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.OnConvertCompletedError(System.String,System.Exception)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.OnConvertCompletedError(Aras.ConversionFramework.Models.ConversionTask,System.Exception)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.DeleteConverionTasks(System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ConversionServerApi.DeleteConverionTasks(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="T:Aras.Ark.Common.EmailsApi">
+            <summary>
+            Implements methods to operate with emails.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.EmailsApi.#ctor(Aras.IOM.Innovator)">
+            <summary>
+            EmailsApi contructor.
+            </summary>
+            <param name="innovator"><see cref="T:Aras.IOM.Innovator"/> object.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.EmailsApi.SendEmail(Aras.IOM.Item,Aras.IOM.Item,Aras.IOM.Item)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.EmailsApi.SendEmail(Aras.IOM.Item,Aras.IOM.Item)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.EmailsApi.SendEmail(System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.EmailsApi.SendFormattedEmail(Aras.IOM.Item,Aras.IOM.Item,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.EmailsApi.SendFormattedEmail(System.String,System.String,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <inheritdoc />
+        </member>
+        <member name="T:Aras.Ark.Common.I18NContext">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.#ctor(Aras.IOM.I18NSessionContext)">
+            <summary>
+            <see cref="T:Aras.Ark.Common.I18NContext"/> constructor.
+            </summary>
+            <param name="i18NSessionContext"><see cref="T:Aras.IOM.I18NSessionContext"/> object.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.ConvertFromNeutral(System.String,System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.ConvertNeutralToUtcDateTime(System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.ConvertToNeutral(System.String,System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.ConvertUtcDateTimeToNeutral(System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.GetCorporateToLocalOffset">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.GetDefaultLanguageCode">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.GetDefaultLanguageSuffix">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.GetLanguageCode">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.GetLanguageSuffix">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.GetLocale">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.GetTimeZone">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.GetUIDatePattern(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.ConvertLocalDateTimeToAml(System.DateTime)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.ConvertUtcDateTimeToAml(System.DateTime)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.ConvertAmlDateTimeToLocal(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.I18NContext.ConvertAmlDateTimeToUtc(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="T:Aras.Ark.Common.IdentitiesApi">
+            <summary>
+            Implements methods to operate with Identities.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.IdentitiesApi.#ctor(Aras.IOM.Innovator,Aras.Server.Core.CallContext)">
+            <summary>
+            IdentitiesApi contructor.
+            </summary>
+            <param name="innovator">Innovator object.</param>
+            <param name="callContext">CallContext object.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IdentitiesApi.GetCurrentUserAliases">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.IdentitiesApi.GetUserAliases(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.IdentitiesApi.GetCurrentUserIdentitiesList">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.IdentitiesApi.GetUserIdentitiesList(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.IdentitiesApi.GetAncestorIdentityIds(System.Collections.Generic.IEnumerable{System.String})">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.IdentitiesApi.GetDescendantIdentityIds(System.Collections.Generic.IEnumerable{System.String})">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.IdentitiesApi.IsCurrentUserInIdentities(System.Collections.Generic.IEnumerable{System.String})">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.IdentitiesApi.IsUserInIdentities(System.String,System.Collections.Generic.IEnumerable{System.String})">
+            <inheritdoc />
+        </member>
+        <member name="T:Aras.Ark.Common.IBaseDataAccessLayer">
+            <summary>
+            Provides base methods to operate with data.
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Common.IBaseDataAccessLayer.Identities">
+            <value>Gets Current Identities API</value>
+        </member>
+        <member name="P:Aras.Ark.Common.IBaseDataAccessLayer.RequestState">
+            <summary>
+            <see cref="T:Aras.Server.Core.IContextState"/> object from the current <see cref="T:Aras.Server.Core.CallContext"/>.
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Common.IBaseDataAccessLayer.I18N">
+            <summary>
+            Provides internationalization and localization context methods.
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Common.IBaseDataAccessLayer.Emails">
+            <summary>
+            Provides emails API
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Common.IBaseDataAccessLayer.ConversionServer">
+            <summary>
+            Provides ConversionServer API
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.NewResult(System.String)">
+            <summary>
+            Returns an <see cref="T:Aras.IOM.Item"/> where the <paramref name="data"/> passed in as the argument is the body for the Result tag.
+            </summary>
+            <param name="data">String to be set as the body for the tag.</param>
+            <returns>Created item.</returns>
+            <remarks>After the insertion the method performs a verification that resulting AML is well-formed XML. If passed text contains any XML escape symbols it's user's responsibility to put the text inside a 'CDATA' block.</remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.NewError(System.String)">
+            <summary>
+            Returns a new "error" item.
+            </summary>
+            <param name="error">
+            <para>Is used to populate the tag inside node.</para>
+            <para>According to the SOAP 1.1 specification the faultstring element is 
+            intended to provide a human readable explanation of the fault and 
+            is not intended for algorithmic processing.</para>
+            <para>Note, that passed message
+            is set as InnerText on the element without any pre-processing,
+            so symbols like &lt;, &gt; etc. will be escaped.</para>
+            </param>
+            <returns>Created "error" item.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.NewItem">
+            <summary>
+            Returns a new <see cref="T:Aras.IOM.Item"/>.
+            </summary>
+            <returns>Newly created instance of <see cref="T:Aras.IOM.Item"/>.</returns>
+            <remarks>The new <see cref="T:Aras.IOM.Item"/> will have no properties.</remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.NewItem(System.String)">
+            <summary>
+            Returns a new <see cref="T:Aras.IOM.Item"/> with the specified <paramref name="type"/>.
+            </summary>
+            <param name="type">Name of the <see cref="T:Aras.IOM.Item"/>.</param>
+            <returns>Newly created instance of <see cref="T:Aras.IOM.Item"/>.</returns>
+            <remarks>
+            The ItemType name is used to set the 'type' attribute. The new <see cref="T:Aras.IOM.Item"/> will have no properties.
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.NewItem(System.String,System.String)">
+            <summary>
+            Returns a new <see cref="T:Aras.IOM.Item"/> with the specified <paramref name="type"/> and <paramref name="action"/>.
+            </summary>
+            <param name="type">Name of the ItemType.</param>
+            <param name="action">Name of action (e.g. "get", "update", etc.)</param>
+            <returns>Newly created instance of <see cref="T:Aras.IOM.Item"/>.</returns>
+            <remarks>
+            The ItemType name is used to set the 'type' attribute and the action name is used to set the 'action' attribute on the <see cref="T:Aras.IOM.Item"/>. The new <see cref="T:Aras.IOM.Item"/> will have no properties.
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.NewItemWithoutAttribute">
+            <summary>
+            Returns a new <see cref="T:Aras.IOM.Item"/> without unused attributes (isNew, isTemp).
+            </summary>
+            <returns>Newly created instance of <see cref="T:Aras.IOM.Item"/>.</returns>
+            <remarks>The new <see cref="T:Aras.IOM.Item"/> will have no properties.</remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.NewItemWithoutAttribute(System.String)">
+            <summary>
+            Returns a new <see cref="T:Aras.IOM.Item"/> with the specified <paramref name="type"/>, without unused attributes (isNew, isTemp).
+            </summary>
+            <param name="type">Name of the ItemType.</param>
+            <returns>Newly created instance of <see cref="T:Aras.IOM.Item"/>.</returns>
+            <remarks>
+            The ItemType name is used to set the 'type' attribute. The new <see cref="T:Aras.IOM.Item"/> will have no properties.
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.NewItemWithoutAttribute(System.String,System.String)">
+            <summary>
+            Returns a new <see cref="T:Aras.IOM.Item"/> with the specified <paramref name="type"/> and <paramref name="action"/>, without unused attributes (isNew, isTemp).
+            </summary>
+            <param name="type">Name of the ItemType.</param>
+            <param name="action">Name of action (e.g. "get", "update", etc.)</param>
+            <returns>Newly created instance of <see cref="T:Aras.IOM.Item"/>.</returns>
+            <remarks>
+            The ItemType name is used to set the 'type' attribute and the action name is used to set the 'action' attribute on the <see cref="T:Aras.IOM.Item"/>. The new <see cref="T:Aras.IOM.Item"/> will have no properties.
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.ApplyItem(Aras.IOM.Item)">
+            <summary>
+            Applies the AML, which is the XML of this <paramref name="item"/> dom.
+            </summary>
+            <param name="item"><see cref="T:Aras.IOM.Item"/> to apply</param>
+            <returns>
+            <para>Returns an <see cref="T:Aras.IOM.Item"/> where the dom property is the XML returned from the server.</para>
+            <para>The dom may contain an <see cref="T:Aras.IOM.Item"/>, a forest of <see cref="T:Aras.IOM.Item"/>s (i.e. a disjoint union of AML trees), or an error.</para>
+            </returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.ApplyAml(System.String)">
+            <summary>
+            Sends request to Innovator server and returns server response as an item.
+            </summary>
+            <param name="aml">AML script to be sent to Innovator server.</param>
+            <returns>Server response. An <see cref="T:Aras.IOM.Item"/> object where the dom property is the xml response returned from the server.</returns>
+            <remarks>
+            It's assumed that passed AML script has a root tag &lt;AML&gt; that contains one or more &lt;Item&gt; children elements.
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.ApplySql(System.String)">
+            <summary>
+            Sends SQL request to Innovator server and returns server response as an <see cref="T:Aras.IOM.Item"/>.
+            </summary>
+            <param name="sql">SQL to be sent to Innovator server.</param>
+            <returns>Server response. In the returned <see cref="T:Aras.IOM.Item"/> object the dom property is the XML returned from the server.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.ApplyMethod(System.String,System.String)">
+            <summary>
+            Apply a method by <paramref name="methodName"/>, passing a string value as its <paramref name="body"/>.
+            </summary>
+            <param name="methodName">Name of the method.</param>
+            <param name="body">Context for the method (method item).</param>
+            <returns>
+            <para>Method Result &lt;Item&gt;.</para>
+            <para>Depends on the method being called.</para>
+            </returns>
+            <remarks>
+            <para>The context for the method will be the method item, in the form: &lt;Item type="Method" action="{<paramref name="methodName"/>}"&gt;{<paramref name="body"/>}&lt;/Item&gt;.</para>
+            <para>Note, that only methods that use IOM namespace from .NET (C#, VBScript) can be applied, and methods written in JavaScript cannot be applied.</para>
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.GetNewId">
+            <summary>
+            A new 32 character hex string based on a GUID.
+            </summary>
+            <returns>New GUID.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.GetCurrentUserId">
+            <summary>
+            Returns id of the user assosiated with a given instance of Innovator.
+            </summary>
+            <remarks>if assosiated user is currently logged off throws "Not logged in" exception.</remarks>
+            <returns>User id.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.LockItem(Aras.IOM.Item)">
+            <summary>
+            Applies the 'lock' action on the <paramref name="item"/> and returns the server response.
+            </summary>
+            <param name="item"><see cref="T:Aras.IOM.Item"/> to be locked</param>
+            <returns>Response item from the server.</returns>
+            <remarks>
+            <para>The method sends a request to the server to lock the <paramref name="item"/>.</para>
+            <para>This is almost the equivalent to this.apply("lock") except that: </para>
+            <list type="table">
+            <item><term>a</term><description> the method checks that item's type and ID are set before sending the request;</description></item>
+            <item><term>b</term><description> the method updates locked_by_id property of this item with the value obtained from the server if the server response is not an error.</description></item>
+            </list>
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.UnlockItem(Aras.IOM.Item)">
+            <summary>
+            Applies the 'unlock' action on the <paramref name="item"/> and returns the server response.
+            </summary>
+            <param name="item"><see cref="T:Aras.IOM.Item"/> to be Unlocked</param>
+            <returns>Response item from the server.</returns>
+            <remarks>
+            <para>The method sends a request to the server to unlock the <paramref name="item"/>.</para>
+            <para>This is almost the equivalent to this.apply("unlock") except that:</para>
+            <list type="table">
+            <item><term>a</term><description> the method checks that item's type and ID are set before sending the request;</description></item>
+            <item><term>b</term><description> the method removes locked_by_id property of this item if the server response is not an error.</description></item>
+            </list>
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.PromoteItem(Aras.IOM.Item,System.String,System.String)">
+            <summary>
+            Promote <paramref name="item"/> to the specified <paramref name="state"/>.
+            </summary>
+            <param name="item"><see cref="T:Aras.IOM.Item"/> to be promoted</param>
+            <param name="state">State to promote.</param>
+            <param name="comments">comment for the "history" record about the promote event.</param>
+            <returns>"Result" item with inner text "Ok" in case of success. Otherwise "error" item (if promote failed).</returns>
+            <remarks>
+            Comments available if ItemType of the item is configured to log "history" records when items of the ItemType are created\promoted\etc. (i.e. if the ItemType's property "save_history" is set to "1") 
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.GetConnection">
+            <summary>
+            Returns server connection object that implements <see cref="T:Aras.IOM.IServerConnection"/> interface. 
+            </summary>
+            <returns>Returns the server connection set on the instance.</returns>
+            <remarks>The real type of the server connection object depends on what was passed to the <see cref="M:Aras.IOM.IomFactory.CreateInnovator(Aras.IOM.IServerConnection)"/> when the instance of the <see cref="T:Aras.IOM.Innovator"/> class was created.</remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.ApplyItemWithGrantIdentity(Aras.IOM.Item,System.String)">
+            <summary>
+            Applies the AML, which is the XML of this <paramref name="item"/> dom. Using <see cref="T:Aras.Server.Security.Identity"/> with specified <paramref name="identityName"/>.
+            </summary>
+            <param name="item"><see cref="T:Aras.IOM.Item"/> to apply</param>
+            <param name="identityName"><see cref="T:Aras.Server.Security.Identity"/> to use for the <see cref="M:Aras.Ark.Common.IBaseDataAccessLayer.ApplyItem(Aras.IOM.Item)"/> action</param>
+            <returns>
+            <para>Returns an <see cref="T:Aras.IOM.Item"/> where the dom property is the XML returned from the server.</para>
+            <para>The dom may contain an <see cref="T:Aras.IOM.Item"/>, a forest of <see cref="T:Aras.IOM.Item"/>s (i.e. a disjoint union of AML trees), or an error.</para>
+            </returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.ApplyActionWithGrantIdentity(System.Func{Aras.IOM.Item},System.String)">
+            <summary>
+            Applies the <paramref name="action"/>. Using <see cref="T:Aras.Server.Security.Identity"/> with specified <paramref name="identityName"/>.
+            </summary>
+            <param name="action">Action(<see cref="T:System.Func`1"/>) to apply</param>
+            <param name="identityName"><see cref="T:Aras.Server.Security.Identity"/> to use for the <see cref="M:Aras.Ark.Common.IBaseDataAccessLayer.ApplyItem(Aras.IOM.Item)"/> action</param>
+            <returns>
+            <para>Returns an <see cref="T:Aras.IOM.Item"/> where the dom property is the XML returned from the server.</para>
+            <para>The dom may contain an <see cref="T:Aras.IOM.Item"/>, a forest of <see cref="T:Aras.IOM.Item"/>s (i.e. a disjoint union of AML trees), or an error.</para>
+            </returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.GetErrorMessage(System.String)">
+            <summary>
+            Gets custom error message by <paramref name="userMessageName"/>.
+            </summary>
+            <param name="userMessageName">Custom error message name.</param>
+            <returns>String with custom error message.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IBaseDataAccessLayer.GetErrorMessage(System.String,System.Object[])">
+            <summary>
+            Gets custom error message by <paramref name="userMessageName"/>. With applied <paramref name="parameters"/>.
+            </summary>
+            <param name="userMessageName">Custom error message name.</param>
+            <param name="parameters">Parameters applied to the error message</param>
+            <returns>String with custom error message.</returns>
+        </member>
+        <member name="T:Aras.Ark.Common.IConversionServerApi">
+            <summary>
+            Provides methods to operate with conversion server.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.CreateConversionTask(System.String,System.Action{Aras.ConversionFramework.Models.ConversionTask},System.String)">
+            <summary>
+            Creates a new Conversion Task item based on Conversion Rule.
+            Does not execute Conversion Rule events.
+            </summary>
+            <param name="conversionRuleId">Conversion Rule item id.</param>
+            <param name="initTask"><see cref="T:System.Action"/> to initialize Conversion Task fields after its creation.</param>
+            <param name="conversionManagerIdentityName">Execute logic to create a task as specified identity.</param>
+            <returns>Id of new Conversion Task item.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.CreateConversionTask(System.String,System.Action{Aras.ConversionFramework.Models.ConversionTask})">
+            <summary>
+            Creates a new Conversion Task item based on Conversion Rule.
+            Executes logic as default "Conversion Manager" identity.
+            Does not execute Conversion Rule events.
+            </summary>
+            <param name="conversionRuleId">Conversion Rule item id.</param>
+            <param name="initTask"><see cref="T:System.Action"/> to initialize Conversion Task fields after its creation.</param>
+            <returns>Id of new Conversion Task item.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.CreateConversionTaskWithOnConvertUserData(System.String,System.Action{Aras.ConversionFramework.Models.ConversionTask},System.String,System.String)">
+            <summary>
+            Creates a new Conversion Task item based on Conversion Rule and sets user_data on onConvert event handler.
+            Does not execute Conversion Rule events.
+            </summary>
+            <param name="conversionRuleId">Conversion Rule item id.</param>
+            <param name="onConvertUserData">String to populate User Data field of onConvert event handler.</param>
+            <param name="initTask"><see cref="T:System.Action"/> to initialize Conversion Task fields after its creation.</param>
+            <param name="conversionManagerIdentityName">Execute logic to create a task as specified identity.</param>
+            <returns>Id of new Conversion Task item.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.CreateConversionTaskWithOnConvertUserData(System.String,System.Action{Aras.ConversionFramework.Models.ConversionTask},System.String)">
+            <summary>
+            Creates a new Conversion Task item based on Conversion Rule and sets user_data on onConvert event handler.
+            Executes logic as default "Conversion Manager" identity.
+            Does not execute Conversion Rule events.
+            </summary>
+            <param name="conversionRuleId">Conversion Rule item id.</param>
+            <param name="onConvertUserData">String to populate User Data field of onConvert event handler.</param>
+            <param name="initTask"><see cref="T:System.Action"/> to initialize Conversion Task fields after its creation.</param>
+            <returns>Id of new Conversion Task item.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.ProcessFileAsVault(System.String,Aras.IOM.Item,System.String)">
+            <summary>
+            Executes Conversion Tasks generation logic just as Vault Server does during File creation.
+            Can also mimic creation of a specified Conversion Task with Conversion Rule events execution.
+            To do this you need to pass ConversionTask item with file_id, file_type, rule_id
+            properties as <paramref name="eventArg"/> parameter.
+            </summary>
+            <param name="fileId">File id.</param>
+            <param name="eventArg">
+            Event arguments item for ConversionRuleEventType.OnTaskCreating event.
+            Can be replaced with ConversionTask item to mimic creation of a specific Conversion Task only.
+            </param>
+            <param name="conversionManagerIdentityName">Execute logic to create tasks as specified identity.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.ProcessFileAsVault(System.String,Aras.IOM.Item)">
+            <summary>
+            Executes Conversion Tasks generation logic just as Vault Server does during File creation.
+            Can also mimic creation of a specified Conversion Task with Conversion Rule events execution.
+            To do this you need to pass ConversionTask item with file_id, file_type, rule_id
+            properties as <paramref name="eventArg"/> parameter.
+            Executes logic as default "Conversion Manager" identity.
+            </summary>
+            <param name="fileId">File id.</param>
+            <param name="eventArg">
+            Event arguments item for ConversionRuleEventType.OnTaskCreating event.
+            Can be replaced with ConversionTask item to mimic creation of a specific Conversion Task only.
+            </param>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.ProcessFileAsVault(System.String)">
+            <summary>
+            Executes Conversion Tasks generation logic just as Vault Server does during File creation.
+            No event args are specified for ConversionRuleEventType.OnTaskCreating event.
+            Executes logic as default "Conversion Manager" identity.
+            </summary>
+            <param name="fileId">File id.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.OnConvertCompletedSuccess(System.String,System.Collections.Generic.IEnumerable{Aras.ConversionFramework.Converter.FileConversionResult})">
+            <summary>
+            Completes onConvert Conversion Server event with success.
+            </summary>
+            <param name="taskId">Converion Task id.</param>
+            <param name="conversionResult">Converion results collection.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.OnConvertCompletedSuccess(System.String)">
+            <summary>
+            Completes onConvert Conversion Server event with success.
+            </summary>
+            <param name="taskId">Converion Task id.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.OnConvertCompletedSuccess(Aras.ConversionFramework.Models.ConversionTask,System.Collections.Generic.IEnumerable{Aras.ConversionFramework.Converter.FileConversionResult})">
+            <summary>
+            Completes onConvert Conversion Server event with success.
+            </summary>
+            <param name="convTask"><see cref="T:Aras.ConversionFramework.Models.ConversionTask"/> object.</param>
+            <param name="conversionResult">Converion results collection.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.OnConvertCompletedSuccess(Aras.ConversionFramework.Models.ConversionTask)">
+            <summary>
+            Completes onConvert Conversion Server event with success.
+            </summary>
+            <param name="convTask"><see cref="T:Aras.ConversionFramework.Models.ConversionTask"/> object.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.OnConvertCompletedError(System.String,System.Exception)">
+            <summary>
+            Completes onConvert Conversion Server event with error.
+            </summary>
+            <param name="taskId">Converion Task id.</param>
+            <param name="conversionError">Converion error.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.OnConvertCompletedError(Aras.ConversionFramework.Models.ConversionTask,System.Exception)">
+            <summary>
+            Completes onConvert Conversion Server event with error.
+            </summary>
+            <param name="convTask"><see cref="T:Aras.ConversionFramework.Models.ConversionTask"/> object.</param>
+            <param name="conversionError">Converion error.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.DeleteConverionTasks(System.String,System.String)">
+            <summary>
+            Deletes specified Conversion Task items. Where condition example:
+            <list type="bullet">
+            [ConversionTask].rule_id = '{convRuleId}' AND [ConversionTask].[status] in ('Failed','Discarded','Succeeded')
+            </list>
+            </summary>
+            <param name="whereCondition">Where condition to specify which items to delete.</param>
+            <param name="conversionManagerIdentityName">Execute logic to create tasks as specified identity.</param>
+            <returns>Item result of deletion.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IConversionServerApi.DeleteConverionTasks(System.String)">
+            <summary>
+            Deletes specified Conversion Task items. Where condition example:
+            <list type="bullet">
+            [ConversionTask].rule_id = '{convRuleId}' AND [ConversionTask].[status] in ('Failed','Discarded','Succeeded')
+            </list>
+            </summary>
+            <param name="whereCondition">Where condition to specify which items to delete.</param>
+            <returns>Item result of deletion.</returns>
+        </member>
+        <member name="T:Aras.Ark.Common.IEmailsApi">
+            <summary>
+            Provides methods to operate with emails.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.IEmailsApi.SendEmail(Aras.IOM.Item,Aras.IOM.Item,Aras.IOM.Item)">
+            <summary>
+            Send e-mail to the specified identity. In order to do so, the method sends a special
+            request to the Innovator server.
+            </summary>
+            <param name="item">Context <see cref="T:Aras.IOM.Item"/> with data.</param>
+            <param name="emailItem"><see cref="T:Aras.IOM.Item"/> of type "EMail Message".</param>
+            <param name="identityItem"><see cref="T:Aras.IOM.Item"/> of type "Identity".</param>
+            <returns>'true' if mail was successfully sent, 'false' otherwise.</returns>
+            <exception cref="T:System.Exception">The instance doesn't represent a single item.</exception>
+        </member>
+        <member name="M:Aras.Ark.Common.IEmailsApi.SendEmail(Aras.IOM.Item,Aras.IOM.Item)">
+            <summary>
+            Send e-mail to the specified identity. In order to do so, the method sends a special
+            request to the Innovator server.
+            </summary>
+            <param name="emailItem"><see cref="T:Aras.IOM.Item"/> of type "EMail Message".</param>
+            <param name="identityItem"><see cref="T:Aras.IOM.Item"/> of type "Identity".</param>
+            <returns>'true' if mail was successfully sent, 'false' otherwise.</returns>
+            <exception cref="T:System.Exception">The instance doesn't represent a single item.</exception>
+        </member>
+        <member name="M:Aras.Ark.Common.IEmailsApi.SendEmail(System.String,System.String)">
+            <summary>
+            Send e-mail to the specified identity. In order to do so, the method sends a special
+            request to the Innovator server.
+            </summary>
+            <param name="emailId">Id of <see cref="T:Aras.IOM.Item"/> of type "EMail Message".</param>
+            <param name="identityId">Id of <see cref="T:Aras.IOM.Item"/> of type "Identity".</param>
+            <returns>'true' if mail was successfully sent, 'false' otherwise.</returns>
+            <exception cref="T:System.Exception">The instance doesn't represent a single item.</exception>
+        </member>
+        <member name="M:Aras.Ark.Common.IEmailsApi.SendFormattedEmail(Aras.IOM.Item,Aras.IOM.Item,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            Send e-mail to the specified identity. In order to do so, the method sends a special
+            request to the Innovator server. It also replaces variables defined as {variable_name}
+            with values provided in <paramref name="variables"/> dictionary.
+            </summary>
+            <param name="emailItem"><see cref="T:Aras.IOM.Item"/> of type "EMail Message".</param>
+            <param name="identityItem"><see cref="T:Aras.IOM.Item"/> of type "Identity".</param>
+            <param name="variables"><see cref="T:System.Collections.Generic.Dictionary`2"/> where key is a variable name for properties values.</param>
+            <returns>'true' if mail was successfully sent, 'false' otherwise.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IEmailsApi.SendFormattedEmail(System.String,System.String,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            Send e-mail to the specified identity. In order to do so, the method sends a special
+            request to the Innovator server. It also replaces variables defined as {variable_name}
+            with values provided in <paramref name="variables"/> dictionary.
+            </summary>
+            <param name="emailId">Id of <see cref="T:Aras.IOM.Item"/> of type "EMail Message".</param>
+            <param name="identityId">Id of <see cref="T:Aras.IOM.Item"/> of type "Identity".</param>
+            <param name="variables"><see cref="T:System.Collections.Generic.Dictionary`2"/> where key is a variable name for properties values.</param>
+            <returns>'true' if mail was successfully sent, 'false' otherwise.</returns>
+        </member>
+        <member name="T:Aras.Ark.Common.IIdentitiesApi">
+            <summary>
+            Provides methods to operate with Identities.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.IIdentitiesApi.GetCurrentUserAliases">
+            <summary>
+            Retrieves current user alias identity ids using core API.
+            In the latest Aras Innovator versions only one id is possible.
+            </summary>
+            <returns>List of alias identity ids of a current user.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IIdentitiesApi.GetUserAliases(System.String)">
+            <summary>
+            Retrieves specified user alias identity ids using innovator server request.
+            No server API for this functionality is available right now.
+            In the latest Aras Innovator versions only one id is possible.
+            </summary>
+            <param name="userId">Id of a user.</param>
+            <returns>List of alias identity ids of a specified user.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IIdentitiesApi.GetCurrentUserIdentitiesList">
+            <summary>
+            Retrieves all identity ids for current user using core API.
+            </summary>
+            <returns>List of all identity ids of a current user.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IIdentitiesApi.GetUserIdentitiesList(System.String)">
+            <summary>
+            Retrieves all identity ids for specified user using core API.
+            </summary>
+            <param name="userId">Id of a user.</param>
+            <returns>List of all identity ids of a specified user.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IIdentitiesApi.GetAncestorIdentityIds(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Retrieves ancestor identity ids of specified identities using core API.
+            Core API excludes all identity ids specified in input from method output.
+            </summary>
+            <param name="identityIds">Collection of identity ids.</param>
+            <returns>List of ancestor identity ids of a specified identities.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IIdentitiesApi.GetDescendantIdentityIds(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Retrieves descendant identity ids of specified identities using core API.
+            Core API excludes all identity ids specified in input from method output.
+            </summary>
+            <param name="identityIds">Collection of identity ids.</param>
+            <returns>List of descendant identity ids of a specified identities.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IIdentitiesApi.IsCurrentUserInIdentities(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Validates that current user is a part at least one of specified identities.
+            </summary>
+            <param name="identityIds">Collection of identity ids.</param>
+            <returns>True in case current user is a part of at least one of specified identities.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IIdentitiesApi.IsUserInIdentities(System.String,System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Validates that a specified user is a part at least one of specified identities.
+            </summary>
+            <param name="userId">Id of a user.</param>
+            <param name="identityIds">Collection of identity ids.</param>
+            <returns>True in case specified user is a part of at least one of specified identities.</returns>
+        </member>
+        <member name="T:Aras.Ark.Common.II18NContext">
+            <summary>
+            Provides internationalization and localization context.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.ConvertFromNeutral(System.String,System.String,System.String)">
+            <summary>
+            Converts from neutral format into the format specific for the session locale.
+            </summary>
+            <param name="svalue">
+            Locale specific string representation of a value that has to be converted.
+            </param>
+            <param name="vtype">
+            Type of the value; only the following types are considered to be locale specific - 'date' | 'float' | 'decimal'
+            </param>
+            <param name="datePtrn">
+            The parameter is taken into consideration only if <c>vtype='date'</c>. In this case the parameter can have one the following
+            values:
+            <list type="bullet">
+            <item>short_date</item>
+            <item>long_date</item>
+            <item>short_date_time</item>
+            <item>long_date_time</item>
+            <item>short_time</item>
+            <item>long_time</item>
+            </list>
+            </param>
+            <returns>
+            Locale specific string representation of the <c>svalue</c>. 
+            </returns>
+            <exception cref="T:System.FormatException"><c>svalue</c> does not contain a valid string representation of the type defined by the <c>vtype</c></exception>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.ConvertNeutralToUtcDateTime(System.String,System.String)">
+            <summary>
+            Converts a date-time in the time zone of the session in neutral format to a string that represents the same moment of time in UTC.
+            </summary>
+            <param name="neutralStr">A string that represent a date-time in the time zone of the session in neutral format.</param>
+            <param name="outPattern">Invariant culture date time format.</param>
+            <returns>The convertation result.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">No time zones with name=the session time zone name found</exception>
+            <exception cref="T:System.FormatException"><c>inPattern</c> supposes time offset</exception>
+            <exception cref="T:System.FormatException"><c>neutralStr</c> is not in neutral format</exception>
+            <exception cref="T:System.NotSupportedException">The method is running on not supported platform</exception>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.ConvertToNeutral(System.String,System.String,System.String)">
+            <summary>
+            Convert <c>svalue</c> that is a string representation of value of type <c>vtype</c> into the neutral format. It is assumed
+            that <c>svalue</c> has a format that is a valid format for the session locale. 
+            </summary>
+            <remarks>
+            Note that in case <c>vtype='date'</c> and <c>svalue</c> contails time zone offset (e.g. "2008-10-22T16:20:00-0500") the 
+            <c>svalue</c> represents a concrete 
+            moment of time which is different from the case when <c>svalue</c> doesn't have an offset (e.g. "2008-10-22T16:20:00")
+            because "no offset" value can be interpreted as different moments of time depending of the time zone in which the value
+            is processed. If <c>svalue</c> doesn't have an offset it's interpreted as the date-time in the time zone of the session.
+            If <c>svalue</c> has an offset (i.e. it represents a concrete moment of time) it's represented as the same moment of time
+            in the time zone of the session. For instance, if time zone of the session is "Eastern Standard Time" and <c>svalue</c>
+            is "2008-12-25T18:25:00+0100" then the methods returns "2008-12-25T12:25:00".
+            </remarks>
+            <param name="svalue">
+            Locale specific string representation of a value that has to be converted. 
+            </param>
+            <param name="vtype">
+            Type of the value; only the following types are considered to be locale specific - 'date' | 'float' | 'decimal'
+            </param>
+            <param name="datePtrn">
+            The parameter is taken into consideration only if <c>vtype='date'</c>. In this case user can specify the exact format 
+            that is used in the string representation of a date in <c>svalue</c>. In case <c>vtype='date'</c> but the parameter is not specified
+            or passed as <c>null</c> or empty string then an attempt is made to parse the <c>svalue</c> assuming that it has a valid format 
+            for the session locale.
+            </param>
+            <returns>
+            </returns>
+            <exception cref="T:System.FormatException"><c>svalue</c> does not contain a valid string representation of the type defined by the <c>vtype</c></exception>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.ConvertUtcDateTimeToNeutral(System.String,System.String)">
+            <summary>
+            Converts <c>utcStr</c> date to string representing the same moment of time in the time zone of the session in neutral format.
+            </summary>
+            <param name="utcStr">If <c>utcStr</c> doesn't have an offset it's interpreted as UTC date/time; i.e. as it would have offset +0000. If the parameter has an offset then it's interpreted as the exact moment of time that is specified by the parameter.</param>
+            <param name="inPattern">Invariant culture date time format.</param>
+            <returns>The convertation result.</returns>
+            <exception cref="T:System.ArgumentOutOfRangeException">No time zones with name=the session time zone name found</exception>
+            <exception cref="T:System.FormatException"><c>utcStr</c> does not contain a valid string representation of the type defined by the <c>inPattern</c></exception>
+            <exception cref="T:System.NotSupportedException">The method is running on not supported platform</exception>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.GetCorporateToLocalOffset">
+            <summary>
+            Returns offset in minutes between corporate time zone and the local time zone of the client. If the
+            corporate time zone is not defined by the Innovator then '0' is returned.
+            </summary>
+            <returns>Offset in minutes</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.GetDefaultLanguageCode">
+            <summary>
+            Returns code of the default language.
+            </summary>
+            <returns>Language code, e.g. "en"</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.GetDefaultLanguageSuffix">
+            <summary>
+            Returns suffix of the default language.
+            </summary>
+            <returns>Language suffix, e.g. "_en"</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.GetLanguageCode">
+            <summary>
+            Returns Innovator language code for the session language.
+            </summary>
+            <returns>Language code, e.g. "en"</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.GetLanguageSuffix">
+            <summary>
+            Returns suffix of the language for the session language.
+            </summary>
+            <returns>Language suffix, e.g. "_en"</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.GetLocale">
+            <summary>
+            Returns locale of the current session.
+            </summary>
+            <returns>Locale, e.g. "en-US"</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.GetTimeZone">
+            <summary>
+            Returns time zone of the session.
+            </summary>
+            <returns>
+            Time zone, e.g. "US Eastern Standard Time". The value is one of keys from the registry entry:
+            HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Time Zones
+            </returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.GetUIDatePattern(System.String)">
+            <summary>
+            Returns locale specific date-time pattern that corresponds to the passed Innovator pattern (e.g. 'short_date').
+            </summary>
+            <param name="innovatorDatePattern">
+            One of possible values:
+            <list type="bullet">
+            <item>short_date</item>
+            <item>long_date</item>
+            <item>short_date_time</item>
+            <item>long_date_time</item>
+            <item>short_time</item>
+            <item>long_time</item>
+            </list>
+            </param>
+            <returns>Date-time pattern, e.g. "yyyy-MM-dd"</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.ConvertLocalDateTimeToAml(System.DateTime)">
+            <summary>
+            Convert local time zone <see cref="T:System.DateTime"/> object to neutral AML date time string.
+            </summary>
+            <param name="dateTime"><see cref="T:System.DateTime"/> object.</param>
+            <returns>DateTime string in DATETIME_NEUTRAL_FORMAT.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.ConvertUtcDateTimeToAml(System.DateTime)">
+            <summary>
+            Convert UTC <see cref="T:System.DateTime"/> object to neutral AML date time string.
+            </summary>
+            <param name="dateTime"><see cref="T:System.DateTime"/> object.</param>
+            <returns>DateTime string in DATETIME_NEUTRAL_FORMAT.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.ConvertAmlDateTimeToLocal(System.String)">
+            <summary>
+            Convert neutral AML date time string to local time zone <see cref="T:System.DateTime"/> object.
+            </summary>
+            <param name="dateTime">DateTime string in DATETIME_NEUTRAL_FORMAT.</param>
+            <returns><see cref="T:System.DateTime"/> object.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.II18NContext.ConvertAmlDateTimeToUtc(System.String)">
+            <summary>
+            Convert neutral AML date time string to UTC <see cref="T:System.DateTime"/> object.
+            </summary>
+            <param name="dateTime">DateTime string in DATETIME_NEUTRAL_FORMAT.</param>
+            <returns><see cref="T:System.DateTime"/> object.</returns>
+        </member>
+        <member name="T:Aras.Ark.Common.IServerConnectionProvider">
+            <summary>
+            Provides methods to operate with <see cref="T:Aras.IOM.IServerConnection"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.IServerConnectionProvider.GetConnection(System.String,System.String,System.String,System.String)">
+            <summary>
+            Gets connection with provided parameters
+            </summary>
+            <param name="innovatorServerAdress">Innovator server URL</param>
+            <param name="database">Database name</param>
+            <param name="userName">User name</param>
+            <param name="password">User password</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IServerConnectionProvider.GetConnection(System.String,System.String,System.String,System.String,System.Int32)">
+            <summary>
+            Gets connection with provided parameters
+            </summary>
+            <param name="innovatorServerAdress">Innovator server URL</param>
+            <param name="database">Database name</param>
+            <param name="userName">User name</param>
+            <param name="password">User password</param>
+            <param name="timeout"><see cref="T:System.Int32"/> timeout value</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Common.IServerConnectionProvider.Login(Aras.IOM.IServerConnection)">
+            <summary>
+            Does Login for a specified connection generated by <see cref="M:Aras.Ark.Common.IServerConnectionProvider.GetConnection(System.String,System.String,System.String,System.String,System.Int32)"/>
+            </summary>
+            <param name="connection"><see cref="T:Aras.IOM.IServerConnection"/> object</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IServerConnectionProvider.Logout(Aras.IOM.IServerConnection)">
+            <summary>
+            Does Logout for a specified connection generated by <see cref="M:Aras.Ark.Common.IServerConnectionProvider.GetConnection(System.String,System.String,System.String,System.String,System.Int32)"/>
+            </summary>
+            <param name="connection"><see cref="T:Aras.IOM.IServerConnection"/> object</param>
+        </member>
+        <member name="M:Aras.Ark.Common.IServerConnectionProvider.Logout(Aras.IOM.IServerConnection,System.Boolean)">
+            <summary>
+            Does Logout for a specified connection generated by <see cref="M:Aras.Ark.Common.IServerConnectionProvider.GetConnection(System.String,System.String,System.String,System.String,System.Int32)"/>
+            </summary>
+            <param name="connection"><see cref="T:Aras.IOM.IServerConnection"/> object</param>
+            <param name="unlockOnLogout">Flag to specify to do unlock on logout or not.</param>
+        </member>
+        <member name="T:Aras.Ark.Common.ServerConnectionProvider">
+            <summary>
+            Implements methods to operate with <see cref="T:Aras.IOM.IServerConnection"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.ServerConnectionProvider.GetConnection(System.String,System.String,System.String,System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ServerConnectionProvider.GetConnection(System.String,System.String,System.String,System.String,System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ServerConnectionProvider.Login(Aras.IOM.IServerConnection)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ServerConnectionProvider.Logout(Aras.IOM.IServerConnection)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Common.ServerConnectionProvider.Logout(Aras.IOM.IServerConnection,System.Boolean)">
+            <inheritdoc />
+        </member>
+        <member name="T:Aras.Ark.Common.ItemException">
+            <summary>
+            Implements methods to operate with Item Exceptions.
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Common.ItemException.ErrorItem">
+            <value>Get or private Set Current Error <see cref="T:Aras.IOM.Item"/></value>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemException.#ctor(Aras.IOM.Item)">
+            <summary>
+            <see cref="T:Aras.Ark.Common.ItemException"/> constructor.
+            </summary>
+            <param name="errorItem"><see cref="T:Aras.IOM.Item"/> with error.</param>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemException.#ctor(System.String)">
+            <summary>
+            <see cref="T:Aras.Ark.Common.ItemException"/> constructor.
+            </summary>
+            <param name="errorMessage">Error message as <see cref="T:System.String"/></param>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemException.#ctor(System.String,Aras.IOM.Item)">
+            <summary>
+            <see cref="T:Aras.Ark.Common.ItemException"/> constructor.
+            </summary>
+            <param name="errorMessage">Error message as <see cref="T:System.String"/></param>
+            <param name="errorItem"><see cref="T:Aras.IOM.Item"/> with error.</param>
+        </member>
+        <member name="T:Aras.Ark.Common.ItemExtensions">
+            <summary>
+            Implements methods to operate with Item Extensions.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.Enumerate(Aras.IOM.Item)">
+            <summary>
+            Returns <see cref="T:System.Collections.Generic.IEnumerable`1"/> collection created from <paramref name="collectionItem"/>.
+            </summary>
+            <param name="collectionItem"><see cref="T:Aras.IOM.Item"/> with multiple &lt;Item&gt; nodes.</param>
+            <returns><see cref="T:System.Collections.Generic.IEnumerable`1"/> collection.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.ToList(Aras.IOM.Item)">
+            <summary>
+            Returns <see cref="T:System.Collections.Generic.List`1"/> created from <paramref name="collectionItem"/>.
+            </summary>
+            <param name="collectionItem"><see cref="T:Aras.IOM.Item"/> with multiple &lt;Item&gt; nodes.</param>
+            <returns><see cref="T:System.Collections.Generic.List`1"/> collection.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.GetRequiredPropertyItem(Aras.IOM.Item,System.String)">
+            <summary>
+            Gets <see cref="T:Aras.IOM.Item"/> found in properties of provided <paramref name="item"/> by <paramref name="propertyItemName"/>.
+            </summary>
+            <param name="item">Source <see cref="T:Aras.IOM.Item"/></param>
+            <param name="propertyItemName">Name of the property containing an <see cref="T:Aras.IOM.Item"/></param>
+            <returns>Property <see cref="T:Aras.IOM.Item"/>.</returns>
+            <remarks>
+            If the requested Property Item is null in the provided <paramref name="item"/>, an <see cref="T:Aras.Ark.Common.ItemException"/> will be thrown.
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.GetRequiredProperty(Aras.IOM.Item,System.String)">
+            <summary>
+            Gets property of provided <paramref name="item"/> by <paramref name="propertyName"/>.
+            </summary>
+            <param name="item">Source <see cref="T:Aras.IOM.Item"/></param>
+            <param name="propertyName">Name of the requested property</param>
+            <returns><see cref="T:System.String"/> value of requested property</returns>
+            <remarks>
+            If the requested Property is null in the provided <paramref name="item"/>, an <see cref="T:Aras.Ark.Common.ItemException"/> will be thrown.
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.GetRequiredAttribute(Aras.IOM.Item,System.String)">
+            <summary>
+            Gets attribute of provided <paramref name="item"/> by <paramref name="attributeName"/>.
+            </summary>
+            <param name="item">Source <see cref="T:Aras.IOM.Item"/></param>
+            <param name="attributeName">Name of the requested attribute</param>
+            <returns><see cref="T:System.String"/> value of requested attribute</returns>
+            <remarks>
+            If the requested Attribute is null in the provided <paramref name="item"/>, an <see cref="T:Aras.Ark.Common.ItemException"/> will be thrown.
+            </remarks>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.FormatItem(Aras.IOM.Item,System.Collections.Generic.IEnumerable{System.String},System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            Replaces variables defined as {variable_name} with values provided in <paramref name="variables"/> dictionary
+            for properties specified in <paramref name="properties"/>.
+            </summary>
+            <param name="item">Source <see cref="T:Aras.IOM.Item"/>.</param>
+            <param name="properties"><see cref="T:System.Collections.Generic.IEnumerable`1"/> collection of properties names.</param>
+            <param name="variables"><see cref="T:System.Collections.Generic.Dictionary`2"/> where key is a variable name for properties values.</param>
+            <returns>Formatted <see cref="T:Aras.IOM.Item"/>.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.FormatEmail(Aras.IOM.Item,System.Collections.Generic.Dictionary{System.String,System.String})">
+            <summary>
+            Replaces variables defined as {variable_name} with values provided in <paramref name="variables"/> dictionary.
+            List of formatter properties:
+            <list type="bullet">
+            <item>body_html</item>
+            <item>body_plain</item>
+            <item>subject</item>
+            </list>
+            </summary>
+            <param name="item">Source <see cref="T:Aras.IOM.Item"/>.</param>
+            <param name="variables"><see cref="T:System.Collections.Generic.Dictionary`2"/> where key is a variable name for properties values.</param>
+            <returns>Formatted <see cref="T:Aras.IOM.Item"/>.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.AddRelationships(Aras.IOM.Item,System.Collections.Generic.IEnumerable{Aras.IOM.Item})">
+            <summary>
+            Adds multiple relationships between Source <paramref name="item"/> and Related <paramref name="items"/>.
+            </summary>
+            <param name="item">Source <see cref="T:Aras.IOM.Item"/></param>
+            <param name="items"><see cref="T:System.Collections.Generic.IEnumerable`1"/> Collection of related <see cref="T:Aras.IOM.Item"/>s</param>
+            <returns>Source <paramref name="item"/> with added relationships</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.ToAmlQuery(Aras.IOM.Item)">
+            <summary>
+            Creates AML Query from provided <paramref name="items"/>.
+            </summary>
+            <param name="items"><see cref="T:Aras.IOM.Item"/> with multiple &lt;Item&gt; nodes</param>
+            <returns>AML Query as <see cref="T:System.String"/></returns>
+        </member>
+        <member name="M:Aras.Ark.Common.ItemExtensions.ToAmlQuery(System.Collections.Generic.IEnumerable{Aras.IOM.Item})">
+            <summary>
+            Creates AML Query from provided <paramref name="items"/>.
+            </summary>
+            <param name="items"><see cref="T:System.Collections.Generic.IEnumerable`1"/> collection of <see cref="T:Aras.IOM.Item"/>s</param>
+            <returns>AML Query as <see cref="T:System.String"/></returns>
+        </member>
+        <member name="T:Aras.Ark.Common.JsonExtensions">
+            <summary>
+            Implements methods for JSON conversion.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.JsonExtensions.ToJsonString(System.Object)">
+            <inheritdoc cref="M:System.Web.Script.Serialization.JavaScriptSerializer.Serialize(System.Object)" />
+        </member>
+        <member name="M:Aras.Ark.Common.JsonExtensions.ParseJson``1(System.String)">
+            <inheritdoc cref="M:System.Web.Script.Serialization.JavaScriptSerializer.Deserialize``1(System.String)" />
+        </member>
+        <member name="T:Aras.Ark.Common.StringExtensions">
+            <summary>
+            Implements methods to operate with String Extensions.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.EnumerateIdList(System.String)">
+            <summary>
+            Converts idlist string to array of id strings.
+            Expectes the following chars
+            <list type="bullet">
+            <item>comma (,)</item>
+            <item>ordinary quotes (')</item>
+            <item>double quotes (")</item>
+            </list>
+            </summary>
+            <param name="idlist">String representing idlist.</param>
+            <returns>Array of id strings.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.EnumerateIdList(System.String,System.String)">
+            <summary>
+            Converts idlist string to array of id strings.
+            Expectes the following chars
+            <list type="bullet">
+            <item>custom separator</item>
+            <item>ordinary quotes (')</item>
+            <item>double quotes (")</item>
+            </list>
+            </summary>
+            <param name="idlist">String representing idlist.</param>
+            <param name="customSeparator">Custom separator string instead of default comma.</param>
+            <returns>Array of id strings.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.EnumerateIdListWithValidation(System.String,System.String)">
+            <summary>
+            Converts idlist string to array of id strings. In case of invalid ids throws an exception.
+            Expectes the following chars
+            <list type="bullet">
+            <item>comma (,)</item>
+            <item>ordinary quotes (')</item>
+            <item>double quotes (")</item>
+            </list>
+            </summary>
+            <param name="idlist">String representing idlist.</param>
+            <param name="errorMessage">Error message in case of incorrect id.</param>
+            <exception cref="T:Aras.Ark.Common.ItemException" >Idlist contains incorrect id.</exception>
+            <returns>Array of id strings.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.EnumerateIdListWithValidation(System.String,System.String,System.String)">
+            <summary>
+            Converts idlist string to array of id strings. In case of invalid ids throws an exception.
+            Expectes the following chars
+            <list type="bullet">
+            <item>custom separator</item>
+            <item>ordinary quotes (')</item>
+            <item>double quotes (")</item>
+            </list>
+            </summary>
+            <param name="idlist">String representing idlist.</param>
+            <param name="customSeparator">Custom separator string instead of default comma.</param>
+            <param name="errorMessage">Error message in case of incorrect id.</param>
+            <exception cref="T:Aras.Ark.Common.ItemException" >Idlist contains incorrect id.</exception>
+            <returns>Array of id strings.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.ConvertToIdListString(System.Collections.Generic.IEnumerable{System.String},System.Boolean,System.String)">
+            <summary>
+            Converts collection to idlist string.
+            </summary>
+            <param name="idlist"><see cref="T:System.Collections.Generic.IEnumerable`1"/> collection of strings.</param>
+            <param name="separator">Separator for ids in the string.</param>
+            <param name="useQuotes">Flag to specify if method needs to wrap ids in quotes.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.ConvertToIdListString(System.Collections.Generic.IEnumerable{System.String},System.Boolean)">
+            <summary>
+            Converts collection to idlist string. Comma seperator is used by default.
+            </summary>
+            <param name="idlist"><see cref="T:System.Collections.Generic.IEnumerable`1"/> collection of strings.</param>
+            <param name="useQuotes">Flag to specify if method needs to wrap ids in quotes.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.ConvertToIdListString(System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Converts collection to idlist string. Comma seperator is used by default.
+            Method doesn't wrap ids in quotes automatically.
+            </summary>
+            <param name="idlist"><see cref="T:System.Collections.Generic.IEnumerable`1"/> collection of strings.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.ConvertToIdListStringWithValidation(System.Collections.Generic.IEnumerable{System.String},System.Boolean,System.String,System.String)">
+            <summary>
+            Converts collection to idlist string.
+            </summary>
+            <param name="idlist"><see cref="T:System.Collections.Generic.IEnumerable`1"/> collection of strings.</param>
+            <param name="separator">Separator for ids in the string.</param>
+            <param name="useQuotes">Flag to specify if method needs to wrap ids in quotes.</param>
+            <param name="errorMessage">Error message in case of incorrect id.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.ConvertToIdListStringWithValidation(System.Collections.Generic.IEnumerable{System.String},System.Boolean,System.String)">
+            <summary>
+            Converts collection to idlist string. Comma seperator is used by default.
+            </summary>
+            <param name="idlist"><see cref="T:System.Collections.Generic.IEnumerable`1"/> collection of strings.</param>
+            <param name="useQuotes">Flag to specify if method needs to wrap ids in quotes.</param>
+            <param name="errorMessage">Error message in case of incorrect id.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.ConvertToIdListStringWithValidation(System.Collections.Generic.IEnumerable{System.String},System.String)">
+            <summary>
+            Converts collection to idlist string. Comma seperator is used by default.
+            Method doesn't wrap ids in quotes automatically.
+            </summary>
+            <param name="idlist"><see cref="T:System.Collections.Generic.IEnumerable`1"/> collection of strings.</param>
+            <param name="errorMessage">Error message in case of incorrect id.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.ToArasString(System.Boolean)">
+            <summary>
+            Converts boolean value to aras string representation of boolean value.
+            </summary>
+            <param name="value"><see cref="T:System.Boolean"/> value.</param>
+            <returns>Aras string representation of boolean value.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.ToArasBoolean(System.String)">
+            <summary>
+            Converts aras string representation of boolean value to boolean.
+            </summary>
+            <param name="value"><see cref="T:System.String"/> value.</param>
+            <returns>Boolean value equivalent of the string expression.</returns>
+        </member>
+        <member name="M:Aras.Ark.Common.StringExtensions.ValidateIdlist(System.Collections.Generic.IEnumerable{System.String},System.String)">
+            <summary>
+            Validates idlist collection and throws ItemException in case of invalid ids.
+            </summary>
+        </member>
+    </members>
+</doc>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = ".";
+  gCommonRootRelPath = ".";
+  gTopicId = "3.6.0_7";
+
+//]]></script>
+
+<script type="text/javascript" src="./template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="./template/scripts/common.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="./template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="assets/css/JAI_styles.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>RelationshipType Item Behavior</title>
+  
+</head>
+<body>
+  <div>
+  <h1>RelationshipType Item Behavior</h1>
+  <p class="Content_body">One of the properties defined in the RelationshipType is Behavior.  While there are only two choices, Float and Fixed there are many variations of what can happen depending on this setting.  Let&#39;s explore some of these variations. In the figures
+    below we will use Parent and Child to refer to the items.  Another way to think about these items is: Parent = Source Item; Child = Related Item.  The numbers 1 and 2 refer to the generation number, so Parent 1 is the first generation of the source
+    item.</p>
+  <p class="Content_body">The first case is where the Parent1 is connected with Child1.  Then, Parent is versioned to become Parent2.  Then, Child is versioned to become Child2.  Below is a view of the relationship connections that result from this process.</p>
+  <p class="Content_body_indented"><img alt="" class="Image" src="assets/images/behavior1.jpg" style="width: 100%; max-width: 751px;"/></p>
+  <?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+    <p class="Figure_indented"></p>
+    <?rh-list_end ?>
+      <p class="Content_body">The second Float case should raise the question: If the behavior is Float, why is it that after Child2 is created, Parent1 is not pointing to Child2?  Wouldn&#39;t that follow the definition of the Float behavior - that the parent points to the
+        latest version of the child?  The answer is in the rules of versioning the Parent.  When the Parent is versioned, the previous version of the Parent is then set to a Hard Fixed behavior in order to preserve its configuration.  In other words,
+        when the Parent is versioned, its previous version will remain forever in the configuration which it had right before the Parent was versioned. In our case above, the first generation of Parent was connected to Child1.  Since Parent was versioned
+        first, Parent1 is immediate &quot;frozen&quot; in its current configuration which will always point to Child 1.  Also, Parent2 will point to Child1 since it is the latest version of Child. However, once Child is versioned, and Child 2 is created,
+        Parent 2 will break its bond with Child1 and point to Child2, according to the Float behavior that it defines.</p>
+      <p class="Content_body">The next case is similar in that it starts out with Parent1 and Child1 being related at the time of their creation.  Then, the child is versioned first, to create Child2.   After that, the parent is versioned to become Parent 2.  The following is
+        the diagram of the relationship behavior:</p>
+      <p class="Content_body_indented"><img alt="" class="Image" src="assets/images/behavior2.jpg" style="width: 100%; max-width: 773px;"/></p>
+      <?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+        <p class="Figure_indented"></p>
+        <?rh-list_end ?>
+          <p class="Content_body">In this case, the question should arise for the Fixed behavior.  Why is Parent2 associated with Child2 when the behavior is fixed?  The answer is because of another rule.  When a new generation of the parent is created, it is automatically associated
+            with the latest version of the children.  So, if a later version of the child exists, even if the behavior is defined as fixed, it will automatically be associated with the new version of the parent.</p>
+          <p class="Content_body">The other two behaviors - Hard Fixed and Hard Float only play a role when combined with Life Cycle behavior settings.  So, we will explore those in a context of a life cycle.  See <a href="Item_Behavior.htm">Item Behavior</a> for an explanation
+            of how life cycles can further change the behavior of related versionable items.</p>
+
+</div>
+  <div>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

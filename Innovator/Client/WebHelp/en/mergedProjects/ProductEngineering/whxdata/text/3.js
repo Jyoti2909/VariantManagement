@@ -1,0 +1,1 @@
+rh._.exports({"0":["System Setup"],"1":["\n  ","\n  ","\n  ","This section deals with the administrative setup of Aras Innovator, and should be accessed by an authorized user. This chapter is not intended as end-user documentation and instruction.","\n\n","\n  ","\n    "," ","\n    ","©2020 Aras Corporation - All Rights Reserved","\n  ","\n\n"],"2":["System Setup"],"id":"3"})

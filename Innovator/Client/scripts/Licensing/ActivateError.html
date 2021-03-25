@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2013. -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title></title>
+	<style type="text/css">
+		@import "../../styles/default.css";
+		@import "../../javascript/include.aspx?classes=common.css";
+
+		html,body{
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+	<script type="text/javascript" src="../../javascript/dialog.js"></script>
+	<script type="text/javascript">
+		var dialogArguments = window.frameElement.dialogArguments;
+		var arasObject = dialogArguments.aras;
+		var errorDetails = dialogArguments.errorDetails;
+		var errorTitle = dialogArguments.title || arasObject.getResource("", "licensing.activation_error_title");
+
+		onload = function onload_handler() {
+			populate();
+		}
+
+		function populate() {
+			document.getElementById("errorDetails").textContent = errorDetails;
+		}
+	</script>
+</head>
+<body>
+	<div style="padding: 10px; height: 60%;">
+		<div class="sys_f_label" id="errorDetails" style="padding-top:10px; text-transform: none;"></div>
+	</div>
+	<div style="padding: 0px; height: 40%; max-height: 100px;" align="center">
+		<input type="button" value="OK "id="close_btn" class="btn" onclick="dialogArguments.dialog.close();"></input>
+	</div>
+</body>
+</html>

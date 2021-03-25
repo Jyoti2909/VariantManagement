@@ -1,0 +1,79 @@
+﻿<AML>
+ <Item type="Method" id="B37C25DEF8544F6E97DC2733AAC9C14A" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.Ark.Logger;
+
+			logger.Verbose("Beginning of the ArasArkLoggerExample method execution");
+			// here we use prearranged logger from the template
+			// if you need to configure your own logger you can use loggerBuilder from the template
+			// or you can create your own LoggerBuilder instance like here
+
+			// var otherConfigFactory = new Aras.Ark.Logger.Mappers.Factories.ConfigMapperFactory();
+			// LoggerBuilder otherLoggerBuilder = new LoggerBuilder("$(pkgname)", this.dom.CloneNode(true) as XmlDocument, otherConfigFactory, this.getInnovator());
+
+			// using (ILogger otherLogger = otherLoggerBuilder.BuildLogger())
+			// {
+				// your code goes here
+			// }
+
+			for (int i = 0; i < 10; i++)
+			{
+				int result = Work();
+				logger.Debug("Work() method has been executed {0} time with result {1}.", i + 1, result);
+			}
+
+			logger.Information("Cycle with Work() method has ended.");
+
+			var stopwatch = new System.Diagnostics.Stopwatch();
+			stopwatch.Start();
+
+			LongWork();
+
+			stopwatch.Stop();
+
+			if (stopwatch.ElapsedMilliseconds > 3000)
+			{
+				logger.Warning("LongWork() took {0} milliseconds, which is longer than expected.", stopwatch.ElapsedMilliseconds);
+			}
+
+			try
+			{
+				MethodWithException();
+			}
+			catch(Aras.IOME.ItemErrorException e)
+			{
+				logger.Error(e.Message);
+
+				return e.Error;
+			}
+			catch(NotImplementedException e)
+			{
+				logger.Fatal(e.Message);
+
+				throw e;
+			}
+
+			return this;
+		}
+
+		int Work()
+		{
+			System.Threading.Thread.Sleep(1000);
+
+			return (new Random()).Next(0, 100);
+		}
+
+		void LongWork()
+		{
+			System.Threading.Thread.Sleep(5000);
+		}
+
+		void MethodWithException()
+		{
+			System.Threading.Thread.Sleep(1000);
+
+			throw new NotImplementedException("Exception from MethodWithException() method.");]]></method_code>
+  <method_type>C#</method_type>
+  <name>ArasArkLoggerExample</name>
+ </Item>
+</AML>

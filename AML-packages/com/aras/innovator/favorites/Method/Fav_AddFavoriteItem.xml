@@ -1,0 +1,62 @@
+﻿<AML>
+ <Item type="Method" id="097F792B0DB042A7825C041B53C1ECD5" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = this.getInnovator();
+
+Item isAliasUserIdentityItem = innovator.newItem("User", "VC_GetUserIsAliasIdentity");
+isAliasUserIdentityItem.setID(innovator.getUserID());
+isAliasUserIdentityItem = isAliasUserIdentityItem.apply();
+if (isAliasUserIdentityItem.isError()) {
+	return isAliasUserIdentityItem;
+}
+
+string favoriteOwnedById = isAliasUserIdentityItem.getID();
+string favoriteMustViewById = this.getProperty("mustViewById");
+string favoriteCategory = this.getProperty("category");
+string contextTypeName = this.getProperty("contextType");
+string favoriteLabel = this.getProperty("label");
+string quickAccessFlag = this.getProperty("quickAccess");
+string additionalDataJSON = this.getProperty("additionalData");
+string favoriteItemId = this.getProperty("id");
+Item savedSearchItem = this.getPropertyItem("savedSearchItem");
+
+Item favoriteItem = innovator.newItem("Favorite", "add");
+favoriteItem.setProperty("category", favoriteCategory);
+favoriteItem.setProperty("classification", "Favorites");
+favoriteItem.setProperty("context_type", contextTypeName);
+favoriteItem.setProperty("owned_by_id", favoriteOwnedById);
+favoriteItem.setProperty("label", favoriteLabel);
+favoriteItem.setProperty("quick_access_flag", quickAccessFlag);
+favoriteItem.setProperty("additional_data", additionalDataJSON);
+if (!string.IsNullOrEmpty(favoriteItemId)) {
+	favoriteItem.setID(favoriteItemId);
+}
+
+if (!string.IsNullOrEmpty(favoriteMustViewById) && favoriteOwnedById != favoriteMustViewById)
+{
+	Item favoriteMustViewByItem = innovator.newItem("FavoriteMustViewBy", "add");
+	favoriteMustViewByItem.setProperty("related_id", favoriteMustViewById);
+	favoriteItem.addRelationship(favoriteMustViewByItem);
+}
+
+favoriteItem = favoriteItem.apply();
+if (favoriteItem.isError())
+{
+	return favoriteItem;
+}
+
+if (savedSearchItem != null && savedSearchItem.getType() == "SavedSearch" && savedSearchItem.getAction() == "add")
+{
+	savedSearchItem = savedSearchItem.apply();
+	if (savedSearchItem.isError())
+	{
+		return savedSearchItem;
+	}
+}
+
+return innovator.applyMethod("Fav_FavoriteItemJsonBuilder", favoriteItem.node.InnerXml);
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>Fav_AddFavoriteItem</name>
+ </Item>
+</AML>

@@ -1,0 +1,85 @@
+﻿<AML>
+ <Item type="Report" id="5206FFBFE9F9482EAC8B2EDE15AC443F" action="add">
+  <location>client</location>
+  <report_query><![CDATA[<Item type="PM_ProjectColorMap" action="get" select="comparison_date,target_date,activity_state">
+  <source_id>
+    <Item type="Preference" id="{@id}" />
+  </source_id>
+  <Relationships>
+    <Item type="PM_ProjectColorPeriod" action="get" select="color,comparison_value" />
+  </Relationships>
+</Item>]]></report_query>
+  <target>window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:aras="http://www.aras-corp.com">
+  <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes"/>
+  <xsl:template match="/">
+    <html>
+      <head>
+        <title>PM Activity Status Color Report</title>
+        <style type="text/css">
+	.divH3 {
+		background-color : #6A5ACD;
+		color : #FFFFE0;
+		padding : 2 2 2 2;
+		font-weight : bold;
+		font-family : sans-serif;
+		font-size : 14px;
+	}
+	td {
+		text-align : center;
+		font-size : 13px;
+		background-color : White;
+	}
+	th {
+		background-color : #C8C8C8;
+		font-size : 12px;
+		font-family : Arial;
+	}
+        </style>
+      </head>
+      <body>
+        <div class="divH3" align="center">PM Activity Status Color Report</div>
+        <table width="100%" cellspacing="1" cellpadding="0" style="background-color: #EAEAEA;">
+          <tr>
+            <th>State</th>
+            <th>Color</th>
+            <th>Comparison Date</th>
+            <th>Comparison Value</th>
+            <th>Target Date</th>
+          </tr>
+          <xsl:apply-templates mode="main" select="//Item[@type='PM_ProjectColorMap']"></xsl:apply-templates>
+        </table>
+      </body>
+    </html>
+  </xsl:template>
+  <xsl:template mode="main" match="Item">
+    <xsl:apply-templates mode="add_row" select="Relationships/Item[@type='PM_ProjectColorPeriod']"/>
+  </xsl:template>
+  <xsl:template match="Item" mode="add_row">
+    <tr>
+      <xsl:if test="position()=1">
+        <td>
+          <xsl:attribute name="rowspan"><xsl:value-of select="count(ancestor::Item/Relationships/Item[@type='PM_ProjectColorPeriod'])"/></xsl:attribute>
+          <xsl:value-of select="ancestor::Item/activity_state"/>
+        </td>
+      </xsl:if>
+      <td>
+        <xsl:attribute name="style">background-color:<xsl:value-of select="color"/>;</xsl:attribute>
+      </td>
+      <td>
+        <xsl:value-of select="ancestor::Item/comparison_date"/>
+      </td>
+      <td>
+        <xsl:value-of select="comparison_value"/>
+      </td>
+      <td>
+        <xsl:value-of select="ancestor::Item/target_date"/>
+      </td>
+    </tr>
+  </xsl:template>
+</xsl:stylesheet>
+]]></xsl_stylesheet>
+  <name>PM Activity Status Color Report</name>
+ </Item>
+</AML>

@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="315B1027F9E2483E8F08B1F794340DFE" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = this.getInnovator();
+var derivedRelationshipFamily = this.newItem("dac_DomainDefinition", "get");
+derivedRelationshipFamily.setProperty("dr_relationshipfamily_id", this.getProperty("dr_relationshipfamily_id"));
+derivedRelationshipFamily.setProperty("id", this.getID());
+derivedRelationshipFamily.setPropertyAttribute("id", "condition", "ne");
+derivedRelationshipFamily.setAttribute("select", "id, dr_relationshipfamily_id");
+derivedRelationshipFamily = derivedRelationshipFamily.apply();
+if (!derivedRelationshipFamily.isError()) {
+	var queryDefinitionName = this.getPropertyAttribute("dr_relationshipfamily_id", "keyed_name");
+	var itemTypeName = this.getType();
+	Item itemType = innovator.newItem("ItemType", "get");
+	itemType.setAttribute("select", "label");
+	itemType.setProperty("name", itemTypeName);
+	itemType = itemType.apply();
+	string message = string.Format(
+		CultureInfo.InvariantCulture,
+		CCO.ErrorLookup.Lookup("Aras.Server.Core.PropertiesAreNotUniqueException"),
+		itemType.getProperty("label"),
+		itemTypeName,
+		"Derived Relationship Family '" + queryDefinitionName + "'");
+	return innovator.newError(message);
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dac_DomainDefinitionBeforeSave</name>
+ </Item>
+</AML>

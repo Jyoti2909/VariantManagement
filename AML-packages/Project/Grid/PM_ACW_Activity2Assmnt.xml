@@ -1,0 +1,132 @@
+﻿<AML>
+ <Item type="Grid" id="D743BE7EA8A54E298C0D214027BF1B9F" action="add">
+  <merge_path>Relationships</merge_path>
+  <method keyed_name="PM_ACW_cfgGridsOnLoad" type="Method">D48BCA1EC7D5474E8400DD6C5CCFD904</method>
+  <query><![CDATA[<Item type="Activity2 Assignment" action="get" select="sort_order,role,work_est,percent_load,percent_compl,date_start_act,state,related_id(name)">
+  <source_id>{id}</source_id>
+</Item>]]></query>
+  <name>PM_ACW_Activity2Assmnt</name>
+  <Relationships>
+   <Item type="Grid Column" id="2DF91E69AF8947D39D0525EAF93A29A9" action="add">
+    <align>left</align>
+    <datatype>federated</datatype>
+    <label xml:lang="en">Name</label>
+    <property>name</property>
+    <sort_order>100</sort_order>
+    <source_id keyed_name="PM_ACW_Activity2Assmnt" type="Grid">D743BE7EA8A54E298C0D214027BF1B9F</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>100</width>
+    <xpath>self::Item[@type="Activity2 Assignment"]/related_id/Item[@type='Identity']</xpath>
+   </Item>
+   <Item type="Grid Column" id="B92D75D044D34B04AED6C8C6BE0BCABC" action="add">
+    <align>left</align>
+    <datatype>federated</datatype>
+    <label xml:lang="en">Role</label>
+    <property>role</property>
+    <sort_order>200</sort_order>
+    <source_id keyed_name="PM_ACW_Activity2Assmnt" type="Grid">D743BE7EA8A54E298C0D214027BF1B9F</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>100</width>
+    <xpath>self::Item[@type="Activity2 Assignment"]</xpath>
+   </Item>
+   <Item type="Grid Column" id="3585A1440D3C4F8D91BF82702E23DBDB" action="add">
+    <align>left</align>
+    <datatype>federated</datatype>
+    <label xml:lang="en">Work Estimate</label>
+    <property>work_est</property>
+    <sort_order>300</sort_order>
+    <source_id keyed_name="PM_ACW_Activity2Assmnt" type="Grid">D743BE7EA8A54E298C0D214027BF1B9F</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>100</width>
+    <xpath>self::Item[@type="Activity2 Assignment"]</xpath>
+   </Item>
+   <Item type="Grid Column" id="31C75A07AA1D457596D14E149E4B302B" action="add">
+    <align>left</align>
+    <datatype>federated</datatype>
+    <label xml:lang="en">Percent Load</label>
+    <property>percent_load</property>
+    <sort_order>400</sort_order>
+    <source_id keyed_name="PM_ACW_Activity2Assmnt" type="Grid">D743BE7EA8A54E298C0D214027BF1B9F</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>100</width>
+    <xpath>self::Item[@type="Activity2 Assignment"]</xpath>
+   </Item>
+   <Item type="Grid Column" id="8B835FDA0AEC4471BACBA712540EED0B" action="add">
+    <align>left</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Actual Start</label>
+    <property>date_start_act</property>
+    <sort_order>500</sort_order>
+    <source_id keyed_name="PM_ACW_Activity2Assmnt" type="Grid">D743BE7EA8A54E298C0D214027BF1B9F</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>100</width>
+    <xpath>self::Item[@type="Activity2 Assignment"]</xpath>
+    <Relationships>
+     <Item type="Column Event" id="92D7F5BDFC864E848D3C4C91FCFA2B80" action="add">
+      <grid_event>oneditstart</grid_event>
+      <related_id keyed_name="PM_ACW_onCompleteChecked" type="Method">
+       <Item type="Method" action="get" select="id">
+        <name>PM_ACW_onCompleteChecked</name>
+       </Item>
+      </related_id>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="8B835FDA0AEC4471BACBA712540EED0B" type="Grid Column">8B835FDA0AEC4471BACBA712540EED0B</source_id>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="Grid Column" id="257D5574F3834C9282501A19288AD41D" action="add">
+    <align>center</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Complete</label>
+    <property>is_complete</property>
+    <sort_order>600</sort_order>
+    <source_id keyed_name="PM_ACW_Activity2Assmnt" type="Grid">D743BE7EA8A54E298C0D214027BF1B9F</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>60</width>
+    <xpath>self::Item[@type="Activity2 Assignment"]</xpath>
+    <Relationships>
+     <Item type="Column Event" id="2EF99C53B4694920A8B6B66A42461BC8" action="add">
+      <grid_event>onchangecell</grid_event>
+      <related_id keyed_name="PM_ACW_onCompleteChecked" type="Method">
+       <Item type="Method" action="get" select="id">
+        <name>PM_ACW_onCompleteChecked</name>
+       </Item>
+      </related_id>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="257D5574F3834C9282501A19288AD41D" type="Grid Column">257D5574F3834C9282501A19288AD41D</source_id>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="Grid Column" id="0A95BAF3594948F18D2C0700F3E7BC28" action="add">
+    <align>left</align>
+    <datatype>default</datatype>
+    <label xml:lang="en">Percent Complete</label>
+    <property>percent_compl</property>
+    <sort_order>700</sort_order>
+    <source_id keyed_name="PM_ACW_Activity2Assmnt" type="Grid">D743BE7EA8A54E298C0D214027BF1B9F</source_id>
+    <starts_nested_row>0</starts_nested_row>
+    <visible>1</visible>
+    <width>120</width>
+    <xpath>self::Item[@type="Activity2 Assignment"]</xpath>
+    <Relationships>
+     <Item type="Column Event" id="7D1D1814A0D341A493DF7978A2BECD2F" action="add">
+      <grid_event>oneditstart</grid_event>
+      <related_id keyed_name="PM_ACW_onCompleteChecked" type="Method">
+       <Item type="Method" action="get" select="id">
+        <name>PM_ACW_onCompleteChecked</name>
+       </Item>
+      </related_id>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="0A95BAF3594948F18D2C0700F3E7BC28" type="Grid Column">0A95BAF3594948F18D2C0700F3E7BC28</source_id>
+     </Item>
+    </Relationships>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

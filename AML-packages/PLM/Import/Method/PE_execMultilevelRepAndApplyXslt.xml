@@ -1,0 +1,41 @@
+﻿<AML>
+ <Item type="Method" id="C889328E80B14C28960A4C0EC4C6AF8E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const report_query = '<Item type="Method" action="PE_ExecuteQdReportMethod">' +
+	'<query_definition>63BA7548B94F4640AE3B0F5656314F49</query_definition>' +
+	'<report_name>multilevel</report_name>' +
+	'<part_id>' + inDom.getAttribute('id') + '</part_id>' +
+'</Item>';
+
+let report = this.newItem('Report', 'get');
+report.setProperty('select', 'xsl_stylesheet');
+report.setID('FB8CA61BE45E46DE9E4346BB653398C2');
+report = report.apply();
+
+let query = this.newItem();
+query.loadAML(report_query);
+query = query.apply();
+
+if (query.IsError()) {
+	aras.AlertError(query.getErrorString())
+}
+
+let results = query.dom.xml;
+let xsl_stylesheet = report.getProperty('xsl_stylesheet');
+if (xsl_stylesheet) {
+	const xslt_stylesheetDOM = aras.createXMLDocument();
+	xslt_stylesheetDOM.loadXML(xsl_stylesheet);
+
+	xsl_stylesheet = xslt_stylesheetDOM.xml;
+
+	const res = aras.createXMLDocument();
+	res.loadXML(results);
+
+	results = aras.applyXsltString(res, xsl_stylesheet);
+}
+
+return results;]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PE_execMultilevelRepAndApplyXslt</name>
+ </Item>
+</AML>

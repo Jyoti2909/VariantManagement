@@ -1,0 +1,79 @@
+﻿<AML>
+ <Item type="Method" id="8E288C5BF8CB45C8B355BFBD5D87DB41" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[  // Sets the editability to assist in editing the grid
+
+  if (!parent.isEditMode) return;
+  var relshipNd = parent.item.selectSingleNode("Relationships/Item[@id='" + relationshipID + "' and related_id/Item]");
+  if (!relshipNd) return;
+  var relatedNd = relshipNd.selectSingleNode("related_id/Item");
+
+  //+++++ Get the values
+  var isPart = false;
+  var new_item_id = relatedNd.selectSingleNode("new_item_id/Item");
+  if (new_item_id)
+    isPart = (new_item_id.getAttribute("type") == "Part")
+  else
+  {
+    var icon = aras.getItemProperty(relatedNd, "affected_type", undefined);
+    isPart = (icon != undefined && icon.indexOf("Part") > 0);
+  }
+  
+  var action = aras.getItemProperty(relatedNd, "action", undefined);
+  var isInter = (aras.getItemProperty(relatedNd, "interchangeable") == "1");
+  var isAdd = (action == "Add");
+  var isChange = (action == "Change");
+  var isDelete = (action == "Delete");
+  //----- Get the values
+
+  if (propertyName == "action")
+  {
+    var doUpdateRow = false;
+    if (isAdd)
+    {
+      // Old Number, Old Rev should be empty
+      clearItemPropVal(relatedNd, "affected_id");
+      clearItemPropVal(relatedNd, "affected_rev");
+      clearItemPropVal(relatedNd, "in_build_disposition");
+      clearItemPropVal(relatedNd, "in_service_disposition");
+      doUpdateRow = true;
+    }
+    else if (isDelete)
+    {
+      clearItemPropVal(relatedNd, "new_item_id");
+      clearItemPropVal(relatedNd, "new_item_rev")
+      doUpdateRow = true;
+    }
+    
+    if (isAdd || (isChange && !isInter))
+    {
+      // New Number, New Rev should be empty
+      clearItemPropVal(relatedNd, "new_item_id");
+      clearItemPropVal(relatedNd, "new_item_rev");
+      clearItemPropVal(relatedNd, "affected_type");
+      doUpdateRow = true;
+    }
+    if (doUpdateRow) updateRow(relshipNd, relatedNd);
+  }
+  else
+  {
+    var hash = { affected_id: !isAdd, interchangeable: isChange, new_item_id: (isAdd || (isChange && !isInter)), in_build_disposition: (isPart && !isAdd), in_service_disposition: (isPart && !isAdd) };
+    if (hash[propertyName] !== undefined)
+    {
+      return hash[propertyName];
+    }
+  }
+
+  function clearItemPropVal(itm, propNm)
+  {
+    var propNd = itm.selectSingleNode(propNm);
+    if (propNd)
+    {
+      itm.removeChild(propNd);
+      itm.appendChild(itm.ownerDocument.createElement(propNm));
+    }
+  }]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PE_AffectedItemGridHandler</name>
+ </Item>
+</AML>

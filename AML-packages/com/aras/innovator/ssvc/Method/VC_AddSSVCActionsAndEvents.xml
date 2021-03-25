@@ -1,0 +1,73 @@
+﻿<AML>
+ <Item type="Method" id="D25FCCFCF6254510BE9502941782B82F" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	inn = this.getInnovator();
+	var itemTypeId = this.getProperty("source_id");
+	AddCreateDiscussionDefinitionActionIfNeed(itemTypeId);
+	return this;
+}
+
+private Innovator inn;
+
+private void AddCreateDiscussionDefinitionActionIfNeed(String itemTypeId)
+{
+	const string actionId = "5B155B40AD8F405D812EF95BC5848214"; // action "Create Discussion Definition"
+	Item itemAction = inn.newItem("Item Action", "get");
+	itemAction.setProperty("source_id", itemTypeId);
+	itemAction.setProperty("related_id", actionId);
+	itemAction = itemAction.apply();
+	if (itemAction.isError())
+	{
+		string determinedId = CalculateId(itemTypeId, actionId);
+
+		itemAction = this.newItem("Item Action", "add");
+		itemAction.setID(determinedId);
+		itemAction.setAttribute("doGetItem", "0");
+		itemAction.setProperty("source_id", itemTypeId);
+		itemAction.setProperty("related_id", actionId);
+		itemAction = itemAction.apply();
+		if (itemAction.isError())
+		{
+			throw new Exception(itemAction.getErrorString());
+		}
+	}
+}
+
+internal class XxHashAlgorithmHelper
+{
+	private readonly object _xxHashAlgorithm;
+	private readonly System.Reflection.MethodInfo _computeHashMethodInfo;
+
+	internal XxHashAlgorithmHelper()
+	{
+		System.Reflection.Assembly targetAssembly = System.Reflection.Assembly.Load("Aras.Cryptography");
+		Type xxHash64AlgorithmBuilderType = targetAssembly.GetTypes().Single(t => t.Name == "XxHash64AlgorithmBuilder");
+		var xxHash64AlgorithmBuilder = Activator.CreateInstance(xxHash64AlgorithmBuilderType);
+
+		System.Reflection.MethodInfo buildMethodInfo = xxHash64AlgorithmBuilderType.GetMethod("Build");
+
+		_xxHashAlgorithm = buildMethodInfo.Invoke(xxHash64AlgorithmBuilder, null);
+		_computeHashMethodInfo = _xxHashAlgorithm.GetType().GetMethod("ComputeHash", new[] { typeof(byte[]) });
+	}
+
+	internal byte[] ComputeHash(byte[] dataBytes)
+	{
+		byte[] result = (byte[])_computeHashMethodInfo.Invoke(_xxHashAlgorithm, new object[] { dataBytes });
+		return result;
+	}
+}
+
+private static string CalculateId(string itemTypeId, string actionId)
+{
+	var xxHashAlgorithmHelper = new XxHashAlgorithmHelper();
+	string itemTypeIdHash = BitConverter.ToString(xxHashAlgorithmHelper.ComputeHash(Encoding.UTF8.GetBytes(itemTypeId)));
+	string actionIdHash = BitConverter.ToString(xxHashAlgorithmHelper.ComputeHash(Encoding.UTF8.GetBytes(actionId)));
+	string id = string.Format(CultureInfo.InvariantCulture, "{0}{1}", itemTypeIdHash, actionIdHash)
+		.Replace("-", string.Empty);
+
+	return id;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_AddSSVCActionsAndEvents</name>
+ </Item>
+</AML>

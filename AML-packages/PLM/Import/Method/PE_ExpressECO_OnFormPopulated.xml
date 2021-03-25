@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="937A28EC15564D27A5F9A07B8887839D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[window.arasAdjustEdrTabs = function () {
+    if (!parent.relationships || parent.relationships.document.readyState != "complete" || !parent.relationships.currTabID) {
+        setTimeout(window.arasAdjustEdrTabs, 100);
+        return;
+    }
+    var currentState = window.document.thisItem.getProperty("state", "").toLowerCase();
+    var edrTabId = "ABDB18C0E6C3420D820E676BDAE539C9", 
+        edrGroupingTabId = "3E0840AC5B0E41E4903D82765358D058",
+        tabToShow, tabToHide;
+    if (["", "new", "in planning", "plan review", "cancelled"].indexOf(currentState) > -1) {
+        tabToShow = edrGroupingTabId;
+        tabToHide = edrTabId;
+    } else {
+        tabToShow = edrTabId;
+        tabToHide = edrGroupingTabId;
+    }
+
+    parent.relationships.relTabbar.SetTabVisible(tabToHide, false);
+    parent.relationships.relTabbar.SetTabVisible(tabToShow, true);
+}
+
+window.arasAdjustEdrTabs();]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PE_ExpressECO_OnFormPopulated</name>
+ </Item>
+</AML>

@@ -1,0 +1,91 @@
+﻿<TestCase author='vsmirnov@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../TestCase.xsd'>
+	<Description>Setup for mechanical part theoretical weight calculation tests</Description>
+	<Request>
+		<Variables>
+			<Variable id='Password.Hash.Of.1' action='apply' xpath="Query/AML/Item[@id='D45821108E4549A8A04BE4C3A46B5336']/password | Query/AML/Item[@id='D45821108E4549A8A04BE4C3A46B5336']/confirm_password" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='User' id='D45821108E4549A8A04BE4C3A46B5336' action='add' doGetItem='0'>
+					<login_name>testUser</login_name>
+					<password></password>
+					<confirm_password></confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type='Member' id='0A0D4837A8B4441EBEF32858299BCCF4' action='add' doGetItem='0'>
+					<related_id>
+						<Item type='Identity' action='get' select='id'>
+							<keyed_name>testUser</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>A8F3C6AC115C4349A89A06791B98E8C1</source_id>
+				</Item>
+				<Item type='Member' id='1057CAEE609B433AAE8A5F7D780E99B2' action='add' doGetItem='0'>
+					<related_id>
+						<Item type='Identity' action='get' select='id'>
+							<keyed_name>testUser</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>65CBCEA10A1F4D7B99BC6180FA2AF7DF</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='User' id='D45821108E4549A8A04BE4C3A46B5336' />
+						<Item type='Member' id='0A0D4837A8B4441EBEF32858299BCCF4'>
+							<related_id>
+								<Item type='Identity' typeId='E582AB17663F4EF28460015B2BE9E094' id='2C766B5AEA164C609255AEEAC1D11CC5'>
+									<id keyed_name='cadUser1' type='Identity'>2C766B5AEA164C609255AEEAC1D11CC5</id>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type='Member' id='1057CAEE609B433AAE8A5F7D780E99B2'>
+							<related_id>
+								<Item type='Identity' typeId='E582AB17663F4EF28460015B2BE9E094' id='09C1E01DC87C4F22AF927C341CDCE6E7'>
+									<id keyed_name='cadUser2' type='Identity'>09C1E01DC87C4F22AF927C341CDCE6E7</id>
+								</Item>
+							</related_id>
+						</Item>
+						
+					</Result>
+					<Message>
+						<event name='ids_modified' value='97C3F6E1FC1F427290194CB5560F2877' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Member']/related_id/Item" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='Member' action='delete' idlist='597B9304C6834F4BB6E0EDCB74E896F3,04E69C26522F4B4C89BC953CA56E7848,39B0BF1DBE69463DAF04C6B1CCAFA876,0A0D4837A8B4441EBEF32858299BCCF4,1057CAEE609B433AAE8A5F7D780E99B2,018E024C3C75486A9CC30C3C00E727BD,F4BAA93C0EEE4645BACC1B3B60C6E39E' />
+				<Item type='History' action='delete' where="[History].created_by_id = 'D45821108E4549A8A04BE4C3A46B5336'" />
+				<Item type='History Container' action='delete' where="[History_Container].created_by_id = 'D45821108E4549A8A04BE4C3A46B5336'" />
+				<Item type='User' action='delete' idlist='D45821108E4549A8A04BE4C3A46B5336' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name='ids_modified' value='1C16D4DADAC44A659DF90262DF9E70E8' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

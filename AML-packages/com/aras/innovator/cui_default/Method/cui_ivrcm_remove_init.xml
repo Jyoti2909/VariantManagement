@@ -1,0 +1,22 @@
+﻿<AML>
+ <Item type="Method" id="C0F37DEBAA1E4646ABEB32D58CE0D46F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[let isDisabled = true;
+if (window.grid && window.computeCorrectControlState) {
+	const ids = window.grid.getSelectedItemIds();
+	if (ids.length) {
+		const currentItem = aras.getMostTopWindowWithAras().getItem();
+		const idsArray = ids.map(function(id) {
+			return '@id=\'' + id + '\'';
+		});
+
+		const relatedItems = currentItem.selectNodes('Relationships/Item[' +
+			idsArray.join(' or ') + ' and (not(action) or (action!=\'delete\' and action!=\'purge\'))]/related_id/Item');
+		isDisabled = !window.computeCorrectControlState('remove', relatedItems.length === idsArray.length);
+	}
+}
+return {disabled: isDisabled};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivrcm_remove_init</name>
+ </Item>
+</AML>

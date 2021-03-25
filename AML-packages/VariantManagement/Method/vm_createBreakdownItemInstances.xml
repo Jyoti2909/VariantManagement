@@ -1,0 +1,165 @@
+﻿<AML>
+ <Item type="Method" id="C8441CF444064AC38CD079C305AB2DB0" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[debugger;
+
+debugger;
+
+const inn = this.getInnovator();
+instantiateBreakdownTree(inArgs.parentNode);
+
+function instantiateBreakdownTree(node){
+	if(!node || (node.type != 'vm_BreakdownItem')){
+		return;
+	}
+	
+	if(node.instantiation === 'No') {
+	    if(!node.parent) {
+	        let alertMessage = 'Breakdown item "' + node.keyedName + '" must be instantiated. It cannot have "instantionation" property set to "no". Aborting Instantiation.';
+            aras.AlertError(alertMessage);
+	    }
+	    return;
+	}
+	
+	node.children.forEach((childNode) => {
+		instantiateBreakdownTree(childNode);
+	});
+	
+	// Dont instantiate breakdown structure with no parts
+	if(node.children.length === 0) {
+	    return;
+	}
+
+    const existingItem = getBreakdownItemExistingPart(node);
+    if(!existingItem.node){
+	    const createdPart = instantiate(node);
+	    node.partId = createdPart.getProperty('id');
+    }
+    else{
+        node.partId = existingItem.getProperty('id');
+    }
+    
+    setBOMRelations(node);
+	return;
+}
+
+function instantiate(breakdownItemNode){
+    let classification;
+    const instType = breakdownItemNode.instantiation;
+    
+    if(instType.indexOf('Part/') !== -1) {
+        classification = instType.substr(instType.indexOf('Part/') + 5);
+        
+        const newPartNumber = inn.getNextSequence('GAG_MechanicalPartSequence');
+        const newPartName = breakdownItemNode.name;
+        const assetItem = inn.newItem('Part', "add");
+        
+        assetItem.setProperty("name", newPartName);
+        assetItem.setProperty("item_number", newPartNumber);
+        assetItem.setProperty("classification", classification);
+        
+        const itemHash = generateHash(breakdownItemNode.cumulativeId);
+    	assetItem.setProperty('vm_breakdown_inst_key_part', itemHash);
+        return assetItem.apply();
+    }
+    else if(instType === 'Document') {
+        classification = 'Document';
+        
+        const newDocumentNumber = inn.getNextSequence('GAG_DocumentSequence');
+        const newDocumentName = breakdownItemNode.name;
+        const assetItem = inn.newItem('Document', "add");
+        
+        assetItem.setProperty("name", newDocumentName);
+        assetItem.setProperty("item_number", newDocumentNumber);
+        assetItem.setProperty("classification", classification);
+        
+        const itemHash = generateHash(breakdownItemNode.cumulativeId);
+    	assetItem.setProperty('vm_breakdown_inst_key_doc', itemHash);
+        return assetItem.apply();
+    }
+    else {
+        let alertMessage = 'Breakdown item ' + node.keyedName + ' has unsupported instantiation type ' + instType;
+        aras.AlertError(alertMessage);
+        return;
+    }
+}
+
+function getBreakdownItemExistingPart(node){
+    const itemHash = generateHash(node.cumulativeId);
+    const type = (node.instantiation === 'Document') ? 'Document' : 'Part';
+    const item = inn.newItem(type,'get');
+    
+    const instType = breakdownItemNode.instantiation;
+    if(instType.indexOf('Part/') !== -1) {
+        item.setProperty('vm_breakdown_inst_key_part', itemHash);
+    }
+    else if(instType === 'Document') {
+        item.setProperty('vm_breakdown_inst_key_doc', itemHash);
+    }
+    return item.apply();
+}
+
+function generateHash(string) {
+    let hash = 0;
+    if (string.length == 0)
+        return hash;
+        
+    for (let i = 0; i < string.length; i++) {
+        const charCode = string.charCodeAt(i);
+        hash = ((hash << 5) - hash) + charCode;
+        hash = hash & hash;
+    }
+    
+    return hash.toString();
+}
+
+function setBOMRelations(node){
+    const parentPartId = node.partId;
+    const item = inn.newItem('Part', "get");
+    
+    item.setProperty('id', parentPartId);
+    const parentPart = item.apply();
+    
+    node.children.forEach((childNode) => {
+        if(childNode.instantiaton == 'Document') {
+            
+            const childDocumentId = childNode.partId;
+            const relationship = inn.newItem('Part Document', 'get');
+            relationship.setProperty('source_id', parentPartId);
+            relationship.setProperty('related_id', childDocumentId);
+            const existingRelationship = relationship.apply();
+            
+            // Create Part BOM relationship if it doesnt exit
+            if(!existingRelationship.node){
+                const newRelationship = parentPart.createRelationship('Part Document', 'add');
+                newRelationship.setProperty('source_id', parentPartId);
+                newRelationship.setProperty('related_id', childDocumentId);
+                newRelationship.setProperty('quantity', 1);
+                newRelationship.apply();
+            }
+        }
+        else {
+            
+            const childPartId = childNode.partId;
+            const relationship = inn.newItem('Part BOM', 'get');
+            relationship.setProperty('source_id', parentPartId);
+            relationship.setProperty('related_id', childPartId);
+            const existingRelationship = relationship.apply();
+            
+            // Create Part BOM relationship if it doesnt exit
+            if(!existingRelationship.node){
+                const newRelationship = parentPart.createRelationship('Part BOM', 'add');
+                newRelationship.setProperty('source_id', parentPartId);
+                newRelationship.setProperty('related_id', childPartId);
+                newRelationship.setProperty('quantity', 1);
+                newRelationship.apply();
+            }
+        }
+    });
+}
+
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>vm_createBreakdownItemInstances</name>
+ </Item>
+</AML>

@@ -1,0 +1,248 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2014. -->
+<html>
+<head>
+	<title></title>
+	<link rel="stylesheet" type="text/css" media="print" href="../../styles/gantt_print.css" />
+	<style type="text/css">
+		@import "../../../../styles/default.css";
+		@import "../../../../javascript/Aras/Client/Controls/Experimental/_gantt/resources/gantt.css";
+
+		html, body {
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+
+		#ganttContainer {
+			position: absolute;
+			overflow: hidden;
+			top: 0px;
+			bottom  : 0px;
+			left    : 0px;
+			right   : 0px;
+		}
+	</style>
+	<script type="text/javascript" src="../../../../javascript/include.aspx?classes=ArasModules,ScriptSet1"></script>
+	<script type="text/javascript">
+		var aras = parent.aras;
+
+		document.write("<title>Gantt Chart - " + document.location.hash + "</title>");
+	</script>
+	<script type="text/javascript" src="../../../../javascript/PopulateDocByLabels.js"></script>
+	<script type="text/javascript" src="../../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../../../javascript/dojo'"></script>
+	<script type="text/javascript">
+		var viewController = parent.projectView,
+			viewPanel = viewController.getPanelById(window.frameElement.getAttribute("panelid")),
+			viewShare = viewController.share,
+			ganttXml = null,
+			ganttTimeDelta,
+			ganttControl;
+
+		window.addEventListener("DOMContentLoaded", function () {
+			var ganttOptions = {};
+
+			PopulateDocByLabels(document, aras, "project");
+			viewShare.functions.loadFullProjectTree(false);
+
+			ganttXml = viewShare.functions.generateSimpleGanttXml(viewShare.properties.wbs);
+			ganttOptions.xml = ganttXml;
+			ganttOptions.domNode = document.getElementById("ganttContainer");
+			ganttOptions.aras = aras;
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Experimental._gantt.StandaloneGanttChart", ganttOptions, function (control) {
+				ganttControl = control;
+				ganttControl.ownerPanel = viewPanel;
+				viewShare.controls.ganttChart = ganttControl;
+				ganttControl.initializeCSS(document);
+
+				clientControlsFactory.on(ganttControl, {
+					"onItemClick": onGanttItemClick
+				});
+
+				ganttControl.initProject(ganttXml);
+				attachViewEventListeners();
+				attachGanttToGrid();
+				attachToolbarControls();
+			});
+		});
+
+		function onGanttItemClick(itemId) {
+			viewShare.properties.selectedItemIds = [itemId];
+		}
+
+		function attachGanttToGrid() {
+			if (viewShare.controls.treeGrid) {
+				ganttControl.attachToGrid(viewShare.controls.treeGrid);
+				window.addEventListener('resize', function() {
+					ganttControl.requestRendering();
+					viewShare.controls.treeGrid._grid.render();
+				});
+			}
+			else {
+				setTimeout(attachGanttToGrid, 100);
+			}
+		}
+
+		function attachToolbarControls() {
+			ganttTimeDelta = calculateProjectDelta();
+			ganttControl.setDelta(ganttTimeDelta);
+			const toolbarWrapper = viewShare.controls.activeToolbar;
+			const timelineItem = toolbarWrapper.getItem('gantt_time_delta');
+			timelineItem.setSelected(ganttTimeDelta);
+			const toolbarData = toolbarWrapper._toolbar.data;
+			const toggleButtons = [
+				'gantt_task_float',
+				'gantt_dependency_links'
+			];
+			toggleButtons.forEach(function(itemId) {
+				toolbarData.get(itemId).state = true;
+			});
+		};
+
+		function calculateProjectDelta() {
+			var resultDelta;
+
+			if (ganttControl.project) {
+				var projectDayDuration = (ganttControl.project.getMaxDate() - ganttControl.project.getMinDate()) / (1000 * 60 * 60 * 24);
+
+				if (projectDayDuration < 30) {
+					resultDelta = "day";
+				}
+				else if (projectDayDuration < 180 /*half year*/) {
+					resultDelta = "week";
+				}
+				else if (projectDayDuration < 730 /*two years*/) {
+					resultDelta = "month";
+				}
+				else if (projectDayDuration < 1825 /*five years*/) {
+					resultDelta = "quarter";
+				}
+				else {
+					resultDelta = "year";
+				}
+			}
+
+			return resultDelta || "day";
+		}
+
+		function attachViewEventListeners() {
+			viewPanel.addControllerEventListener(window, "onToolbarButtonClick", onToolbarItemClick);
+			viewPanel.addControllerEventListener(window, "onToolbarItemChange", onToolbarItemChange);
+			viewPanel.addControllerEventListener(window, "onProjectItemChanged", onProjectChanged);
+			viewPanel.addControllerEventListener(window, "onItemChanged", onProjectChanged);
+			viewPanel.addControllerEventListener(window, "onItemPropertyChanged", onProjectItemPropertyChanged);
+			viewPanel.addControllerEventListener(window, "onPanelDestroy", onPanelDestroy);
+			viewPanel.addControllerEventListener(window, "onPanelHide", enableToolbarControls.bind(null, false));
+			viewPanel.addControllerEventListener(window, "onPanelShow", enableToolbarControls.bind(null, true));
+			viewPanel.addControllerEventListener(window, "onSelectItemChanged", onProjectSelectionChanged);
+		}
+
+		function onPanelDestroy() {
+			delete viewShare.controls.ganttChart;
+		}
+
+		function enableToolbarControls(enable) {
+			const ganttToolbarItems = [
+				'gantt_time_delta',
+				'gantt_dependency_links',
+				'gantt_completion_progress',
+				'gantt_task_float'
+			];
+			const toolbar = viewShare.controls.activeToolbar;
+			if (enable) {
+				for (let i = ganttToolbarItems.length - 1; i >= 0; i--) {
+					const item = ganttToolbarItems[i];
+					toolbar.showItem(item);
+				}
+				return;
+			}
+			
+			for (let i = 0; i < ganttToolbarItems.length; i++) {
+				const item = ganttToolbarItems[i];
+				toolbar.hideItem(item);
+			}
+		}
+
+		function onProjectSelectionChanged(selectedIds) {
+			if (ganttControl.project) {
+				ganttControl.project.setSelectedItems(selectedIds);
+			}
+		}
+
+		function onProjectItemPropertyChanged(itemId, propertyName, propertyValue) {
+			if (ganttControl.project) {
+				switch (propertyName) {
+					case "percent_compl":
+						var projectTask = ganttControl.project.getTaskById(itemId);
+
+						if (projectTask) {
+							projectTask.setPercent(propertyValue);
+							ganttControl.render();
+						}
+						break;
+					case "date_start_sched":
+					case "date_due_sched":
+					case "expected_duration":
+						var projectTask = ganttControl.project.getTaskById(itemId);
+
+						if (projectTask) {
+							var changedNode = viewShare.functions.getItemNodeById(itemId);
+
+							projectTask.startDate = Date.parse(aras.getItemProperty(changedNode, "date_start_sched"));
+							projectTask.endDate = Date.parse(aras.getItemProperty(changedNode, "date_due_sched"));
+							projectTask.duration = parseInt(aras.getItemProperty(changedNode, "duration"));
+							ganttControl.render();
+						}
+						break;
+					default:
+						return;
+				}
+			}
+		}
+
+		function onProjectChanged() {
+			ganttXml = viewShare.functions.generateSimpleGanttXml(viewShare.properties.wbs);
+			ganttControl.initProject(ganttXml);
+			ganttControl.setDelta(ganttTimeDelta);
+		}
+
+		function onToolbarItemChange(toolbarItem) {
+			var itemId = toolbarItem.getId();
+
+			switch (itemId) {
+				case "gantt_time_delta":
+					onChangeTimeline(toolbarItem.getSelectedItem());
+					break;
+			}
+		}
+
+		function onToolbarItemClick(toolbarItem) {
+			var itemId = toolbarItem.getId();
+			const state = toolbarItem._toolbar._toolbar.data.get(itemId).state;
+			switch (itemId) {
+				case 'gantt_dependency_links':
+					ganttControl.showDependencyLinks(state);
+					break;
+				case 'gantt_completion_progress':
+					ganttControl.showCompletionProgress(state);
+					break;
+				case 'gantt_task_float':
+					ganttControl.showTaskFloat(state);
+					break;
+			}
+		}
+
+		function onChangeTimeline(newTimeline) {
+			ganttTimeDelta = newTimeline;
+			ganttControl.setDelta(newTimeline);
+		}
+	</script>
+</head>
+<body>
+	<div id="ganttContainer">
+	</div>
+</body>
+</html>

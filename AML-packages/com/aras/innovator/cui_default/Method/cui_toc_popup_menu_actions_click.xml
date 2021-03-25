@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="312EE7B26D1048CCA34C6B30BF3E278D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const actionId = target.actionId;
+const itemTypeId = target.itemTypeId;
+if (!actionId || !itemTypeId) {
+	return;
+}
+
+const actionHandlerName = 'onAction:' + actionId + ':' + itemTypeId + 'Command';
+if (window[actionHandlerName]) {
+	const commandId = 'action:' + actionId + ':' + itemTypeId;
+	window[actionHandlerName](commandId);
+	return;
+}
+const actionItem = aras.getItemFromServer(
+	'Action',
+	actionId,
+	'name,method(name,method_type,method_code),type,target,location,body,on_complete(name,method_type,method_code),item_query'
+);
+
+if (actionItem) {
+	aras.invokeAction(actionItem.node, itemTypeId, '');
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_toc_popup_menu_actions_click</name>
+ </Item>
+</AML>

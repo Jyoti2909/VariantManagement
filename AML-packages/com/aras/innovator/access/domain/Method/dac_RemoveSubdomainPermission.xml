@@ -1,0 +1,20 @@
+﻿<AML>
+ <Item type="Method" id="391BBDABE1844F81BA70B08EC0D8468F" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const item = parent.document.item;
+const uiSubdomainPermission = [].find.call(item.selectNodes('Relationships/Item[@type="dac_UI_SubdomainPermission"]'),
+function(uiSubdomainPermission) {
+	return aras.getItemProperty(uiSubdomainPermission, 'id') === relationshipID;
+});
+
+const realItemId = aras.getItemProperty(uiSubdomainPermission, 'real_item_id');
+const realItem = item.selectSingleNode('Relationships/Item[@id="' + realItemId + '"]');
+
+if (aras.isTempEx(realItem)) {
+	realItem.parentNode.removeChild(realItem);
+	return;
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>dac_RemoveSubdomainPermission</name>
+ </Item>
+</AML>

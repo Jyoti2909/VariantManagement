@@ -1,0 +1,67 @@
+﻿<AML>
+ <Item type="Method" id="1B0D1B285D3B417590D3986110AD129E" action="add">
+  <comments>Check if related Identity is not a Team Identity</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string cl = this.getProperty("classification");
+if (cl == "")
+{
+	//Team identity's team_role must be a Team Identity
+	Item q = this.newItem();
+	q.loadAML("<Item type='Team Identity' action='get' select='source_id'><team_role>" + System.Security.SecurityElement.Escape(this.getID()) + "</team_role></Item>");
+	q = q.apply();
+	int itemsCount = q.getItemCount();
+	if (itemsCount == 1)
+		return this.getInnovator().newError("Classification could not be changed. This identity is used in Team '" + q.getPropertyAttribute("source_id", "keyed_name") + "'.");
+	else if (itemsCount > 1)
+		return this.getInnovator().newError("Classification could not be changed. This identity is used in multiple Teams.");
+}
+else if (cl == "Team")
+{
+	//Member's related_id identity must not be a Team Identity.
+	Item q = this.newItem();
+	q.loadAML("<Item type='Member' action='get' select='source_id'><related_id>" + System.Security.SecurityElement.Escape(this.getID()) + "</related_id></Item>");
+	q = q.apply();
+	if (q.getItemCount() == 1)
+		return this.getInnovator().newError("Classification could not be changed. This identity is used in Identity '" + q.getPropertyAttribute("source_id", "keyed_name") + "'.");
+	else if (q.getItemCount() > 1)
+		return this.getInnovator().newError("Classification could not be changed. This identity is used in multiple Identities.");
+}
+
+string is_alias = this.getProperty("is_alias");
+// If one of properties was not set try to get it from database
+if (this.getAttribute("action") != "add" && this.getAttribute("action") != "create")
+{
+	if (cl == null && is_alias != null)
+	{
+		Item q = this.newItem("Identity", "get");
+		q.setID(this.getID());
+		q.setAttribute("select", "classification");
+		q = q.apply();
+		if (q.isError())
+			return q;
+		else
+			cl = q.getProperty("classification");
+	}
+	else if (is_alias == null && cl != null)
+	{
+		Item q = this.newItem("Identity", "get");
+		q.setID(this.getID());
+		q.setAttribute("select", "is_alias");
+		q = q.apply();
+		if (q.isError())
+			return q;
+		else
+			is_alias = q.getProperty("is_alias");
+	}
+}
+
+//Check if Identity has not set both classification="Team" and is_alias="1"
+if (cl == "Team" && is_alias == "1")
+{
+	return this.getInnovator().newError("Team Identity could not has is_alias='1'.");
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Identity_IsClassificationValid</name>
+ </Item>
+</AML>

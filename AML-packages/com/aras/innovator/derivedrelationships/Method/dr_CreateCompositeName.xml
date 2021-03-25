@@ -1,0 +1,38 @@
+﻿<AML>
+ <Item type="Method" id="9918B07A2D7E4680A3565E5A2E684A40" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var relationshipFamilyName = string.Empty;
+if (RequestState.Contains("drfName")) {
+	relationshipFamilyName = (string) RequestState["drfName"];
+} else {
+	var familyElement = this.newItem("dr_FamilyElement", "get");
+	familyElement.setAttribute("select", "source_id");
+	familyElement.setProperty("dr_relationship_id", this.getID());
+	familyElement = familyElement.apply();
+	if (familyElement.isError()) {
+		return this;
+	}
+
+	var relationshipFamily = this.newItem("dr_RelationshipFamily", "get");
+	relationshipFamily.setAttribute("select", "name");
+	relationshipFamily.setID(familyElement.getProperty("source_id"));
+	relationshipFamily = relationshipFamily.apply();
+	if (relationshipFamily.isError()) {
+		return this;
+	}
+
+	relationshipFamilyName = relationshipFamily.getProperty("name");
+}
+var derivedRelationshipName = this.getProperty("name");
+
+this.setProperty("keyed_name", string.Format(
+	CultureInfo.InvariantCulture,
+	"{0}-{1}",
+	relationshipFamilyName,
+	derivedRelationshipName));
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_CreateCompositeKeyedName</name>
+ </Item>
+</AML>

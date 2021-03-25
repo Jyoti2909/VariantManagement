@@ -1,0 +1,26 @@
+﻿<AML>
+ <Item type="Method" id="9AF10805A134443E84DE2621FF1C3568" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+string timeFormat = inn.getI18NSessionContext().GetUIDatePattern("long_time");
+int itemCount = this.getItemCount();
+
+for (int i = 0; i < itemCount; i++) {
+	Item itm = this.getItemByIndex(i);
+
+	if (DateTime.TryParse(itm.getProperty("first_occurred_on"), out DateTime firstOccurredOn))
+	{
+		itm.setProperty("first_occurred_at", firstOccurredOn.ToString(timeFormat, CultureInfo.InvariantCulture));
+	}
+
+	if (DateTime.TryParse(itm.getProperty("occurred_on"), out DateTime occurredOn))
+	{
+		itm.setProperty("last_occurred_at", occurredOn.ToString(timeFormat, CultureInfo.InvariantCulture));
+	}
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>ES_PopulateTimeProperties</name>
+ </Item>
+</AML>

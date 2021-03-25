@@ -1,0 +1,21 @@
+﻿<AML>
+ <Item type="Method" id="44F246D9BC39419784C1109D6A724E70" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const queryDefinitionId = aras.getItemProperty(item, 'query_definition_id');
+const queryDefinition = aras.itemsCache.getItem(queryDefinitionId);
+const rootQueryReference = queryDefinition.selectSingleNode('Relationships/Item[@type="qry_QueryReference" and not(parent_ref_id)]');
+const reusedQueryReferences = queryDefinition.selectNodes('Relationships/Item[child_ref_id="' +
+aras.getItemProperty(rootQueryReference, 'child_ref_id') + '"]');
+const idList = [].reduce.call(queryDefinition.selectNodes('Relationships/Item[@type="qry_QueryItem"]'),
+function(result, queryItemNode) {
+	if (aras.getItemProperty(queryItemNode, 'ref_id') !== aras.getItemProperty(rootQueryReference, 'child_ref_id') || reusedQueryReferences.length > 1) {
+		result.push(aras.getItemProperty(queryItemNode, 'item_type'));
+	}
+
+	return result;
+}, []);
+inDom.setAttribute('idlist', idList);]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>dr_setItemTypes</name>
+ </Item>
+</AML>

@@ -1,0 +1,22 @@
+﻿<AML>
+ <Item type="Method" id="6B91D4B59C3F45F091216ACB27FD3714" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (this.computeCorrectControlState) {
+	if (state.contentEditable) {
+		return true;
+	}
+
+	var isDeleteEnabled = this.computeCorrectControlState('delete');
+	if (isDeleteEnabled) {
+		var msg = aras.getResource('', 'relationshipsgrid.delete_confirmation');
+		if (!aras.confirm(msg)) {
+			return;
+		}
+		this.processCommand('delete');
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_iwrs_delete</name>
+ </Item>
+</AML>

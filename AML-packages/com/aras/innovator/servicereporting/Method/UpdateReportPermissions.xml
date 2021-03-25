@@ -1,0 +1,423 @@
+﻿<AML>
+ <Item type="Method" id="B01480C5E39848409EF862B5A5D5B123" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	_innovator = this.getInnovator();
+	var ignore = this.getAttribute("ignoreUpdatePermission");
+	var utils = new Utils(_innovator);
+	var dataAccess = new DataAccess(_innovator);
+	var reportService = new ReportService(dataAccess, utils);
+
+	var reportId = this.getProperty("report_id");
+	if (String.IsNullOrEmpty(reportId))
+	{
+		reportId = this.getProperty("source_id");
+	}
+	if (String.IsNullOrEmpty(reportId))
+	{
+		return utils.ErrorResult("reportId is empty.");
+	}
+	var report = dataAccess.GetSelfServiceReport(reportId);
+	if (report.getRelationships("SelfServiceReportSharedWith").getItemCount() != 0 && string.IsNullOrEmpty(ignore)) {
+		return reportService.SynchronizePermissions(report);
+	} else {
+		var rep = this.newItem(ItemTypeNames.SelfServiceReport, "edit");
+		rep.setAttribute("id", reportId);
+		rep.setProperty("team_id", "");
+		rep.apply();
+
+		var teams = this.newItem("Team");
+		teams.setAttribute("where", "name='" + String.Format(CultureInfo.InvariantCulture, "SelfServiceReport {0} Team", CCO.DB.InnDatabase.QuoteValue(reportId)) + "'");
+		return DataAccess.InnerApply(teams, ItemActions.Delete, true);
+	}
+}
+
+private Innovator _innovator;
+
+public interface IReportService
+{
+	Item SynchronizePermissions(Item report);
+}
+
+public interface IDataAccess
+{
+	Item Add(Item item, bool asAdministrator);
+
+	Item ApplyChanges(Item item, bool asAdministrator);
+
+	Item GetSelfServiceReport(string reportId);
+
+	Item GetTeam(string teamId);
+
+	string GetTeamRoleId(string name);
+}
+
+public class ReportService : IReportService
+{
+	private readonly Utils _utils;
+	private readonly IDataAccess _dataAccess;
+
+	public ReportService(IDataAccess dataAccess, Utils utils)
+	{
+		_dataAccess = dataAccess;
+		_utils = utils;
+	}
+
+	public Item SynchronizePermissions(Item report)
+	{
+		if (report == null)
+		{
+			return _utils.ErrorResult("Report doesn't exist.");
+		}
+		string teamId = report.getProperty(ReportProperties.Team);
+		Item team = _dataAccess.GetTeam(teamId) ?? SpawnTeam(report);
+		if (!IsValidTeam(team, report))
+		{
+			return _utils.ErrorResult("Report have a non valid team.");
+		}
+
+		var converter = new ReportSharedWithToTeamIdentityConverter(_dataAccess, _utils);
+		Item reportsSharedWiths = report.getRelationships(ItemTypeNames.SelfServiceReportSharedWith);
+		IEnumerable<Item> newTeamIdentityRelationships = ItemHelper
+			.EnumerateItemCollection(reportsSharedWiths)
+			.Select(converter.Convert)
+			.Where(i => i != null);
+		UpdateTeamIdentities(team, newTeamIdentityRelationships);
+		return _dataAccess.ApplyChanges(team, true);
+	}
+
+	private static string GenerateTeamName(Item report)
+	{
+		return String.Format(CultureInfo.InvariantCulture, "SelfServiceReport {0} Team", report.getID());
+	}
+
+	private Item SpawnTeam(Item report)
+	{
+		const string description = "System Team for SelfServiceReport";
+		string name = GenerateTeamName(report);
+		Item team = _utils.CreateTeam(name, description);
+		team = _dataAccess.Add(team, true);
+		report.setProperty(ReportProperties.Team, team.getID());
+		_dataAccess.ApplyChanges(report, false);
+		return team;
+	}
+
+	private static bool IsValidTeam(Item team, Item report)
+	{
+		string expectedName = GenerateTeamName(report);
+		return string.Equals(expectedName, team.getProperty(TeamProperties.Name), StringComparison.InvariantCulture);
+	}
+
+	private static void UpdateTeamIdentities(Item team, IEnumerable<Item> newTeamIdentityRelationships)
+	{
+		var teamIdentityComparer = new TeamIdentityComparer();
+
+		List<Item> newTeamIdentities = newTeamIdentityRelationships.ToList();
+		List<Item> currentTeamIdentities = ItemHelper.EnumerateItemCollection(team.getRelationships(ItemTypeNames.TeamIdentity)).ToList();
+
+		IEnumerable<Item> toDelete = currentTeamIdentities.Except(newTeamIdentities, teamIdentityComparer);
+		IEnumerable<Item> toAdd = newTeamIdentities.Except(currentTeamIdentities, teamIdentityComparer);
+		foreach (var teamIdentity in toDelete)
+		{
+			teamIdentity.setAction(ItemActions.Delete);
+		}
+		foreach (var teamIdentity in toAdd)
+		{
+			team.addRelationship(teamIdentity);
+		}
+	}
+}
+
+public class DataAccess : IDataAccess
+{
+	private readonly Innovator _innovator;
+
+	public DataAccess(Innovator innovator)
+	{
+		_innovator = innovator;
+	}
+
+	public Item Add(Item item, bool asAdministrator)
+	{
+		if (item == null)
+		{
+			return null;
+		}
+		return InnerApply(item, ItemActions.Add, asAdministrator);
+	}
+
+	public Item ApplyChanges(Item item, bool asAdministrator)
+	{
+		if (item == null)
+		{
+			return null;
+		}
+		string lockedById = item.getProperty(ItemProperties.LockedById);
+		string action = String.IsNullOrEmpty(lockedById) ? ItemActions.Edit : ItemActions.Update;
+		return InnerApply(item, action, asAdministrator);
+	}
+
+	public Item GetSelfServiceReport(string reportId)
+	{
+		if (String.IsNullOrEmpty(reportId))
+		{
+			return null;
+		}
+		return _innovator
+			.getItemById(ItemTypeNames.SelfServiceReport, reportId)
+			.fetchRelationships(ItemTypeNames.SelfServiceReportSharedWith);
+	}
+
+	public Item GetTeam(string teamId)
+	{
+		if (String.IsNullOrEmpty(teamId))
+		{
+			return null;
+		}
+		var item = _innovator.getItemById(ItemTypeNames.Team, teamId);
+		return item != null ? item.fetchRelationships(ItemTypeNames.TeamIdentity) : null;
+	}
+
+	public string GetTeamRoleId(string name)
+	{
+		if (String.IsNullOrEmpty(name))
+		{
+			return null;
+		}
+		Item query = _innovator.newItem(ItemTypeNames.Identity, ItemActions.Get);
+		query.setAttribute("select", "id");
+		query.setProperty("name", name);
+		Item result = query.apply();
+		return result.getID();
+	}
+
+	public static Item InnerApply(Item item, string action, bool asAdministrator)
+	{
+		bool permissionWasSet = false;
+		Aras.Server.Security.Identity administratorsIdentity = null;
+		try
+		{
+			if (asAdministrator)
+			{
+				administratorsIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+				permissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(administratorsIdentity);
+			}
+
+			return item != null ? item.apply(action) : null;
+		}
+		finally
+		{
+			if (permissionWasSet)
+			{
+				Aras.Server.Security.Permissions.RevokeIdentity(administratorsIdentity);
+			}
+		}
+	}
+}
+
+public class Utils
+{
+	private readonly Innovator _innovator;
+
+	public Utils(Innovator innovator)
+	{
+		_innovator = innovator;
+	}
+
+	public Item CreateTeam(string name, string description)
+	{
+		Item team = _innovator.newItem(ItemTypeNames.Team, ItemActions.Add);
+		team.setProperty(TeamProperties.Name, name);
+		team.setProperty(TeamProperties.Description, description);
+		return team;
+	}
+
+	public Item CreateTeamIdentity(string identity, string role)
+	{
+		if (String.IsNullOrEmpty(identity) || String.IsNullOrEmpty(role))
+		{
+			return null;
+		}
+		Item teamIdentityRelationship = _innovator.newItem(ItemTypeNames.TeamIdentity, ItemActions.Add);
+		teamIdentityRelationship.setProperty(TeamIdentityProperties.Role, role);
+		teamIdentityRelationship.setProperty(RelationshipProperties.Related, identity);
+		return teamIdentityRelationship;
+	}
+
+	public Item OkResult()
+	{
+		return _innovator.newResult("OK");
+	}
+
+	public Item ErrorResult()
+	{
+		return ErrorResult(String.Empty);
+	}
+
+	public Item ErrorResult(string explanation)
+	{
+		return _innovator.newError(explanation);
+	}
+}
+
+public class TeamIdentityComparer : EqualityComparer<Item>
+{
+	public override Boolean Equals(Item x, Item y)
+	{
+		if (Object.ReferenceEquals(x, y))
+		{
+			return true;
+		}
+		if (Object.ReferenceEquals(x, null) || Object.ReferenceEquals(y, null))
+		{
+			return false;
+		}
+		return string.Equals(x.getProperty(TeamIdentityProperties.Role), y.getProperty(TeamIdentityProperties.Role), StringComparison.OrdinalIgnoreCase)
+			&& string.Equals(x.getProperty(RelationshipProperties.Related), y.getProperty(RelationshipProperties.Related), StringComparison.OrdinalIgnoreCase);
+	}
+
+	public override Int32 GetHashCode(Item item)
+	{
+		if (Object.ReferenceEquals(item, null))
+		{
+			return 0;
+		}
+
+		string role = item.getProperty(TeamIdentityProperties.Role) ?? String.Empty;
+		string identity = item.getProperty(RelationshipProperties.Related) ?? String.Empty;
+
+		return (role + identity).GetHashCode();
+	}
+}
+
+public class ReportSharedWithToTeamIdentityConverter
+{
+	private readonly Utils _utils;
+	private readonly IDataAccess _dataAccess;
+	private readonly Lazy<string> _teamGuestId;
+	private readonly Lazy<string> _teamMemberId;
+
+	public ReportSharedWithToTeamIdentityConverter(IDataAccess dataAccess, Utils utils)
+	{
+		_utils = utils;
+		_dataAccess = dataAccess;
+		_teamGuestId = new Lazy<string>(() => _dataAccess.GetTeamRoleId(RoleNames.TeamGuest));
+		_teamMemberId = new Lazy<string>(() => _dataAccess.GetTeamRoleId(RoleNames.TeamMember));
+	}
+
+	public Item Convert(Item reportSharedWith)
+	{
+		string role;
+		var identity = reportSharedWith.getProperty(RelationshipProperties.Related);
+		var accessRights = reportSharedWith.getProperty(ReportSharedWithProperties.AccessRights);
+		var ordinalIgnoreCase = StringComparison.OrdinalIgnoreCase;
+		if (string.Equals(accessRights, ReportAccess.Full, ordinalIgnoreCase))
+		{
+			role = _teamMemberId.Value;
+		}
+		else if (string.Equals(accessRights, ReportAccess.Locked, ordinalIgnoreCase)
+			|| string.Equals(accessRights, ReportAccess.ReadOnly, ordinalIgnoreCase)
+			|| string.Equals(accessRights, ReportAccess.ViewOnly, ordinalIgnoreCase))
+		{
+			role = _teamGuestId.Value;
+		}
+		else
+		{
+			return null;
+		}
+		return _utils.CreateTeamIdentity(identity, role);
+	}
+}
+
+#region Helpers
+
+public static class ItemHelper
+{
+	public static IEnumerable<Item> EnumerateItemCollection(Item itemCollection)
+	{
+		if (itemCollection == null)
+		{
+			throw new ArgumentNullException("itemCollection");
+		}
+		if (!itemCollection.isCollection())
+		{
+			throw new InvalidOperationException("Item is not collection.");
+		}
+		var count = itemCollection.getItemCount();
+		for (var i = 0; i < count; i++)
+		{
+			yield return itemCollection.getItemByIndex(i);
+		}
+	}
+}
+
+public static class TeamProperties
+{
+	public const string Name = "name";
+	public const string Description = "description";
+}
+
+public static class ItemProperties
+{
+	public const string LockedById = "locked_by_id";
+}
+
+public static class ReportProperties
+{
+	public const string Team = "team_id";
+}
+
+public static class ReportAccess
+{
+	public const string Full = "full";
+	public const string ReadOnly = "readonly";
+	public const string ViewOnly = "viewonly";
+	public const string Locked = "locked";
+}
+
+public static class ReportSharedWithProperties
+{
+	public const string AccessRights = "access_rights";
+}
+
+public static class TeamIdentityProperties
+{
+	public const string Role = "team_role";
+}
+
+public static class RelationshipProperties
+{
+	public const string Source = "source_id";
+	public const string Related = "related_id";
+}
+
+public static class RoleNames
+{
+	public const string TeamGuest = "Team Guest";
+	public const string TeamMember = "Team Member";
+}
+
+public static class ItemTypeNames
+{
+	public const string Identity = "Identity";
+	public const string TeamIdentity = "Team Identity";
+	public const string Team = "Team";
+	public const string SelfServiceReport = "SelfServiceReport";
+	public const string SelfServiceReportSharedWith = "SelfServiceReportSharedWith";
+}
+
+public static class ItemActions
+{
+	public const string Add = "add";
+	public const string Edit = "edit";
+	public const string Update = "update";
+	public const string Get = "get";
+	public const string Delete = "delete";
+}
+
+#endregion
+
+internal class SomeClass {]]></method_code>
+  <method_type>C#</method_type>
+  <name>UpdateReportPermissions</name>
+ </Item>
+</AML>

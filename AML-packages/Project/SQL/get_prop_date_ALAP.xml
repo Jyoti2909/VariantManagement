@@ -1,0 +1,184 @@
+﻿<AML>
+ <Item type="SQL" id="70E69E1E3BB44B7ABDD3E895CF8C8F7D" action="add">
+  <execution_count>8</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>get_prop_date_ALAP</old_name>
+  <sqlserver_body><![CDATA[create procedure get_prop_date_ALAP
+  @inputId char(32),
+  @TZ_NAME NVARCHAR(50) = NULL,
+  @isForDebug bit = null,
+  @propDateS datetime OUTPUT,
+  @propDateF datetime OUTPUT
+AS 
+-- Returns the prop[osed?] date for ALAP scheduling.
+BEGIN
+    if ((not @isForDebug is null) and 1=@isForDebug)
+    begin
+      Declare curAP cursor For select id, S, F from #ACTIVITIES_P
+      Declare @apID CHAR(32), @apS DATETIME, @apF DATETIME
+      OPEN curAP
+      print('In SP get_prop_date_ALAP.  #ACTIVITIES_P start: @inputActivityId=' + @inputId)
+      declare @toPr as varchar(128)
+      set @toPr = REPLICATE (' ', 15) + '@apId' + REPLICATE (' ', 18) + '@apS' + REPLICATE (' ', 18) + '@apF' + REPLICATE (' ', 18) + '@added'
+      print @toPr
+      Fetch Next From curAP Into @apId, @apS, @apF
+      While @@Fetch_Status = 0 Begin
+        declare @added as datetime
+        set @added = [innovator].[Business_dateadd_Scalar](@apF, 0 + 1, @TZ_NAME)
+        set @toPr = '   ' + @apId + '   ' + convert(varchar(32), @apS) + '   ' + convert(varchar(32), @apF) + '   ' + convert(varchar(32), @added)
+        print @toPr
+        Fetch Next From curAP Into @apId, @apS, @apF
+      end
+      print('In get_prop_date_ALAP.  #ACTIVITIES_P end')
+      CLOSE curAP
+      Deallocate curAP
+      --SQL Server logging; in opposite to print, works in real calls too
+      declare @thisCallerName varchar(64),  @thisDbName varchar(64),
+        @thisInCallPars varchar(512), @thisOutCallPars varchar(512)--, @thisAdditionalInfo NVARCHAR(MAX)
+      select @thisCallerName = convert(varchar(64), OBJECT_NAME(@@PROCID))
+      select @thisDbName = convert(varchar(64), DB_NAME())
+      set @thisInCallPars = ''
+      set @thisInCallPars = @thisInCallPars + '@inputId char(32)=' + @inputId
+      set @thisInCallPars = @thisInCallPars + '; @TZ_NAME NVARCHAR(50)=' + convert(varchar(64), @TZ_NAME)
+        
+      exec [innovator].[schedulingLogSp] @callerSpName=@thisCallerName, @dbName=@thisDbName,
+          @inParams=@thisInCallPars--, @additionalInfo=@thisAdditionalInfo --, @outParams=@thisOutCallPars
+    end 
+    select @propDateS = Min
+    (
+      CASE
+        WHEN p.precedence_type = 'Finish to Start'
+        THEN [innovator].[Business_dateadd_Scalar]
+        (
+          PL.S,
+          -p.lead_lag -
+            ( CASE
+                WHEN S.expected_duration = 0 THEN 0
+                ELSE 1
+              END ),
+          @TZ_NAME
+        )
+        WHEN p.precedence_type = 'Start to Start'
+        THEN [innovator].[Business_dateadd_Scalar]
+        (
+          PL.S,
+          -p.lead_lag + this.expected_duration -
+            ( CASE
+                WHEN S.expected_duration = 0 THEN 1
+                ELSE 1
+              END ),
+          @TZ_NAME
+        )
+        WHEN p.precedence_type = 'Finish to Finish'
+        THEN [innovator].[Business_dateadd_Scalar]
+        (
+          PL.F,
+          -p.lead_lag -
+            ( CASE
+                WHEN S.expected_duration = 0 THEN 0
+                ELSE 0
+              END ),
+          @TZ_NAME
+        )
+        WHEN p.precedence_type = 'Start to Finish'
+        THEN [innovator].[Business_dateadd_Scalar]
+        (
+          PL.F,
+          -p.lead_lag + this.expected_duration -
+            ( CASE
+                WHEN S.expected_duration = 0 THEN 0
+                ELSE 0
+              END ),
+          @TZ_NAME
+        )
+      END
+    )
+    FROM  #ACTIVITIES_P PL,
+          [PREDECESSOR] P,
+          [ACTIVITY2] THIS,
+          [ACTIVITY2] S
+    WHERE  P.RELATED_ID = this.ID --A.ID
+        AND P.SOURCE_ID = PL.ID
+        --AND A.ID = THIS.ID
+        AND S.ID = PL.ID
+        and @inputId = this.ID
+  --),
+  --A.DATE_LF),
+                  --                                       /* cur date. 3rd argument */
+                  --                                       A.DATE_DUE_SCHED,
+                  --                                       /* target date. 4th argument */
+                  --                                       A.DATE_DUE_TARGET,
+                  --                                       /* late date. 5th argument */
+                  --                                       A.DATE_LF,
+                  --                                       /* flag. 6th argument */
+                  --                                       @FLAG), -A.EXPECTED_DURATION + ( CASE
+                  --                                                                          WHEN A.EXPECTED_DURATION = 0 THEN 0
+                  --                                                                          ELSE 1
+                  --                                                                        END ), @TZ_NAME) start
+
+    select @propDateF =
+    Min
+    (
+      CASE
+        WHEN p.precedence_type = 'Finish to Start'
+        THEN [innovator].[Business_dateadd_Scalar]
+        (
+          PL.S,
+          -p.lead_lag -
+            ( CASE
+                WHEN S.expected_duration = 0 THEN 0
+                ELSE 1
+             END ),
+          @TZ_NAME
+        )
+        WHEN p.precedence_type = 'Start to Start'
+        THEN [innovator].[Business_dateadd_Scalar]
+        (
+          PL.S,
+          -p.lead_lag + this.expected_duration -
+            ( CASE
+                WHEN S.expected_duration = 0 THEN 1
+                ELSE 1
+              END ),
+          @TZ_NAME
+        )
+        WHEN p.precedence_type = 'Finish to Finish'
+        THEN [innovator].[Business_dateadd_Scalar]
+        (
+          PL.F,
+          -p.lead_lag -
+            ( CASE
+                WHEN S.expected_duration = 0 THEN 0
+                ELSE 0
+              END ),
+          @TZ_NAME
+        )
+        WHEN p.precedence_type = 'Start to Finish'
+        THEN [innovator].[Business_dateadd_Scalar]
+        (
+          PL.F,
+          -p.lead_lag + this.expected_duration -
+            ( CASE
+                WHEN S.expected_duration = 0 THEN 0
+                ELSE 0
+              END ),
+          @TZ_NAME
+        )
+      END
+    )
+    FROM  #ACTIVITIES_P PL,
+          [PREDECESSOR] P,
+          [ACTIVITY2] THIS,
+          [ACTIVITY2] S
+      WHERE P.RELATED_ID = this.ID --A.ID
+        AND P.SOURCE_ID = PL.ID
+        --AND A.ID = THIS.ID
+        AND S.ID = PL.ID
+        and @inputId = this.ID
+END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>get_prop_date_ALAP</name>
+ </Item>
+</AML>

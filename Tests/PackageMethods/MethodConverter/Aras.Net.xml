@@ -1,0 +1,1653 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.Net</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.Net.WindowsAuthenticationHelper">
+            <summary>
+            Contains useful static methods to support Windows Authentication in all our XControls and Server.
+            </summary>
+        </member>
+        <member name="P:Aras.Net.WindowsAuthenticationHelper.DefaultCredentials">
+            <summary>
+            Returns instance of default Windows credentials which is sync with credentials entered by user
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WindowsAuthenticationHelper.#cctor">
+            <summary>
+            Attach unhandled exceptions handler.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WindowsAuthenticationHelper.SetDefaultCredentials(System.Net.ICredentials)">
+            <summary>
+            Sets default credentials used in <see cref="M:CreateHttpWebRequest"/>
+            and <see cref="M:CreateXmlDocument"/>.
+            </summary>
+            <param name="defaultCredentials"></param>
+        </member>
+        <member name="M:Aras.Net.WindowsAuthenticationHelper.CreateHttpWebRequest(System.Uri)">
+            <summary>
+            Creates instance of <see cref="T:System.Net.HttpWebRequest"/> and intializes that property
+            <see cref="M:HttpWebRequest.Credentials"/> with <see cref="M:DefaultCredentials"/>.
+            </summary>
+            <param name="requestUri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.WindowsAuthenticationHelper.CreateXmlDocument">
+            <summary>
+            Creates instance of <see cref="T:System.Xml.XmlDocument"/> and intializes that property
+            <see cref="M:XmlDocument.XmlResolver"/> with <see cref="T:System.Xml.XmlUrlResolver"/> initialized with
+            <see cref="M:DefaultCredentials"/>.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.ConfigurationManagerWrapper">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.ConfigurationManagerWrapper.AppSettings">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.ConfigurationManagerWrapper.ConnectionStrings">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Aras.Net.ConfigurationManagerWrapper.GetSection(System.String)">
+            <summary>
+            
+            </summary>
+            <param name="sectionName"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.ConfigurationManagerWrapper.OpenExeConfiguration(System.Configuration.ConfigurationUserLevel)">
+            <summary>
+            
+            </summary>
+            <param name="userLevel"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.ConfigurationManagerWrapper.OpenExeConfiguration(System.String)">
+            <summary>
+            
+            </summary>
+            <param name="exePath"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.ConfigurationManagerWrapper.OpenMachineConfiguration">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.ConfigurationManagerWrapper.OpenMappedExeConfiguration(System.Configuration.ExeConfigurationFileMap,System.Configuration.ConfigurationUserLevel)">
+            <summary>
+            
+            </summary>
+            <param name="fileMap"></param>
+            <param name="userLevel"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.ConfigurationManagerWrapper.OpenMappedMachineConfiguration(System.Configuration.ConfigurationFileMap)">
+            <summary>
+            
+            </summary>
+            <param name="fileMap"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.ConfigurationManagerWrapper.RefreshSection(System.String)">
+            <summary>
+            
+            </summary>
+            <param name="sectionName"></param>
+        </member>
+        <member name="T:Aras.Net.Configuration.IReadWriteTimeoutSection">
+            <summary>
+            Proxy section
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IReadWriteTimeoutSection.Value">
+            <summary>
+            Gets or sets mode proxy
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.IAuthenticationSection">
+            <summary>
+            Authentication section
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IAuthenticationSection.ModeAuthentication">
+            <summary>
+            Gets or sets mode authentification
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IAuthenticationSection.BasicAuthentication">
+            <summary>
+            Gets or sets basic authentication
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.IBasicAuthenticationSection">
+            <summary>
+            Basic authentication section
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IBasicAuthenticationSection.Credentials">
+            <summary>
+            Gets or sets credentials
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.ICredentialsSection">
+            <summary>
+            Credentials section
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ICredentialsSection.User">
+            <summary>
+            Gets or sets user
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.IProvider">
+            <summary>
+            Provider
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IProvider.Pattern">
+            <summary>
+            Gets or sets pattern
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IProvider.TypeProvider">
+            <summary>
+            Gets or sets type provider
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IProvider.Authentication">
+            <summary>
+            Gets or sets authentication
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IProvider.Proxy">
+            <summary>
+            Gets or sets proxy
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IProvider.Timeout">
+            <summary>
+            Return instance of ITimeoutSettingsProvider
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IProvider.ReadWriteTimeout">
+            <summary>
+            Returns instance of IReadWriteTimeoutSettingsProvider
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.IProxySection">
+            <summary>
+            Proxy section
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IProxySection.ModeProxy">
+            <summary>
+            Gets or sets mode proxy
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IProxySection.BasicProxyAuthentication">
+            <summary>
+            Gets or sets basic proxy authentication
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.IRequestProviderSection">
+            <summary>
+            Request provider section
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IRequestProviderSection.Providers">
+            <summary>
+            Gets or sets providers
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.ITimeoutSection">
+            <summary>
+            Proxy section
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ITimeoutSection.Value">
+            <summary>
+            Gets or sets mode proxy
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.IUserSection">
+            <summary>
+            User section
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IUserSection.Name">
+            <summary>
+            Gets or sets name
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.IUserSection.Password">
+            <summary>
+            Gets or sets password
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.AuthenticationConfigurationSection">
+            <summary>
+            Authentication class
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.AuthenticationConfigurationSection.ModeAuthentication">
+            <summary>
+            ConfigurationProperty mode (determines the type of authentication)
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.AuthenticationConfigurationSection.BasicAuthentication">
+            <summary>
+            ConfigurationProperty Basic
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.AuthenticationConfigurationSection.Aras#Net#Configuration#IAuthenticationSection#BasicAuthentication">
+            <summary>
+            BasicAuthentication
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.BasicAuthenticationConfigurationSection">
+            <summary>
+            If Authentication mode = "Basic" then uses class BasicAuthenticationConfigurationSection
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.BasicAuthenticationConfigurationSection.Credentials">
+            <summary>
+            ConfigurationProperty credentials
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.BasicAuthenticationConfigurationSection.Aras#Net#Configuration#IBasicAuthenticationSection#Credentials">
+            <summary>
+            Credentials
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.ReadWriteTimeoutConfigurationElement">
+            <summary>
+            Represents a ReadWriteTimeout configuration element.
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ReadWriteTimeoutConfigurationElement.Value">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ReadWriteTimeoutConfigurationElement.ReadWriteTimeout">
+            <summary>
+            ReadWriteTimeout
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.CredentialsConfigurationSection">
+            <summary>
+            Information about credentials
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.CredentialsConfigurationSection.User">
+            <summary>
+            ConfigurationProperty
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.CredentialsConfigurationSection.Aras#Net#Configuration#ICredentialsSection#User">
+            <summary>
+            User
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.ProviderElement">
+            <summary>
+            Element of the collection
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.Pattern">
+            <summary>
+            ConfigurationProperty uriPattern
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.TypeProvider">
+            <summary>
+            ConfigurationProperty type
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.Authentication">
+            <summary>
+            ConfigurationProperty authentication
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.Proxy">
+            <summary>
+            ConfigurationProperty Proxy
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.Timeout">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.ReadWriteTimeout">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.Aras#Net#Configuration#IProvider#Timeout">
+            <summary>
+            Timeout
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.Aras#Net#Configuration#IProvider#ReadWriteTimeout">
+            <summary>
+            ReadWriteTimeout
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.Aras#Net#Configuration#IProvider#Authentication">
+            <summary>
+            Authentication
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProviderElement.Aras#Net#Configuration#IProvider#Proxy">
+            <summary>
+            Proxy
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.ProxyConfigurationSection">
+            <summary>
+            Authentication class
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProxyConfigurationSection.ModeProxy">
+            <summary>
+            ConfigurationProperty mode (determines the type of authentication on proxy)
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProxyConfigurationSection.BasicProxyAuthentication">
+            <summary>
+            ConfigurationProperty Basic
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.ProxyConfigurationSection.Aras#Net#Configuration#IProxySection#BasicProxyAuthentication">
+            <summary>
+            BasicProxyAuthentication
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.RequestProviderConfigurationSection">
+            <summary>
+            class RequestProviderSection
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.RequestProviderConfigurationSection.Providers">
+            <summary>
+            Collection providers
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.RequestProviderConfigurationSection.Aras#Net#Configuration#IRequestProviderSection#Providers">
+            <summary>
+            Providers
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.ProvidersElementCollection">
+            <summary>
+            Class collection of providers
+            </summary>
+        </member>
+        <member name="M:Aras.Net.Configuration.ProvidersElementCollection.CreateNewElement">
+            <summary>
+             Creates a new ConfigurationElement
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.Configuration.ProvidersElementCollection.GetElementKey(System.Configuration.ConfigurationElement)">
+            <summary>
+            Gets the element key for a specified configuration element
+            </summary>
+            <param name="element"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.Configuration.ProvidersElementCollection.GetEnumerator">
+            <summary>
+            Gets an IEnumerator which is used to iterate through the ConfigurationElementCollection.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.Configuration.TimeoutConfigurationElement">
+            <summary>
+            Represents a Timeout configuration element.
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.TimeoutConfigurationElement.Value">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.TimeoutConfigurationElement.Timeout">
+            <summary>
+            Timeout
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Configuration.UserConfigurationSection">
+            <summary>
+            Information about user
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.UserConfigurationSection.Name">
+            <summary>
+            ConfigurationProperty userName
+            </summary>
+        </member>
+        <member name="P:Aras.Net.Configuration.UserConfigurationSection.Password">
+            <summary>
+            ConfigurationProperty userPassword
+            </summary>
+        </member>
+        <member name="T:Aras.Net.Constants">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="F:Aras.Net.Constants.SoapEnvUri">
+            -----------------------------------------------------------------------------
+            <summary>
+            URI to SOAP 1.1 schema
+            </summary>
+            <remarks>
+            </remarks>
+            <history>
+            </history>
+            -----------------------------------------------------------------------------
+        </member>
+        <member name="F:Aras.Net.Constants.SoapNamespaceCheck">
+            -----------------------------------------------------------------------------
+            <summary>
+            Check of namespace to be used in XPath
+            </summary>
+            <remarks>
+            </remarks>
+            <history>
+            </history>
+            -----------------------------------------------------------------------------
+        </member>
+        <member name="F:Aras.Net.Constants.FaultXPath">
+            -----------------------------------------------------------------------------
+            <summary>
+            XPath for Fault
+            </summary>
+            <remarks>
+            </remarks>
+            <history>
+            </history>
+            -----------------------------------------------------------------------------
+        </member>
+        <member name="T:Aras.Net.IoC">
+            <summary>
+            Сustom container
+            </summary>
+        </member>
+        <member name="M:Aras.Net.IoC.Resolve``1">
+            <summary>
+            Resolve object by type
+            </summary>
+            <typeparam name="T"></typeparam>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.ConfigurableRequestProvider">
+            <summary>
+            Create default component and wraps some decorators
+            </summary>
+        </member>
+        <member name="M:Aras.Net.ConfigurableRequestProvider.#ctor(Aras.Net.IRequestProviderContext)">
+            <summary>
+            Creates instance
+            </summary>
+            <param name="requestProviderContext"></param>
+        </member>
+        <member name="M:Aras.Net.ConfigurableRequestProvider.GetWebRequest(System.Uri)">
+            <summary>
+            
+            </summary>
+            <param name="requestUri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.ConfigurableRequestProvider.GetWebRequest(System.Net.WebRequest)">
+            <summary>
+            
+            </summary>
+            <param name="origin"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.CookieContainerProviderFactory">
+            <summary>
+            Provide ability to create most common implementations of CookieContainerProvider
+            </summary>
+        </member>
+        <member name="M:Aras.Net.CookieContainerProviderFactory.GetPerInstanceCookieContainerProvider">
+            <summary>
+            Create instance of ICookeContainerProvider which provides CookieContainer instance, which scope is limited to scope of curent returned object
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.CookieContainerProviderFactory.GetCookieContainerProviderWrapper(System.Net.CookieContainer)">
+            <summary>
+            Wraps existing cookieContainer instance to ICookieContainerProvider interface
+            </summary>
+            <param name="cookieContainer">Existing instance of cookieContainer</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.CookieContainerProviderFactory.GetContextBasedCookieContainerProvider(System.Uri)">
+            <summary>
+            
+            </summary>
+            <param name="uri"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.IReadWriteTimeoutSettingsProvider">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.IReadWriteTimeoutSettingsProvider.ReadWriteTimeout">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:Aras.Net.ITimeoutSettingsProvider">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.ITimeoutSettingsProvider.Timeout">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="T:Aras.Net.IAuthenticationSettingsProvider">
+            <summary>
+            Class authentication settings
+            </summary>
+        </member>
+        <member name="P:Aras.Net.IAuthenticationSettingsProvider.AuthenticationType">
+            <summary>
+            Return type aythentication
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.IBasicAuthenticationSettingsProvider">
+            <summary>
+            Class Basic authentication settings
+            </summary>
+        </member>
+        <member name="P:Aras.Net.IBasicAuthenticationSettingsProvider.UserName">
+            <summary>
+            Return user name
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Aras.Net.IBasicAuthenticationSettingsProvider.UserPassword">
+            <summary>
+            Return user password
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.IRequestProviderContext">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.IRequestProviderContext.BasicAuthenticationSettingsProvider">
+            <summary>
+            Return instance of IBasicAuthenticationSettingsProvider
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Aras.Net.IRequestProviderContext.ProxyBasicAuthenticationSettingsProvider">
+            <summary>
+            Return instance of IProxyBasicAuthenticationSettingsProvider
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Aras.Net.IRequestProviderContext.AuthenticationSettingsProvider">
+            <summary>
+            Return instance of IAuthenticationSettingsProvider
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Aras.Net.IRequestProviderContext.ProxyAuthenticationSettingsProvider">
+            <summary>
+            Return instance of IProxyAuthenticationSettingsProvider
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Aras.Net.IRequestProviderContext.CookieContainerProvider">
+            <summary>
+            Return instance of ICookieContainerProviderSettings
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Aras.Net.IRequestProviderContext.TimeoutSettingsProvider">
+            <summary>
+            Return instance of ITimeoutSettingsProvider
+            </summary>
+        </member>
+        <member name="P:Aras.Net.IRequestProviderContext.ReadWriteTimeoutSettingsProvider">
+            <summary>
+            Returns instance of IReadWriteTimeoutSettingsProvider
+            </summary>
+        </member>
+        <member name="T:Aras.Net.ICookieContainerProvider">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.ICookieContainerProvider.CookieContainer">
+            <summary>
+            Return CookieContainer
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.IProxyAuthenticationSettingsProvider">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.IProxyAuthenticationSettingsProvider.AuthenticationType">
+            <summary>
+            Return proxy authentication type
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.IProxyBasicAuthenticationSettingsProvider">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.Net.IProxyBasicAuthenticationSettingsProvider.UserName">
+            <summary>
+             Return proxy user name
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="P:Aras.Net.IProxyBasicAuthenticationSettingsProvider.UserPassword">
+            <summary>
+             Return proxy user password
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.IRequestProvider">
+            <summary>
+            interface for creating and processing WebRequest
+            </summary>
+        </member>
+        <member name="M:Aras.Net.IRequestProvider.GetWebRequest(System.Uri)">
+            <summary>
+            Creates instance of <see cref="T:System.Net.WebRequest"/>
+            </summary>
+            <param name="requestUri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.IRequestProvider.GetWebRequest(System.Net.WebRequest)">
+            <summary>
+            return origin instance of <see cref="T:System.Net.WebRequest"/>
+            </summary>
+            <param name="origin"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.ApplicationRequestProvider">
+            <summary>
+            Public class for creating HttpWebRequest 
+            </summary>
+        </member>
+        <member name="P:Aras.Net.ApplicationRequestProvider.Instance">
+            <summary>
+            class ApplicationRequestProvider instance 
+            </summary>
+        </member>
+        <member name="M:Aras.Net.ApplicationRequestProvider.GetWebRequest(System.Uri,Aras.Net.ICookieContainerProvider)">
+            <summary>
+            Creates instance of <see cref="T:System.Net.WebRequest"/> and intializes that property
+            </summary>
+            <param name="requestUri"></param>
+            <param name="cookieContainerProvider"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.ApplicationRequestProvider.GetWebRequest(System.Net.WebRequest,Aras.Net.ICookieContainerProvider)">
+            <summary>
+            Creates instance of <see cref="T:System.Net.WebRequest"/> and intializes that property
+            </summary>
+            <param name="origin"></param>
+            <param name="cookieContainerProvider"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.WindowsRequestProviderDecorator.GetWebRequest(System.Uri)">
+            <summary>
+            Add credentials and return WebRequest request
+            </summary>
+            <param name="requestUri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.WindowsRequestProviderDecorator.GetWebRequest(System.Net.WebRequest)">
+            <summary>
+            Add credentials and return WebRequest request
+            </summary>
+            <param name="origin"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.HttpRequestCreatorUsingIECookies">
+            <summary>
+            Creates <see cref="T:System.Net.HttpWebRequest"/> and attaches IE cookies defined for a specified URL.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.HttpRequestCreatorUsingIECookies.CreateHttpWebRequest(System.Uri)">
+            <summary>
+            Creates HttpWebRequest using standard <see cref="T:System.Net.HttpRequestCreator"/>.
+            </summary>
+            <param name="uri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.HttpRequestCreatorUsingIECookies.RetrieveIECookiesForUrl(System.Uri)">
+            <summary>
+            Retrieves permanent and session IE cookies associated with the specified URL.
+            Doesn't retrieve cookies marked with "HttpOnly".
+            For example the following *will not* be retrieved:
+            Set-Cookie:ASP.NET_SessionId=3gjqqzvvvay3v055teh1xfiu; path=/; HttpOnly
+            </summary>
+            <param name="uri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.HttpRequestCreatorUsingIECookies.Create(System.Uri)">
+            <summary>
+            Creates <see cref="T:System.Net.HttpWebRequest"/> and attaches IE cookies defined for a specified URL.
+            </summary>
+            <param name="uri"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.WindowsAuthHelperComConnector">
+            <summary>
+            A wrapper for <see cref="T:Aras.Net.WindowsAuthenticationHelper"/> available for COM clients.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WindowsAuthHelperComConnector.SetDefaultCredentials(System.Net.ICredentials)">
+            <summary>
+            Sets default credentials used in <see cref="M:WindowsAuthenticationHelper.CreateHttpWebRequest"/>
+            and <see cref="M:WindowsAuthenticationHelper.CreateXmlDocument"/>.
+            </summary>
+            <param name="defaultCredentials"></param>
+        </member>
+        <member name="T:Aras.Net.IWindowsAuthHelperComConnectorComIncoming">
+            <summary>
+            COM interface for WindowsAuthHelperComConnector
+            </summary>
+        </member>
+        <member name="M:Aras.Net.IWindowsAuthHelperComConnectorComIncoming.SetDefaultCredentials(System.Net.ICredentials)">
+            <summary>
+            Sets default credentials used in <see cref="M:CreateHttpWebRequest"/>
+            and <see cref="M:CreateXmlDocument"/>.
+            </summary>
+            <param name="defaultCredentials"></param>
+        </member>
+        <member name="T:Aras.Net.WinInet.GetWindowCommand">
+            <summary>
+            Possible command for GetWindow function.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.GetWindowCommand.GW_ENABLEDPOPUP">
+            <summary>
+            Windows 2000/XP: The retrieved handle identifies the enabled popup window owned by the
+            specified window (the search uses the first such window found using GW_HWNDNEXT); otherwise,
+            if there are no enabled popup windows, the retrieved handle is that of the specified window.
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.HttpRequestHeaders">
+            <summary>
+            Collection of htptp headers. Is used in method ConnectViaWinInet.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WinInet.HttpRequestHeaders.Add(System.String,System.String)">
+            <summary>
+            Adds a header in a list.
+            </summary>
+            <param name="name">
+            Header name.
+            </param>
+            <param name="value">
+            Header value.
+            </param>
+        </member>
+        <member name="M:Aras.Net.WinInet.HttpRequestHeaders.ToString">
+            <summary>
+            Returns a list of all headers as one string. Headers and values are delimited with ": ".
+            Each header name and value pair ends with "\r\n".
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.WinInet.InternetErrorDlgAction">
+            <summary>
+            Actions to pass into InternetErrorDlg.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgAction.FLAGS_ERROR_UI_FILTER_FOR_ERRORS">
+            <summary>
+            Scans the returned headers for errors. Call InternetErrorDlg with this flag set following a call
+            to HttpSendRequest so as to detect hidden errors. Authentication errors, for example, are
+            normally hidden because the call to HttpSendRequest completes successfully, but by scanning
+            the status codes, InternetErrorDlg can determine that the proxy or server requires authentication.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgAction.FLAGS_ERROR_UI_FLAGS_CHANGE_OPTIONS">
+            <summary>
+            If the function succeeds, stores the results of the dialog box in the Internet handle.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgAction.FLAGS_ERROR_UI_FLAGS_GENERATE_DATA">
+            <summary>
+            Queries the Internet handle for needed information. The function constructs the appropriate
+            data structure for the error. (For example, for Cert CN failures, the function grabs
+            the certificate.)
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgAction.FLAGS_ERROR_UI_FLAGS_NO_UI">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgAction.FLAGS_ERROR_UI_SERIALIZE_DIALOGS">
+            <summary>
+            Serializes authentication dialog boxes for concurrent requests on a password cache entry.
+            The lppvData parameter should contain the address of a pointer to an
+            INTERNET_AUTH_NOTIFY_DATA structure, and the client should implement a thread-safe, nonblocking
+            callback function.
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.InternetErrorDlgErrorType">
+            <summary>
+            Error dialog type.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgErrorType.INTERNET_ERROR_BASE">
+            <summary>
+            Just an error base. Do not use this value.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgErrorType.ERROR_INTERNET_INCORRECT_PASSWORD">
+            <summary>
+            InternetErrorDlg displays a dialog box requesting the user's name and password.
+            (On Microsoft Windows 95, the function attempts to use any cached authentication information
+            for the server being accessed before displaying a dialog box.)
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.InternetErrorDlgReturnValue">
+            <summary>
+            Possible return values of InternetErrorDlg
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgReturnValue.ERROR_SUCCESS">
+            <summary>
+            The function completed successfully.
+            For more information, see ERROR_INTERNET_CLIENT_AUTH_CERT_NEEDED in the dwError parameter.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgReturnValue.ERROR_CANCELLED">
+            <summary>
+            The function was canceled by the user.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgReturnValue.INTERNET_ERROR_BASE">
+            <summary>
+            Just an error base. Do not use this value.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetErrorDlgReturnValue.ERROR_INTERNET_FORCE_RETRY">
+            <summary>
+            This indicates that the function needs to redo its request.
+            In the case of authentication this indicates that the user clicked the OK button.
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.InvisibleForm">
+            <summary>
+            Special form used by <see cref="T:Aras.Net.WinInet.WinInetCredentialsCollection.WinInetCredentialsHelper"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WinInet.InvisibleForm.#ctor">
+            <summary>
+            Initialize instance of <see cref="T:Aras.Net.WinInet.InvisibleForm"/>.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InvisibleForm.components">
+            <summary>
+            Required designer variable.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WinInet.InvisibleForm.Dispose(System.Boolean)">
+            <summary>
+            Clean up any resources being used.
+            </summary>
+            <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+        </member>
+        <member name="M:Aras.Net.WinInet.InvisibleForm.InitializeComponent">
+            <summary>
+            Required method for Designer support - do not modify
+            the contents of this method with the code editor.
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.UnsafeNativeMethods">
+            <summary>
+            Summary description for UnsafeNative.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.UnsafeNativeMethods.ERROR_INSUFFICIENT_BUFFER">
+            <summary>
+            Some call require the application to pass in a buffer filled with data.
+            This error is returned if the data buffer is too small.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.UnsafeNativeMethods.ERROR_NO_MORE_ITEMS">
+            <summary>
+            No more items have been found.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.GetDesktopWindow">
+            <summary>
+            The GetDesktopWindow function returns a handle to the desktop window.
+            The desktop window covers the entire screen. The desktop window is the area on top of which
+            other windows are painted.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.GetWindow(System.IntPtr,Aras.Net.WinInet.GetWindowCommand)">
+            <summary>
+            The GetWindow function retrieves a handle to a window that has the specified relationship
+            (Z-Order or owner) to the specified window.
+            </summary>
+            <param name="hWnd">
+            Handle to a window. The window handle retrieved is relative to this window, based on the
+            value of the uCmd parameter.
+            </param>
+            <param name="uCmd">
+            Specifies the relationship between the specified window and the window whose handle is
+            to be retrieved. This parameter can be one of <see cref="T:Aras.Net.WinInet.GetWindowCommand"/>.
+            </param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.HttpOpenRequest(System.IntPtr,System.String,System.String,System.String,System.String,System.String,Aras.Net.WinInet.WinInetFlags,System.IntPtr)">
+            <summary>
+            Creates an HTTP request handle.
+            </summary>
+            <param name="hConnect">
+            A handle to an HTTP session returned by InternetConnect.
+            </param>
+            <param name="lpszVerb">
+            A pointer to a null-terminated string that contains the HTTP verb to use in the request.
+            If this parameter is NULL, the function uses GET as the HTTP verb.
+            </param>
+            <param name="lpszObjectName">
+            A pointer to a null-terminated string that contains the name of the target object of the
+            specified HTTP verb. This is generally a file name, an executable module, or a search specifier.
+            </param>
+            <param name="lpszVersion">
+            A pointer to a null-terminated string that contains the HTTP version. If this parameter is NULL,
+            the function uses HTTP/1.1 as the version.
+            </param>
+            <param name="lpszReferer">
+            A pointer to a null-terminated string that specifies the URL of the document from which the URL
+            in the request (lpszObjectName) was obtained. If this parameter is NULL, no referrer is specified.
+            </param>
+            <param name="lplpszAcceptTypes">
+            A pointer to a null-terminated array of strings that indicates media types accepted by the client.
+            If this parameter is NULL, no types are accepted by the client. Servers generally interpret a
+            lack of accept types to indicate that the client accepts only documents of type "text/*"
+            (that is, only text documents—no pictures or other binary files). For more information and a list
+            of valid media types, see ftp://ftp.isi.edu/in-notes/iana/assignments/media-types/media-types.
+            </param>
+            <param name="dwFlags">
+            Internet options. This parameter can be combination of <see cref="T:Aras.Net.WinInet.WinInetFlags"/>.
+            </param>
+            <param name="dwContext">
+            A pointer to a variable that contains the application-defined value that associates this
+            operation with any application data.
+            </param>
+            <returns>
+            Returns an HTTP request handle if successful, or NULL otherwise.
+            To retrieve extended error information, call GetLastError.
+            </returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.HttpSendRequest(System.IntPtr,System.String,System.Int32,System.IntPtr,System.Int32)">
+            <summary>
+            Sends the specified request to the HTTP server.
+            </summary>
+            <param name="hRequest">
+            Handle returned by HttpOpenRequest.
+            </param>
+            <param name="lpszHeaders">
+            Pointer to a null-terminated string that contains the additional headers to be appended
+            to the request. This parameter can be NULL if there are no additional headers to be appended.
+            </param>
+            <param name="dwHeadersLength">
+            Size of the additional headers, in TCHARs. If this parameter is -1L and lpszHeaders is not NULL,
+            the function assumes that lpszHeaders is zero-terminated (ASCIIZ), and the length is calculated.
+            See Remarks for specifics.
+            </param>
+            <param name="lpOptional">
+            Pointer to a buffer containing any optional data to be sent immediately after the request headers.
+            This parameter is generally used for POST and PUT operations. The optional data can be the
+            resource or information being posted to the server. This parameter can be NULL if there is no
+            optional data to send.
+            </param>
+            <param name="dwOptionalLength">
+            Size of the optional data, in bytes. This parameter can be zero if there is no optional data to send.
+            </param>
+            <returns>
+            Returns TRUE if successful, or FALSE otherwise. To get extended error information, call GetLastError.
+            </returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.InternetCloseHandle(System.IntPtr)">
+            <summary>
+            Closes a single Internet handle.
+            </summary>
+            <param name="hInternet">
+            Handle to be closed.
+            </param>
+            <returns>
+            Returns TRUE if the handle is successfully closed, or FALSE otherwise.
+            To get extended error information, call GetLastError.
+            </returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.InternetConnect(System.IntPtr,System.String,System.Int16,System.String,System.String,Aras.Net.WinInet.InternetConnectServiceType,Aras.Net.WinInet.WinInetFlags,System.IntPtr)">
+            <summary>
+            Opens an File Transfer Protocol (FTP), Gopher, or HTTP session for a given site.
+            </summary>
+            <param name="hInternet">
+            Handle returned by a previous call to InternetOpen.
+            </param>
+            <param name="lpszServerName">
+            Pointer to a null-terminated string that specifies the host name of an Internet server.
+            Alternately, the string can contain the IP number of the site, in ASCII dotted-decimal
+            format (for example, 11.0.1.45).
+            </param>
+            <param name="nServerPort">
+            Transmission Control Protocol/Internet Protocol (TCP/IP) port on the server.
+            These flags set only the port that is used. The service is set by the value of dwService.
+            This parameter can be one of the following values.
+            </param>
+            <param name="lpszUsername">
+            Pointer to a null-terminated string that specifies the name of the user to log on.
+            If this parameter is NULL, the function uses an appropriate default, except for HTTP;
+            a NULL parameter in HTTP causes the server to return an error.
+            For the FTP protocol, the default is "anonymous".
+            </param>
+            <param name="lpszPassword">
+            Pointer to a null-terminated string that contains the password to use to log on.
+            If both lpszPassword and lpszUsername are NULL, the function uses the default "anonymous" password.
+            In the case of FTP, the default password is the user's e-mail name.
+            If lpszPassword is NULL, but lpszUsername is not NULL, the function uses a blank password.
+            </param>
+            <param name="dwService">
+            Type of service to access. This parameter can be one of <see cref="T:Aras.Net.WinInet.InternetConnectServiceType"/>.
+            </param>
+            <param name="dwFlags">
+            Options specific to the service used. If dwService is INTERNET_SERVICE_FTP,
+            INTERNET_FLAG_PASSIVE causes the application to use passive FTP semantics.
+            </param>
+            <param name="dwContext">
+            Pointer to a variable that contains an application-defined value that is used to identify
+            the application context for the returned handle in callbacks.
+            </param>
+            <returns>
+            Returns a valid handle to the FTP, Gopher, or HTTP session if the connection is successful,
+            or NULL otherwise. To retrieve extended error information, call GetLastError. An application
+            can also use InternetGetLastResponseInfo to determine why access to the service was denied.
+            </returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.InternetErrorDlg(System.IntPtr,System.IntPtr,Aras.Net.WinInet.InternetErrorDlgErrorType,Aras.Net.WinInet.InternetErrorDlgAction,System.IntPtr)">
+            <summary>
+            Displays a dialog box for the error that is passed to InternetErrorDlg,
+            if an appropriate dialog box exists. If the FLAGS_ERROR_UI_FILTER_FOR_ERRORS flag is used,
+            the function also checks the headers for any hidden errors and displays a dialog box if needed.
+            </summary>
+            <param name="hWnd">
+            Handle to the parent window for any needed dialog box. This parameter can be NULL if no dialog
+            box is needed.
+            </param>
+            <param name="hRequest">
+            Handle to the Internet connection used in the call to HttpSendRequest.
+            </param>
+            <param name="dwError">
+            Error value for which to display a dialog box. This parameter can be one
+            of <see cref="T:Aras.Net.WinInet.InternetErrorDlgErrorType"/>.
+            </param>
+            <param name="dwFlags">
+            Actions. This parameter can be one or more of the <see cref="T:Aras.Net.WinInet.InternetErrorDlgAction"/>.
+            </param>
+            <param name="lppvData">
+            Pointer to the address of a data structure. The structure can be different for each
+            error that needs to be handled.
+            </param>
+            <returns>
+            Returns one of the following values, or an error value otherwise.
+            </returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.InternetGetCookie(System.String,System.String,System.Text.StringBuilder,System.Int32@)">
+            <summary>
+            Retrieves the cookie for the specified URL.
+            <remarks>
+            InternetGetCookie does not require a call to InternetOpen.
+            InternetGetCookie checks in the windows\cookies directory for persistent cookies that have an
+            expiration date set sometime in the future. InternetGetCookie also searches memory for any session
+            cookies, that is, cookies that do not have an expiration date that were created in the same process
+            by InternetSetCookie, because these cookies are not written to any files. Rules for creating cookie
+            files are internal to the system and can change in the future.
+            
+            As noted in HTTP Cookies, InternetGetCookie does not return cookies that the server marked as
+            non-scriptable with the "HttpOnly" attribute in the Set-Cookie header.
+            
+            Like all other aspects of the WinINet API, this function cannot be safely called from within DllMain
+            or the constructors and destructors of global objects.
+            </remarks>
+            </summary>
+            <param name="lpszUrl">
+            A pointer to a null-terminated string that specifies the URL for which cookies are to be retrieved.
+            </param>
+            <param name="lpszCookieName">
+            Not implemented.
+            </param>
+            <param name="lpszCookieData">
+            A pointer to a buffer that receives the cookie data. This parameter can be NULL.
+            </param>
+            <param name="lpdwSize">
+            A pointer to a variable that specifies the size of the lpszCookieData parameter buffer, in TCHARs.
+            If the function succeeds, the buffer receives the amount of data copied to the lpszCookieData buffer.
+            If lpszCookieData is NULL, this parameter receives a value that specifies the size of the buffer
+            necessary to copy all the cookie data, expressed as a byte count.
+            </param>
+            <returns>
+            If the function succeeds, the function returns TRUE.
+            If the function fails, it returns FALSE. To get extended error data, call GetLastError.
+            </returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.InternetOpen(System.String,Aras.Net.WinInet.InternetOpenAccessType,System.String,System.String,Aras.Net.WinInet.InternetOpenOptions)">
+            <summary>
+            Initializes an application's use of the WinINet functions.
+            </summary>
+            <param name="lpszAgent">
+            Pointer to a null-terminated string that specifies the name of the application or entity
+            calling the WinINet functions. This name is used as the user agent in the HTTP protocol.
+            </param>
+            <param name="dwAccessType">
+            Type of access required.
+            </param>
+            <param name="lpszProxyName">
+            Pointer to a null-terminated string that specifies the name of the proxy server(s) to use
+            when proxy access is specified by setting dwAccessType to INTERNET_OPEN_TYPE_PROXY.
+            Do not use an empty string, because InternetOpen will use it as the proxy name.
+            The WinINet functions recognize only CERN type proxies (HTTP only) and the TIS FTP gateway
+            (FTP only). If Microsoft Internet Explorer is installed, these functions also support
+            SOCKS proxies. FTP and Gopher requests can be made through a CERN type proxy either by
+            changing them to an HTTP request or by using InternetOpenUrl. If dwAccessType is not set to
+            INTERNET_OPEN_TYPE_PROXY, this parameter is ignored and should be NULL. For more information
+            about listing proxy servers, see the Listing Proxy Servers section of Enabling Internet
+            Functionality.
+            </param>
+            <param name="lpszProxyBypass">
+            Pointer to a null-terminated string that specifies an optional list of host names or IP addresses,
+            or both, that should not be routed through the proxy when dwAccessType is set to
+            INTERNET_OPEN_TYPE_PROXY. The list can contain wildcards. Do not use an empty string, because
+            InternetOpen will use it as the proxy bypass list. If this parameter specifies the "&lt;local&gt;"
+            macro as the only entry, the function bypasses any host name that does not contain a period.
+            If dwAccessType is not set to INTERNET_OPEN_TYPE_PROXY, this parameter is ignored and should be
+            NULL.
+            </param>
+            <param name="dwFlags">
+            Options. This parameter can be a combination of <see cref="T:Aras.Net.WinInet.InternetOpenOptions"/>.
+            </param>
+            <returns>
+            Returns a valid handle that the application passes to subsequent WinINet functions.
+            If InternetOpen fails, it returns NULL. To retrieve a specific error message, call GetLastError.
+            </returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.InternetQueryOption(System.IntPtr,Aras.Net.WinInet.InternetOptionsToSetOrQuery,System.Text.StringBuilder,System.Int32@)">
+            <summary>
+            Queries an Internet option on the specified handle.
+            </summary>
+            <param name="hInternet">
+            Handle on which to query information.
+            </param>
+            <param name="dwOption">
+            Internet option to be queried. This can be one of the Option Flags values.
+            </param>
+            <param name="lpBuffer">
+            Pointer to a buffer that receives the option setting.
+            Strings returned by InternetQueryOption are globally allocated, so the calling application must
+            free them when it is finished using them.
+            </param>
+            <param name="lpdwBufferLength">
+            Pointer to a variable that contains the size of lpBuffer, in bytes.
+            When InternetQueryOption returns, lpdwBufferLength specifies the size of the data placed into lpBuffer.
+            If GetLastError returns ERROR_INSUFFICIENT_BUFFER, this parameter points to the number of bytes
+            required to hold the requested information.
+            </param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.InternetSetCookie(System.String,System.String,System.String)">
+            <summary>
+            Creates a cookie associated with the specified URL.
+            <remarks>
+            Cookies created by InternetSetCookie without an expiration date are stored in memory and are available
+            only in the same process that created them. Cookies that include an expiration date are stored in the
+            windows\cookies directory.
+            
+            Creating a new cookie might cause a dialog box to appear on the screen asking the user if they want to
+            allow or disallow cookies from this site based on the privacy settings for the user.
+            </remarks>
+            </summary>
+            <param name="lpszUrl">
+            Pointer to a null-terminated string that specifies the URL for which the cookie should be set.
+            </param>
+            <param name="lpszCookieName">
+            Pointer to a null-terminated string that specifies the name to be associated with the cookie data.
+            If this parameter is NULL, no name is associated with the cookie.
+            </param>
+            <param name="lpszCookieData">
+            Pointer to the actual data to be associated with the URL.
+            </param>
+            <returns>
+            Returns TRUE if successful, or FALSE otherwise. To get a specific error message, call GetLastError.
+            </returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.UnsafeNativeMethods.SendMessage(System.IntPtr,System.UInt32,System.IntPtr,System.IntPtr)">
+            <summary>
+            The SendMessage function sends the specified message to a window or windows.
+            It calls the window procedure for the specified window and does not return until the window
+            procedure has processed the message.
+            </summary>
+            <param name="hWnd"></param>
+            <param name="Msg"></param>
+            <param name="wParam"></param>
+            <param name="lParam"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Net.WinInet.WinInetCredentialsCollection">
+            <summary>
+            Provides storage for multiple credentials. Contains methods to obtain credentials from native
+            library WinInet.dll.
+            </summary>
+            <remarks>
+            The class incapsulates <see cref="T:System.Net.CredentialCache" /> thus
+            the <see cref="T:Aras.Net.WinInet.WinInetCredentialsCollection" /> class stores credentials for multiple
+            Internet resources. Applications that need to access multiple resources can store the
+            credentials for those resources in a WinInetCredentialsCollection instance that then provides
+            the proper set of credentials to the Internet resource when required.
+            When the <see cref="M:GetCredential" /> method is called, it compares the Uniform Resource Identifier
+            (URI) and authentication type provided with those stored in the cache and returns the first set of
+            credentials that match.
+            
+            If no match found then <see cref="P:System.Net.CredentialCache.DefaultNetworkCredentials"/> are returned. These are
+            system credentials of the current security context.
+            </remarks>
+        </member>
+        <member name="T:Aras.Net.WinInet.WinInetCredentialsCollection.WinInetCredentialsHelper">
+            <summary>
+            Shows authentication dialog after a special request sent to WinInetHelper page
+            and gets credentials from the dialog.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.GetCredential(System.Uri,System.String)">
+            <summary>
+            Returns a <see cref="T:System.Net.NetworkCredential"/> object that is associated with the specified URI
+            and authentication type.
+            </summary>
+            <param name="uri">
+            A <see cref="T:System.Uri"/> that specifies the URI prefix of the resources that the credential
+            grants access to.
+            </param>
+            <param name="authType">
+            The authentication scheme used by the resource named in uriPrefix.
+            </param>
+            <returns>
+            A <see cref="T:System.Net.NetworkCredential"/>. If there is no matching credential in the cache then returns
+            <see cref="P:System.Net.CredentialCache.DefaultNetworkCredentials" />.
+            </returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.GetEnumerator">
+            <summary>
+            
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.Add(System.Uri,System.String,System.Net.NetworkCredential)">
+            <summary>
+            Adds a <see cref="T:System.Net.NetworkCredential"/> instance to the credential cache for use with protocols
+            other than SMTP and associates it with a Uniform Resource Identifier (URI) prefix and
+            authentication protocol.
+            </summary>
+            <param name="uriPrefix">
+            A <see cref="T:System.Uri"/> that specifies the URI prefix of the resources that the credential
+            grants access to.
+            </param>
+            <param name="authType">
+            The authentication scheme used by the resource named in uriPrefix.
+            </param>
+            <param name="credential">
+            The <see cref="T:System.Net.NetworkCredential"/> to add to the credential cache.
+            </param>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.Remove(System.Uri,System.String)">
+            <summary>
+            Deletes a <see cref="T:System.Net.NetworkCredential"/> instance from the cache if it is associated
+            with the specified Uniform Resource Identifier (URI) prefix and authentication protocol.
+            </summary>
+            <param name="uriPrefix">
+            A <see cref="T:System.Uri"/> that specifies the URI prefix of the resources that the credential is used for.
+            </param>
+            <param name="authType">
+            The authentication scheme used by the host named in uriPrefix.
+            </param>
+        </member>
+        <member name="F:Aras.Net.WinInet.WinInetCredentialsCollection.agentName">
+            <summary>
+            Use this as User-Agent header of our requests made via WinInet.dll
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.WinInetCredentialsCollection.OnAfterHttpSendRequestHandler">
+            <summary>
+            Description of HttpSendRequest results handler.
+            The handler is called immedeately after HttpSendRequest.
+            </summary>
+            <param name="uri">
+            A <see cref="T:System.Uri"/> where request was sent.
+            </param>
+            <param name="hRequest">
+            Handle of request.
+            </param>
+            <param name="attemptNumber"></param>
+            <param name="tryResend">
+            True if HttpSendRequest should be called again.
+            </param>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.AlreadyHasPermissionsForHelperUri(System.Uri)">
+            <summary>
+            Ensures that .Net code has access to helper page.
+            </summary>
+            <param name="winInetHelperUri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.CheckThatRequestSucceeded(System.Uri,System.IntPtr,System.Int32,System.Boolean@)">
+            <summary>
+            Has signature of OnAfterHttpSendRequestHandler. Checks that request succeeded. If didn't
+            - throws exception.
+            </summary>
+            <param name="uri"></param>
+            <param name="attemptNumber"></param>
+            <param name="hRequest"></param>
+            <param name="tryResend"></param>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.EstablishConnectionViaWinInet(System.Uri)">
+            <summary>
+            Establishes connection from WinInet.dll. Gets credentials if required.
+            </summary>
+            <param name="winInetHelperUri"></param>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.GetCredentialsFromWinInet(System.Uri)">
+            <summary>
+            Gets credentials from WinInet.dll
+            </summary>
+            <param name="winInetHelperUri"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.AddFromWinInet(System.Uri,System.Uri)">
+            <summary>
+            Obtains credentials from WinInet.dll if required (please read Remarks)
+            and creates a <see cref="T:System.Net.NetworkCredential"/> based on that.
+            Then adds the <see cref="T:System.Net.NetworkCredential"/> instance to the credential cache for use
+            with protocols other than SMTP and associates it with a Uniform Resource Identifier (URI)
+            prefix and NTLM, Negotiate protocols.
+            </summary>
+            <param name="uriPrefix">
+            A <see cref="T:System.Uri"/> that specifies the URI prefix of the resources that the credential
+            grants access to.
+            </param>
+            <param name="winInetHelperUri">
+            A <see cref="T:System.Uri"/> to a page implementing special interface required to get user credentials
+            from WinInet.dll. Please see Remarks.
+            </param>
+            <remarks>
+            <code>winInetHelperUri</code> is a URI of a special page. The page is required to
+            1) ensure that .Net code has no access to that page;
+            2) establish connection from WinInet.dll;
+            3) send a special request to a page via WinInet.dll to get the credentials;
+            </remarks>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetCredentialsCollection.AddFromWinInet(System.String,System.String)">
+            <summary>
+            Obtains credentials from WinInet.dll if required (please read Remarks)
+            and creates a <see cref="T:System.Net.NetworkCredential"/> based on that.
+            Then adds the <see cref="T:System.Net.NetworkCredential"/> instance to the credential cache for use
+            with protocols other than SMTP and associates it with a Uniform Resource Identifier (URI)
+            prefix and NTLM, Negotiate protocols.
+            </summary>
+            <param name="uriPrefix">
+            A <see cref="T:System.String"/> that specifies the URI prefix of the resources that the credential
+            grants access to.
+            </param>
+            <param name="winInetHelperUri">
+            A <see cref="T:System.String"/> - URI to a page implementing special interface required to get user credentials
+            from WinInet.dll. Please see Remarks.
+            </param>
+            <remarks>
+            <code>winInetHelperUri</code> is a URI of a special page. The page is required to
+            1) ensure that .Net code has no access to that page;
+            2) establish connection from WinInet.dll;
+            3) send a special request to a page via WinInet.dll to get the credentials;
+            </remarks>
+        </member>
+        <member name="T:Aras.Net.WinInet.InternetConnectServiceType">
+            <summary>
+            Type of service to use in <see cref="M:UnsafeNative.InternetConnect"/>.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetConnectServiceType.INTERNET_SERVICE_FTP">
+            <summary>
+            FTP service.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetConnectServiceType.INTERNET_SERVICE_GOPHER">
+            <summary>
+            Gopher service.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetConnectServiceType.INTERNET_SERVICE_HTTP">
+            <summary>
+            HTTP service.
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.InternetOpenOptions">
+            <summary>
+            Options to use in <see cref="M:UnsafeNative.InternetOpen"/>.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOpenOptions.NONE">
+            <summary>
+            No options.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOpenOptions.INTERNET_FLAG_ASYNC">
+            <summary>
+            Makes only asynchronous requests on handles descended from the handle returned from this function.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOpenOptions.INTERNET_FLAG_FROM_CACHE">
+            <summary>
+            Does not make network requests. All entities are returned from the cache.
+            If the requested item is not in the cache, a suitable error, such as ERROR_FILE_NOT_FOUND,
+            is returned.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOpenOptions.INTERNET_FLAG_OFFLINE">
+            <summary>
+            The same as <see cref="M:INTERNET_FLAG_FROM_CACHE"/>
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.AuthenticationDialogHunter">
+            <summary>
+            Finds authentication dialog and "clicks" OK.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WinInet.AuthenticationDialogHunter.ClickOk">
+            <summary>
+            Finds authentication dialog and sends that IDOK window message.
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.IWinInetCredentialsCollectionComIncoming">
+            <summary>
+            Com interface for <see cref="T:Aras.Net.WinInet.WinInetCredentialsCollection"/>.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WinInet.IWinInetCredentialsCollectionComIncoming.AddFromWinInet(System.String,System.String)">
+            <summary>
+            Obtains credentials from WinInet.dll if required (please read Remarks)
+            and creates a <see cref="T:System.Net.NetworkCredential"/> based on that.
+            Then adds the <see cref="T:System.Net.NetworkCredential"/> instance to the credential cache for use
+            with protocols other than SMTP and associates it with a Uniform Resource Identifier (URI)
+            prefix and NTLM, Negotiate protocols.
+            </summary>
+            <param name="uriPrefix">
+            A <see cref="T:System.String"/> that specifies the URI prefix of the resources that the credential
+            grants access to.
+            </param>
+            <param name="winInetHelperUri">
+            A <see cref="T:System.String"/> - URI to a page implementing special interface required to get user credentials
+            from WinInet.dll. Please see Remarks.
+            </param>
+            <remarks>
+            <code>winInetHelperUri</code> is a URI of a special page. The page is required to
+            1) ensure that .Net code has no access to that page;
+            2) establish connection from WinInet.dll;
+            3) send a special request to a page via WinInet.dll to get the credentials;
+            </remarks>
+        </member>
+        <member name="T:Aras.Net.WinInet.WinInetException">
+            <summary>
+            Exception is thrown when error happens in during call of a routine from WinInet.dll.
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetException.#ctor">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetException.#ctor(System.String)">
+            <summary>
+            
+            </summary>
+            <param name="message"></param>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetException.#ctor(System.String,System.Exception)">
+            <summary>
+            
+            </summary>
+            <param name="message"></param>
+            <param name="innerException"></param>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetException.#ctor(System.Runtime.Serialization.SerializationInfo,System.Runtime.Serialization.StreamingContext)">
+            <summary>
+            
+            </summary>
+            <param name="info"></param>
+            <param name="context"></param>
+        </member>
+        <member name="M:Aras.Net.WinInet.WinInetException.#ctor(System.Int32)">
+            <summary>
+            
+            </summary>
+            <param name="lastWin32Error"></param>
+        </member>
+        <member name="T:Aras.Net.WinInet.InternetOpenAccessType">
+            <summary>
+            Access type to use in <see cref="M:UnsafeNative.InternetOpen"/>.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOpenAccessType.INTERNET_OPEN_TYPE_PRECONFIG">
+            <summary>
+            Retrieves the proxy or direct configuration from the registry.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOpenAccessType.INTERNET_OPEN_TYPE_DIRECT">
+            <summary>
+            Resolves all host names locally. (direct to net)
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOpenAccessType.INTERNET_OPEN_TYPE_PROXY">
+            <summary>
+            Passes requests to the proxy unless a proxy bypass list is supplied and the name
+            to be resolved bypasses the proxy. In this case, the function uses
+            <see cref="M:INTERNET_OPEN_TYPE_DIRECT"/>.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOpenAccessType.INTERNET_OPEN_TYPE_PRECONFIG_WITH_NO_AUTOPROXY">
+            <summary>
+            Retrieves the proxy or direct configuration from the registry and prevents the use
+            of a startup Microsoft JScript or Internet Setup (INS) file.
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.InternetOptionsToSetOrQuery">
+            <summary>
+            Options to use in <see cref="M:UnsafeNative.InternetQueryOption"/>
+            or in <see cref="M:UnsafeNative.InternetSetOption"/>.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOptionsToSetOrQuery.INTERNET_OPTION_CONNECT_RETRIES">
+            <summary>
+            Sets or retrieves an unsigned long integer value that contains the number of times WinINet attempts
+            to resolve and connect to a host. It only attempts once per IP address. For example, if you attempt
+            to connect to a multihome host that has ten IP addresses and INTERNET_OPTION_CONNECT_RETRIES
+            is set to seven, WinINet only attempts to resolve and connect to the first seven IP addresses.
+            Conversely, given the same set of ten IP addresses, if INTERNET_OPTION_CONNECT_RETRIES is set to
+            10, WinINet attempts each of the ten only once. If a host has only one IP address and the first
+            connection attempt fails, there are no further attempts. If a connection attempt still fails
+            after the specified number of attempts, the request is canceled. The default value for
+            INTERNET_OPTION_CONNECT_RETRIES is five attempts. This option can be used on any
+            HINTERNET handle, including a NULL handle. It is used by InternetQueryOption and InternetSetOption.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOptionsToSetOrQuery.INTERNET_OPTION_USERNAME">
+            <summary>
+            Sets or retrieves a string that contains the user name associated with a handle returned
+            by InternetConnect. This is used by InternetQueryOption and InternetSetOption.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOptionsToSetOrQuery.INTERNET_OPTION_PASSWORD">
+            <summary>
+            Sets or retrieves a string value that contains the password associated with a handle
+            returned by InternetConnect. This is used by InternetQueryOption and InternetSetOption.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.InternetOptionsToSetOrQuery.INTERNET_OPTION_USER_AGENT">
+            <summary>
+            Sets or retrieves the user agent string on handles supplied by InternetOpen and used
+            in subsequent HttpSendRequest functions, as long as it is not overridden by a header added
+            by HttpAddRequestHeaders or HttpSendRequest. This is used by InternetQueryOption and InternetSetOption.
+            </summary>
+        </member>
+        <member name="T:Aras.Net.WinInet.WinInetFlags">
+            <summary>
+            Many of the WinINet functions accept an array of flags as a parameter.
+            The following is a brief description of the defined flags.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.WinInetFlags.None">
+            <summary>
+            No flags.
+            </summary>
+        </member>
+        <member name="F:Aras.Net.WinInet.WinInetFlags.INTERNET_FLAG_SECURE">
+            <summary>
+            Uses secure transaction semantics. This translates to using Secure Sockets Layer/Private
+            Communications Technology (SSL/PCT) and is only meaningful in HTTP requests. This flag is used
+            by HttpOpenRequest and InternetOpenUrl, but this is redundant if https:// appears in the URL.
+            The InternetConnect function uses this flag for HTTP connections; all the request handles
+            created under this connection will inherit this flag.
+            </summary>
+        </member>
+    </members>
+</doc>

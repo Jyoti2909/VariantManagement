@@ -1,0 +1,164 @@
+﻿<AML>
+ <Item type="Method" id="98A2C15E42634C4BAB47E79D4D78CC99" action="add">
+  <comments>ER-000257</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' name: sendEmailToA2Assignee
+' purpose: sends e-mail to activity2 assignee if activity2 state changed to 'Active'
+' created: 19-JUL-2005 Yuri Delyamba
+' (c) Copyright by Aras Corporation, 2005-2007.
+
+If Me.GetType() <> "Activity2" Then Return Me
+
+Dim itemAction as String = Me.getAttribute("action")
+Dim inItem = Me.apply("do_l10n")
+If inItem.isError() Then Return inItem
+
+Me.setAttribute("action", itemAction)
+Dim managedById As String = inItem.getPropertyAttribute("managed_by_id", "keyed_name")
+Dim toIdentityNames() As String = New String() {}
+Dim toIdentityNamesHash As New Hashtable()
+
+'+++ Generate and fill toIdentityNames array +++
+Dim inD2 As New XmlDocument()
+Dim outD2 As New XmlDocument()
+Dim x As String = String.Format("<Item type='Activity2 Assignment' action='get' select='related_id(keyed_name)'>" + _
+  "  <source_id>{0}</source_id>" + _
+  "  </Item>", System.Security.SecurityElement.Escape(inItem.getAttribute("id")))
+
+Dim doUseIdentitiesFromXmlOnly As Boolean = (inItem.getAttribute("use_identities_from_xml_only") = "1")
+If doUseIdentitiesFromXmlOnly Then
+
+	Dim tmpElem As XmlElement = CType(inItem.node.SelectSingleNode("Relationships/Item[@type='Activity2 Assignment']/related_id"), XmlElement)
+	Dim id As String
+	If tmpElem Is Nothing Then
+
+		id = inItem.getProperty("managed_by_id")
+	Else
+
+		Dim tmpElem2 As XmlElement = CType(tmpElem.SelectSingleNode("Item"), XmlElement)
+		id = tmpElem.InnerText
+		If Not tmpElem2 Is Nothing Then id = tmpElem2.GetAttribute("id")
+	End If
+
+	If String.IsNullOrEmpty(id) Then id = "NON_EXISTING"
+	x = String.Format("<Item type='Identity' action='get' select='keyed_name' id='{0}'/>", System.Security.SecurityElement.Escape(id))
+End If
+
+inD2.LoadXml(x)
+CCO.GetItem.GetItem(inD2, outD2)
+Dim nd As XmlElement
+Dim ndList As XmlNodeList = outD2.SelectNodes("//Item[@type='Identity']/keyed_name")
+Dim toIdentityNamesLength As Integer = ndList.Count
+If Not String.IsNullOrEmpty(managedById) AndAlso Not doUseIdentitiesFromXmlOnly Then toIdentityNamesLength += 1
+If toIdentityNamesLength > 0 Then Redim toIdentityNames(toIdentityNamesLength - 1)
+If Not String.IsNullOrEmpty(managedById) AndAlso Not doUseIdentitiesFromXmlOnly Then
+	toIdentityNames(0) = managedById
+	toIdentityNamesHash.Add(toIdentityNames(0), "")
+End If
+Dim i As Integer = 1
+If doUseIdentitiesFromXmlOnly Then i = 0
+Dim s As String
+For Each nd In ndList
+	s = nd.InnerText
+	If Not toIdentityNamesHash.Contains(s) Then
+		toIdentityNamesHash.Add(s, "")
+		toIdentityNames(i) = s
+	End If
+	i += 1
+Next nd
+
+If toIdentityNamesLength < 1 Then Return inItem
+'--- Generate and fill toIdentityNames array ---
+
+Dim fromIdentityId As String = inItem.getProperty("owned_by_id")
+Dim xml As String
+
+Dim projNum As String = inItem.getProperty("proj_num")
+If String.IsNullOrEmpty(projNum) Then
+
+	Dim itm As Item = inItem.newItem("Activity2", "get")
+	itm.setAttribute("select", "proj_num")
+	itm.setID(inItem.getAttribute("id"))
+	itm = itm.apply()
+	If itm.isError() Then Return itm
+	projNum = itm.getProperty("proj_num")
+End If
+
+Dim projName As String = ""
+Dim actId As String = inItem.getID()
+Dim actName As String = inItem.getProperty("name")
+Dim actDueDate As String = inItem.getProperty("date_due_sched")
+
+If Not String.IsNullOrEmpty(projNum) Then
+
+	Dim project As Item = inItem.newItem("Project", "get")
+	project.setProperty("project_number", projNum)
+	project = project.apply()
+	If project.isError() Then Return project
+
+	projName = project.getProperty("name")
+End If
+
+If String.IsNullOrEmpty(fromIdentityId) Then
+
+	fromIdentityId = CCO.Permissions.GetIdentityIDbyName("Innovator Admin")
+End If
+
+xml = "<AML>" & _
+"<Item type='User' action='get' select='login_name'>" & _
+  "<Relationships>" & _
+ "<Item type='Alias' action='get'>" & _
+"<related_id>" & _
+  "<Item type='Identity' action='get' id='" & System.Security.SecurityElement.Escape(fromIdentityId) & "' />" & _
+"</related_id>" & _
+ "</Item>" & _
+  "</Relationships>" & _
+"</Item></AML>"
+
+Dim res As Item = inItem.getInnovator().applyAML(xml)
+If res.isError() Then Return res
+
+Dim fromUserName As String = res.getProperty("login_name")
+
+Dim protocol As String = "http"
+Dim host As String = HttpContext.Current.Request.Url.Host
+Dim port As String = HttpContext.Current.Request.Url.Port
+Dim vDir As String = ""
+Dim count As Integer = HttpContext.Current.Request.Url.Segments.Count
+For index As Integer = 1 To (count - 3) 'Ignoring "Server/InnovatorServer.aspx"
+	vDir +=  HttpContext.Current.Request.Url.Segments(index)
+Next
+If port <> "80" Then 
+	host +=  ":" + port
+End If
+
+If HttpContext.Current.Request.IsSecureConnection <> False Then
+	protocol = "https"
+End If
+
+Dim htmlBody As String = "" & _
+"<body>" & _
+"You have been assigned to a project activity that is now in the Active state." & _
+"<br><br>" & _
+"Project number: " & projNum & "<br>" & _
+"Project name: " & projName & "<br>" & _
+"Activity name: " & actName & "<br>" & _
+"Activity Due Date: " & actDueDate & "<br>" & _
+"<br><br>" & _
+"Select on the following hyperlink to review the details of the activity.<br>" & _
+"<a href=""" & protocol & "://" & host & "/" & vDir & "default.aspx?StartItem=Activity2:" & _
+actId & """>" & projNum & " - " & projName & "</a>" & _
+"</body>"
+
+For i = 0 To toIdentityNames.Length - 1
+	If Not String.IsNullOrEmpty(toIdentityNames(i)) Then
+
+		CCO.Email.SendEmailToIdentityEx(toIdentityNames(i), "Project Assignment", "", htmlBody, fromUserName)
+	End If
+Next i
+
+Return Me]]></method_code>
+  <method_type>VB</method_type>
+  <name>sendEmailToA2Assignee</name>
+ </Item>
+</AML>

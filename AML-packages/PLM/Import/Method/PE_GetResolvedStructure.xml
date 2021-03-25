@@ -1,0 +1,200 @@
+﻿<AML>
+ <Item type="Method" id="A1FD6F3ED2D742EA94ADC9C50BBDE6E8" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/* 
+  input format:
+  <AML>
+	<Item type="{ItemType (ex. CAD)}" action="PE_GetResolvedStructure" id="{ID}" resolution="{AsSaved|Released|Current}">
+	  <Relationships>
+		<Item type="{Relationship ItemType to traverse}" repeatTimes="{0-no restriction, >0 - deep}">
+		  <related_id>
+			<Item type="{ItemType of target item (ex CAD)}">
+			  <OR>
+				<classification condition="like">Mechanical%</classification>
+				<classification condition="like">Electronic/Design%</classification>
+			  </OR>
+			</Item>
+		  </related_id>
+		</Item>
+	  </Relationships>
+	</Item>
+  </AML>
+*/
+
+		Item itemsWithNotAllowedActions = this.getItemsByXPath("//Item[@action and @action!='PE_GetResolvedStructure' and @action!='add' and " +
+			"@action!='delete' and @action!='update' and @action!='edit' and @action!='get' and @action!='skip']");
+		if (itemsWithNotAllowedActions.getItemCount() > 0)
+		{
+			//"this" shouldn't contain Items with not allowed "actions" because such Items is applied in this server-side method.
+			//So, e.g., not admin user can call actions where "execution_allowed_to" is for administrators.
+			throw new InvalidOperationException();
+		}
+
+		Utils.InitializeForRequest(this.getInnovator(), CCO);
+
+		InputItem inputItem = new InputItem(this);
+		return inputItem.GetResolvedStructure();
+	}
+}
+
+enum Resolution
+{
+	AsSaved,
+	Released,
+	Current
+}
+
+class InputItem : ItemContext
+{
+	public InputItem(Item item)
+		: base(item)
+	{
+
+	}
+
+	private List<string> GetFilePropertyNameList()
+	{
+		String aml = @"
+		<AML>
+			<Item type='Property' action='get' select='name'>
+				<source_id>
+					<Item type='ItemType' action='get'>
+						<name>{0}</name>
+					</Item>
+				</source_id>
+				<data_source>
+					<Item type='ItemType' action='get'>
+						<name>File</name>
+					</Item>
+				</data_source>
+			</Item>
+		</AML>
+	";
+
+		aml = String.Format(CultureInfo.InvariantCulture, aml, System.Security.SecurityElement.Escape(this.Type));
+
+		Item propertyItem = Utils.Innovator.applyAML(aml);
+
+		List<String> propertyNameList = new List<String>();
+
+		for (int propertyIndex = 0; propertyIndex < propertyItem.getItemCount(); propertyIndex++)
+		{
+			String propName = propertyItem.getItemByIndex(propertyIndex).getProperty("name");
+			propertyNameList.Add(propName);
+		}
+
+		return propertyNameList;
+	}
+
+	private void UpdateQueryItemToLoadFileProperties(Item qryItem)
+	{
+		String fileItemQuery = @"
+	<AML>
+  <Item type='File' action='get'>
+    <Relationships>
+      <Item type='Located' action='get'>
+        <related_id>
+          <Item type='Vault' action='get'/>
+        </related_id>
+      </Item>
+    </Relationships>
+  </Item>
+	</AML>";
+
+		Item fileItem = Utils.Innovator.newItem();
+		fileItem.loadAML(fileItemQuery);
+
+		List<String> filePropertyNameList = this.GetFilePropertyNameList();
+
+		foreach (String propName in filePropertyNameList)
+		{
+			qryItem.setPropertyItem(propName, fileItem);
+		}
+	}
+
+	public Item GetResolvedStructure()
+	{
+		Item relationshipItem = this.Item.getItemsByXPath("Relationships/Item");
+		if (relationshipItem.getItemCount() >= 1)
+		{
+			relationshipItem = relationshipItem.getItemByIndex(0);
+			relationshipItem.setAttribute("repeatProp", "related_id");
+
+			String repeatTimes = relationshipItem.getAttribute("repeatTimes", "");
+			if (String.IsNullOrEmpty(repeatTimes))
+			{
+				relationshipItem.setAttribute("repeatTimes", "0");
+			}
+		}
+
+		UpdateQueryItemToLoadFileProperties(this.Item);
+
+		return this.Item.apply("GetItemRepeatConfig");
+	}
+}
+
+/// <summary>
+/// Represent base class for Item wrappers
+/// </summary>
+abstract class ItemContext
+{
+	/// <summary>
+	/// Constructor. Create empty prototype.
+	/// </summary>
+	protected ItemContext()
+	{
+	}
+
+	/// <summary>
+	/// Constructor. Wrap item and create Utils
+	/// </summary>
+	/// <param name="item"></param>
+	public ItemContext(Item item)
+	{
+		this.Item = item;
+	}
+
+	Item p_item;
+	/// <summary>
+	/// Get wrapped item
+	/// </summary>
+	public Item Item
+	{
+		get { return p_item; }
+		set { p_item = value; }
+	}
+
+	public string Type
+	{
+		get { return this.Item.getType(); }
+	}
+}
+
+/// <summary>
+/// Create and get access to Innovator object and provide help methods.
+/// </summary>
+static class Utils
+{
+	private const String InnovatorObjectUID = "PE_GetRelatedParts_InnovatorObject";
+	private const String InnovatorCCOUID = "PE_GetRelatedParts_InnovatorCCO";
+
+	public static void InitializeForRequest(Innovator innovator, Aras.Server.Core.CallContext CCO)
+	{
+		HttpContext.Current.Items[InnovatorObjectUID] = innovator;
+		HttpContext.Current.Items[InnovatorCCOUID] = CCO;
+	}
+
+	/// <summary>
+	/// Get instance of Innovator object
+	/// </summary>
+	public static Innovator Innovator
+	{
+		get
+		{
+			return ((Innovator)HttpContext.Current.Items[InnovatorObjectUID]);
+		}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_GetResolvedStructure</name>
+ </Item>
+</AML>

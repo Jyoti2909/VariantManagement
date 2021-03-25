@@ -1,0 +1,176 @@
+﻿<AML>
+ <Item type="Method" id="D61CC2F1302348A695FA6979A9F71CCB" action="add">
+  <classification>/*</classification>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator();
+//System.Diagnostics.Debugger.Break();
+Aras.Server.Security.Identity plmIdentity = Aras.Server.Security.Identity.GetByName("Aras PLM");
+bool PermissionWasSet = Aras.Server.Security.Permissions.GrantIdentity(plmIdentity);
+
+//Param "TARGET_SOURCE_ID" ->  ID of the Item which should get a new relationship
+//Param "TARGET_RELATED_ID" -> ID of the Item which should be the related item in the new relationship
+//Param "ACTION" -> 2 possible actions 'ADD' and 'REPLACE' Standard is set to ADD
+//Param "REL_TYPE" -> Type of the relationship which should be added or replaced
+//Param "ADDITIONAL_PROPERTIES" -> This parameter allows to add custom properties to the new relationship
+//                                 The format must be: PROPERTY_NAME=PROPERTY_VALUE.
+//                                 It is possible to add more than one new property. If more than one property
+//                                 should be added than the format is PROPERTY_NAME=PROPERTY_VALUE separated by ";"
+//                                 Example:
+//                                          name=onetwo;description=three;cax_flag=1
+//Param "ADDITIONAL_ATTRIBUTES" -> This parameter allows to add custom attributes to the new relationship
+//                                 The format must be: PROPERTY_NAME=ATTRIBUTE_VALUE.
+//                                 It is possible to add more than one new attribute. If more than one attribute
+//                                 should be added than the format is ATTRIBUTE_NAME=ATTRIBUTE_VALUE separated by ";"
+//                                 Example:
+//
+//Param "OLD_REL_ID" -> If action is REPLACE the OLD_REL_ID holds the ID of the relationship which will be deleted before
+//                      the new relationship will be added
+//Param "CHECK_IDENTITY" -> To prevent all users to be able add and replace relationships to released items
+//                          then with CHECK_IDENTITY set to 1 the method will check if the current user
+//                          is in the identity set in param IDENTITY_TO_BE_CHECKED
+//                          CHECK_IDENTITY is set to 0 in standard
+//Param "IDENTITY_TO_BE_CHECKED" -> The identity name in which the user must be if CHECK_IDENTITY is set to 1
+//                                  If CHECK_IDENTITY is set to 1 IDENTITY_TO_BE_CHECKED must have a valid value
+
+
+
+string sourceID = this.getProperty("TARGET_SOURCE_ID","");
+string relatedID = this.getProperty("TARGET_RELATED_ID","");
+string actionRequest = this.getProperty("ACTION","ADD");
+string relType = this.getProperty("REL_TYPE","");
+string additonalProperties = this.getProperty("ADDITIONAL_PROPERTIES","");
+string additonalAttributes= this.getProperty("ADDITIONAL_ATTRIBUTES","");
+string oldRelID = this.getProperty("OLD_REL_ID","");
+string checkIdentity = this.getProperty("CHECK_IDENTITY","0");
+string identityToBeChecked = this.getProperty("IDENTITY_TO_BE_CHECKED","");
+
+
+//checks
+if(sourceID.Length == 0)
+{
+	return inn.newError("No Source ID set in xPLMAddReltoReleasedItem");
+}
+
+if(relatedID.Length == 0)
+{
+	return inn.newError("No Related ID set in xPLMAddReltoReleasedItem");
+}
+
+if( (actionRequest != "ADD") && (actionRequest!="REPLACE"))
+{
+	return inn.newError("Only Action ADD or REPLACE allowed in xPLMAddReltoReleasedItem");
+}
+
+if(actionRequest=="REPLACE")
+{
+ if(oldRelID.Length == 0)
+ {
+	return inn.newError("No old Relationship ID set in xPLMAddReltoReleasedItem");
+ }
+}
+
+if(relType.Length == 0)
+{
+	return inn.newError("No Relationship Type set in xPLMAddReltoReleasedItem");
+}
+
+if(checkIdentity == "1")
+{
+	if(identityToBeChecked.Length == 0)
+	{	return inn.newError("xPLM Add Rel to Released Item: CHECK_IDENTITY is set to 1 but IDENTITY_TO_BE_CHECKED is empty. Operation aborted!");}
+	
+	Item identityToBeCheckedItem = inn.getItemByKeyedName("Identity",identityToBeChecked);
+	if(identityToBeCheckedItem == null)
+	{
+	 return inn.newError("xPLM Add Rel to Released Item: IDENTITY_TO_BE_CHECKED is not a valid Identity. Operation aborted!");
+	}
+	
+	
+	string[] currentUserIdentitiesList = Aras.Server.Security.Permissions.Current.IdentitiesList.Split(new Char[]{','});
+	string identityToBeCheckedItemID = identityToBeCheckedItem.getID();
+	bool currentUserIsAllowedToRunMethod = false;
+	
+	foreach(string identity in currentUserIdentitiesList)
+	{
+		if(identityToBeCheckedItemID == identity.Replace("'",""))
+		{
+			currentUserIsAllowedToRunMethod = true;
+			break;
+		}
+	}
+	
+	if(!currentUserIsAllowedToRunMethod)
+	{
+		return inn.newError("xPLM Add Rel to Released Item: Current User is not in Identity: "+identityToBeChecked+". Operation not allowed for current user!");
+	}
+
+}
+
+
+//work
+
+
+
+if(actionRequest=="REPLACE")
+{
+	//delete the old relation
+
+	Item oldRel = inn.newItem(relType,"delete");
+	oldRel.setID(oldRelID);
+	oldRel = oldRel.apply();
+	if(oldRel.isError())
+	{
+		return oldRel;
+	}
+}
+
+Item newRel = inn.newItem(relType,"add");
+if(actionRequest=="REPLACE")
+{
+	newRel.setAttribute("version","0");
+}
+
+newRel.setProperty("source_id",sourceID);
+if(relType == "CADFiles") {
+    newRel.setProperty("attached_file",relatedID);
+} else {
+    newRel.setProperty("related_id",relatedID);
+}
+// properties adding
+
+if (additonalProperties.Length > 0)
+{
+  string[] additionalPropsArray = additonalProperties.Split(new Char[]{';'});
+  foreach(string property in additionalPropsArray)
+  {
+		string[] nameValue = property.Split(new Char[]{'='});
+		newRel.setProperty(nameValue[0],nameValue[1]);
+  }
+}
+
+if (additonalAttributes.Length > 0)
+{
+  string[] additonalAttributesArray = additonalAttributes.Split(new Char[]{';'});
+  foreach(string attribute in additonalAttributesArray)
+  {
+		string[] nameValue = attribute.Split(new Char[]{'='});
+		newRel.setAttribute(nameValue[0],nameValue[1]);
+  }
+}
+
+newRel = newRel.apply();
+if(newRel.isError())
+{
+	return newRel;
+}
+
+if (PermissionWasSet)
+{
+	Aras.Server.Security.Permissions.RevokeIdentity(plmIdentity);
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>xPLMAddReltoReleasedItem</name>
+ </Item>
+</AML>

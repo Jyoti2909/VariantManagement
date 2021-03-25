@@ -1,0 +1,28 @@
+﻿<AML>
+ <Item type="Method" id="2B4CF6ECAEAF4072B56F5C1DAD6DB8A8" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const additionalData = target.additional_data || {};
+const actionId = additionalData.actionId;
+if (!actionId) {
+	return;
+}
+
+const itemTypeId = aras.getItemTypeId(options.itemTypeName);
+const actionHandlerName = 'onAction:' + actionId + ':' + itemTypeId + 'Command';
+
+if (window[actionHandlerName]) {
+	const commandId = 'action:' + actionId + ':' + itemTypeId;
+	window[actionHandlerName](commandId);
+} else {
+	const actionItem = aras.getItemFromServer('Action', actionId,
+		'name,method(name,method_type,method_code),type,target,location,body,on_complete(name,method_type,method_code),item_query');
+
+	if (actionItem) {
+		aras.invokeAction(actionItem.node, itemTypeId, options.itemId);
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivicb_more_action_click</name>
+ </Item>
+</AML>

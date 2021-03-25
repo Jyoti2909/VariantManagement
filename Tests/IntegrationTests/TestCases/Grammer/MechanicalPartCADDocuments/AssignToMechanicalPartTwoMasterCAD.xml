@@ -1,0 +1,106 @@
+﻿<TestCase author='pponkrashov@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description>Create Item of Item Type Part with Mechanical Part/Component classification as Product Engineer, created in 'Setup Test.xml'</Description>
+	<Request runAs='cadMPUser1:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer and CAD-Designer identity
+			When:
+				The user tries to create
+					a part with Mechanical Part/Component classification.
+					a cad with Mechanical/Assembly classification and MASTER subclassification.
+					a cad with Mechanical/Assembly classification and MASTER subclassification.
+			Then:
+				The user should create the part and two cads.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='0A59D379BC584E8AB3D58A6279662BB2' doGetItem='0'>
+					<classification>Mechanical Part/Component</classification>
+					<name>TestName</name>
+				</Item>
+				<Item type='CAD' action='add' id='8C5A62E728F84395934BBB74527EFEE1' doGetItem='0'>
+					<classification>Mechanical/Assembly</classification>
+					<gag_classification>MASTER</gag_classification>
+					<name>CAD1-For-MP</name>
+				</Item>
+				<Item type='CAD' action='add' id='88EA7B36A1C843AFBAA608DDCF03472E' doGetItem='0'>
+					<classification>Mechanical/Assembly</classification>
+					<gag_classification>MASTER</gag_classification>
+					<name>CAD2-For-MP</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='0A59D379BC584E8AB3D58A6279662BB2' />
+						<Item type='CAD' id='8C5A62E728F84395934BBB74527EFEE1' />
+						<Item type='CAD' id='88EA7B36A1C843AFBAA608DDCF03472E' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='cadMPUser1:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer and CAD-Designer identity
+			When:
+				The user tries to assign two cads to Part.
+			Then:
+				The user should get error.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part CAD' action='add' doGetItem='0' id='C0384FFD11974AE3A63FDBEF3A4C3D60'>
+					<source_id>0A59D379BC584E8AB3D58A6279662BB2</source_id>
+					<related_id>8C5A62E728F84395934BBB74527EFEE1</related_id>
+				</Item>
+				<Item type='Part CAD' action='add' doGetItem='0' id='7F7F5359463E4E0A8D6510E59C2434D6'>
+					<source_id>0A59D379BC584E8AB3D58A6279662BB2</source_id>
+					<related_id>88EA7B36A1C843AFBAA608DDCF03472E</related_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring><![CDATA[Only one MASTER 3D-Doc allowed!]]></faultstring>
+						<detail>
+							<af:legacy_detail><![CDATA[Only one MASTER 3D-Doc allowed!]]></af:legacy_detail>
+							<af:exception message="Only one MASTER 3D-Doc allowed!" type="Aras.Ark.Common.ItemException" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs='root:innovator'>
+		<Query>
+			<AML>
+				<Item type='Part CAD' id='C0384FFD11974AE3A63FDBEF3A4C3D60' action='delete'></Item>
+				<Item type='Part CAD' id='7F7F5359463E4E0A8D6510E59C2434D6' action='delete'></Item>
+
+				<Item type='Part' id='0A59D379BC584E8AB3D58A6279662BB2' action='delete' />
+				<Item type='CAD' id='8C5A62E728F84395934BBB74527EFEE1' action='delete' />
+				<Item type='CAD' id='88EA7B36A1C843AFBAA608DDCF03472E' action='delete' />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

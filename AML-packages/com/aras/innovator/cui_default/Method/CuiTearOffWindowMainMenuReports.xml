@@ -1,0 +1,79 @@
+﻿<AML>
+ <Item type="Method" id="36AC63D9DDF14305878D3F1FC3C86F7B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Item menuItems = null;
+
+	//ItemType and Item reports
+	string itemTypeId = this.getProperty("item_type_id");
+	if (!string.IsNullOrEmpty(itemTypeId))
+	{
+		Item items;
+		Item itemReports = this.newItem("Item Report", "get");
+		itemReports.setProperty("source_id", itemTypeId);
+		Item relReports = this.newItem("Report", "get");
+		relReports.setAttribute("select", "name,label");
+		Item logicOr = relReports.newOR();
+		logicOr.setProperty("type", "itemtype");
+		logicOr.setProperty("type", "item");
+		itemReports.setRelatedItem(relReports);
+		itemReports = itemReports.apply();
+		if (!itemReports.isError())
+		{
+			Item reports = itemReports.getItemsByXPath(Item.XPathResultItem + "/related_id/Item");
+			items = HandleMenuButtons(reports, "report:{0}:{1}", itemTypeId);
+			if (items != null)
+			{
+				Item separator = this.newItem("CommandBarSeparator");
+				separator.setProperty("name", "cui_after_reports_sep");
+				_sortOrder += 128;
+				separator.setProperty("sort_order", _sortOrder.ToString(CultureInfo.InvariantCulture));
+				//Id is required. Id of separator should be constant. Main Menu will be refreshed at each choice of item in TOC if separator id will be random generated GUID.
+				separator.setID("cui_after_reports_sep");
+				separator.setProperty("parent_menu", "ABC76A89AB8B48F6BA8AD121247D7B88");
+				items.appendItem(separator);
+				menuItems = items;
+			}
+		}
+	}
+
+	return menuItems ?? this.getInnovator().newResult("");
+}
+
+private int _sortOrder = 0;
+
+private Item HandleMenuButtons(Item reports, string reportTemplate, string itemTypeId)
+{
+	int reportsCount = reports.getItemCount();
+	if (reportsCount > 0)
+	{
+		Item cuiItems = reports.newItem();
+		for (var i = 0; i < reportsCount; i++)
+		{
+			Item currentReport = reports.getItemByIndex(i);
+			Item menuButton = currentReport.newItem("CommandBarMenuButton");
+			string reportId = currentReport.getID();
+			string reportName = string.Format(CultureInfo.InvariantCulture, reportTemplate, reportId, itemTypeId);
+			menuButton.setProperty("name", reportName);
+			menuButton.setProperty("label", currentReport.getProperty("label") ?? currentReport.getProperty("name"));
+
+			// 'ABC76A89AB8B48F6BA8AD121247D7B88' - com.aras.innovator.cui_default.twmm_reports_menu
+			menuButton.setProperty("parent_menu", "ABC76A89AB8B48F6BA8AD121247D7B88");
+			menuButton.setProperty("action", "Add");
+			_sortOrder += 128;
+			menuButton.setProperty("sort_order", _sortOrder.ToString(CultureInfo.InvariantCulture));
+			menuButton.setID(reportId);
+			menuButton.removeAttribute("isNew");
+			menuButton.removeAttribute("isTemp");
+			cuiItems.appendItem(menuButton);
+		}
+
+		// newItem() is creates empty node. It's should be deleted
+		cuiItems.removeItem(cuiItems.getItemByIndex(0));
+		return cuiItems;
+	}
+
+	return null;]]></method_code>
+  <method_type>C#</method_type>
+  <name>CuiTearOffWindowMainMenuReports</name>
+ </Item>
+</AML>

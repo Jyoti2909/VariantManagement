@@ -1,0 +1,72 @@
+﻿@{
+	Layout = "Shared/_cuiLayout.cshtml";
+}
+@section header
+{
+	<style type="text/css">
+		@@import "@Url.ContentWithSalt("~/styles/default.css")";
+		@@import "@Url.ContentWithSalt("~/styles/controls/mainTree.css")";
+		@@import "@Url.ContentWithSalt("~/styles/controls/menu.css")";
+		@@import "@Url.ContentWithSalt("~/Modules/aras.innovator.CMF/Styles/cmfAdminStyle.css")";
+	</style>
+}
+
+@section init_widgets
+{
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/jsBundles/cui.js")"></script>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=tearoffWindow")"></script>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/Modules/aras.innovator.CMF/Scripts/AdminPanel/cmfItemForm.js")"></script>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/Modules/aras.innovator.CMF/Scripts/AdminPanel/cmfAdminPanel.js")"></script>
+	<script type="text/javascript">
+		const initTearOffMenuController = () => {
+			const tearOffMenuController = new TearOffMenuController({ view: viewType, aras: window.aras });
+			tearOffMenuController.menuFrameReady = true;
+			tearOffMenuController.initSvgManager();
+			tearOffMenuController.initController();
+			window.tearOffMenuController = tearOffMenuController;
+			clientControlsFactory.createControl('Aras.Client.Frames.TearOffMenu', { tearOffMenuController });
+		};
+		const initCuiLayout = async () => {
+			const layoutNode = document.getElementById('top-toolbars');
+			const options = window.getDefaultOptions(window.itemID, window.itemTypeName);
+			window.layout = new ItemViewToolbarsCuiLayout(layoutNode, 'ItemView', options);
+			window.addEventListener('unload', () => window.layout.destroy());
+			await window.layout.init();
+			const commandBarNode = layoutNode.querySelector('.aras-commandbar');
+			if (commandBarNode) {
+				const itemTypeColor = aras.getItemTypeColor(window.itemTypeName, 'name');
+				commandBarNode.style.borderBottom = `4px solid ${itemTypeColor}`;
+			}
+		};
+		document.addEventListener('DOMContentLoaded', () => {
+			initTearOffMenuController();
+			initCuiLayout();
+		});
+
+		window.addEventListener('load', function () {
+			window.containerWidget = dijit.byId('view-container');
+			window.formsPaneWidget = dijit.byId('forms');
+			window.tabsPaneWidget = dijit.byId('relationshipsPane');
+			window.loadCmfAdminPanel();
+			aras.browserHelper.toggleSpinner(document, false);
+		});
+	</script>
+}
+@section center
+{
+	<!------ cmfContentType.html page content -------------------------------------------------------------------------->
+	<div id="worflowToolContent" class="aras-flex" style="height: 100%">
+		<div id="editorPane" style="width: 350px">
+			<div id="divTree" class="aras-hide"></div>
+		</div>
+		<aras-splitter id="tree-splitter"></aras-splitter>
+		<div id="view-container" class="aras-flex-grow" style="height: 100%">
+			<div id="viewContent" class="aras-flex aras-flex_column" style="height: 100%">
+				<div id="forms"></div>
+				<aras-splitter id="form-splitter"></aras-splitter>
+				<div id="relationshipsPane" class="aras-flex-grow" style="height: 100%"></div>
+			</div>
+		</div>
+	</div>
+	<!------ end of cmfContentType.html page -------------------------------------------------------------------------->
+}

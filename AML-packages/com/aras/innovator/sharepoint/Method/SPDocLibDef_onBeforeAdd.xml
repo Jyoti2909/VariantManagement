@@ -1,0 +1,529 @@
+﻿<AML>
+ <Item type="Method" id="9D04686C79C64D7F98BFCB5AE384E52C" action="add">
+  <comments>Checks SP url, gets SP doc lib ID, title, etc.</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharpInOut;
+      if (InnovatorServerASP == null)
+        throw new ArgumentNullException("InnovatorServerASP");
+
+      Innovator inn = new Innovator(InnovatorServerASP);
+
+      SPDocLibBeforeAddHandler bah = new SPDocLibBeforeAddHandler(inn, inDom);
+      bah.Process();
+    }
+
+
+    /// <summary>
+    /// This handler needed for setting up SPDocumentLibrary while saving.
+    /// </summary>
+    private class SPDocLibBeforeAddHandler
+    {
+      /// <summary>
+      /// Innovator object instance.
+      /// </summary>
+      private Innovator _inn;
+
+      /// <summary>
+      /// SPDocLibDefinition item to process.
+      /// </summary>
+      private XmlDocument _inDom;
+
+      /// <summary>
+      /// SharePoint site.
+      /// </summary>
+      private Aras.Tools.SPSite _site;
+
+      /// <summary>
+      /// SharePoint document library.
+      /// </summary>
+      private Aras.Tools.SPDocumentLibrary _doclib;
+
+      /// <summary>
+      /// Authentication mode, used to determine what credentials are used to connect to SharePoint.
+      /// </summary>
+      private Aras.Tools.SharePointAuthenticationType _auth_type = Aras.Tools.SharePointAuthenticationType.Undefined;
+
+      /// <summary>
+      /// Structure used to convert SharePoint fields to Innovator fields.
+      /// </summary>
+      private struct FieldData
+      {
+        public string sp_name;
+        public string sp_type;
+        public string inn_name;
+        public string inn_label;
+        public int inn_length;
+        public bool inn_hidden;
+        public bool inn_hidden2;
+        public int inn_keyed_order;
+      }
+
+      /// <summary>
+      /// As default there are 10 standard fields that are used now.
+      /// </summary>
+      private FieldData[] _fdata = new FieldData[10];
+
+
+      /// <summary>
+      /// Initializes new instance of SPDocLibBeforeAddHandler class.
+      /// </summary>
+      /// <param name="inn"></param>
+      /// <param name="inDom">SPDocLibDefinition item to process.</param>
+      protected internal SPDocLibBeforeAddHandler(Innovator inn, XmlDocument inDom)
+      {
+        _inn = inn;
+        _inDom = inDom;
+
+        XmlNode auth_type = inDom.DocumentElement.SelectSingleNode("authentication_type");
+        if (auth_type != null)
+        {
+          switch (auth_type.InnerText)
+          {
+            case "WindowsAuthenticationOnly":
+              {
+                _auth_type = Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationOnly;
+              } break;
+            case "WindowsAuthenticationPreferred":
+              {
+                _auth_type = Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationPreferred;
+              } break;
+            case "DedicatedUserOnly":
+              {
+                _auth_type = Aras.Tools.SharePointAuthenticationType.DedicatedUserOnly;
+              } break;
+            default:
+              {
+                _auth_type = Aras.Tools.SharePointAuthenticationType.Undefined;
+              } break;
+          }
+        }
+      }
+
+
+      /// <summary>
+      /// This method sets up SPDocLibDefinition using specified Authentication mode
+      /// and credentials to get required information from SharePoint server.
+      /// </summary>
+      protected internal void Process()
+      {
+        if (HttpContext.Current.Request.Headers["IsRedirected"] == null)
+        {
+          if (_auth_type == Aras.Tools.SharePointAuthenticationType.WindowsAuthenticationOnly)
+          {
+            bool customCredentialsAreUsed = (_inDom.DocumentElement.SelectSingleNode("custom_user") != null);
+            if (customCredentialsAreUsed)
+            {
+              ConnectUsingCustomCredentials();
+            }
+            else
+            {
+              ConnectWithAuthCheck();
+            }
+          }
+          else
+          {
+            ConnectUsingDedicatedCredentials();
+          }
+        }
+        else
+        {
+          ConnectUsingWindowsCredentials();
+        }
+      }
+
+
+      /// <summary>
+      /// Executes actions using credentials from custom credential dialog.
+      /// </summary>
+      private void ConnectUsingCustomCredentials()
+      {
+        ICredentials cred = GetCustomCredentials();
+        try
+        {
+          ExecuteActions(cred);
+        }
+        catch (WebException ex)
+        {
+          ConnectWithAuthCheck();
+        }
+      }
+
+
+      /// <summary>
+      /// Executes actions using dedicated credentials.
+      /// </summary>
+      private void ConnectUsingDedicatedCredentials()
+      {
+        ICredentials cred = GetDedicatedCredentials();
+        ExecuteActions(cred);
+      }
+
+
+      /// <summary>
+      /// Checks if user is authenticated and redirect it to authenticate or executes actions
+      /// using windows credentials.
+      /// </summary>
+      private void ConnectWithAuthCheck()
+      {
+        if (!HttpContext.Current.Request.LogonUserIdentity.IsAuthenticated)
+        {
+          HttpContext.Current.Response.AddHeader("IE.Bug.PostRequestMustRedirectedManualy", "1");
+          HttpContext.Current.Response.AddHeader("IE.Bug.RedirectToUrl", "SharePoint/Auth/InnovatorServerWinAuth.aspx");
+          HttpContext.Current.Response.End();
+        }
+        else
+        {
+          ConnectUsingWindowsCredentials();
+        }
+      }
+
+
+      /// <summary>
+      /// Executes actions using windows credentials.
+      /// </summary>
+      private void ConnectUsingWindowsCredentials()
+      {
+        // Checks here if Windows Authentication is possible.
+        if (HttpContext.Current.Request.Headers["Authorization"] != null
+            && HttpContext.Current.Request.Headers["Authorization"].Length < 1500)
+        {
+          throw new WebException("To use Windows Authentication Mode 'Kerberos' authentication should be configured.");
+        }
+        if (HttpContext.Current.Request.LogonUserIdentity.ImpersonationLevel
+            != System.Security.Principal.TokenImpersonationLevel.Delegation)
+        {
+          throw new WebException("User Identity impersonation level should be 'Delegation'.");
+        }
+
+        System.Security.Principal.WindowsImpersonationContext c = HttpContext.Current.Request.LogonUserIdentity.Impersonate();
+        ICredentials cred = CredentialCache.DefaultNetworkCredentials;
+
+        try
+        {
+          ExecuteActions(cred);
+        }
+        finally
+        {
+          c.Undo();
+        }
+      }
+
+
+      /// <summary>
+      /// Executes actions with given credentials.
+      /// </summary>
+      /// <returns>ICredentials</returns>
+      private void ExecuteActions(ICredentials cred)
+      {
+        SetSPSiteAndLib(cred);
+        InitStdFieldData();
+        UpdateDocLibInfo();
+        CreateStandardFields();
+      }
+
+
+      /// <summary>
+      /// Get custom credentials from inDom element.
+      /// </summary>
+      /// <returns>ICredentials</returns>
+      private ICredentials GetCustomCredentials()
+      {
+      	XmlNode userNode = _inDom.DocumentElement.SelectSingleNode("custom_user");
+        if (userNode.InnerText.Length == 0)
+          throw new ArgumentException("SharePoint user name is not specified.");
+        XmlNode passNode = _inDom.DocumentElement.SelectSingleNode("custom_password");
+        if (passNode == null || passNode.InnerText.Length == 0)
+          throw new ArgumentException("SharePoint user password is not specified.");
+        XmlNode domainNode = _inDom.DocumentElement.SelectSingleNode("custom_domain");
+        if (domainNode == null || domainNode.InnerText.Length == 0)
+          throw new ArgumentException("SharePoint user domain is not specified.");
+
+        string user = userNode.InnerText;
+        string password = passNode.InnerText;
+        string domain = domainNode.InnerText;
+
+        return new NetworkCredential(user, password, domain);
+      }
+
+
+      /// <summary>
+      /// Get dedicated credentials from inDom element.
+      /// </summary>
+      /// <returns>ICredential</returns>
+      private ICredentials GetDedicatedCredentials()
+      {
+      	XmlNode userNode = _inDom.DocumentElement.SelectSingleNode("sp_user");
+        if (userNode == null || userNode.InnerText.Length == 0)
+          throw new ArgumentException("SharePoint user name is not specified.");
+        XmlNode passNode = _inDom.DocumentElement.SelectSingleNode("sp_password");
+        if (passNode == null || passNode.InnerText.Length == 0)
+          throw new ArgumentException("SharePoint user password is not specified.");
+        XmlNode domainNode = _inDom.DocumentElement.SelectSingleNode("sp_domain");
+        if (domainNode == null || domainNode.InnerText.Length == 0)
+          throw new ArgumentException("SharePoint user domain is not specified.");
+
+        string user = userNode.InnerText;
+        string password = passNode.InnerText;
+        string domain = domainNode.InnerText;
+
+        return new NetworkCredential(user, password, domain);
+      }
+
+
+      /// <summary>
+      /// Sets site and document library titles in SPDocumentLibrary item.
+      /// </summary>
+      private void UpdateDocLibInfo()
+      {
+        // Set site title
+        XmlNode st_node = _inDom.DocumentElement.SelectSingleNode("sp_site_title");
+        if (st_node == null)
+        {
+          st_node = _inDom.CreateElement("sp_site_title");
+          st_node.InnerText = _site.Title;
+          _inDom.DocumentElement.AppendChild(st_node);
+        }
+
+        // Set document library title
+        XmlNode dlt_node = _inDom.DocumentElement.SelectSingleNode("sp_doclib_name");
+        if (dlt_node == null)
+        {
+          dlt_node = _inDom.CreateElement("sp_doclib_name");
+          dlt_node.InnerText = _doclib.Title;
+          _inDom.DocumentElement.AppendChild(dlt_node);
+        }
+      }
+
+
+      /// <summary>
+      /// Sets relationships for standard fields in SPDocumentLibrary item.
+      /// </summary>
+      private void CreateStandardFields()
+      {
+        XmlNode rel_node = _inDom.DocumentElement.SelectSingleNode("Relationships");
+        if (rel_node == null)
+        {
+          rel_node = _inDom.CreateElement("Relationships");
+          _inDom.DocumentElement.AppendChild(rel_node);
+        }
+
+        for (int i = 0; i < _fdata.Length; i++)
+        {
+          CreateStdField((XmlElement)rel_node, _fdata[i]);
+        }
+      }
+
+
+      /// <summary>
+      /// Creates xml definition from fielddata structure and appends it to parent node.
+      /// </summary>
+      /// <param name="rel_node">Parent node to add field definition to.</param>
+      /// <param name="fd">Field data.</param>
+      private void CreateStdField(XmlElement rel_node, FieldData fd)
+      {
+        XmlElement item_elem = CreateXmlElement(rel_node, "Item");
+        item_elem.SetAttribute("type", "SPField");
+        item_elem.SetAttribute("action", "add");
+
+        Aras.Tools.SPField spfield = _doclib.GetField(fd.sp_name);
+
+        // sp_guid
+        XmlElement spguid_elem = CreateXmlElement(item_elem, "sp_guid");
+        spguid_elem.InnerText = spfield.Id;
+
+        // sp_field_name
+        XmlElement sp_fn_elem = CreateXmlElement(item_elem, "sp_field_name");
+        sp_fn_elem.InnerText = spfield.Name;
+
+        // sp_field_type
+        XmlElement sp_ft_elem = CreateXmlElement(item_elem, "sp_field_type");
+        sp_ft_elem.InnerText = spfield.SPType;
+
+        // property_name
+        XmlElement pname_elem = CreateXmlElement(item_elem, "property_name");
+        pname_elem.InnerText = fd.inn_name;
+
+        // property_type
+        XmlElement ptype_elem = CreateXmlElement(item_elem, "property_type");
+        ptype_elem.InnerText = spfield.InnovatorType.ToString().ToLower();
+
+        // property_length
+        XmlElement plength_elem = CreateXmlElement(item_elem, "property_length");
+        plength_elem.InnerText = fd.inn_length.ToString();
+
+        // property_label
+        XmlElement plabel_elem = CreateXmlElement(item_elem, "property_label");
+        plabel_elem.InnerText = fd.inn_label;
+
+        // property_hidden
+        XmlElement ph_elem = CreateXmlElement(item_elem, "property_hidden");
+        ph_elem.InnerText = (fd.inn_hidden == true ? "1" : "0");
+
+        // property_hidden2
+        XmlElement ph2_elem = CreateXmlElement(item_elem, "property_hidden2");
+        ph2_elem.InnerText = (fd.inn_hidden2 == true ? "1" : "0");
+
+        // property_keyed_order
+        if (fd.inn_keyed_order > 0)
+        {
+          XmlElement pko_elem = CreateXmlElement(item_elem, "property_keyed_order");
+          pko_elem.InnerText = fd.inn_keyed_order.ToString();
+        }
+      }
+
+
+      /// <summary>
+      /// Creates child xml element with specified name and appends it to parent xml element.
+      /// </summary>
+      /// <param name="parent">Parent xml element.</param>
+      /// <param name="ename">Element name.</param>
+      /// <returns>Xml Element.</returns>
+      private XmlElement CreateXmlElement(XmlElement parent, string ename)
+      {
+        XmlElement result = parent.OwnerDocument.CreateElement(ename);
+        parent.AppendChild(result);
+
+        return result;
+      }
+
+
+      /// <summary>
+      /// Sets SharePoint Site and Library fields.
+      /// </summary>
+      /// <param name="cred">Credentials to connect to SharePoint server.</param>
+      private void SetSPSiteAndLib(ICredentials cred)
+      {
+        // Document library ID
+        XmlNode dlid_node = _inDom.DocumentElement.SelectSingleNode("sp_doclib_id");
+        if (dlid_node == null)
+          throw new ArgumentException("SharePoint document library is not specified.");
+
+        // URL
+        XmlNode url_node = _inDom.DocumentElement.SelectSingleNode("sp_site_url");
+        if (url_node == null)
+          throw new ArgumentException("Site URL is not specified.");
+
+        string site_url = url_node.InnerText.ToLower();
+
+        Aras.Tools.SPConnector spc = new Aras.Tools.SPConnector(site_url, cred);
+        if (spc == null)
+          throw new WebException("Could not create SharePoint Connector.");
+
+        _site = spc.GetSite(site_url);
+        if (_site == null)
+          throw new WebException(string.Format("SharePoint site with URL '{0}' not found.", site_url));
+
+        // Set SharePoint document library 
+        string doclib_id = dlid_node.InnerText;
+        _doclib = _site.GetDocumentLibrary(doclib_id);
+        if (_doclib == null)
+          throw new WebException(string.Format("SharePoint document library with ID={0} " +
+            "is not found or specified user doesn't have permissions to get this library.", doclib_id));
+      }
+
+
+      /// <summary>
+      /// Inits standard fields data.
+      /// </summary>
+      private void InitStdFieldData()
+      {
+        // "ID"
+        _fdata[0].sp_name = "ID";
+        _fdata[0].inn_name = "sp_id";
+        _fdata[0].inn_label = "SharePoint ID";
+        _fdata[0].inn_length = 16;
+        _fdata[0].inn_hidden = true;
+        _fdata[0].inn_hidden2 = true;
+        _fdata[0].inn_keyed_order = -1;
+
+        // "GUID"
+        _fdata[1].sp_name = "GUID";
+        _fdata[1].inn_name = "sp_guid";
+        _fdata[1].inn_label = "SharePoint GUID";
+        _fdata[1].inn_length = 64;
+        _fdata[1].inn_hidden = true;
+        _fdata[1].inn_hidden2 = true;
+        _fdata[1].inn_keyed_order = -1;
+
+        // "FileLeafRef"
+        _fdata[2].sp_name = "FileLeafRef";
+        _fdata[2].inn_name = "sp_file_name";
+        _fdata[2].inn_label = "Document Name";
+        _fdata[2].inn_length = 64;
+        _fdata[2].inn_hidden = false;
+        _fdata[2].inn_hidden2 = false;
+        _fdata[2].inn_keyed_order = -1;
+
+        // "FileDirRef"
+        _fdata[3].sp_name = "FileDirRef";
+        _fdata[3].inn_name = "sp_dir";
+        _fdata[3].inn_label = "Directory";
+        _fdata[3].inn_length = 128;
+        _fdata[3].inn_hidden = false;
+        _fdata[3].inn_hidden2 = false;
+        _fdata[3].inn_keyed_order = -1;
+
+        // "ServerUrl"
+        _fdata[4].sp_name = "ServerUrl";
+        _fdata[4].inn_name = "sp_file_url";
+        _fdata[4].inn_label = "Document URL";
+        _fdata[4].inn_length = 256;
+        _fdata[4].inn_hidden = true;
+        _fdata[4].inn_hidden2 = true;
+        _fdata[4].inn_keyed_order = 1;
+
+        // "Created_x0020_By"
+        _fdata[5].sp_name = "Created_x0020_By";
+        _fdata[5].inn_name = "sp_created_by";
+        _fdata[5].inn_label = "(SP) Created By";
+        _fdata[5].inn_length = 32;
+        _fdata[5].inn_hidden = true;
+        _fdata[5].inn_hidden2 = true;
+        _fdata[5].inn_keyed_order = -1;
+
+        // "Created"
+        _fdata[6].sp_name = "Created";
+        _fdata[6].inn_name = "sp_created";
+        _fdata[6].inn_label = "(SP) Created On";
+        _fdata[6].inn_length = 32;
+        _fdata[6].inn_hidden = true;
+        _fdata[6].inn_hidden2 = true;
+        _fdata[6].inn_keyed_order = -1;
+
+        // "Modified_x0020_By"
+        _fdata[7].sp_name = "Modified_x0020_By";
+        _fdata[7].inn_name = "sp_modified_by";
+        _fdata[7].inn_label = "(SP) Modified By";
+        _fdata[7].inn_length = 32;
+        _fdata[7].inn_hidden = false;
+        _fdata[7].inn_hidden2 = true;
+        _fdata[7].inn_keyed_order = -1;
+
+        // "Modified"
+        _fdata[8].sp_name = "Modified";
+        _fdata[8].inn_name = "sp_modified";
+        _fdata[8].inn_label = "(SP) Modified On";
+        _fdata[8].inn_length = 32;
+        _fdata[8].inn_hidden = false;
+        _fdata[8].inn_hidden2 = true;
+        _fdata[8].inn_keyed_order = -1;
+
+        // "File_x0020_Size"
+        _fdata[9].sp_name = "File_x0020_Size";
+        _fdata[9].inn_name = "sp_file_size";
+        _fdata[9].inn_label = "File Size";
+        _fdata[9].inn_length = 16;
+        _fdata[9].inn_hidden = false;
+        _fdata[9].inn_hidden2 = true;
+        _fdata[9].inn_keyed_order = -1;
+
+        for (int i = 0; i < _fdata.Length; i++)
+        {
+          Aras.Tools.SPField spf = _doclib.GetField(_fdata[i].sp_name);
+          _fdata[i].sp_type = spf.SPType;
+        }
+      }]]></method_code>
+  <method_type>C#</method_type>
+  <name>SPDocLibDef_onBeforeAdd</name>
+ </Item>
+</AML>

@@ -1,0 +1,102 @@
+﻿<AML>
+ <Item type="Method" id="4E2C3A95E1F348329EED8E492F45132E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Aras.ConversionFramework.Models.ConversionTask task = new Aras.ConversionFramework.Models.ConversionTask()
+{
+  Item = this
+};
+
+Innovator inn = this.getInnovator();
+
+Dictionary<string, string> files = new Dictionary<string, string>
+{
+	{ "shatteredModel", String.Empty },
+	{ "view", String.Empty }
+};
+
+Item results = task.Item.getItemsByXPath("Relationships/Item[@type='ConversionTaskResult']");
+for(int resIndex = 0; resIndex < results.getItemCount(); resIndex++)
+{
+  Item result = results.getItemByIndex(resIndex);
+  switch(result.getProperty("kind", ""))
+  {
+	case "scs":
+	  files["view"] = result.getProperty("file_id", "");
+  	  break;
+	case "xml":
+	  files["shatteredModel"] = result.getProperty("file_id", "");
+  	  break;
+  }
+}
+
+if(files.Any(item => !String.IsNullOrEmpty(item.Value)))
+{
+    // Creates FileRepresentation native_file -> scs
+    XmlDocument document = new XmlDocument();
+    document.LoadXml(task.UserData);
+    XmlNode nativeFileIdNode = document.DocumentElement.SelectSingleNode("NativeFileId");
+	string nativeFileId = nativeFileIdNode.InnerText;
+	Item nativeFile = inn.newItem("File", "get");
+	nativeFile.setID(nativeFileId);
+	nativeFile.setProperty("select", "file_type");
+	nativeFile = nativeFile.apply();
+	
+	if(nativeFile.isError())
+	{
+	    return nativeFile;
+	}
+    
+	string nativeFileTypeId = nativeFile.getProperty("file_type");
+	Item fileRepresentationType = inn.newItem("fr_RepresentationType", "get");
+	fileRepresentationType.setProperty("source_id", nativeFileTypeId);
+	fileRepresentationType.setProperty("name", "SCS Representation");
+	fileRepresentationType = fileRepresentationType.apply();
+
+	if (fileRepresentationType.isError())
+	{
+		return fileRepresentationType;
+	}
+
+	string representationTypeId = fileRepresentationType.getID();
+	Item fileRepresentation = inn.newItem("fr_Representation", "add");
+	
+	fileRepresentation.setProperty("source_id", nativeFileId);
+	fileRepresentation.setProperty("representation_type_id", representationTypeId);
+	
+	Item scsRepresentationFile = fileRepresentation.createRelationship("fr_RepresentationFile", "add");
+	scsRepresentationFile.setProperty("related_id", files["view"]);
+	scsRepresentationFile.setProperty("kind", "scs");
+	
+	if(!string.IsNullOrEmpty(files["shatteredModel"]))
+	{
+    	Item xmlRepresentationFile = fileRepresentation.createRelationship("fr_RepresentationFile", "add");
+    	xmlRepresentationFile.setProperty("related_id", files["shatteredModel"]);
+    	xmlRepresentationFile.setProperty("kind", "xml_assemblytree");
+    }
+    
+    Aras.Server.Security.Identity identity = Aras.Server.Security.Identity.GetByName("File Representation Manager");
+    bool granted = Aras.Server.Security.Permissions.GrantIdentity(identity);
+ 
+    try
+    {
+        fileRepresentation = fileRepresentation.apply();
+    }
+    finally
+    {
+        if (granted)
+        {
+            Aras.Server.Security.Permissions.RevokeIdentity(identity);
+        }
+    }
+
+    if (fileRepresentation.isError())
+	{
+		return fileRepresentation;
+	}
+}
+
+return task.Item;]]></method_code>
+  <method_type>C#</method_type>
+  <name>CR_3DPRCtoSCS_SetFiles</name>
+ </Item>
+</AML>

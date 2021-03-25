@@ -1,0 +1,24 @@
+﻿<AML>
+ <Item type="SQL" id="1ACC824ED6DA43D4BE2EBDD9F5ABC0E0" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>IsClassesHasProperty</old_name>
+  <sqlserver_body><![CDATA[CREATE FUNCTION IsClassesHasProperty
+(
+	@propdef_id CHAR(32),
+	@item_classes VARCHAR(MAX)
+)
+RETURNS TABLE
+AS
+RETURN
+(
+	SELECT TOP 1 9 as p 
+		from [innovator].[XCLASS_XPROPERTY_FLATTEN] xclass_xproperty_flatten
+		WHERE xclass_xproperty_flatten.RELATED_ID = @propdef_id AND
+			(CHARINDEX(xclass_xproperty_flatten.SOURCE_ID COLLATE Latin1_General_BIN2, @item_classes) > 0)
+)]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>function</type>
+  <name>IsClassesHasProperty</name>
+ </Item>
+</AML>

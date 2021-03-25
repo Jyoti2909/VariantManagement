@@ -1,0 +1,18 @@
+﻿<AML>
+ <Item type="Method" id="3F0DE2FFF1B94238B810EAA8019BE8C7" action="add">
+  <comments>Handles changes of doclib name to set corresponding value in doclib id field</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var doclibNameList = this;
+var id = '';
+var name = '';
+if (doclibNameList.selectedIndex > -1) {
+	id = doclibNameList.options[doclibNameList.selectedIndex].value;
+	name = doclibNameList.options[doclibNameList.selectedIndex].text;
+}
+aras.setItemProperty(document.item, 'sp_doclib_name', name);
+handleItemChange('sp_doclib_id', id);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>SPDocLibDef_onNameChange</name>
+ </Item>
+</AML>

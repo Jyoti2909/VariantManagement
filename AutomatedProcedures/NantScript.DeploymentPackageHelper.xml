@@ -1,0 +1,451 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<project name="DeploymentPackageHelper">
+	<!--
+		Target takes several parameter:
+		1) Nuget.Command.Line - command line which will be passed to NuGet.exe to execute once it set up NuGet source.
+		2) Nuget.Fail.On.Error - (optional) boolean parameter identified whether target fail if an error occurs or not.
+		3) Nuget.Output.File - (optional) a file where output from NuGet.exe will be redirected.
+		4) Nuget.Publishing.Source - (optional) See Default.Settings.include
+		5) Nuget.Uploader.Username - (optional) See Default.Settings.include
+		6) Nuget.Uploader.Password - (optional) See Default.Settings.include
+	-->
+	<target name="Execute.Nuget.Command.Line.Using.Nuget.Source"
+			description="Set NuGet source, execute passed target and remove NuGet source in finally.">
+		<fail message="Target expects Nuget.Command.Line property to be passed. But it doesn't exist or empty" if="${not property::exists('Nuget.Command.Line') or string::get-length('Nuget.Command.Line') == 0}" />
+
+		<property name="Nuget.Fail.On.Error" value="true" if="${not property::exists('Nuget.Fail.On.Error') or string::get-length(Nuget.Fail.On.Error) == 0}" />
+
+		<trycatch>
+			<try>
+				<property name="Nuget.Source.Name" overwrite="false" value="packageSourceForCRT" />
+
+				<exec program="${Path.To.Nuget}" verbose="true" workingdir="${Path.To.This.Git.Repository}">
+					<arg value="sources" />
+					<arg value="Add" />
+					<arg value="-Name" />
+					<arg value="${Nuget.Source.Name}" />
+					<arg value="-Source" />
+					<arg value="${Nuget.Publishing.Source}" />
+					<arg value="-UserName" />
+					<arg value="${Nuget.Uploader.Username}" />
+					<arg value="-Password" />
+					<arg value="${Nuget.Uploader.Password}" />
+					<arg value="-ConfigFile" />
+					<arg value="${Path.To.Nuget.Config}" />
+				</exec>
+
+				<choose>
+					<when test="${property::exists('Nuget.Output.File') and string::get-length(Nuget.Output.File) > 0}">
+						<exec program="${Path.To.Nuget}" commandline="${Nuget.Command.Line} -Source ${Nuget.Source.Name}" failonerror="${Nuget.Fail.On.Error}" output="${Nuget.Output.File}" verbose="true" workingdir="${Path.To.This.Git.Repository}" />
+					</when>
+					<otherwise>
+						<exec program="${Path.To.Nuget}" commandline="${Nuget.Command.Line} -Source ${Nuget.Source.Name}" failonerror="${Nuget.Fail.On.Error}" verbose="true" workingdir="${Path.To.This.Git.Repository}" />
+					</otherwise>
+				</choose>
+			</try>
+			<finally>
+				<exec program="${Path.To.Nuget}" verbose="true" workingdir="${Path.To.This.Git.Repository}">
+					<arg value="sources" />
+					<arg value="Remove" />
+					<arg value="-Name" />
+					<arg value="${Nuget.Source.Name}" />
+					<arg value="-ConfigFile" />
+					<arg value="${Path.To.Nuget.Config}" />
+				</exec>
+
+				<property name="Target.Name" value="" />
+				<property name="Nuget.Fail.On.Error" value="true" />
+				<property name="Nuget.Output.File" value="" />
+			</finally>
+		</trycatch>
+	</target>
+
+	<target name="SetupParameters.For.Nuget">
+		<property name="Deployment.Package.Version.Suffix" overwrite="false" value="${Last.Commit.Before.Current.Release}" />
+	</target>
+
+	<target name="Get.Nuget.Package.Existense" depends="SetupParameters.For.Nuget">
+		<property name="Path.To.Deployment.Package.All.Existing.Versions" value="${path::combine(Path.To.Automated.Procedures.Temp, 'DeploymentPackageAllExistingVersions.txt')}" />
+
+		<property name="Nuget.Command.Line" value='list ${Deployment.Package.Id} -AllVersions -PreRelease -ConfigFile "${Path.To.Nuget.Config}"' />
+		<property name="Nuget.Fail.On.Error" value="false" />
+		<property name="Nuget.Output.File" value="${Path.To.Deployment.Package.All.Existing.Versions}" />
+		<call target="Execute.Nuget.Command.Line.Using.Nuget.Source" />
+
+		<property name="Full.Deployment.Package.Version" value="${Deployment.Package.Version}-${Deployment.Package.Version.Suffix}" />
+		<loadfile file="${Path.To.Deployment.Package.All.Existing.Versions}" property="Deployment.Package.All.Existing.Versions" />
+
+		<property name="Nuget.Package.Exists" value="${string::contains(Deployment.Package.All.Existing.Versions, Full.Deployment.Package.Version)}"/>
+	</target>
+
+	<target name="Prepare.Deployment.Package"
+			depends="Get.Nuget.Package.Existense"
+			description="Check that NuGet package exists and create it otherwise.">
+		<choose>
+			<when test="${not Nuget.Package.Exists}">
+				<call target="Build.Deployment.Tool" />
+				<call target="CreateZipWithDeploymentPackageContent" />
+
+				<property name="Nuspec.File.Name" value="package.nuspec" />
+				<call target="Push.Nuget.Package" />
+			</when>
+			<otherwise>
+				<echo message="Deployment package '${Deployment.Package.Id}.${Full.Deployment.Package.Version}' already exists at '${Nuget.Publishing.Source}'. Skip building" />
+			</otherwise>
+		</choose>
+
+		<call target="Install.Nuget.Package" />
+	</target>
+
+	<target name="Check.Nuget.Package.Existense"
+			depends="Get.Nuget.Package.Existense">
+		<fail if="${not Nuget.Package.Exists}"/>
+	</target>
+
+	<target name="Install.Nuget.Package"
+			description="Install NuGet package from specified source."
+			depends="SetupParameters.For.Nuget">
+		<property name="Path.To.Nuget.Output.Directory" value="${path::combine(Path.To.Automated.Procedures.Output, 'Packages')}" />
+		<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Nuget.Output.Directory}" /S /Q' if='${directory::exists(Path.To.Nuget.Output.Directory)}'/>
+		<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Deployment.Package.Dir}" /S /Q' if='${directory::exists(Path.To.Deployment.Package.Dir)}'/>
+
+		<trycatch>
+			<try>
+				<mkdir dir="${Path.To.Nuget.Output.Directory}" />
+				<mkdir dir="${Path.To.Deployment.Package.Dir}" />
+				<exec program="cmd.exe" commandline='/C subst s: "${Path.To.Nuget.Output.Directory}"' verbose='true' />
+				<exec program="cmd.exe" commandline='/C subst t: "${Path.To.Deployment.Package.Dir}"' verbose='true' />
+
+				<property name="Nuget.Command.Line" value='install ${Deployment.Package.Id} -Version ${Deployment.Package.Version}-${Deployment.Package.Version.Suffix} -OutputDirectory s: -ExcludeVersion -ConfigFile "${Path.To.Nuget.Config}"' />
+				<call target="Execute.Nuget.Command.Line.Using.Nuget.Source" />
+
+				<property name="Path.To.Installed.Nuget.Package" value="${path::combine('s:', Deployment.Package.Id)}" />
+
+				<!-- To ensure that Path.To.Deployment.Package.Dir contains deployment package content. -->
+				<move todir="t:">
+					<fileset basedir="${Path.To.Installed.Nuget.Package}">
+						<include name="**/*" />
+					</fileset>
+				</move>
+				<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Nuget.Output.Directory}" /S /Q' if='${directory::exists(Path.To.Nuget.Output.Directory)}'/>
+			</try>
+			<finally>
+				<call target="Remove.Used.Substitutions" />
+			</finally>
+		</trycatch>
+	</target>
+
+	<target name="Push.Nuget.Package"
+			depends="Create.Nuget.Package"
+			description="Push NuGet package to specified storage.">
+		<property name="Nuget.Command.Line" value='push *.nupkg -ApiKey ${Nuget.Uploader.Username}:${Nuget.Uploader.Password} -ConfigFile "${Path.To.Nuget.Config}"' />
+		<call target="Execute.Nuget.Command.Line.Using.Nuget.Source" />
+	</target>
+
+	<target name="Create.Nuget.Package"
+			depends="SetupParameters.For.Nuget"
+			description="Prepares NuGet package with script, that runs deploy based on files and AMLs, which were modified during release N development.">
+		<trycatch>
+			<try>
+				<exec program="cmd.exe" commandline='/C subst s: "${Path.To.This.Git.Repository}"' verbose='true' />
+
+				<property name="Path.To.Package.Nuspec" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\' + Nuspec.File.Name)}" />
+				<property name="Path.To.Expanded.Package.Nuspec" value="${path::combine(Path.To.Deployment.Package.Dir, Nuspec.File.Name)}" />
+				<loadfile file="${Path.To.Package.Nuspec}" property="Package.Nuspec.Content">
+					<filterchain>
+						<expandproperties />
+					</filterchain>
+				</loadfile>
+				<echo message="${Package.Nuspec.Content}" file="${Path.To.Expanded.Package.Nuspec}" />
+
+				<exec program="${Path.To.Nuget}" verbose="true" workingdir="s:">
+					<arg value="pack" />
+					<arg value="${Path.To.Expanded.Package.Nuspec}" />
+					<arg value="-BasePath" />
+					<arg value="s:" />
+					<arg value="-Version" />
+					<arg value="${Deployment.Package.Version}" />
+					<arg value="-Suffix" />
+					<arg value="${Deployment.Package.Version.Suffix}" />
+				</exec>
+			</try>
+			<finally>
+				<call target="Remove.Used.Substitutions" />
+			</finally>
+		</trycatch>
+	</target>
+
+	<target name="CreateZipWithDeploymentPackageContent"
+			depends="GetGitDiffBetweenCurrentHeadStateAndLastRelease"
+			description="Prepares zip archive with files and AMLs, which were modified during release N development.">
+		<trycatch>
+			<try>
+				<property name="Path.To.AutomatedProcedures" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures')}" />
+				<exec program="cmd.exe" commandline='/C subst s: "${Path.To.AutomatedProcedures}"' verbose='true' />
+				<exec program="cmd.exe" commandline='/C subst t: "${Path.To.Deployment.Package.Dir}"' verbose='true' />
+
+				<property name="Path.To.File.With.List.Of.Files.To.Deploy" value="${path::combine('t:', 'ListOfFilesToDeploy.txt')}" />
+				<property name="Path.To.File.With.List.Of.Files.To.Delete" value="${path::combine('t:', 'ListOfFilesToDelete.txt')}" />
+
+				<property name="Deployment.Package.Content.Archive.Name" value="Deployment-Package-Content.zip" />
+				<property name="Path.To.Deployment.Package.Content.Archive" value="${path::combine(Path.To.This.Git.Repository, Deployment.Package.Content.Archive.Name)}" />
+				<exec program="cmd" commandline='/C del /F "${Path.To.Deployment.Package.Content.Archive}"' if="${file::exists(Path.To.Deployment.Package.Content.Archive)}" />
+				<exec program="${Path.To.SevenZip}" verbose="true" workingdir="t:">
+					<arg value="a"/>
+					<arg value="${Path.To.Deployment.Package.Content.Archive}"/>
+					<arg value="*"/>
+					<arg value="-r"/>
+					<arg value="-x!*.nupkg"/>
+				</exec>
+			</try>
+			<finally>
+				<call target="Remove.Used.Substitutions" />
+			</finally>
+		</trycatch>
+	</target>
+
+	<target name="CreateZipWithDeploymentPackageAndScripts"
+					depends="Prepare.Deployment.Package"
+					description="Prepares zip archive with script, that runs deploy based on files and AMLs, which were modified during release N development.">
+		<property name="Deployment.Package.Archive.Name" overwrite="false" value="Deployment-Package-From-${Last.Commit.Before.Current.Release}-${This.Script.Start.Time.As.Sortable.Date}.zip" />
+		<property name="Path.To.Deployment.Package.Archive" value="${path::combine(Path.To.This.Git.Repository, Deployment.Package.Archive.Name)}" />
+		<exec program="cmd" commandline='/C del /F "${Path.To.Deployment.Package.Archive}"' if="${file::exists(Path.To.Deployment.Package.Archive)}" />
+		<exec program="${Path.To.SevenZip}" verbose="true" workingdir="${Path.To.This.Git.Repository}">
+			<arg value="a"/>
+			<arg value="${Path.To.Deployment.Package.Archive}"/>
+			<arg value="${Path.To.Deployment.Package.Dir}\**"/>
+			<arg value="-x!*.nupkg"/>
+		</exec>
+	</target>
+
+	<target name="Unzip.Deployment.Package.Content">
+		<property name="Deployment.Package.Content.Archive.Name" overwrite="false" value="Deployment-Package-Content.zip" />
+		<property name="Path.To.Deployment.Package.Content.Archive.Name" value="${path::combine(Path.To.Deployment.Package.Dir, Deployment.Package.Content.Archive.Name)}" />
+		<choose>
+			<when test="${file::exists(Path.To.Deployment.Package.Content.Archive.Name)}">
+				<exec program="${Path.To.SevenZip}" verbose="true" workingdir="${Path.To.Deployment.Package.Dir}">
+					<arg value="x"/>
+					<arg value="-aoa"/>
+					<arg value="${Deployment.Package.Content.Archive.Name}"/>
+				</exec>
+			</when>
+			<otherwise>
+				<echo message="Deployment package ${Path.To.Deployment.Package.Content.Archive.Name} wasn't found" />
+			</otherwise>
+		</choose>
+	</target>
+
+	<target name="GetGitDiffBetweenCurrentHeadStateAndLastRelease" 
+			depends="Build.Custom.Solutions"
+			description="Prepares &quot;package&quot;, containing files and AMLs, which were modified during release N development.">
+		<!--
+			Configure git with '.gitconfig' from the repositotry
+		-->
+		<echo>Configure 'git' with '.gitconfig' from the repositotry</echo>
+		<exec program="git"
+			commandline="config --local include.path ../.gitconfig"
+			workingdir="${Path.To.This.Git.Repository}" />
+		<!--
+			Check that specified in the default settings commit hash of current release does exist in the repositotry
+		-->
+		<echo>Check if commit ${Last.Commit.Before.Current.Release} exists in a repository. Path to the repository: ${Path.To.This.Git.Repository}</echo>
+		<exec program="git"
+					commandline="rev-parse --verify ${Last.Commit.Before.Current.Release}"
+					workingdir="${Path.To.This.Git.Repository}"
+					output="${Path.To.Pre.Deploy.Validations.Log.File}"
+					failonerror="false"
+					resultproperty="Commit.Found" />
+
+		<fail if="${Commit.Found != '0'}"
+			message="${Last.Commit.Before.Current.Release} not found in the repository" />
+		<echo>OK</echo>
+		<trycatch>
+			<try>
+				<exec program="cmd.exe" commandline='/C rmdir "${Path.To.Deployment.Package.Dir}" /S /Q' if='${directory::exists(Path.To.Deployment.Package.Dir)}'/>
+				<mkdir dir="${Path.To.Deployment.Package.Dir}" />
+				<exec program="cmd.exe" commandline='/C subst s: "${Path.To.Deployment.Package.Dir}"' verbose='true' />
+				<exec program="cmd.exe" commandline='/C subst t: "${Path.To.This.Git.Repository}"' verbose='true' />
+
+				<echo>Get list of files, which were added, modified or removed since ${Last.Commit.Before.Current.Release}</echo>
+				<property name="Path.To.File.With.List.Of.Files.To.Deploy" value="${path::combine('s:', 'ListOfFilesToDeploy.txt')}" />
+				<property name="Path.To.File.With.List.Of.Files.To.Delete" value="${path::combine('s:', 'ListOfFilesToDelete.txt')}" />
+				<property name="Path.To.File.With.Client.Modifications.Count" value="${path::combine('s:', 'InnovatorClientModifications.txt')}" />
+				<property name="Path.To.File.With.Templates.Of.Setting.Files.Modifications" value="${path::combine('s:', 'TemplatesOfSettingFilesModifications.txt')}" />
+				<property name="Path.To.DeltaExtractionTool" value="${path::combine('t:', 'AutomatedProcedures\tools\Aras.DeltaExtraction.CommandLine\lib\DeltaExtractionCmd.exe')}" />
+				<property name="Path.To.AML.Packages" value="${path::combine(Path.To.This.Git.Repository, 'AML-packages')}" />
+				<property name="Git.AML.Packages.Path" value="AML-packages/" />
+				<property name="Git.AML.Packages.Path" value="" if="${Use.Delta.Extraction.Tool}" />
+				<!--
+					Parameters that we pass to git diff:
+					staged
+						Show only that changes, that was staged to this repository (via 'git add/commit')
+					name-only
+						Show only names of changed files.
+					no-renames
+						Turn off rename detection
+					diff-filter=ACM
+						Select only files that are Added (A), Copied (C), Modified (M)
+					diff-filter=D
+						Select only files that are Removed (D)
+				-->
+				<if test="${Project.Prefix != 'GRAM'}">
+					<exec
+						program="git"
+						commandline='diff --staged --name-only --no-renames --diff-filter=ACM ${Last.Commit.Before.Current.Release} -- "AutomatedProcedures\TemplatesOfSettingFiles"/ "OAuthServer\OAuthServer.Plugins.json" ":!*.cer" ":!*.pfx"'
+						workingdir="t:"
+						output="${Path.To.File.With.Templates.Of.Setting.Files.Modifications}" />
+					<if test="${file::exists(Path.To.File.With.Templates.Of.Setting.Files.Modifications)}" >
+						<loadfile file="${Path.To.File.With.Templates.Of.Setting.Files.Modifications}" property="Templates.Of.Setting.Files.Modifications" />
+						<fail message="Please use the transformation mechanism to update the config files. Refer to TransformationsOfConfigFiles folder in the root of the repository" if="${string::get-length('Templates.Of.Setting.Files.Modifications') > 0}" />
+					</if>
+				</if>
+				<exec
+					program="git"
+					commandline='diff --staged --name-only --no-renames --diff-filter=ACM ${Last.Commit.Before.Current.Release} -- ${Git.AML.Packages.Path} ConversionServer/ OAuthServer/ DB/ Innovator/ VaultServer/ Scheduler/ SelfServiceReporting/ AgentService/ AmlDeploymentScripts/ NAntDeploymentScripts/ TransformationsOfConfigFiles/ "Language packs"'
+					workingdir="t:"
+					output="${Path.To.File.With.List.Of.Files.To.Deploy}" />
+				<exec
+					program="git"
+					commandline="diff --staged --name-only --no-renames --diff-filter=D ${Last.Commit.Before.Current.Release} -- ConversionServer/ OAuthServer/ DB/ Innovator/ VaultServer/ Scheduler/ SelfServiceReporting/ AgentService/"
+					workingdir="t:"
+					output="${Path.To.File.With.List.Of.Files.To.Delete}" />
+				<exec
+					program="git"
+					commandline="diff --staged --name-only --no-renames --diff-filter=ACMD ${Last.Commit.Before.Current.Release} -- Innovator/Client"
+					workingdir="t:"
+					output="${Path.To.File.With.Client.Modifications.Count}" />
+
+				<!--
+					Used to receive delta between {Last.Commit.Before.Current.Release} and 'HEAD' commit in Git.
+					This delta is being built for packages that are located in 'AML-packages' folder
+				-->
+				<exec 
+					program="${Path.To.DeltaExtractionTool}"
+					commandline='Repository -p ${Path.To.AML.Packages} -f ${Last.Commit.Before.Current.Release} -o s: -s "Workflow Map Activity"'
+					workingdir="t:"
+					if="${Use.Delta.Extraction.Tool}"
+					failonerror="true" />
+
+				<!--ToDo: This is a temporary solution necessary to add a link to Aras.Common.dll and dependencies-->
+				<copy todir="s:">
+					<fileset basedir="t:">
+						<include name="${path::combine('t:', 'Innovator\Server\method-config.xml')}" />
+						<include name="${path::combine('t:', 'Innovator\Server\bin\Aras.Common.dll')}" />
+						<include name="${path::combine('t:', 'Innovator\Server\bin\Aras.Ark.Common.dll')}" />
+					</fileset>
+				</copy>
+				<!--ToDo-->
+
+				<property name="Path.To.Package.Include.File" value="${path::combine('t:', 'AutomatedProcedures\package.include')}" />
+				<property name="Path.To.Package.Exclude.File" value="${path::combine('t:', 'AutomatedProcedures\package.exclude')}" />
+
+				<!-- if file doesn't exist and code is still executing it means that there are no files to deploy -->
+				<choose>
+					<when test="${file::exists(Path.To.File.With.List.Of.Files.To.Deploy)}">
+						<decode_git_diff_file_to_utf8 inputFile="${Path.To.File.With.List.Of.Files.To.Deploy}"
+													outputFile="${Path.To.File.With.List.Of.Files.To.Deploy}" />
+						<copy todir="s:">
+							<fileset basedir="t:">
+								<includesfile name="${Path.To.File.With.List.Of.Files.To.Deploy}" />
+								<includesfile name="${Path.To.Package.Include.File}" />
+								<excludesfile name="${Path.To.Package.Exclude.File}" />
+							</fileset>
+						</copy>
+					</when>
+					<otherwise>
+						<copy todir="s:">
+							<fileset basedir="t:">
+								<includesfile name="${Path.To.Package.Include.File}" />
+								<excludesfile name="${Path.To.Package.Exclude.File}" />
+							</fileset>
+						</copy>
+					</otherwise>
+				</choose>
+
+				<mkdir dir="${path::combine('s:', 'Files')}" />
+				<echo file="${path::combine('s:', 'Files\readme.txt')}">
+					Since Aras Update package should contain at least one of the folders:
+						- Files;
+						- Imports;
+						- Scripts.
+				</echo>
+
+				<if test="${Use.Delta.Extraction.Tool}">
+					<!--
+						Cleanup ignored files which appeared in 'AML-packages' folder after DeltaExtractionTool execution.
+						Also cleanup empty folders if there are any after files cleanup.
+					-->
+					<delete>
+						<fileset basedir="s:">
+							<includesfile name="${Path.To.Package.Exclude.File}" />
+						</fileset>
+					</delete>
+					<foreach item="Folder" property="AML.Package.Folder">
+						<in>
+							<items basedir="s:">
+								<include name="AML-packages\*" />
+								<include name="AML-packages" />
+							</items>
+						</in>
+						<do>
+							<fileset id="Included.Aml.Files">
+								<include name="${AML.Package.Folder}\**" />
+							</fileset>
+							<delete dir="${AML.Package.Folder}" if="${not fileset::has-files('Included.Aml.Files')}" />
+						</do>
+					</foreach>
+				</if>
+
+				<if test="${directory::exists(path::combine(Path.To.Deployment.Package.Dir, 'AML-packages'))}">
+					<!-- If there is AML-packages folder then there must be imports.mf inside it. -->
+					<property name="Path.To.Manifest.File" value="${path::combine(Path.To.Deployment.Package.Dir, 'AML-packages\imports.mf')}" />
+					<if test="${not file::exists(Path.To.Manifest.File)}">
+						<copy file="${path::combine('t:', 'AML-packages\imports.mf')}" tofile="${Path.To.Manifest.File}" />
+					</if>
+					<fail if="${not aras::remove-missing-aml-packages-from-manifest-file(Path.To.Manifest.File)}" />
+				</if>
+
+				<property name="Path.To.Language.Packs" overwrite="false" value="${path::combine(Path.To.Deployment.Package.Dir, 'Language packs')}" />
+				<if test="${directory::exists(Path.To.Language.Packs)}">
+					<foreach item="Folder" in="${Path.To.Language.Packs}" property="Path.To.Language.CodeFolder">
+					<property name="Language.CodeFolder" value="${path::get-file-name(Path.To.Language.CodeFolder)}" />
+						<foreach item="File" property="Path.To.Repository.Language.Packs.Imports.Config">
+							<in>
+								<items basedir="${path::combine('t:', 'Language Packs')}">
+									<include name="**\${Language.CodeFolder}\**\ImportConfig.xml" />
+								</items>
+							</in>
+							<do>
+								<property name="Path.To.Language.Packs.Imports.Config" value="${string::replace(Path.To.Repository.Language.Packs.Imports.Config, 'T:', 'S:')}" />
+								<!-- If there is Language packs folder then there must be ImportConfig.xml inside it. -->
+								<if test="${not file::exists(Path.To.Language.Packs.Imports.Config)}">
+									<copy file="${Path.To.Repository.Language.Packs.Imports.Config}" tofile="${Path.To.Language.Packs.Imports.Config}" />
+								</if>
+							</do>
+						</foreach>
+					</foreach>
+				</if>
+
+				<!--Copy Sample Data to 'TemporaryFolderWithFilesToDeploy' if Sample Data deployment is turned on (even if there are no changes in files)-->
+				<echo message="Copy Sample Data if required" />
+				<choose>
+					<when test="${Perform.Import.Of.SampleData == 'true'}">
+						<echo message="Copying Sample Data" />
+						<copy todir="s:">
+							<fileset basedir="t:">
+								<include name="Sample Data/**" />
+							</fileset>
+						</copy>
+						<echo message="Sample Data copied" />
+					</when>
+					<otherwise>
+						<echo message="Sample Data copying was skipped" />
+					</otherwise>
+				</choose>
+			</try>
+			<finally>
+				<call target="Remove.Used.Substitutions" />
+			</finally>
+		</trycatch>
+	</target>
+</project>

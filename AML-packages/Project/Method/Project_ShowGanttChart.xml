@@ -1,0 +1,55 @@
+﻿<AML>
+ <Item type="Method" id="5C412E3A6375429FACEE803A82586445" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var wbs;
+var wbsId;
+eval(top.aras.getFileText(top.aras.getBaseURL() + "/Solutions/Project/javascript/gantt_methods.js"));
+eval(top.aras.getFileText(top.aras.getBaseURL() + "/Solutions/Project/javascript/scheduling_methods.js"));
+
+function showGanttChart(itemId)
+{
+ wbs = getWBS(itemId);
+ initActNums();
+ sortItems(wbs.documentElement);
+ var projectNumber = "";
+ try
+ {
+  projectNumber = getProjectNumber(itemId);
+ }
+ catch (ex1) { }
+ showGanttInternal(wbs, projectNumber);
+}
+
+function getWBS(itemId)
+{
+ var query = "<Item type =\"WBS Activity2\" select=\"source_id\" action=\"get\"><related_id>" + itemId + "</related_id></Item>";
+ var result = top.aras.applyItem(query);
+ var xml = top.aras.createXMLDocument();
+ xml.loadXML(result);
+ wbsId = xml.documentElement.selectSingleNode("source_id").text;
+ query = top.aras.createXMLDocument();
+ query.load(top.aras.getI18NXMLResource("query.xml", top.aras.getScriptsURL() + "../Solutions/Project/"));
+ query.selectSingleNode("//*[@repeatTimes]").setAttribute("repeatTimes", -1);
+ query.documentElement.setAttribute("id", wbsId);
+ result = top.aras.applyItem(query.documentElement.xml);
+ xml = top.aras.createXMLDocument();
+ xml.loadXML(result);
+ return xml;
+}
+
+function getProjectNumber(itemId)
+{
+ var query = "<Item type =\"Activity2\" select=\"proj_num\" action=\"get\"><id>" + itemId + "</id></Item>";
+ var result = top.aras.applyItem(query);
+ var xml = top.aras.createXMLDocument();
+ xml.loadXML(result);
+ var projectNumber = xml.documentElement.selectSingleNode("proj_num").text;
+ return projectNumber;
+}
+
+var itemId = inDom.selectSingleNode("id").text;
+showGanttChart(itemId);]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Project_ShowGanttChart</name>
+ </Item>
+</AML>

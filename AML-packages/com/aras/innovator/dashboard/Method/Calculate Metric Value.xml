@@ -1,0 +1,66 @@
+﻿<AML>
+ <Item type="Method" id="4BC3CC5600274D259D5A12DEA0CD9230" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[' Calculate Metric Value
+' Server method called OnAfterGet for the Metric Value itemtype.  If the calculate 
+'  property is 1, runs the query defined on the Metric Value and the calculation 
+'  stylesheet/method.  Sets the value Property with the results of the calculation
+
+' Check for Metric Values with the calculate flag on
+Dim innovator As Innovator = Me.getInnovator()
+
+Dim calcNodes As Item = Me.getItemsByXPath("//Item[@type='Metric Value'][calculate='1']")
+Dim nodeCount As Integer = calcNodes.getItemCount()
+If (nodeCount > 0) Then
+	Dim i As Long
+	' Loop through the calculated values
+	For i = 0 To nodeCount - 1
+		' Get the properties of this Metric Value
+		Dim query As String = calcNodes.getItemByIndex(i).getProperty("query")
+		Dim metricId As String = calcNodes.getItemByIndex(i).getProperty("source_id")
+		' Make sure the query and the parent ID are present
+		If (query Is Nothing Or metricId Is Nothing) Then
+			Return innovator.newError("Error getting Metric query")
+		End If
+		' Get the parent metric and check for errors
+		Dim qryItem As Item = Me.newItem("Metric", "get")
+		qryItem.setId(metricId)
+		qryItem.setAttribute("select", "stylesheet,method(name)")
+		Dim metric As Item = qryItem.apply()
+		If (metric.isError()) Then
+			Return innovator.newError("Error getting Metric")
+		End If
+		' Get the stylesheet and method properties
+		Dim stylesheet As String = metric.getProperty("stylesheet")
+		Dim method As Item = metric.getPropertyItem("method")
+		' Make sure we have at least one or the other
+		If (stylesheet Is Nothing AndAlso method Is Nothing) Then
+			Return innovator.newError("Error getting Metric calculation")
+		End If
+		' Run the query for the Metric Value and check for errors
+		qryItem.loadAML(query)
+		Dim res As Item = qryItem.apply()
+		If (res.getItemCount() < 0) Then
+			Return innovator.newError("Error running Metric query")
+		End If
+		' Apply the stylesheet if it is present
+		If (Not stylesheet Is Nothing AndAlso Not stylesheet = "") Then
+			res.dom.loadXML(res.applyStylesheet(stylesheet, "text"))
+		End If
+		' Run the calculation method if it is present
+		If (Not method Is Nothing) Then
+			Dim methodName As String = method.getProperty("name")
+			res = innovator.applyMethod(methodName, res.dom.OuterXml)
+		End If
+		' Set the value property of the Metric Value
+		If (Not res.dom.selectSingleNode("//Result") Is Nothing) Then
+			calcNodes.getItemByIndex(i).setProperty("value", res.dom.selectSingleNode("//Result").InnerText)
+		End If
+	Next i
+End If
+
+Return Me]]></method_code>
+  <method_type>VB</method_type>
+  <name>Calculate Metric Value</name>
+ </Item>
+</AML>

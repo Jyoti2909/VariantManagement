@@ -1,0 +1,72 @@
+﻿<AML>
+ <Item type="Method" id="1499BC7E7DEE48B59EBD43ED60D5E7F1" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[SelectClassificationDialog = function (item, classifications, selectedIndex) {
+	this.item = item;
+	const container = document.querySelector(
+		'div[name=classificationSelectionComponet] .classification-container'
+	);
+
+	if (!container) {
+		throw Error('Container was not found.');
+	}
+
+	for (let i = 0; i < classifications.length; i++) {
+		const classification = classifications[i];
+		const id = 'classification_' + classification;
+		let radioInput = document.createElement('div');
+		radioInput.classList.add('classification-item');
+
+		if (selectedIndex >= 0 && selectedIndex === i) {
+			radioInput.innerHTML =
+				'<input type="radio" id="' +
+				id +
+				'" name="classification-variant" value="' +
+				classification +
+				'" checked />' +
+				'<label for="' +
+				id +
+				'">' +
+				classification +
+				'</label>';
+		} else {
+			radioInput.innerHTML =
+				'<input type="radio" id="' +
+				id +
+				'" name="classification-variant" value="' +
+				classification +
+				'" />' +
+				'<label for="' +
+				id +
+				'">' +
+				classification +
+				'</label>';
+		}
+
+		container.appendChild(radioInput);
+	}
+};
+
+SelectClassificationDialog.prototype.ok = function () {
+	let selected = document.querySelectorAll(
+		'div[name=classificationSelectionComponet] .classification-container input[name="classification-variant"]'
+	);
+	selected = Array.from(selected);
+	selected = selected.find(function (x) {
+		return x.checked;
+	});
+	if (!selected) {
+		aras.AlertError('Choose a classification');
+		return;
+	}
+
+	parent.args.dialog.close(selected.value);
+};
+
+SelectClassificationDialog.prototype.cancel = function () {
+	parent.args.dialog.close();
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_SelectClassification_API</name>
+ </Item>
+</AML>

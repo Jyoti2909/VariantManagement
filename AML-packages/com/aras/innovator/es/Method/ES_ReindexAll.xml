@@ -1,0 +1,56 @@
+﻿<AML>
+ <Item type="Method" id="AF52584EAD99455B86AF49BCAD99473E" action="add">
+  <comments>Reindex all items</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[require([
+	'ES/Scripts/Classes/Utils'
+], function(Utils) {
+	var utils = new Utils({
+		arasObj: aras
+	});
+
+	var message = utils.getResourceValueByKey('message.reindex_all_items');
+	showConfirmationDialog(message, function() {
+		var inn = aras.newIOMInnovator();
+		var resultItem = inn.applyMethod('ES_ResetAllConfigurations', '');
+
+		if (!resultItem.isError()) {
+			resultItem = inn.applyMethod('ES_PushResetQueueCommand', '');
+		}
+
+		if (resultItem.isError()) {
+			aras.AlertError(resultItem.getErrorString());
+		}
+	});
+});
+
+//------------------------------------------------------------------------------
+
+function showConfirmationDialog(message, callback) {
+	var params = {
+		buttons: {
+			btnYes: aras.getResource('', 'common.yes'),
+			btnCancel: aras.getResource('', 'common.cancel')
+		},
+		dialogHeight: 150,
+		dialogWidth: 250,
+		center: true,
+		resizable: true,
+		defaultButton: 'btnCancel',
+		message: message,
+		aras: aras,
+		content: 'groupChgsDialog.html'
+	};
+
+	var topWnd = aras.getMostTopWindowWithAras();
+	(topWnd.main || topWnd).ArasModules.Dialog.show('iframe', params).promise.then(function(resButton) {
+		if (resButton === 'btnYes') {
+			callback();
+		}
+	});
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_ReindexAll</name>
+ </Item>
+</AML>

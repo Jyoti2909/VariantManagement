@@ -1,0 +1,35 @@
+﻿<AML>
+ <Item type="Method" id="7E2FE39C84B846BFAD465506B2034057" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+			return Execute(CCO.ErrorLookup.Lookup);
+		}
+
+		internal Item Execute(Func<string, string> errorLookup)
+		{
+			string maxChildItems = this.getProperty("max_child_items");
+			if (!string.IsNullOrEmpty(maxChildItems))
+			{
+				int maxChildItemsInt = int.Parse(maxChildItems, CultureInfo.InvariantCulture);
+				if (maxChildItemsInt < 1 && maxChildItemsInt != -1)
+				{
+					throw new Aras.Server.Core.InnovatorServerException(errorLookup("rb_InvalidValueOfMaxChildItems"));
+				}
+			}
+
+			string maxQueryDepth = this.getProperty("max_query_depth");
+			if (!string.IsNullOrEmpty(maxQueryDepth))
+			{
+				int maxQueryDepthInt = int.Parse(maxQueryDepth, CultureInfo.InvariantCulture);
+				if (maxQueryDepthInt < 1)
+				{
+					throw new Aras.Server.Core.InnovatorServerException(errorLookup("rb_InvalidValueOfMaxQueryDepth"));
+				}
+			}
+
+			return this;
+			]]></method_code>
+  <method_type>C#</method_type>
+  <name>rb_ValidateTgvdProperties</name>
+ </Item>
+</AML>

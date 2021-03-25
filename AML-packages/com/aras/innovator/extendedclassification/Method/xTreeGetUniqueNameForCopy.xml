@@ -1,0 +1,67 @@
+﻿<AML>
+ <Item type="Method" id="75611C81191A474286B95293BF0A5437" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[if (this.getAttribute("useInputProperties") == "1")
+{
+    // The 'useInputProperties' is a flag for copyAsNew. We don't support it in xClassificationTree copying for now.
+    throw new NotSupportedException(CCO.ErrorLookup.Lookup("xClassificationTree_CopyInputPropsNotSupported"));
+}
+this.node.IsEmpty = true;
+
+Item xClassTreeOriginal = this.newItem(this.getType(), "get");
+xClassTreeOriginal.setID(this.getID());
+if (!string.IsNullOrEmpty(xClassTreeOriginal.getID()))
+{
+	xClassTreeOriginal.setID(this.getID());
+}
+if (!string.IsNullOrEmpty(this.getAttribute("idlist")))
+{
+	xClassTreeOriginal.setAttribute("idlist", this.getAttribute("idlist"));
+}
+if (!string.IsNullOrEmpty(this.getAttribute("where")))
+{
+	xClassTreeOriginal.setAttribute("where", this.getAttribute("where"));
+}
+xClassTreeOriginal.setAttribute("select", "name");
+xClassTreeOriginal = xClassTreeOriginal.apply();
+
+if (xClassTreeOriginal.isError())
+{
+    // if we cannot request an item then just return execution to copyAsNew handler
+    return this;
+}
+if (xClassTreeOriginal.getItemCount() != 1)
+{
+    throw new Aras.Server.Core.InnovatorServerException(CCO.ErrorLookup.Lookup("xClassificationTree_MultipleCopy"));
+}
+
+string originalName = xClassTreeOriginal.getProperty("name");
+string name = String.Format(CultureInfo.InvariantCulture, "Copy of {0}", originalName);
+int index = 1;
+
+Item item = this.newItem(xClassTreeOriginal.getType(), "get");
+item.setAttribute("select", "id");
+item.setProperty("name", name);
+Item result = item.apply();
+
+while(!result.isError())
+{
+    index++;
+    name = String.Format(CultureInfo.InvariantCulture, "Copy {0} of {1}", index, originalName);
+    item.setProperty("name", name);
+    result = item.apply();
+}
+if (result.getErrorCode() != "0")
+{
+    throw new Aras.Server.Core.InnovatorServerException(result.dom);
+}
+
+this.setAttribute("useInputProperties", "1");
+this.setProperty("name", name);
+
+return this;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>xTreeGetUniqueNameForCopy</name>
+ </Item>
+</AML>

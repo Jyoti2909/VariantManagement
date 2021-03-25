@@ -1,0 +1,88 @@
+﻿<AML>
+ <Item type="Method" id="91F8CEF468DC4F09BC47D6D58D0EE7BE" action="add">
+  <comments>Upload SP document</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var self = this;
+
+// 'self' represents item of the selected row
+var spFileName = self.getProperty('sp_file_name');
+
+var tname = self.getType();
+var defRequestAml =
+	'<Item type=\'SPDocumentLibraryDefinition\' action=\'get\' select=\'authentication_type, sp_site_url, sp_doclib_id\'>' +
+	'<doc_type_name>' + tname + '</doc_type_name>' +
+	'</Item>';
+
+var defRequest = aras.IomInnovator.newItem();
+defRequest.loadAML(defRequestAml);
+var dlDef = defRequest.apply();
+if (dlDef.isError()) {
+	aras.AlertError(dlDef.getFaultString(), dlDef.getFaultDetails());
+	return;
+}
+
+var authType = dlDef.getProperty('authentication_type');
+var siteUrl = dlDef.getProperty('sp_site_url');
+var doclibid = dlDef.getProperty('sp_doclib_id');
+
+var winAuth = (authType != 'DedicatedUserOnly');
+
+ArasModules.vault.selectFile()
+	.then(function(file) {
+		return sendFile(winAuth, file);
+	})
+	.then(function() {
+			aras.AlertSuccess(aras.getResource('', 'sharepoint.file_upload_success'));
+		},
+		function(error, file) {
+			if (authType == 'WindowsAuthenticationPreferred') {
+				return sendFile(false, file);
+			}
+			aras.AlertError(aras.getResource('', 'sharepoint.file_upload_failure') + error);
+		})
+	.catch(function(error) {
+		aras.AlertError(aras.getResource('', 'sharepoint.file_upload_failure') + error);
+	});
+
+function sendFile(winAuth, file) {
+	return new Promise(function(resolve, reject) {
+		var xhr = new XMLHttpRequest();
+		var headers = {
+			'SP-Action': 'UploadFile',
+			'SP-Url': siteUrl,
+			'SP-DocLibId': doclibid,
+			'SP-DocName': spFileName
+		};
+
+		if (winAuth) {
+			xhr.open('POST', aras.getServerBaseURL() + 'SharePoint/Auth/SPHelperWinAuth.aspx');
+		} else {
+			xhr.open('POST', aras.getServerBaseURL() + 'SharePoint/SPHelper.aspx');
+			xhr.setRequestHeader('SP-DocTypeName', self.getType());
+			Object.assign(headers, aras.getHttpHeadersForSoapMessage());
+		}
+
+		Object.keys(headers).forEach(function(item) {
+			xhr.setRequestHeader(item, headers[item]);
+		});
+
+		xhr.send(file);
+
+		xhr.addEventListener('load', function() {
+			if (this.status !== 200) {
+				reject(new Error(this.statusText), file);
+				return;
+			}
+			resolve();
+		});
+
+		xhr.addEventListener('error', function() {
+			reject(new Error(this.statusText), file);
+		});
+	});
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>SPDocument_UploadAction</name>
+ </Item>
+</AML>

@@ -1,0 +1,58 @@
+﻿<AML>
+ <Item type="Life Cycle Map" id="59F8BB9538D54F45B3A6AA6D3A3F757C" action="add">
+  <start_state keyed_name="Active" type="Life Cycle State">8810E54824724E829CA142328A6C537F</start_state>
+  <name>Forum</name>
+  <Relationships>
+   <Item type="Life Cycle State" id="8810E54824724E829CA142328A6C537F" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <label xml:lang="en">Active</label>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Forum" type="Life Cycle Map">59F8BB9538D54F45B3A6AA6D3A3F757C</source_id>
+    <state_permission_id keyed_name="New Forum" type="Permission">6A635ED4490E4335B5EED6C88AE6C28B</state_permission_id>
+    <x>20</x>
+    <y>20</y>
+    <name>Active</name>
+   </Item>
+   <Item type="Life Cycle State" id="B3842A28E45347408BE9A46ECC33F66C" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <label xml:lang="en">Inactive</label>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Forum" type="Life Cycle Map">59F8BB9538D54F45B3A6AA6D3A3F757C</source_id>
+    <state_permission_id keyed_name="InactiveForum" type="Permission">2127C97A025045B6BF47E82A2DF28FEE</state_permission_id>
+    <x>191</x>
+    <y>21</y>
+    <name>Inactive</name>
+   </Item>
+   <Item type="Life Cycle Transition" id="728AED14DADA4E66861EF128B168BFBF" action="add">
+    <from_state keyed_name="Active" type="Life Cycle State">8810E54824724E829CA142328A6C537F</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="VC_OnChangeForumState" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>VC_OnChangeForumState</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</role>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Forum" type="Life Cycle Map">59F8BB9538D54F45B3A6AA6D3A3F757C</source_id>
+    <to_state keyed_name="Inactive" type="Life Cycle State">B3842A28E45347408BE9A46ECC33F66C</to_state>
+   </Item>
+   <Item type="Life Cycle Transition" id="4DD6930E1D7143359D9E499533117B28" action="add">
+    <from_state keyed_name="Inactive" type="Life Cycle State">B3842A28E45347408BE9A46ECC33F66C</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="VC_OnChangeForumState" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>VC_OnChangeForumState</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</role>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Forum" type="Life Cycle Map">59F8BB9538D54F45B3A6AA6D3A3F757C</source_id>
+    <to_state keyed_name="Active" type="Life Cycle State">8810E54824724E829CA142328A6C537F</to_state>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

@@ -1,0 +1,107 @@
+﻿<AML>
+ <Item type="Method" id="69FA10A201B841F58A766849E901AEF7" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string userID = contextItem.getProperty("user_id");
+				string sapChangeNumber = contextItem.getProperty("sap_changeNumber");
+				
+				Item queryUser = _dal.NewItem("User", "get");
+				queryUser.setAttribute("select","login_name,gag_sap_password");
+				queryUser.setID(userID);
+				Item userResult = queryUser.apply();
+				string userName = userResult.getProperty("login_name");
+				string password = userResult.getProperty("gag_sap_password");
+
+				Item queryPart = _dal.NewItem("GAG_SAPInterfaceSettings", "get");
+				queryPart.setProperty("gag_active", "Yes");
+				Item queryResult = queryPart.apply();
+				if (queryResult.isEmpty())
+				{
+					return _dal.NewError("No SAP Connection Found. Contact Admin.");
+				}
+				else
+				{
+					Item result = VerifySAPChangeNumber(userName, password, sapChangeNumber, queryResult);
+					return result;
+				}
+			}
+
+			private Item VerifySAPChangeNumber(string userName, string password, string sapChangeNumber, Item interfaceResult)
+			{
+				try
+				{
+					using (RfcConfigParameters parameters = new RfcConfigParameters())
+					{
+						Item sapConnectionResult = interfaceResult.getItemByIndex(0);
+						parameters[RfcConfigParameters.Name] = sapConnectionResult.getProperty("gag_name");
+						parameters[RfcConfigParameters.User] = userName;
+						parameters[RfcConfigParameters.Password] = password;
+						parameters[RfcConfigParameters.PeakConnectionsLimit] = sapConnectionResult.getProperty("gag_peak_connection_limit");
+						parameters[RfcConfigParameters.ConnectionIdleTimeout] = sapConnectionResult.getProperty("gag_connection_idle_time_out");
+						parameters[RfcConfigParameters.Language] = sapConnectionResult.getProperty("gag_language");
+						parameters[RfcConfigParameters.AppServerHost] = sapConnectionResult.getProperty("gag_app_server_host");
+						parameters[RfcConfigParameters.SystemNumber] = sapConnectionResult.getProperty("gag_system_number");
+						parameters[RfcConfigParameters.Client] = sapConnectionResult.getProperty("gag_client");
+
+						RfcDestination destination = RfcDestinationManager.GetDestination(parameters);
+						RfcSessionManager.BeginContext(destination);
+						destination.Ping();
+
+						IRfcFunction DisplayChangeMaster = destination.Repository.CreateFunction("CCAP_ECN_HEADER_READ");
+						DisplayChangeMaster.SetValue("CHANGE_NO", sapChangeNumber);
+						DisplayChangeMaster.Invoke(destination);
+						IRfcStructure changeStruct = DisplayChangeMaster.GetStructure("CHANGE_HEADER");
+						string changeNumberStatus = changeStruct.GetValue("STATUS").ToString();
+						if (changeNumberStatus == "01")
+						{
+							Item result = _dal.NewResult("Change Number is active");
+							return result;
+						}
+						else
+						{
+							return _dal.NewError("Change Number is not active");
+						}
+
+					}
+				}
+				catch (RfcCommunicationException)
+				{
+					return _dal.NewError("Server communication error.");
+				}
+				catch (RfcLogonException)
+				{
+					return _dal.NewError("SAP Username or Password is incorrect.");
+				}
+				catch (RfcAbapRuntimeException)
+				{
+					return _dal.NewError("SAP ABAP Runtime error.");
+				}
+				catch (RfcAbapBaseException)
+				{
+					return _dal.NewError("SAP Authorisation Error.");
+				}
+			}
+
+		
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_VerifySAPChangeNumber</name>
+ </Item>
+</AML>

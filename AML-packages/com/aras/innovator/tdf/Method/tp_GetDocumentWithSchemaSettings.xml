@@ -1,0 +1,62 @@
+﻿<AML>
+ <Item type="Method" id="B380163F89114EE5BBB3982B932BFCE0" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[bool permsWasSet = false;
+Aras.Server.Security.Identity identity = null;
+string techDocPriveledgedPublisherId = "86F8574A13814269A1CEC0E012AEADB2";
+string identityList = Aras.Server.Security.Permissions.Current.IdentitiesList;
+if (identityList.IndexOf(techDocPriveledgedPublisherId, System.StringComparison.Ordinal) != -1)
+{
+	identity = Aras.Server.Security.Identity.GetByName("Super User");
+	permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(identity);
+}
+try
+{
+	Innovator innovator = this.getInnovator();
+	Item documentItem = innovator.applyAML("<AML><Item action=\"get\" type=\"" + System.Security.SecurityElement.Escape(this.getType()) + "\" id=\"" + System.Security.SecurityElement.Escape(this.getID()) + "\"/></AML>");
+
+	if (documentItem.isError())
+	{
+		return documentItem;
+	}
+
+	string classification = System.Security.SecurityElement.Escape(documentItem.getProperty("classification"));
+	string schemaId = System.Security.SecurityElement.Escape(documentItem.getProperty("xml_schema"));
+
+	string classificationFilter = (!String.IsNullOrEmpty(classification)
+		? "<OR>" +
+			"<target_classification condition=\"is null\"></target_classification>" +
+			"<target_classification>" + classification + "</target_classification>" +
+		"</OR>"
+		: "<target_classification condition=\"is null\"></target_classification>");
+
+	string schemaRequestAml =
+		"<AML>" +
+			"<Item action=\"get\" type=\"tp_XmlSchema\" id=\"" + schemaId + "\">" +
+				"<Relationships>" +
+					"<Item type=\"tp_XmlSchemaOutputSetting\" action=\"get\" select=\"target_classification,stylesheet_id(name,style_content,parent_stylesheet),classification\">" +
+						classificationFilter +
+					"</Item>" +
+				"</Relationships>" +
+			"</Item>" +
+		"</AML>";
+	Item foundSettings = innovator.applyAML(schemaRequestAml);
+
+	if (foundSettings.isError())
+	{
+		return foundSettings;
+	}
+	documentItem.setPropertyItem("xml_schema", foundSettings);
+	return documentItem;
+}
+finally
+{
+	if (permsWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(identity);
+	}
+}]]></method_code>
+  <method_type>C#</method_type>
+  <name>tp_GetDocumentWithSchemaSettings</name>
+ </Item>
+</AML>

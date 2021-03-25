@@ -1,0 +1,49 @@
+﻿<AML>
+ <Item type="Method" id="D0BA0D57F2CB41C8B15553EAB3A4D6FD" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[            string requestStateDictionaryKey =
+				string.Format(CultureInfo.InvariantCulture, "{0}_PresentationConfigurations", this.getID());
+
+			Item itemTypeItem = this.newItem();
+			itemTypeItem.loadAML(
+				@"<AML>
+				<Item type=""ItemType"" action=""get"" select=""id"">
+					<Relationships>
+						<Item type=""ITPresentationConfiguration"" action=""get"" select=""id,related_id"">
+							<related_id>
+								<Item type=""PresentationConfiguration"" action=""get"" select=""id"">
+									<Relationships>
+										<Item type=""PresentationCommandBarSection"" action=""get"" select=""id,related_id"" />
+									</Relationships>
+								</Item>
+							</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>");
+			itemTypeItem.setID(this.getID());
+			itemTypeItem = itemTypeItem.apply();
+
+			IDictionary<string, IList<string>> presentationConfigurations = new Dictionary<string, IList<string>>();
+			Item itemTypePresentationConfigurationsItem = itemTypeItem.getRelationships("ITPresentationConfiguration");
+			for (int itemTypePresentationConfigurationIndex = 0; itemTypePresentationConfigurationIndex < itemTypePresentationConfigurationsItem.getItemCount(); itemTypePresentationConfigurationIndex++)
+			{
+				IList<string> commandBarSections = new List<string>();
+				Item itemTypePresentationConfigurationItem = itemTypePresentationConfigurationsItem.getItemByIndex(itemTypePresentationConfigurationIndex);
+				Item presentationConfigurationItem = itemTypePresentationConfigurationItem.getRelatedItem();
+				Item presentationCommandBarSectionsItem = presentationConfigurationItem.getRelationships("PresentationCommandBarSection");
+				for (int presentationCommandBarSectionIndex = 0; presentationCommandBarSectionIndex < presentationCommandBarSectionsItem.getItemCount(); presentationCommandBarSectionIndex++)
+				{
+					Item presentationCommandBarSectionItem = presentationCommandBarSectionsItem.getItemByIndex(presentationCommandBarSectionIndex);
+					commandBarSections.Add(presentationCommandBarSectionItem.getRelatedItemID());
+				}
+				presentationConfigurations[presentationConfigurationItem.getID()] = commandBarSections;
+			}
+
+			RequestState.Add(requestStateDictionaryKey, presentationConfigurations);
+
+			return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>ti_BeforeDeleteItemType</name>
+ </Item>
+</AML>

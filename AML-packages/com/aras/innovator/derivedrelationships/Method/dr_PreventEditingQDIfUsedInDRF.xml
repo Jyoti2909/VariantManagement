@@ -1,0 +1,47 @@
+﻿<AML>
+ <Item type="Method" id="A3F2D06E370F4EF19DDA676F1DDB32A5" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator innovator = this.getInnovator();
+var derivedRelationshipFamily = this.newItem("dr_RelationshipFamily", "get");
+derivedRelationshipFamily.setProperty("query_definition_id", this.getID());
+derivedRelationshipFamily.setProperty("state", "'Persisting', 'Active'");
+derivedRelationshipFamily.setPropertyAttribute("state", "condition", "in");
+derivedRelationshipFamily.setAttribute("select", "id");
+derivedRelationshipFamily = derivedRelationshipFamily.apply();
+
+if (derivedRelationshipFamily.isError() && derivedRelationshipFamily.getErrorCode() != "0") {
+	return derivedRelationshipFamily;
+}
+
+if (derivedRelationshipFamily.getItemCount() > 0) {
+	string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("dr_UnableToEditQDUsedInPersistingOrActiveDRF"));
+	return innovator.newError(message);
+}
+
+var queryReferences = this.getRelationships("qry_QueryReference");
+for (var i = 0; i < queryReferences.getItemCount(); i++) {
+	var queryReference = queryReferences.getItemByIndex(i);
+	var action = queryReference.getAction();
+	if (!string.IsNullOrEmpty(action) && string.Equals(action, "delete", StringComparison.Ordinal)) {
+		var queryReferenceToDelete = this.newItem("qry_QueryReference", "get");
+		queryReferenceToDelete.setID(queryReference.getID());
+		queryReferenceToDelete.setAttribute("select", "id, ref_id");
+		queryReferenceToDelete = queryReferenceToDelete.apply();
+		if (queryReferenceToDelete.isError()) {
+			return queryReferenceToDelete;
+		}
+		var familyElementQueryItem = this.newItem("dr_FamilyElement qry_QueryItem", "get");
+		familyElementQueryItem.setProperty("parent_query_reference_ref_id", queryReferenceToDelete.getProperty("ref_id"));
+		familyElementQueryItem = familyElementQueryItem.apply();
+		if (familyElementQueryItem.getItemCount() > 0) {
+			string message = string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("dr_UnableToDeleteQueryReferenceUsedInDRF"));
+			return innovator.newError(message);
+		}
+	}
+}
+
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_PreventEditingQDIfUsedInDRF</name>
+ </Item>
+</AML>

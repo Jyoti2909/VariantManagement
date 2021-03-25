@@ -1,0 +1,41 @@
+﻿<AML>
+ <Item type="Method" id="DBC26D536FD546B4B13FC918E71B0DA4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' dailyUpdate.vb.txt CVS/Solutions/Project/Methods Revision 1.4
+
+' name: dailyUpdate
+' purpose: APQP. Update status and lifecycles.
+' created: 29-MAR-2005 Yuri Delyamba
+' (c) Copyright by Aras Corporation, 2005-2007.
+
+
+Dim projects As Item = Me.newItem("Project", "get")
+projects = projects.apply()
+If projects.isError() Then Return projects
+
+Dim res As New System.Text.StringBuilder("<Item>")
+
+For i As Integer = 0 To projects.getItemCount() - 1
+	Dim projectItem As Item = projects.getItemByIndex(i)
+	Dim projectState As String = projectItem.getProperty("state")
+If String.Equals(projectState,"Active") Then
+
+	projectItem.setAction("Update Project")
+	projectItem = projectItem.apply()
+
+	If projectItem.isError() Then
+		res.Append(projectItem.getErrorDetail())
+	Else
+		res.Append(projectItem.getResult())
+	End If
+	res.Append("<br />")
+End If 
+Next
+res.Append("</Item>")
+Me.loadAML(res.ToString())
+
+Return Me]]></method_code>
+  <method_type>VB</method_type>
+  <name>dailyUpdate</name>
+ </Item>
+</AML>

@@ -1,0 +1,74 @@
+﻿<AML>
+ <Item type="Method" id="CBF3148DC4114B02AF3ABAA43CB5F459" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Innovator innovator = this.getInnovator();
+	Item item = innovator.newItem("re_Requirement", "update");
+	item.setID(this.getID());
+
+	string lockedById = string.Empty;
+	bool needToUnlcockItem = false;
+	if (this.getLockStatus() == 1)
+	{
+		lockedById = this.getProperty("locked_by_id");
+	}
+	else
+	{
+		Item lockedItem = item.lockItem();
+		lockedById = lockedItem.getProperty("locked_by_id");
+		needToUnlcockItem = true;
+	}
+
+	string currentLangCode = innovator.getI18NSessionContext().GetLanguageCode();
+	string content = this.getProperty("content", "", currentLangCode);
+	if (string.IsNullOrEmpty(content))
+	{
+		content = this.getProperty("content");
+	}
+	XmlDocument contentXml = new XmlDocument { PreserveWhitespace = true };
+	contentXml.LoadXml(content);
+	XmlNode titleNode = contentXml.DocumentElement.SelectSingleNode("*[local-name()=\"Requirement-Info\"]/*[local-name()=\"Requirement-Title\"]");
+	titleNode.FirstChild.InnerText = this.getProperty("req_title");
+	XmlNode numberNode = contentXml.DocumentElement.SelectSingleNode("*[local-name()=\"Requirement-Info\"]/*[local-name()=\"Requirement-Number\"]");
+	numberNode.FirstChild.InnerText = this.getProperty("item_number");
+
+	if (currentLangCode != "en") {
+		item.setProperty("content", contentXml.InnerXml, "en");
+		item.setProperty("content", "", currentLangCode);
+	} else {
+		item.setProperty("content", contentXml.InnerXml, currentLangCode);
+	}
+
+	item.setProperty("req_title", this.getProperty("req_title"));
+	item.setProperty("classification", this.getProperty("classification"));
+	item.setProperty("config_id", this.getID());
+	item.setProperty("global_version", this.getProperty("global_version"));
+	item.setProperty("locked_by_id", lockedById);
+	item.setAttribute("serverEvents", "0");
+	item.removeAttribute("isNew");
+	item = item.apply();
+
+	if (needToUnlcockItem)
+	{
+		item.unlockItem();
+	}
+
+	return item;
+}
+
+private List<string> GetAllLanguageCodes()
+{
+	Item languages = this.newItem("Language", "get");
+	languages.setAttribute("select", "code");
+	languages = languages.apply();
+	List<string> langCodes = new List<string>();
+	for (int langIndex = 0; langIndex < languages.getItemCount(); langIndex++)
+	{
+		Item language = languages.getItemByIndex(langIndex);
+		langCodes.Add(language.getProperty("code"));
+	}
+
+	return langCodes;]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_UnlockRequirementAfterAdd</name>
+ </Item>
+</AML>

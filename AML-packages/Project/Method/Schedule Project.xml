@@ -1,0 +1,48 @@
+﻿<AML>
+ <Item type="Method" id="69E71CB3185947E48826025E12F5A276" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA['inDom format:
+'  <Item type='Method' action='Schedule Project'>
+'    <body project_id='PROJECT_ID_VAL'/>
+'  </Item>
+' OR
+'  <Item type='Project' id='PROJECT_ID_VAL'>
+'    ....
+'  </Item>
+
+Dim i As Innovator = Me.getInnovator()
+Dim projId As String
+Dim tmpNd As XmlElement
+If Me.node.getAttribute("type")="Method" Then
+  tmpNd = CType(Me.node.selectSingleNode("body"), XmlElement)
+  If IsNothing(tmpNd) Then Return i.newError("body is not specified")
+  projId = tmpNd.getAttribute("project_id")
+Else
+  projId = Me.node.getAttribute("id")
+End If
+Dim methNm As String = "PM_fireCustomProjectHook"
+Dim r As Item = i.applyMethod(methNm, String.Format("<body project_id='{0}' prop_name='scheduling_method'/>", System.Security.SecurityElement.Escape(projId)))
+
+'+++ scheduled dates are changed in the result project, thus reflect them +++
+If Me.getAttribute("type")="Project" AndAlso Not r.IsError() Then
+  Dim propNms() As String = {"date_start_sched", "date_due_sched"}
+  Dim q As Item = i.newItem("tmp", "tmp")
+  q.loadAML(String.Format("<Item type='Project' action='get' select='{0}' id='{1}' serverEvents='0'/>", System.Security.SecurityElement.Escape(Join(propNms, ",")), System.Security.SecurityElement.Escape(projId)))
+  q = q.apply()
+  If q.getItemCount()=1 Then
+    q = q.getItemByIndex(0)
+    Dim j As Integer
+    Dim pn As String
+    For j=0 To propNms.Length-1
+      pn = propNms(j)
+      Me.setProperty(pn, q.getProperty(pn, ""))
+    Next j
+  End If
+End If
+'--- scheduled dates are changed in the result project, thus reflect them ---
+
+Return r]]></method_code>
+  <method_type>VB</method_type>
+  <name>Schedule Project</name>
+ </Item>
+</AML>

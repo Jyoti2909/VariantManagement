@@ -1,0 +1,50 @@
+﻿@{
+	ViewBag.syncMode = 1;
+	Layout = "Shared/_cuiLayout.cshtml";
+}
+@section header
+{
+	<style type="text/css">
+		@@import "@Url.ContentWithSalt("~/styles/default.css")";
+	</style>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/jsBundles/cui.js")"></script>
+	<script type="text/javascript" id="ScriptSet1" src="@Url.ContentWithSalt("~/javascript/include.aspx?classes=tearoffWindow")"></script>
+	<script type="text/javascript" id="formtool_window_script" src="@Url.ContentWithSalt("~/javascript/formtool_window.js")"></script>
+	<script type="text/javascript">
+		initializeFormWindowFunctions(window);
+	</script>
+	<script type="text/javascript" src="@Url.ContentWithSalt("~/Modules/aras.innovator.core.ItemWindow/Scripts/formView.js")"></script>
+}
+@section init_widgets
+{
+	<script type="text/javascript">
+		const initTearOffMenuController = () => {
+			const tearOffMenuController = new TearOffMenuController({ view: viewType, aras: window.aras });
+			tearOffMenuController.menuFrameReady = true;
+			tearOffMenuController.initSvgManager();
+			tearOffMenuController.initController();
+			window.tearOffMenuController = tearOffMenuController;
+			clientControlsFactory.createControl('Aras.Client.Frames.TearOffMenu', { tearOffMenuController });
+		};
+		const initCuiLayout = async () => {
+			const layoutNode = document.getElementById('top-toolbars');
+			const options = window.getDefaultOptions(window.itemID, window.itemTypeName);
+			window.layout = new ItemViewToolbarsCuiLayout(layoutNode, 'ItemView', options);
+			window.addEventListener('unload', () => window.layout.destroy());
+			await window.layout.init();
+			const commandBarNode = layoutNode.querySelector('.aras-commandbar');
+			if (commandBarNode) {
+				const itemTypeColor = aras.getItemTypeColor(window.itemTypeName, 'name');
+				commandBarNode.style.borderBottom = `4px solid ${itemTypeColor}`;
+			}
+		};
+		document.addEventListener('DOMContentLoaded', () => {
+			initTearOffMenuController();
+			initCuiLayout();
+		});
+	</script>
+}
+@section center
+{
+	<iframe id="editor" src="@Url.ContentWithSalt("~/scripts/blank.html")" scrolling="no" frameborder="0" width="100%" height="100%"></iframe>
+}

@@ -1,0 +1,96 @@
+﻿<AML>
+ <Item type="Form" id="D0900B820E854BA287AC6411416AF81B" action="add">
+  <category_form>0</category_form>
+  <height>250</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>800</width>
+  <name>Express EDR Impact Matrix Grid</name>
+  <Relationships>
+   <Item type="Body" id="0CCB7BF587284528B9FD133A301AA954" action="add">
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Express EDR Impact Matrix Grid" type="Form">D0900B820E854BA287AC6411416AF81B</source_id>
+    <Relationships>
+     <Item type="Field" id="5C1A1CF3F29247C5947D7D4EB6FF3CFE" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<script>
+	var impactGrid = null;
+
+	function onTabSelected() {
+		return; // not used
+	}
+
+	var onload_handler = function() {
+		if (window.ImpactMatrixGrid) {
+			function ImpactMatrixGridEdr(){
+				ImpactMatrixGrid.call(this);
+			}
+			ImpactMatrixGridEdr.prototype = new ImpactMatrixGrid();
+			ImpactMatrixGridEdr.prototype.isEditable = function () {
+				return false;
+			}
+			ImpactMatrixGridEdr.prototype.GetAffectedPartIds = function () {
+				//special override to always get relationships
+				return ImpactMatrixGrid.prototype.GetAffectedPartIds.call(this, true);
+			}
+			ImpactMatrixGridEdr.prototype.updateColumnStructure = function () {
+				var groupingColumn = this.grid.getColumnIndex("Grouping");
+				var edrColumn = this.grid.getColumnIndex("Edr");
+				this.grid.setColumnVisible(groupingColumn, false);
+				this.grid.setColumnVisible(edrColumn, false);
+			}
+			ImpactMatrixGridEdr.prototype.RefreshEdrsDictionary = function () {
+				this.edrsDictionary = {};
+			}
+			ImpactMatrixGridEdr.prototype.RefreshGroupingTeamsDictionary = function () {
+				this.groupingTeamsDictionary = {};
+			}
+
+			impactGrid = new ImpactMatrixGridEdr();
+			impactGrid.loadHTML();
+		}
+	}
+	window.addEventListener("load", onload_handler);
+</script>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <positioning>absolute</positioning>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="0CCB7BF587284528B9FD133A301AA954" type="Body">0CCB7BF587284528B9FD133A301AA954</source_id>
+      <tab_stop>0</tab_stop>
+      <x>0</x>
+      <y>0</y>
+      <name>html_grid1_edr_change_plan</name>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="Form Event" id="2181C1E6334B4604B5D3F8615FEA7B24" action="add">
+    <form_event>onload</form_event>
+    <related_id keyed_name="BaseTreeGrid" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>BaseTreeGrid</name>
+     </Item>
+    </related_id>
+    <sort_order>10</sort_order>
+    <source_id keyed_name="Express EDR Impact Matrix Grid" type="Form">D0900B820E854BA287AC6411416AF81B</source_id>
+   </Item>
+   <Item type="Form Event" id="C6040A7B787A4B2A9AB001EC191B38BB" action="add">
+    <form_event>onload</form_event>
+    <related_id keyed_name="Express ECO ImpactMatrixGrid" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>Express ECO ImpactMatrixGrid</name>
+     </Item>
+    </related_id>
+    <sort_order>20</sort_order>
+    <source_id keyed_name="Express EDR Impact Matrix Grid" type="Form">D0900B820E854BA287AC6411416AF81B</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

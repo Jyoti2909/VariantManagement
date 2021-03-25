@@ -1,0 +1,54 @@
+﻿<AML>
+ <Item type="Method" id="EE7D5314F20B453F9222CB37B969F734" action="add">
+  <classification>/*</classification>
+  <method_code><![CDATA[ 
+' server-side Method (VB): xPLM Set Assigned Creator
+'
+' This xPLM Server Event is used to set the property "Assigned Creator" to World
+'
+' called OnBeforeAdd 
+' based on Reset Innovator Admin References
+'
+'MethodTemplateName=VBMain;
+
+Dim thisErr As Aras.IOM.Item
+Dim innovator As Aras.IOM.Innovator = Me.getInnovator()
+Dim new_id As String
+Dim new_identity As String = "World"
+
+Function Main() As Item
+
+    Dim owned_by_id As String = Me.getProperty("owned_by_id","")
+
+    If owned_by_id Is Nothing Or owned_by_id = "" Then 
+        new_id = CStr(getidentity(new_identity))
+        Me.setProperty("owned_by_id",new_id) 
+    End If
+
+    Return Me
+
+End Function
+
+Function getidentity(ByVal name As String) As String
+
+  Dim tmpin As XmlDocument = _
+  CCO.XML.CreateXMLDocument("<Item type='Identity'><name>" + _
+                             name + "</name></Item>")
+  Dim tmpout As XmlDocument = CCO.XML.CreateXMLDocument()
+  CCO.GetItem.GetItem(tmpin, tmpout)
+  If CCO.XML.HasFault(tmpout, False) Then
+    Return "NULL"
+  End If
+  Dim item2 As XmlElement = CCO.XML.GetResponseItem(tmpout)
+  If IsNothing(item2) Then
+    Return "NULL"
+  Else
+    Return item2.GetAttribute("id")
+  End If
+  
+End Function
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>xplm_setCreators</name>
+ </Item>
+</AML>

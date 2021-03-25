@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = "..";
+  gCommonRootRelPath = "..";
+  gTopicId = "11.0_12";
+
+//]]></script>
+
+<script type="text/javascript" src="../template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="../template/scripts/common.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="../template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="../template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="../assets/css/default.css"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Understanding Query Definitions for Effectivity Resolution</title>
+  <meta name="topic-status" content="Draft"/>
+  
+</head>
+<body>
+  <div>
+  <h1>Understanding Query Definitions for Effectivity Resolution</h1>
+  <p class="Warning_paragraph">The out-of-the-box Query Definitions (QDs) described here are essential to resolving Part BOM structures against Effectivity Criteria. Do not delete or modify the configurations of these Query Definitions unless it is noted otherwise.</p>
+  <p>The following is an overview of the Query Definition configuration for resolving BOM structures against Effectivity criteria. The Query Definitions are out-of-the-box. The following configurations are described:</p>
+  <ul class="Disc">
+    <li>Query Definitions that contain Effectivity filtering logic.</li>
+    <br/>
+    <li>Merging one Query Definition into another Query Definition to create a single executable Query Definition of a related Tree Grid View.</li>
+  </ul>
+  <p>In PE Part BOM relationships are resolved against effectivity criteria at the BOM Structure accordion tab of a Part item view. The resolution uses Effectivity Scope and Effectivity Variable values set in the Effectivity Criteria Filter dialog. The resolved structure is shown using the PE_BomStructure Tree Grid View (TGV) configuration.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/effcrit.jpg" style="width: 100%; max-width: 460px;"/></p>
+  <p>You can configure the <strong>PE_BomStructure</strong> TGV to add, remove, or reorder columns to display Part and Part BOM properties. Adding or removing columns requires changing the Query Definition configuration to return the given properties. Use the standard TGV and QD procedures for this configuration.</p>
+  <p>The Query Definition containing Effectivity filtering logic is <strong>effs_effectivityResolutionOnPartBom</strong>. It retrieves assigned Effectivity Expressions and evaluates them against the given Effectivity criteria in the Resolution Engine. The Query Definition filters out items that are evaluated as not effective for the given Effectivity criteria.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/effseff.jpg" style="width: 100%; max-width: 686px;"/></p>
+  <p>The <strong>effs_effectivityResolutionOnpartBom</strong> Query Definition passes data to the Effectivity Resolution Engine using the following Query parameters:</p>
+  <ul class="Disc">
+    <li><strong>EffectivityScopeId</strong> - the ID of the Effectivity Scope.</li>
+    <li><strong>EffectivityCriteriaDefinition</strong> - the Effectivity Criteria Definition.</li>
+  </ul>
+  <p>The Query Structure of the <strong>effs_effectivityResolutionOnPartBom</strong> Query definition is as follows:</p>
+  <ul class="Disc">
+    <li>Part BOM is the Effective ItemType for the PE application Effectivity scopes.</li>
+  </ul>
+  <p style="text-indent:40px"><strong>Where Condition:</strong></p>
+  <p class="Code_Sample" style="text-indent:40px">(Count ([[Relationship]] effs_Part_BOM_expr_no_resolve) = 0) OR<br/>
+         (Count ([[Relationship]] effs_Part_BOM_expression) &gt; 0)</p>
+  <p class="Note">You can change the Where Condition to use AND logic instead of OR. The logic to use depends on how multiple Effectivity Expressions on a given single PartBOM Item should be evaluated. </p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/wherecondition4.jpg" style="width: 100%; max-width: 310px;"/></p>
+  <ul class="Disc" style="padding-left:60px">
+    <li><strong>effs_Part_BOM_expression</strong> is a RelationshipType with the source Part BOM ItemType.</li>
+  </ul>
+  <p style="text-indent:60px"><strong>Where Condition:</strong></p>
+  <p class="Code_Sample" style="text-indent:60px">(Scope = $EffectivityScopeId) AND (Definition = &#39;&lt;expression&gt;$EffectivityCriteriaDefinition&lt;/expression&gt;&#39;)</p>
+  <p style="text-indent:60px">The <strong>Effectivity Scope ID</strong> value is set from the <strong>Scope </strong>cell. The Effectivity Criteria Definition value is set from the <strong>Variables<br/>
+                    </strong>and <strong>Values </strong>cells of the Effectivity Criteria Filer dialog.</p>
+  <p style="text-indent:60px"><strong>Join Condition</strong>:</p>
+  <p class="Code_Sample" style="text-indent:60px">[Part BOM].id = effs_Part_BOM_expression.source_id</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/partbomjoin.jpg" style="width: 100%; max-width: 455px;"/></p>
+  <ul class="Disc" style="padding-left:60px">
+    <li><strong>effs_Part_BOM_expr_no_resolve</strong></li>
+  </ul>
+  <p style="text-indent:60px"><strong>Where Condition</strong></p>
+  <p class="Code_Sample" style="text-indent:60px">Scope = $EffectivityScopeId</p>
+  <p style="text-indent:60px">The Effectivity Scope ID value is set from the <strong>Scope </strong>cell.</p>
+  <p style="text-indent:60px"><strong>Join Condition</strong></p>
+  <p class="Code_Sample" style="text-indent:60px">[Part BOM].id = effs_Part_BOM_expr_no_resolve.source_id</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/noresolve.jpg" style="width: 100%; max-width: 449px;"/></p>
+  <p style="text-indent:60px">The <strong>effs_effectyResolutionOnPartBom</strong> Query Definition is merged into the PE_BomStructure Query definition to produce <br/>
+                 a single executable Query Definition.</p>
+  <p class="Figure_indented"><img src="../assets/images/pebomstructure.jpg" style="width: 100%; max-width: 532px;"/></p>
+  <p>The <strong>PE_BomStructure </strong>Query Definition has the following Query parameters:</p>
+  <ul class="Disc">
+    <li><strong>EffectivityResolutionMode </strong>- structure resolution mode.
+      <p class="Code_Sample">Aras.Resolution.EntryPoint;Default</p>
+      is the default value.</li>
+    <br/>
+    <li><strong>EffectivityResolutionConfigurationQueryDefinitionId</strong> - ID of the Query definition containing Effectivity filtering logic to enable Effectivity resolution.</li>
+    <br/>
+    <li><strong>EffectivityScopeId</strong> - ID of the Effectivity Scope item passed to the Effectivity Resolution Engine.</li>
+    <br/>
+    <li><strong>EffectivityCriteriaDefinition</strong> - the Effectivity Criteria Definition passed to the Effectivity Resolution Engine.</li>
+  </ul>
+  <p>The <strong>PE_BomStructure</strong> Query definition structure is recursive:</p>
+  <ul class="Disc">
+    <li><strong>Part BOM</strong> is the root ItemType of the <strong>BOM Structure</strong> accordion tab.</li>
+  </ul>
+  <p style="text-indent:60px"><strong>Order</strong></p>
+  <p class="Code_Sample" style="text-indent:60px">1. Sequence (Ascending)</p>
+  <p style="text-indent:60px"><strong>Where Condition:</strong></p>
+  <p class="Code_Sample" style="text-indent:60px">$EffectivityResolutionConfigurationQueryDefinitionId = $EffectivityResolutionConfigurationQueryDefinitionId</p>
+  <p class="Note">This condition is used as an anchor to detect the place in the Query definition where the effectivityResolutionOnPartBom Query definition is merged. This condition should not be removed, otherwise Effectivity Resolution will not work.</p>
+  <p style="text-indent:60px"><strong>Properties</strong>:</p>
+  <p class="Code_Sample" style="text-indent:60px">Quantity, Sequence, Reference Designator, Expression, id</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/partbom7.jpg" style="width: 100%; max-width: 418px;"/></p>
+  <ul class="Disc" style="padding-left:70px">
+    <li><strong>Part</strong></li>
+  </ul>
+  <p style="text-indent:70px"><strong>Join Condition</strong>:</p>
+  <p class="Code_Sample" style="text-indent:70px">&#39;$StructureResolutionMode;parent.related_id&#39; = Part.id</p>
+  <p style="text-indent:70px"><strong>Properties</strong>:</p>
+  <p class="Code_Sample" style="text-indent:70px">Part Number, Revision, State, locked_by_id, Name, id</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/partwhere.jpg" style="width: 100%; max-width: 424px;"/></p>
+  <ul class="Disc" style="padding-left:80px">
+    <li><strong>Part BOM</strong> is extracted recursively - all its values are the same as for the top <strong>Part BOM</strong>. The following Join Condition is added:</li>
+  </ul>
+  <p class="Code_Sample" style="text-indent:70px">Part.id = [Part BOM].source_id</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/partid.jpg" style="width: 100%; max-width: 526px;"/></p>
+  <p>To merge the Query definition for Effectivity Resolution, the<strong> PE_BomStructure</strong> Query definition has the <strong>OnBeforeExecute </strong>event set for the <strong>effs_mergeQueryDefinition</strong> method.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/partbom8.jpg" style="width: 100%; max-width: 614px;"/></p>
+  <p>The <strong>effs_effectivityResolutionOnPartBom</strong> Query definition has no events.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/methods.jpg" style="width: 100%; max-width: 497px;"/></p>
+  <p>By default, the Query definition item view has no tabs. To view and add events to Query definitions, you need to make these tabs visible by setting the <strong>Default Structure View</strong> property of the <strong>qry_QueryDefinition</strong> ItemType to the <strong>Tabs On</strong> value.</p>
+  <p class="Figure_indented"><img alt="" src="../assets/images/qd1.jpg" style="width: 100%; max-width: 213px;"/></p>
+  <p>To restore the default setting of the Query definition Item view, set the <strong>Default Structure View</strong> property of the <strong>qry_QueryDefinition</strong> ItemType to the <strong>Tabs Off </strong>value.</p>
+  <p> </p>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

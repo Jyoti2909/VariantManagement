@@ -1,0 +1,48 @@
+﻿<AML>
+ <Item type="Method" id="BD5789294D524183A6B598F70F7B1E21" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA['inDom format:
+'  <Item type='Method' action='Unlock Project Tree'>
+'    <body top_wbs_id='TOP_WBS_ID_VAL' handle_locked_by_current_user='1 or 0'/>
+'  </Item>
+Dim tmpInn As Innovator = Me.getInnovator()
+Dim tmpNd As XmlElement = CType(Me.node.selectSingleNode("body[@top_wbs_id]"), XmlElement)
+If IsNothing(tmpNd) Then Return tmpInn.newError("Invalid input parameters.")
+Dim parentID As String = tmpNd.getAttribute("top_wbs_id")
+Dim aml As String = String.Format("" & _
+  "<AML><Item type='SQL' action='SQL PROCESS'>" & _
+    "<PROCESS>CALL</PROCESS><name>get_locked_wbs</name><ARG1>{0}</ARG1>" & _
+  "</Item></AML>", System.Security.SecurityElement.Escape(parentID))
+Dim q As Item = tmpInn.newItem("", "")
+Dim r As Item = tmpInn.applyAML(aml)
+If r.isError() Then Return r
+
+Dim useLockedByCurrentUserOnly As Boolean = (tmpNd.GetAttribute("handle_locked_by_current_user")="1")
+Dim s As String = String.Format("='{0}'", tmpInn.getUserID())
+Dim lockedActivities As XmlNodeList = r.dom.SelectNodes("descendant::Item[@type='Activity2'][string(locked_by_id)"+IIF(useLockedByCurrentUserOnly, s, "!=''")+"]")
+Dim lockedWBSes As XmlNodeList = r.dom.SelectNodes("descendant::Item[@type='WBS Element'][string(locked_by_id)"+IIF(useLockedByCurrentUserOnly, s, "!=''")+"]")
+
+Dim stepNum As Integer
+Dim ndList As XmlNodeList
+Dim lockedItem As XmlElement
+q.loadAML("<Item type='Activity2' action='unlock' doGetItem='0'/>")
+For stepNum=1 To 2
+  If stepNum=1 Then
+    ndList = lockedActivities
+    q.setAttribute("type", "Activity2")
+  Else
+    ndList = lockedWBSes
+    q.setAttribute("type", "WBS Element")
+  End If
+  For Each lockedItem In ndList
+    q.setAttribute("id", lockedItem.getAttribute("id"))
+    cco.startup.debuglog("unlocking", q.dom)
+    r = q.apply()
+    If r.isError() Then Return r
+  Next
+Next stepNum
+Return tmpInn.newResult("ok")]]></method_code>
+  <method_type>VB</method_type>
+  <name>Unlock Project Tree</name>
+ </Item>
+</AML>

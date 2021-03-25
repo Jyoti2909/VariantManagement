@@ -1,0 +1,254 @@
+﻿@import 'variables';
+
+@tooltip-bg: @white;
+@tooltip-font-color: @color-17;
+@tooltip-border-color: @color-13;
+@tooltip-arrow-size: 4px;
+@tooltip-arrow-indent: 2px;
+@tooltip-margin: 6px;
+@tooltip-padding: 7px 8px;
+@tooltip-shadow: @shadow-b;
+@tooltip-border-radius: 4px;
+@tooltip-grid-max-width: 300px;
+
+.defaultTooltipTransform() {
+	&[data-tooltip-pos='up'],
+	&[data-tooltip-pos='down'] {
+		&:after,
+		&:before {
+			transform: translate(-50%, 0);
+		}
+	}
+
+	&[data-tooltip-pos='left'],
+	&[data-tooltip-pos='right'] {
+		&:before,
+		&:after {
+			transform: translate(0, -50%);
+		}
+	}
+}
+
+.showTooltip() {
+	&:after,
+	&:before {
+		opacity: 1;
+		pointer-events: auto;
+	}
+}
+
+.commonTooltipStyles() {
+	background: @tooltip-bg;
+	border: 1px solid @tooltip-border-color;
+	border-radius: @tooltip-border-radius;
+	box-shadow: @tooltip-shadow;
+	color: @tooltip-font-color;
+	font: @font-12-med;
+	line-height: 100%;
+	padding: @tooltip-padding;
+}
+
+.calculateTooltipMargin(@tooltip-margin, @property) {
+	&:before {
+		margin-bottom: 0;
+		@{property}: @tooltip-margin - @tooltip-arrow-size * 2 +
+			@tooltip-arrow-indent;
+	}
+	&:after {
+		@{property}: @tooltip-margin;
+	}
+}
+
+.setTooltipMargin(@tooltip-margin) {
+	@property: margin-bottom;
+	.calculateTooltipMargin(@tooltip-margin, @property);
+	&[data-tooltip-pos='left'] {
+		@property: margin-right;
+		.calculateTooltipMargin(@tooltip-margin, @property);
+	}
+	&[data-tooltip-pos='down'] {
+		@property: margin-bottom;
+		.calculateTooltipMargin(@tooltip-margin, @property);
+	}
+	&[data-tooltip-pos='right'] {
+		@property: margin-left;
+		.calculateTooltipMargin(@tooltip-margin, @property);
+	}
+}
+
+.aras-tooltip {
+	.setTooltipMargin(@tooltip-margin);
+	&[data-tooltip] {
+		position: relative; // alt. absolute or fixed
+		&:before,
+		&:after {
+			.base-effects();
+			bottom: 100%;
+			left: 50%;
+			position: absolute;
+			z-index: 10;
+			transform: translate(-50%, 10px);
+			transform-origin: top;
+		}
+		&:after {
+			.commonTooltipStyles();
+			content: attr(data-tooltip);
+			white-space: nowrap;
+		}
+		&:before {
+			.svg-arrow(@tooltip-bg, up);
+			content: '';
+			z-index: 11;
+		}
+		&:hover {
+			&:before,
+			&:after {
+				opacity: 1;
+				pointer-events: auto;
+				transform: translate(-50%, 0);
+			}
+		}
+
+		&[data-tooltip-break] {
+			&:after {
+				white-space: pre-line;
+				text-align: center;
+			}
+		}
+
+		&[data-tooltip-show='focuswithin'] {
+			&:focus-within {
+				.showTooltip();
+			}
+
+			.defaultTooltipTransform();
+		}
+
+		&[data-tooltip-show='true'] {
+			.showTooltip();
+			.defaultTooltipTransform();
+		}
+
+		&[data-tooltip-show='false'],
+		&[data-tooltip-show='false']:hover {
+			&:after,
+			&:before {
+				opacity: 0;
+				pointer-events: none;
+			}
+		}
+	}
+	&[data-tooltip-pos='down'] {
+		&:before,
+		&:after {
+			bottom: auto;
+			left: 50%;
+			top: 100%;
+			transform: translate(-50%, -10px);
+		}
+		&:before {
+			.svg-arrow(@tooltip-bg, down);
+		}
+		&:hover {
+			&:before,
+			&:after {
+				transform: translate(-50%, 0);
+			}
+		}
+	}
+
+	&[data-tooltip-pos='left'] {
+		&:before,
+		&:after {
+			bottom: auto;
+			left: auto;
+			right: 100%;
+			top: 50%;
+			transform: translate(10px, -50%);
+		}
+		&:before {
+			.svg-arrow(@tooltip-bg, left);
+		}
+		&:hover {
+			&:before,
+			&:after {
+				transform: translate(0, -50%);
+			}
+		}
+	}
+
+	&[data-tooltip-pos='right'] {
+		&:before,
+		&:after {
+			bottom: auto;
+			left: 100%;
+			top: 50%;
+			transform: translate(-10px, -50%);
+		}
+		&:before {
+			.svg-arrow(@tooltip-bg, right);
+		}
+		&:hover {
+			&:before,
+			&:after {
+				transform: translate(0, -50%);
+			}
+		}
+	}
+
+	&[data-tooltip-length] {
+		&:after {
+			white-space: normal;
+		}
+	}
+
+	&[data-tooltip-length='small'] {
+		&:after {
+			width: 80px;
+		}
+	}
+
+	&[data-tooltip-length='medium'] {
+		&:after {
+			width: 150px;
+		}
+	}
+
+	&[data-tooltip-length='large'] {
+		&:after {
+			width: 260px;
+		}
+	}
+
+	&[data-tooltip-length='xlarge'] {
+		&:after {
+			width: 90vw;
+			@media screen and (min-width: 768px) {
+				width: 380px;
+			}
+		}
+	}
+
+	&[data-tooltip-length='fit'] {
+		&:after {
+			width: 100%;
+		}
+	}
+
+	&-block {
+		.commonTooltipStyles();
+		opacity: 0;
+		display: inline-block;
+		max-width: @tooltip-grid-max-width;
+		transition: opacity 0.15s ease-out 0.075s;
+
+		// FF60 fix
+		white-space: pre-wrap;
+		word-break: break-all;
+		
+		word-break: break-word;
+		&_shown {
+			opacity: 1;
+		}
+	}
+}

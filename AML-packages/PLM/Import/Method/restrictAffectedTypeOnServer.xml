@@ -1,0 +1,100 @@
+﻿<AML>
+ <Item type="Method" id="BFC4BCC651C545B79FF2CD6AD56AC649" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[' name: restrictAffectedTypeOnServer
+' purpose: PLM. Checks in onBeforeAdd and onBeforeUpdate server events type of affected_id and new_item_id properties.
+' created: by Valentine Shapovalov
+' MethodTemplateName=VBMain;
+
+Dim innovator As Aras.IOM.Innovator = Me.getInnovator()
+Dim thisErr As Aras.IOM.Item
+Dim relatedItem As Aras.IOM.Item
+
+Function Main() As Item
+    relatedItem = Me.getRelatedItem()
+
+    If relatedItem Is Nothing Then
+        Dim qry As Aras.IOM.Item = Me.newItem("Affected Item", "get")
+        qry.setAttribute("select", "affected_id,new_item_id")
+        qry.setID(Me.getRelatedItemID())
+
+        relatedItem = qry.apply()
+
+        If relatedItem.isError() Then
+            Return relatedItem
+        End If
+    End If
+
+    Dim itemTypeName As String = Me.GetType()
+
+    If Not String.Equals(itemTypeName, "Express ECO Affected Item", StringComparison.Ordinal) _
+        AndAlso Not String.Equals(itemTypeName, "Express DCO Affected Item", StringComparison.Ordinal) _
+    Then
+        'We don't want to support different relationships yet
+        Return Nothing
+    End If
+
+    If Not CheckPropertyValue("affected_id", thisErr) OrElse Not CheckPropertyValue("new_item_id", thisErr) Then
+        Return thisErr
+    End If
+
+    Return Nothing
+End Function
+
+Function GetTargetType(ByVal id As String) As String
+    Dim qry As Aras.IOM.Item = Me.newItem("Change Controlled Item", "get")
+    qry.setAttribute("select", "id")
+    qry.setID(id)
+
+    Dim res As Aras.IOM.Item = qry.apply()
+
+    If res.isError() Then
+        Return Nothing
+    End If
+
+    Return res.getAttribute("type")
+End Function
+
+Function CheckPropertyValue(ByVal prop_name As String, ByRef thisErr As Item) As Boolean
+    If String.IsNullOrEmpty(prop_name) Then
+        thisErr = innovator.newError("Property name couldn't be empty")
+        Return False
+    End If
+
+    Dim propertyValue As String = relatedItem.getProperty(prop_name, "")
+
+    If String.IsNullOrEmpty(propertyValue) Then
+        ' If property not specified, skip checking without error.
+        Return True
+    End If
+
+    Dim propertyValueType As String = GetTargetType(propertyValue)
+
+    If String.IsNullOrEmpty(propertyValueType) Then
+        thisErr = innovator.newError(String.Format(CultureInfo.InvariantCulture, "Can not get type for value of property '{0}' ", prop_name))
+        Return False
+    End If
+
+    Dim itemTypeName As String = Me.GetType()
+
+    'Approved list:
+    ' ECO <-> Any
+    ' DCO <-> Document
+    If String.Equals(itemTypeName, "Express ECO Affected Item", StringComparison.Ordinal) AndAlso False _
+      OrElse _
+      String.Equals(itemTypeName, "Express DCO Affected Item", StringComparison.Ordinal) _
+      AndAlso _
+      (Not String.Equals(propertyValueType, "Document", StringComparison.Ordinal) _
+       AndAlso _
+      Not String.Equals(propertyValueType, "CAD", StringComparison.Ordinal)) _
+    Then
+        thisErr = innovator.newError(String.Format(CultureInfo.InvariantCulture, "Invalid item was selected for current relationship type: RelationshipType '{0}' couldn't contain '{1}' item", itemTypeName, propertyValueType))
+        Return False
+    End If
+
+    Return True
+End Function]]></method_code>
+  <method_type>VB</method_type>
+  <name>restrictAffectedTypeOnServer</name>
+ </Item>
+</AML>

@@ -1,0 +1,74 @@
+﻿<!DOCTYPE html>
+<html>
+	<link rel="stylesheet" href="../../../../../../javascript/dijit/themes/claro/claro.css" media="screen">
+	<head>
+		<script type="text/javascript" src="../../../../../../javascript/include.aspx?classes=arasStub/dojo.js" data-dojo-config="parseOnLoad: true, async: false, isDebug: false, baseUrl:'../../../../../../javascript/dojo'"></script>
+		<link rel="stylesheet" type="text/css" href="../../../../../../javascript/include.aspx?classes=arasClaro.css,common.css"/>
+		<script type="text/javascript" src="../../../../../../Modules/aras.innovator.CMF/Scripts/Utils.js"></script>
+		<script>
+			var args = window.frameElement.dialogArguments;
+			document.title = args.title || "";
+			require(["dojo/parser", "dijit/form/CheckBox"]);
+			function disableOption (checkbox, span, disable) {
+				checkbox.disabled = disable;
+				span.style.color = disable ? "gray" : "";
+			}
+
+			function disableWithValuesIfNeed () {
+				var withValuesCheckBox = document.getElementById("isWithValues");
+				var valuesSpan = document.getElementById("include_values");
+				//includeValues.get("value") returns "on" for true and false for false.
+				if (includeBindings.get("value")) {
+					includeValues.set("value", true);
+					disableOption(withValuesCheckBox, valuesSpan, true);
+				} else {
+					disableOption(withValuesCheckBox, valuesSpan, false);
+				}
+			}
+
+			function onOkClicked() {
+				args.isOkClicked = true;
+				//includeValues.get("value") returns "on" for true and false for false.
+				args.isWithChilds = !!includeChilds.get("value");
+				args.isWithBindings = !!includeBindings.get("value");
+				args.isWithValues = !!includeValues.get("value");
+				args.dialog.close();
+			}
+
+			function onIncludeHierarchyChange () {
+				var isBindingRequired = args.isBindingRequired(!!includeChilds.get("value"));
+				if (isBindingRequired) {
+					includeBindings.set("value", true);
+				}
+				disableOption(document.getElementById("isWithBindings"), document.getElementById("include_references"), isBindingRequired);
+			}
+
+			function onLoad() {
+				onIncludeHierarchyChange();
+
+				disableWithValuesIfNeed();
+			}
+		</script>
+	</head>
+	<body class="claro" style="font-size: 13px; font-family: Arial" onload="onLoad()">
+		<form style="padding: 15px">
+			<div style="padding-bottom: 12px">
+				<input data-dojo-type="dijit/form/CheckBox" id="isWithChilds" data-dojo-id="includeChilds" onchange="onIncludeHierarchyChange()" checked><span id="include_hierarchy"></span><br>
+			</div>
+			<div style="padding-bottom: 12px">
+				<input data-dojo-type="dijit/form/CheckBox" id="isWithBindings" data-dojo-id="includeBindings" onchange="disableWithValuesIfNeed()" checked><span id="include_references"></span><br>
+			</div>
+			<div style="padding-bottom: 12px">
+				<input data-dojo-type="dijit/form/CheckBox" id="isWithValues" data-dojo-id="includeValues" checked><span id="include_values"></span><br>
+			</div>
+			<div style="text-align: center;">
+				<input class="btn form-btn" type="button" value="Ok" onclick="onOkClicked()">
+			</div>
+		</form>
+		<script>
+			document.getElementById("include_hierarchy").textContent = CMF.Utils.getResource("include_hierarchy");
+			document.getElementById("include_references").textContent = CMF.Utils.getResource("include_references");
+			document.getElementById("include_values").textContent = CMF.Utils.getResource("include_values");
+		</script>
+	</body>
+</html>

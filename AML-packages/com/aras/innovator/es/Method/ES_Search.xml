@@ -1,0 +1,24 @@
+﻿<AML>
+ <Item type="Method" id="B578299243B24A62AE10AEE95EA5F58E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Item res = null;
+
+var adminIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+bool adminPermsWasSet = Aras.Server.Security.Permissions.GrantIdentity(adminIdentity);
+try
+{
+	res = Aras.ES.ServerMethods.Search(this);
+}
+finally
+{
+	if (adminPermsWasSet)
+	{
+		Aras.Server.Security.Permissions.RevokeIdentity(adminIdentity);
+	}
+}
+
+return res;]]></method_code>
+  <method_type>C#</method_type>
+  <name>ES_Search</name>
+ </Item>
+</AML>

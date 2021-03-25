@@ -1,0 +1,42 @@
+﻿<AML>
+ <Item type="Method" id="C01483311E4749FE877A64801BD52370" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var field = grid['columns_Experimental'].get(colNumber, 'name');
+if (getRelationshipProperty(relationshipID, 'data_type') != 'date') {
+	grid['columns_Experimental'].set(field, 'editType', undefined);
+	return true;
+}
+
+var listNm = 'DateFormats';
+var listNd = aras.getItem('List', 'name="' + listNm + '"', '<name>' + listNm + '</name>', 1);
+if (!listNd) {
+	return true;
+}
+
+var labs = [];
+var vals = [];
+var rels = listNd.selectNodes('Relationships/Item[@type=\'Value\']');
+for (var i = 0; i < rels.length; i++) {
+	vals.push(aras.getItemProperty(rels[i], 'value'));
+	labs.push(aras.getItemProperty(rels[i], 'label'));
+}
+
+var v = grid['items_Experimental'].get(relationshipID, 'value', field);
+if (v && vals.indexOf(v) === -1) {
+	vals.push(v);
+	labs.push(v);
+}
+
+if (vals.indexOf('') === -1) {
+	vals.unshift('');
+	labs.unshift('');
+}
+
+grid['columns_Experimental'].set(field, 'editType', 'FilterComboBox');
+grid['columns_Experimental'].set(field, 'comboList', vals, labs);
+return true;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>date_pattern_validate</name>
+ </Item>
+</AML>

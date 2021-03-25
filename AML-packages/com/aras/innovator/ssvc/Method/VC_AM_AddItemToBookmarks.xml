@@ -1,0 +1,87 @@
+﻿<AML>
+ <Item type="Method" id="8023207256EB4F0988F03A483770A6FE" action="add">
+  <comments>AM - is abbreviation of Actions Menu</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var options = {
+	dialogWidth: 300,
+	dialogHeight: 100,
+	resizable: false,
+	aras: aras,
+	title: aras.getResource('../Modules/aras.innovator.ssvc/', 'sm_add_item_to_bookmarks'),
+	content: aras.getBaseURL() + '/Modules/aras.innovator.SSVC/Views/SelectForum.html'
+};
+var mostTopWindow = aras.getMostTopWindowWithAras();
+
+(mostTopWindow.main || mostTopWindow).ArasModules.Dialog.show('iframe', options).promise.then(function(forumId) {
+	if (forumId) {
+		addItemToForum(forumId);
+	}
+});
+
+function addItemToForum(forumId) {
+	var forumItem = makeForumItem(forumId);
+	var innovator = forumItem.getInnovator();
+	var result = innovator.applyAML(forumItem.dom.xml);
+
+	if (result.isError() && retryToApplyAML(result, forumId, forumItem)) {
+		return;
+	}
+
+	aras.AlertSuccess(aras.getResource('', 'ssvc.forum.items_added'), window);
+
+	var topWindow = aras.getMostTopWindowWithAras();
+	var event = document.createEvent('Event');
+
+	event.initEvent('bookmarksDataChanged', true, false);
+	topWindow.document.dispatchEvent(event);
+}
+
+function makeForumItem(forumId) {
+	var forumItem = aras.newIOMItem('ForumItem', 'add');
+
+	forumItem.setProperty('item_config_id', inArgs.configId);
+	forumItem.setProperty('item_keyed_name', inArgs.keyedName);
+	forumItem.setProperty('item_type', inArgs.itemTypeName);
+	forumItem.setProperty('source_id', forumId);
+
+	return forumItem;
+}
+
+function retryToApplyAML(result, forumId, forumItem) {
+	if (result.getErrorCode() !== 'SOAP-ENV:Server.PropertiesAreNotUniqueException') {
+		aras.AlertError(result.getErrorString());
+		return true;
+	}
+
+	if ((forumItem = getForumItemToAdd(forumItem, forumId))) {
+		result = innovator.applyAML(forumItem.dom.xml);
+
+		if (result.isError()) {
+			aras.AlertError(result.getErrorString());
+			return true;
+		}
+	}
+}
+
+function getForumItemToAdd(item, forumId) {
+	var existentForumItems = aras.newIOMItem('ForumItem', 'get');
+
+	existentForumItems.setAttribute('select', 'item_config_id');
+	existentForumItems.setProperty('source_id', forumId);
+	existentForumItems = existentForumItems.apply();
+
+	if (existentForumItems.isError()) {
+		aras.AlertError(existentForumItems.getErrorString());
+	}
+
+	var itemConfigId = item.getProperty('item_config_id');
+
+	if (existentForumItems.dom.selectSingleNode('//Result/Item[@type=\'ForumItem\']/item_config_id[text()=\'' + itemConfigId + '\']') === null) {
+		return item;
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VC_AM_AddItemToBookmarks</name>
+ </Item>
+</AML>

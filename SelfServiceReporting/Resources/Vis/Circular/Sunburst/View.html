@@ -1,0 +1,425 @@
+﻿<style type="text/css">
+	#VIS_ID_CONTAINER {
+		position: relative;
+		font-family: 'Open Sans', sans-serif;
+		font-size: 12px;
+		background-color: #fff;
+	}
+
+	#VIS_ID_CONTAINER #VIS_ID path {
+		stroke: #ffffff;
+	}
+
+	#VIS_ID_CONTAINER .izenda-vis-sunburst-cetralarea {
+		cursor: pointer;
+		fill: #ffffff;
+		-webkit-user-select: none;
+		-moz-user-select: none;
+		-ms-user-select: none;
+		user-select: none;
+	}
+
+	#VIS_ID_CONTAINER .izenda-vis-sunburst-mainlabel {
+		fill: #666;
+		font-family: 'Open Sans', sans-serif;
+		pointer-events: none;
+	}
+
+	#VIS_ID_CONTAINER .izenda-vis-sunburst-mainlabel-topline {
+		font-size: 30px;
+	}
+
+	#VIS_ID_CONTAINER .izenda-vis-sunburst-mainlabel-bottomline {
+		font-size: 12px;
+	}
+</style>
+
+<div id="VIS_ID_CONTAINER">
+	<div id="VIS_ID"></div>
+</div>
+
+<script src="d3.v3.min.js"></script>
+
+<script type="text/javascript">
+	(function init() {
+		var services = window.ReportingServices;
+
+		(function () {
+			/* Backward Compatibility Section */
+			if (VIS_CONTEXT.props && VIS_CONTEXT.props.length > 2 && VIS_CONTEXT.props && VIS_CONTEXT.props.indexOf('metric') > 0) {
+				var props = {};
+				try {
+					var oldProps = JSON.parse(VIS_CONTEXT.props);
+					props['Metric'] = oldProps['metric'];
+					props['NodePath'] = oldProps['nodePath'];
+				} catch (e) {
+					props = {};
+				}
+				VIS_CONTEXT.props = JSON.stringify(props);
+			}
+		})();
+
+		var colors = d3.scale.category20().range(), u = {}, n = [];
+		function getColor(d, i) {
+			var path = vis.getPath(d);
+			if (path.length > 0) {
+				var topNode = path[0];
+				var index = ((u[topNode.name] || (u[topNode.name] = n.push(topNode.name))) - 1) % colors.length;
+				return izenda.visualization.getHighchartsColor(i ? colors[index] : '#ffffff', { min: 0, max: topNode.value, factor: 0.7, value: d.value, scale: d3.scale.sqrt() });
+			}
+			return colors[0];
+		}
+
+		var vis = new izenda.visualization({
+			id: 'VIS_ID',
+			rows: VIS_ROWS,
+			columns: VIS_COLUMNS,
+			context: VIS_CONTEXT,
+			status: VIS_FORMJSASTATUS,
+			requirements: { d3: true, svg: true },
+			dataLayout: 'tree',
+			draw: draw
+		});
+
+		vis.initHeader({
+			breadcrumbs: {
+				root: null,
+				total: 1,
+				showRoot: true,
+				showLabel: true,
+				getColor: getColor,
+				clickable: true
+			},
+			metrics: [{
+				name: 'Metric',
+				onChangeCallback: function () {
+					vis.redraw();
+				}
+			}]
+		});
+
+		var subscriptions = [];
+		function draw() {
+			subscriptions.forEach(function (subscription) { subscription.remove(); });
+
+			var currentMetric = vis.getProperty('Metric');
+			var nodePathProperty = vis.getProperty('NodePath');
+			var root = vis.traverseTree(function (context) {
+				if (context.isLeaf) {
+					context.node['size'] = vis.itemValue(context.node, currentMetric);
+				}
+			});
+			if (isNaN(vis.itemValue(root, currentMetric))) {
+				if (!(nodePathProperty && nodePathProperty.length > 0)) {
+					vis.breadcrumb.hide();
+				}
+				vis.abort('No Data to Display');
+			}
+
+			var expText = 'of ' + currentMetric + ' value';
+
+			var current = root;
+			var zoomLock = {};
+			var zoomEnabled = false;
+
+			var totalSize = 0;
+			var radius = Math.min(vis.width, vis.height) / 2 - 6,
+					cx = 0.003, cy = 0.88;
+			var mouseleaveOpacityLock = {};
+
+			var svg = d3.select(vis.element.get(0))
+				.append('svg:svg')
+					.attr('width', vis.width)
+					.attr('height', vis.height);
+			var g = svg.append('svg:g')
+					.attr('transform', 'translate(' + vis.width / 2 + ',' + vis.height / 2 + ')')
+					.on('mouseleave', mouseleave);
+			svg.append('svg:circle')
+				.attr('r', radius * 0.47)
+				.attr('class', 'izenda-vis-sunburst-cetralarea')
+				.attr('transform', 'translate(' + vis.width / 2 + ',' + vis.height / 2 + ')')
+				.on('click', function (d) {
+					if (current != root) {
+						zoom(current.parent);
+					}
+				});
+
+			var g2 = svg.append('svg:g');
+			var explanation = g2.append('svg:text')
+				.attr('class', 'izenda-vis-sunburst-mainlabel')
+				.attr('x', '0')
+				.attr('y', '0');
+			var percentage = explanation.append('tspan')
+				.attr('class', 'izenda-vis-sunburst-mainlabel-topline')
+				.attr('x', '0')
+				.attr('dy', '0')
+				.attr('text-anchor', 'middle')
+				.text('100%');
+			explanation.append('tspan')
+				.attr('class', 'izenda-vis-sunburst-mainlabel-bottomline')
+				.attr('x', '0')
+				.attr('dy', '2.5em')
+				.attr('text-anchor', 'middle')
+				.text(expText);
+
+			var tw = g2.node().getBBox().width, th = g2.node().getBBox().height,
+				actualRadius = Math.sqrt((tw * tw + th * th) / 4),
+				textScaleFactor = (actualRadius > 0) ? (radius * 0.3 / actualRadius) : 1;
+			g2.attr('transform', 'translate(' + vis.width / 2 + ',' + vis.height / 2 + ') scale(' + textScaleFactor + ')');
+
+			var x = d3.scale.linear().range([0, 2 * Math.PI]);
+			var y = d3.scale.sqrt().range([radius * 0.47, radius]);
+
+			var arc = d3.svg.arc()
+				.startAngle(function (d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x))); })
+				.endAngle(function (d) { return Math.max(0, Math.min(2 * Math.PI, x(d.x + d.dx))); })
+				.innerRadius(function (d) { return Math.max(0, y(d.y)); })
+				.outerRadius(function (d) { return Math.max(0, y(d.y + d.dy)); });
+
+			// Bounding circle underneath the sunburst, to make it easier to detect
+			// when the mouse leaves the parent g.
+			g.append('svg:circle')
+				.attr('r', radius)
+				.style('opacity', 0);
+
+			var partition = d3.layout.partition()
+					.value(function (d) { return d.size; });
+
+			// For efficiency, filter nodes to keep only those large enough to see.
+			var nodes = partition.nodes(root)
+				.filter(function (d) { return (d.dx > cx); });
+
+			var minY = d3.min(jq$.grep(nodes, function (n) { return n.y > 0; }), function (n) {
+				return n.y;
+			});
+
+			y.domain([minY, 1]);
+
+			var path = g.data([root]).selectAll('path')
+				.data(nodes)
+				.enter().append('svg:path')
+				.attr('d', arc)
+				.attr('fill-rule', 'evenodd')
+				.style('fill', getColor)
+				.style('opacity', 1)
+				.style('cursor', 'pointer')
+				.each(function (d) {
+					services.tipOn(this, d, {
+						pass: function (obj, v) {
+							return !isNaN(vis.itemValue(obj, v)) || vis.metrics.indexOf(v) < 0;
+						}
+					});
+				})
+				.on('mouseover', mouseover)
+				.on('mouseout', mouseout)
+				.on('click', zoom);
+
+			var isBackRender = (VIS_CONTEXT.toImage || VIS_CONTEXT.toStatic),
+					existNodePath = (nodePathProperty && nodePathProperty.length && nodePathProperty.length > 0);
+			if (isBackRender && existNodePath) {
+				cx = 0; cy = 1;
+			} else {
+				cx = 0.003; cy = 0.88;
+			}
+
+			g.selectAll('path').transition().duration(750)
+				.call(function (transition) {
+					transition.attrTween('d', function (d) {
+						d.edx = d.dx, d.edy = d.dy;
+						d.cdx = d.edx - cx, d.cdy = d.edy * cy;
+						return function (t) {
+							d.dx = d3.interpolate(d.edx, d.cdx)(t);
+							d.dy = d3.interpolate(d.edy, d.cdy)(t);
+							return arc(d);
+						};
+					});
+				});
+
+			totalSize = path.datum().value;
+
+			vis.setBreadcrumbDefaultNode(null);
+			vis.updateBreadcrumbContext({ root: root, total: totalSize });
+
+			if (isBackRender && existNodePath) {
+				var d = trace(root, 0);
+				var pathLocks = new Array(path.size());
+				path.each(function (d2, i2) { pathLocks[i2] = this; });
+				x.domain([d.x, d.x + d.dx]);
+				y.domain([(d.depth > 0) ? d.y : minY, 1]);
+				d3.selectAll(pathLocks).each(function (d2, i2) {
+					d3.select(pathLocks[i2]).attr('d', function () {
+						return arc(d2);
+					});
+				});
+				percentage.text(getPercentageString(d));
+			}
+
+			if (!vis.context.isImageRender) {
+				vis.setProperty('NodePath', null);
+			}
+
+			function trace(node, i) {
+				if (node && node.children) {
+					var index = node.children.findIndex(function (e) {
+						return e.name == vis.getProperty('NodePath')[vis.indexes[i]];
+					});
+					if (index > -1)
+						return trace(node.children[index], i + 1);
+				}
+
+				return node;
+			}
+
+			function getChildren(node) {
+				var path = [node], children = node['children'];
+				if (!children) {
+					return path;
+				}
+
+				for (var i = 0; i < children.length; i++) {
+					path.push.apply(path, getChildren(children[i]));
+				}
+				return path;
+			}
+
+			function mouseover(d) {
+				percentage.text(getPercentageString(d));
+
+				var ancestors = vis.getPath(d), children = getChildren(d);
+
+				g.selectAll('path')
+					.style('opacity', 0.5)
+					.filter(function (node) { return (ancestors.indexOf(node) >= 0); })
+					.style('opacity', 1);
+
+				g.selectAll('path')
+					.transition().duration(150)
+					.call(function (transition) {
+						transition.attrTween('d', function (d2) {
+							return function (t) {
+								d2.dx = d3.interpolate(d2.dx, !zoomEnabled ? d2.cdx : d2.edx)(t);
+								d2.dy = d3.interpolate(d2.dy, !zoomEnabled ? d2.cdy : d2.edy)(t);
+								return arc(d2);
+							};
+						});
+					});
+
+				if (!zoomEnabled) {
+					g.selectAll('path')
+						.filter(function (node) { return (children.indexOf(node) >= 0); })
+						.sort(function (a2, b2) { return a2.size - b2.size; })
+						.transition().duration(250)
+						.delay(function (d2, i) { return i / children.length * 250; })
+						.call(function (transition) {
+							transition.attrTween('d', function (d2) {
+								return function (t) {
+									d2.dx = d3.interpolate(d2.dx, d2.edx)(t);
+									d2.dy = d3.interpolate(d2.dy, d2.edy)(t);
+									return arc(d2);
+								};
+							});
+						});
+				}
+			}
+			function mouseout() {
+				collapseShares();
+			}
+			function mouseleave() {
+				collapseShares();
+				d3.select(mouseleaveOpacityLock)
+					.transition().duration(1000)
+					.tween('style:opacity', function () {
+						var i = d3.interpolateString('0.5', '1');
+						return function (t) { path.style('opacity', i(t)); };
+					});
+				percentage.text(getPercentageString(current));
+			}
+
+			function setZoom(value) {
+				zoomEnabled = value;
+			}
+
+			function getPercentageString(d) {
+				var percentage = (100 * d.value / totalSize).toPrecision(3);
+				return percentage < 0.1 ? '< 0.1%' : percentage + '%';
+			}
+
+			function updateBreadcrumb(d, filter) {
+				vis.updateBreadcrumb(d, { label: getPercentageString(d), preventFilter: !filter });
+			}
+
+			updateBreadcrumb(root, true);
+
+			function zoom(d) {
+				updateBreadcrumb(d, true);
+				setZoom(d.depth != 0);
+				vis.setBreadcrumbDefaultNode(zoomEnabled ? d : null);
+
+				current = d;
+				percentage.text(getPercentageString(current));
+
+				var pathLocks = new Array(path.size());
+				path.each(function (d2, i2) { pathLocks[i2] = this; });
+
+				d3.select(zoomLock)
+					.transition().duration(750)
+					.tween('text', function () {
+						var xd = d3.interpolate(x.domain(), [d.x, d.x + d.dx]),
+							yd = d3.interpolate(y.domain(), [(d.depth > 0) ? d.y : minY, 1]);
+
+						return function (t) {
+							d3.selectAll(pathLocks).each(function (d2, i2) {
+								d3.select(pathLocks[i2]).attr('d', function () {
+									if (!i2) {
+										x.domain(xd(t));
+										y.domain(yd(t));
+									}
+									return arc(d2);
+								});
+							});
+						};
+					});
+
+				g.selectAll('path')
+					.each(function (d2) {
+						d2.dx = !zoomEnabled ? d2.cdx : d2.edx;
+						d2.dy = !zoomEnabled ? d2.cdy : d2.edy;
+					});
+			}
+
+			function collapseShares() {
+				g.selectAll('path')
+					.transition()
+					.duration(1000)
+					.call(function (tran) {
+						if (zoomEnabled)
+							return;
+						tran.attrTween('d', function (d2) {
+							return function (t) {
+								d2.dx = d3.interpolate(d2.dx, d2.cdx)(t);
+								d2.dy = d3.interpolate(d2.dy, d2.cdy)(t);
+								return arc(d2);
+							};
+						});
+					});
+			}
+
+			subscriptions.push(vis.events.subscribe('BreadcrumbClick', function (d) {
+				zoom(d);
+				if (d.depth != 0) {
+					g.selectAll('path')
+						.each(function (d2) {
+							d2.dx = !zoomEnabled ? d2.cdx : d2.edx;
+							d2.dy = !zoomEnabled ? d2.cdy : d2.edy;
+						});
+				} else {
+					collapseShares();
+				}
+			}));
+		}
+
+		vis.draw();
+
+		izenda.visualization.registerResize('VIS_ID', init, vis.clear);
+	})();
+</script>

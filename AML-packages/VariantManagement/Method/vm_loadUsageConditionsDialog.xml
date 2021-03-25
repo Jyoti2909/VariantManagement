@@ -1,0 +1,1022 @@
+﻿<AML>
+ <Item type="Method" id="837D1C49CC66454292D7732E260307C5" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[require([
+    'dojo/_base/connect',
+    'dojo',
+    'Modules/aras.innovator.VariantManagementSample/Scripts/vmGridFormatters',
+    'Modules/aras.innovator.VariantManagementSample/Scripts/usageConditions/usageConditionDataLoader',
+    'Modules/aras.innovator.VariantManagementSample/Scripts/scopeRules/dataStore',
+    'Modules/aras.innovator.VariantManagementSample/Scripts/tableRuleEditor/dataModel/aggregatedDataModel',
+    'Modules/aras.innovator.VariantManagementSample/Scripts/tableRuleEditor/groupTreeGridAdapter',
+    'Modules/aras.innovator.VariantManagementSample/Scripts/vmUsageConditionTableMultisort',
+    'Controls/Common/RenderUtils'
+], function (connect, dojo, vmGridFormatters, usageConditionDataLoader, DataStore, AggregatedDataModel, GroupTreeGridAdapter, RenderUtils,vmUsageConditionTableMultisort) {
+    const aras = window.aras;
+
+    let dialogContext =
+    {
+        data: {
+            dataModel: null,
+            dataStore: null,
+            affectedGroups: null,
+            itemsFilter: {}
+        },
+        eventListeners: {},
+        modules: {}
+    }
+
+    this.usageConditonDalaLoader = new usageConditionDataLoader({ aras: aras, scopeBuilder: 'vm_scopeBuilder' });
+    let dialogsUsageConditions;
+    const sourceID = parent.dialogArguments.scopeId.id;
+
+    let defaultVariabilityItem = aras.newIOMItem('vm_VariabilityItem', 'get');
+    defaultVariabilityItem.setAttribute('select', 'id,keyed_name');
+
+    const relationshipItem = aras.newIOMItem('vm_VarComponentVariabilityItem');
+    relationshipItem.setProperty('source_id', sourceID);
+    defaultVariabilityItem.setPropertyItem('id', relationshipItem);
+    defaultVariabilityItem.setPropertyCondition('id', 'in');
+    defaultVariabilityItem.setPropertyAttribute('id', 'by', 'related_id');
+    defaultVariabilityItem = defaultVariabilityItem.apply();
+
+    const variabilityItemId = defaultVariabilityItem.getAttribute('id');
+
+    //data for groups grid
+    let dataStore = new DataStore({ aras: aras });
+    let dataModel = new AggregatedDataModel({ aras: aras });
+    let treeEventListeners = [];
+    let treeControl;
+    let formControls = {};
+    let isUIControlsCreated = false;
+
+    this.loadModelData = function (dataModel) {
+        if (!dataModel) {
+            return;
+        }
+
+        let isDataFiltered = dialogContext.data.itemsFilter.value;
+        let modelItemStates;
+
+        if (isDataFiltered) {
+            this.restoreFilteredModelData();
+        }
+
+        modelItemStates = this.getModelItemStates(dataModel) || dialogContext.data.affectedGroups;
+
+        // loading dataModel data
+        dataModel.loadSampleData(variabilityItemId, {
+            allowedItemTypes: ['Scope', 'Variable', 'NamedConstant'],
+            builderMethodName: 'vm_scopeBuilder',
+            forceLoad: true
+        });
+
+        this.restoreModelState(dataModel, modelItemStates);
+
+        if (isDataFiltered) {
+            this.filterModelData();
+        }
+
+        // undating properties and controls
+        this.scopeModelItem = dataModel.getItemsByParameters({ itemType: 'Scope' })[0];
+    }.bind(this);
+
+    this.restoreFilteredModelData = function () {
+        let allModelItems = dialogContext.data.dataModel.getAllItems();
+
+        // restore children
+        allModelItems.map(function (targetItem) {
+            targetItem.children = targetItem._children || targetItem.children;
+            delete targetItem._children;
+        });
+    }.bind(this);
+
+    this.restoreModelState = function (dataModel, stateData) {
+        let allModelItems = dataModel.getAllItems();
+        let modelItem;
+
+        if (stateData) {
+            let stateByItemIdPath = {};
+            let stateItem;
+            let idPath;
+            let currentStateItems;
+
+            for (let i = 0; i < stateData.length; i++) {
+                stateItem = stateData[i];
+                currentStateItems = [stateItem].concat(stateItem.children.slice());
+
+                for (let j = 0; j < currentStateItems.length; j++) {
+                    stateItem = currentStateItems[j];
+                    stateByItemIdPath[stateItem.idPath] = stateItem;
+                }
+            }
+
+            for (let i = 0; i < allModelItems.length; i++) {
+                modelItem = allModelItems[i];
+                idPath = modelItem.getItemIdPath().join(',');
+                stateItem = stateByItemIdPath[idPath];
+
+                if (modelItem.setItemGroup && (!stateItem || stateItem.selected)) {
+                    modelItem.setItemGroup('selected', { skipRecursive: true, suppressEvent: true });
+                }
+
+                modelItem.sortIndex = stateItem ? stateItem.sortIndex : 0;
+            }
+
+            for (let i = 0; i < allModelItems.length; i++) {
+                modelItem = allModelItems[i];
+
+                if (modelItem.children.length) {
+                    modelItem.children.sort(function (firstModelItem, secondModelItem) {
+                        return firstModelItem.sortIndex - secondModelItem.sortIndex;
+                    });
+                }
+            }//
+        } else {
+            for (let i = 0; i < allModelItems.length; i++) {
+                modelItem = allModelItems[i];
+                if (modelItem.setItemGroup) {
+                    modelItem.setItemGroup('selected', { skipRecursive: true, suppressEvent: true });
+                }
+            }
+        }
+    }.bind(this);
+
+    this.getModelItemStates = function (dataModel) {
+        let scopeModelItem = dataModel.getItemsByParameters({ itemType: 'Scope' });
+        scopeModelItem = scopeModelItem.length && scopeModelItem[0];
+        if (scopeModelItem) {
+            let variableModelItems = this.scopeModelItem.getChildrenByParameters({ itemType: 'Variable' });
+            let resultItemStates = new aras.getMostTopWindowWithAras().Array();
+            let itemCounter = 0;
+            let childModelItem;
+            let variableOutputData;
+            let modelItem;
+            let childItemStates;
+
+            for (let i = 0; i < variableModelItems.length; i++) {
+                modelItem = variableModelItems[i];
+                variableOutputData = this.createOutputItemData(modelItem, { sortIndex: itemCounter++ });
+
+                childItemStates = new aras.getMostTopWindowWithAras().Array();
+                variableOutputData.children = childItemStates;
+
+                for (let j = 0; j < modelItem.children.length; j++) {
+                    childModelItem = modelItem.children[j];
+                    childItemStates.push(this.createOutputItemData(childModelItem, { sortIndex: itemCounter++ }));
+                }
+
+                resultItemStates.push(variableOutputData);
+            }
+
+            return resultItemStates;
+        }
+    }.bind(this);
+
+    this.initStoreFromModel = function (dataStore, dataModel) {
+        let scopeModelItem = dataModel.getItemsByParameters({ itemType: 'Scope' })[0];
+        scopeModelItem.sortChildren();
+        let scopeRelatedItems = this.scopeModelItem.getChildren();
+        let uniqueId;
+
+        // cleanup dataStore
+        for (uniqueId in dataStore.itemsHash) {
+            dataStore.unregisterItem(dataStore.itemsHash[uniqueId]);
+        }
+
+        for (let i = 0; i < scopeRelatedItems.length; i++) {
+            dataStore.registerItem(scopeRelatedItems[i]);
+        }
+
+        dataStore.treeModelCollection = scopeModelItem.children.slice();
+
+        if (this.isUIControlsCreated) {
+            treeControl.refreshData();
+        }
+    }.bind(this);
+
+    this.renderVariableListCellHTML = function (storeValue, rowIndex, level, layoutCell) {
+        let modelItem = storeValue;
+        let htmlRenderUtils = dialogContext.modules.RenderUtils.HTML;
+        let filterInfo = dialogContext.data.itemsFilter;
+        let itemName = modelItem.getItemProperty('name');
+        let groupsCount = treeControl.getCheckGroupsCount();
+        let cellHTML = '';
+
+        if (filterInfo.value) {
+            let matchesList = itemName.match(filterInfo.regExp);
+
+            if (!matchesList) {
+                cellHTML = htmlRenderUtils.wrapInTag(itemName, 'span', { class: 'NameElementNamePart' });
+            } else {
+                let matchIndex = matchesList.index;
+                let firstMatch = matchesList[0];
+
+                if (matchIndex > 0) {
+                    cellHTML += htmlRenderUtils.wrapInTag(itemName.substr(0, matchIndex), 'span', { class: 'NameElementNamePart' });
+                }
+
+                cellHTML += htmlRenderUtils.wrapInTag(itemName.substr(matchIndex, firstMatch.length), 'span', { class: 'NameElementMatch' });
+
+                if (matchIndex + firstMatch.length < itemName.length) {
+                    cellHTML += htmlRenderUtils.wrapInTag(itemName.substr(matchIndex + firstMatch.length), 'span', { class: 'NameElementNamePart' });
+                }
+            }
+        } else {
+            cellHTML = htmlRenderUtils.wrapInTag(itemName, 'span', { class: 'NameElementNamePart' });
+        }
+
+        cellHTML = htmlRenderUtils.wrapInTag(cellHTML, 'div', {
+            class: 'CellTextContent',
+            title: itemName,
+            style: 'left:' + (level * 28 + 45) + 'px;right:' + groupsCount * 25 + 'px;'
+        });
+
+        return cellHTML + treeControl._renderGroupButtons(modelItem);
+    }.bind(this);
+
+    this.onExecuteGridAction = function (actionName, actionArguments, storeItem) {
+        let gridStore = treeControl.gridWidget.store;
+        let modelItem = gridStore.getValue(storeItem, 'modelItem');
+
+        switch (actionName) {
+            case 'setGroup':
+                modelItem.setItemGroup(actionArguments);
+                treeControl.gridContainer.setSelectedRow(modelItem.uniqueId);
+                treeControl.gridContainer.updateRenderedRows();
+                break;
+            case 'removeGroup':
+                modelItem.removeItemGroup(actionArguments);
+                treeControl.gridContainer.setSelectedRow(modelItem.uniqueId);
+                treeControl.gridContainer.updateRenderedRows();
+                break;
+            default:
+                break;
+        }
+    }.bind(this);
+
+    this.onTreeGridMenuInit = function (rowId, columnIndex) {
+        let gridMenu = treeControl.gridContainer.getMenu();
+
+        gridMenu.removeAll();
+
+        gridMenu.addRange([
+            { id: 'selectall', name: 'Select All' },
+            { id: 'unselectall', name: 'Unselect All' }
+        ]);
+
+        return true;
+    }.bind(this);
+
+    this.onTreeGridMenuClick = function (commandId, rowId, columnIndex) {
+        let dataModel = dialogContext.data.dataModel;
+        let allModelItems = dataModel.getAllItems();
+        let modelItem;
+
+        switch (commandId) {
+            case 'selectall':
+                for (let i = 0; i < allModelItems.length; i++) {
+                    modelItem = allModelItems[i];
+
+                    if (modelItem.setItemGroup) {
+                        modelItem.setItemGroup('selected', { skipRecursive: true, suppressEvent: true });
+                    }
+                }
+
+                treeControl.gridContainer.updateRenderedRows();
+                break;
+            case 'unselectall':
+                for (let i = 0; i < allModelItems.length; i++) {
+                    modelItem = allModelItems[i];
+
+                    if (modelItem.setItemGroup) {
+                        modelItem.removeItemGroup('selected', { skipRecursive: true, suppressEvent: true });
+                    }
+                }
+
+                treeControl.gridContainer.updateRenderedRows();
+                break;
+            default:
+                break;
+        }
+    }.bind(this);
+
+    this.onTreeGridKeyPress = function (keyEvent) {
+        switch (keyEvent.keyCode) {
+            case 13:
+            case 32:
+                let selectedRowId = treeControl.gridContainer.getSelectedId();
+                if (!selectedRowId) {
+                    break;
+                }
+
+                let gridStore = treeControl.gridContainer.grid_Experimental.store;
+                let storeItem = gridStore._itemsByIdentity[selectedRowId];
+                let modelItem = gridStore.getValue(storeItem, 'modelItem');
+                if (modelItem.isItemFromGroup('selected')) {
+                    modelItem.removeItemGroup('selected');
+                } else {
+                    modelItem.setItemGroup('selected');
+                }
+
+                treeControl.gridContainer.setSelectedRow(modelItem.uniqueId);
+                treeControl.gridContainer.updateRenderedRows();
+                treeControl.gridContainer.requestFocus();
+                break;
+            default:
+                break;
+        }
+    }.bind(this);
+
+    this.onBeforeUnload = function () {
+        this.removeEventListeners();
+    }.bind(this);
+
+    this.addDomEventListener = function (targetNode, eventType, eventHandler) {
+        if (!(targetNode && eventType && eventHandler)) {
+            return;
+        }
+
+        let domEventListeners = dialogContext.eventListeners.DOM || (dialogContext.eventListeners.DOM = []);
+
+        targetNode.addEventListener(eventType, eventHandler);
+        domEventListeners.push({ targetNode: targetNode, eventType: eventType, eventHandler: eventHandler });
+
+    }.bind(this);
+
+    this.removeEventListeners = function () {
+        let eventGroup;
+        let groupDescriptors;
+        let currentDescriptor;
+
+        for (eventGroup in dialogContext.eventListeners) {
+            groupDescriptors = dialogContext.eventListeners[eventGroup];
+
+            for (let i = 0; i < groupDescriptors.length; i++) {
+                currentDescriptor = groupDescriptors[i];
+
+                if (currentDescriptor.remove) {
+                    currentDescriptor.remove();
+                } else if (currentDescriptor.targetNode) {
+                    currentDescriptor.targetNode.removeEventListener(currentDescriptor.eventType, currentDescriptor.eventHandler);
+                }
+            }
+        }
+    }.bind(this);
+
+    this.ApplySettings = function () {
+        let itemStates = this.getModelItemStates(dialogContext.data.dataModel);
+        let selectedItemStates = itemStates.filter(function (itemState) {
+            return itemState.selected;
+        });
+
+        let variableNamedConstantPairs = usageConditonDalaLoader.getSelectedVariableNamedConstantPairs(itemStates);
+        dialogsUsageConditions = usageConditonDalaLoader.getDialogUsageConditions(variableNamedConstantPairs);
+        let fetchSize = formControls.limitText.value;
+
+        if (!fetchSize) {
+            fetchSize = usageConditionDefaultValue;
+        }
+
+        const pattern = /[^0-9]/g;
+        const result = fetchSize.match(pattern);
+
+        if (result) {
+            aras.AlertError('Invalid Input for Limit Value');
+            return;
+        }
+
+        if (!itemStates.length || selectedItemStates.length) {
+            let resultSettings = new aras.getMostTopWindowWithAras().Object();
+            resultSettings.affectedGroups = itemStates;
+            if (Number(usageConditionMaximumValue) < Number(fetchSize)) {
+                this.aras.AlertError('Limit cannot exceed maximum limit.');
+                loadedData.validCombinations = "";
+                this.populateRows(null, features);
+                return;
+            }
+
+            loadedData.validCombinations = usageConditonDalaLoader.getValidCombinations(variabilityItemId, sourceID, dialogsUsageConditions, fetchSize);
+            this.populateRows(null, features);
+
+        } else {
+            loadedData.validCombinations = "";
+            this.populateRows(null, features);
+        }
+    }.bind(this);
+
+    this.createOutputItemData = function (modelItem, additionalProperties) {
+        let itemData = {
+            itemId: modelItem.itemId,
+            selected: modelItem.isItemFromGroup('selected'),
+            idPath: modelItem.getItemIdPath().join(','),
+            name: modelItem.getItemProperty('name')
+        };
+
+        if (additionalProperties) {
+            for (let propertyName in additionalProperties) {
+                itemData[propertyName] = additionalProperties[propertyName];
+            }
+        }
+
+        return itemData;
+    }.bind(this);
+
+    this.filterModelData = function () {
+        let filterString = formControls.searchInput.value;
+        let gridWidget = treeControl.gridWidget;
+        let filterInfo = dialogContext.data.itemsFilter;
+
+        if (filterString !== filterInfo.value) {
+            this.restoreFilteredModelData();
+
+            filterString = filterString.replace(/[-[\]{}()*+?.,\\/^$|#\s]/g, '\\$&');
+
+            if (filterString) {
+                let displayedModelItems = this.scopeModelItem.getChildren(true);
+                let searchRegExp = new RegExp(filterString, 'i');
+                let itemFilterFunction = function (targetItem) {
+                    let isFiltrationPassed = false;
+
+                    if (searchRegExp.test(targetItem.getItemProperty('name'))) {
+                        // if item passed filtration due to match with searching string, then keep it's children also
+                        targetItem.children = targetItem._children;
+                        isFiltrationPassed = true;
+                    } else {
+                        isFiltrationPassed = targetItem.children.length > 0;
+                    }
+
+                    if (isFiltrationPassed && targetItem.parent) {
+                        gridWidget.openedExpandos[targetItem.parent.uniqueId] = true;
+                    }
+
+                    return isFiltrationPassed;
+                };
+                let modelItem;
+                displayedModelItems.reverse();
+                displayedModelItems.push(this.scopeModelItem);
+
+                for (let i = 0; i < displayedModelItems.length; i++) {
+                    modelItem = displayedModelItems[i];
+
+                    modelItem._children = modelItem.children;
+                    modelItem.children = modelItem.children.filter(itemFilterFunction);
+                }
+
+                filterInfo.regExp = searchRegExp;
+            }
+
+            filterInfo.value = filterString;
+            this.initStoreFromModel(dialogContext.data.dataStore, dialogContext.data.dataModel);
+            gridWidget.render();
+        }
+    }.bind(this);
+
+    this.onMouseOverHandler = function (e) {
+        let link = e.target;
+        if (!link) {
+            return;
+        }
+
+        let text = link.textContent;
+        const width = (this.getTextWidth(text, link));
+        const iconElementBoundingClientRect = e.target.getBoundingClientRect();
+        const headersClassName = link.className;
+
+        if (headersClassName === "aras-grid-head-cell") {
+            if (Math.ceil(iconElementBoundingClientRect.width) < width) {
+                link.title = text;
+            } else {
+                link.title = "";
+            }
+        } else if (headersClassName === "aras-grid-head-cell-label-text") {
+            if (Math.ceil(iconElementBoundingClientRect.width) < width) {
+                link.title = text;
+            } else {
+                link.title = "";
+            }
+        } else if (headersClassName === "vm-aras-grid-row-cell-subheaders__subheader-text vm-aras-grid-row-cell-subheaders__subheader-text_vertical") {
+            if (width > (SUBHEADER_HEIGHT - DEFAULT_COLUMN_WIDTH)) {
+                link.title = text;
+            } else {
+                link.title = "";
+            }
+        }
+    }.bind(this);
+
+    this.getTextWidth = function (text, link) {
+        let font = window.getComputedStyle(link, null).getPropertyValue('font');
+        let fontSize = window.getComputedStyle(link, null).getPropertyValue('font-size');
+        let paddingLeft = window.getComputedStyle(link, null).getPropertyValue('padding-left');
+        let paddingRight = window.getComputedStyle(link, null).getPropertyValue('padding-right');
+
+        let newlyCreatedDOMNode = document.createElement("div");
+        document.body.appendChild(newlyCreatedDOMNode);
+
+        newlyCreatedDOMNode.style.font = font;
+        newlyCreatedDOMNode.style.fontSize = fontSize;
+        newlyCreatedDOMNode.style.height = 'auto';
+        newlyCreatedDOMNode.style.width = 'auto';
+        newlyCreatedDOMNode.style.position = 'absolute';
+        newlyCreatedDOMNode.style.whiteSpace = 'no-wrap';
+        newlyCreatedDOMNode.style.paddingLeft = paddingLeft;
+        newlyCreatedDOMNode.style.paddingRight = paddingRight;
+        newlyCreatedDOMNode.innerHTML = text;
+
+        let width = Math.ceil(newlyCreatedDOMNode.clientWidth);
+
+        document.body.removeChild(newlyCreatedDOMNode);
+        return width;
+    }.bind(this);
+
+    this.OkClick = function () {
+        const noOfSelectedRows = selectedRows.length;
+        for (let i = 0; i < noOfSelectedRows; i++) {
+            let namedConstantPair = this.getNamedConstantPair(selectedRows[i]);
+
+            let innovator = new Innovator();
+            let identity = innovator.newItem("vm_VariableComponent", "edit");
+            let relationship = identity.createRelationship("vm_VariableComponentAsset", "add");
+            relationship.setProperty("source_id", sourceID);
+            relationship.setProperty("related_id", null);
+            let result = relationship.apply();
+
+            let relatinshipId = result.getID();
+
+            const defaultVariabilityItem = this.getVariabilityItem();
+            const newUsageConditionitem = this.createNewUsageCondition(defaultVariabilityItem, relatinshipId);
+            let usageConditionItemNode = newUsageConditionitem.node;
+            aras.setItemProperty(usageConditionItemNode, 'variability_item', defaultVariabilityItem.node);
+
+            let value = "<expression><AND>";
+            for (let i = 0; i < namedConstantPair.length; i++) {
+                value += "<eq><variable id='" + namedConstantPair[i].variableId + "'></variable><named-constant id='" + namedConstantPair[i].namedConstantId + "'></named-constant></eq>";
+            }
+            value += "</AND></expression>";
+
+            aras.setItemProperty(usageConditionItemNode, 'definition', value);
+            newUsageConditionitem.applyAsync('merge')
+                .then(function (savedUsageConditionItem) {
+
+                }.bind(this))
+                .catch(function (soapResponse) {
+                    const errorItem = aras.newIOMItem();
+                    errorItem.loadAML(soapResponse.responseText);
+                    aras.AlertError(errorItem);
+                }.bind(this));
+            let dialogWindow = new aras.getMostTopWindowWithAras().Object();
+            this.Close(dialogWindow);
+        }
+
+    }.bind(this);
+
+    this.CancelClick = function () {
+        let dialogWindow = new aras.getMostTopWindowWithAras().Object();
+        this.Close(dialogWindow);
+    }.bind(this);
+
+
+    this.onResizeHeadHandler = function (e) {
+        const headId = this.grid.settings.indexHead[e.detail.index];
+        const head = this.grid.head.get(headId);
+        if (head && head.minWidth) {
+            head.width = Math.max(head.width, head.minWidth);
+            this.grid.head.set(headId, head);
+        }
+    }.bind(this);
+
+    this.Close = function (value) {
+        parent.dialogArguments.dialog.close(value);
+    }.bind(this);
+
+    this.getVariabilityItem = function () {
+        let defaultVariabilityItem;
+
+        defaultVariabilityItem = aras.newIOMItem('vm_VariabilityItem', 'get');
+        defaultVariabilityItem.setAttribute('select', 'id,keyed_name');
+
+        const relationshipItem = aras.newIOMItem('vm_VarComponentVariabilityItem');
+        relationshipItem.setProperty('source_id', sourceID);
+
+        defaultVariabilityItem.setPropertyItem('id', relationshipItem);
+        defaultVariabilityItem.setPropertyCondition('id', 'in');
+        defaultVariabilityItem.setPropertyAttribute('id', 'by', 'related_id');
+
+        defaultVariabilityItem = defaultVariabilityItem.apply(); 
+
+        if (defaultVariabilityItem.isError()) {
+            if (defaultVariabilityItem.getErrorCode() !== '0') {
+                aras.AlertError(defaultVariabilityItem);
+            }
+            return null;
+        }
+
+        return defaultVariabilityItem;
+    }.bind(this);
+
+    this.createNewUsageCondition = function (defaultVariabilityItem, relatinshipId) {
+        const usageConditionItem = aras.newIOMItem("vm_VarComponentAssetUsage", 'add');
+        usageConditionItem.setProperty('source_id', relatinshipId);
+
+        const usageConditionVariabilityItemRelationshipItem = usageConditionItem.createRelationship(
+            "vm_VarComponentAssetUsageVarIt",
+            'add'
+        );
+        usageConditionVariabilityItemRelationshipItem.setRelatedItem(defaultVariabilityItem);
+
+        return usageConditionItem;
+    }.bind(this);
+
+    this.getNamedConstantPair = function (selectedRows) {
+        let resultList = [];
+        let rowData = [];
+        rowData = this.grid._rows._store.get(selectedRows);
+        let featureIds = [];
+        featureIds = Object.keys(rowData);
+        for (let i = 1; i < featureIds.length; i++) {
+            let featureData = [];
+            featureData = rowData[featureIds[i]];
+            let optionIds = [];
+            optionIds = Object.keys(featureData);
+            let noOfOptions = Object.keys(featureData).length;
+            for (let j = 0; j < noOfOptions; j++) {
+                if (featureData[optionIds[j]]) {
+                    resultList.push({
+                        namedConstantId: optionIds[j],
+                        variableId: featureIds[i]
+                    });
+                }
+            }
+        }
+
+        return resultList;
+    }.bind(this);
+
+    formControls.applyButton = document.getElementById(document.fieldsTab.ApplyButton);
+    formControls.applyButton.addEventListener('click', function () { this.ApplySettings(); }.bind(this));
+
+    formControls.okButton = document.getElementById(document.fieldsTab.OkButton);
+    formControls.okButton.addEventListener('click', function () { this.OkClick(); }.bind(this));
+
+    formControls.cancelButton = document.getElementById(document.fieldsTab.CancelButton);
+    formControls.cancelButton.addEventListener('click', function () { this.CancelClick(); }.bind(this));
+
+    formControls.searchInput = document.querySelector('[id="' + document.fieldsTab.searchInput + '"] input');
+    formControls.searchInput.addEventListener('input', function () {
+        let filterTimeout = this._filterTimeout;
+        if (filterTimeout) {
+            clearTimeout(this._filterTimeout);
+            this._filterTimeout = null;
+        }
+        this._filterTimeout = setTimeout(this.filterModelData.bind(this), 200);
+    }.bind(this));
+
+    let innovator = new Innovator();
+    let qryItem = innovator.newItem("Variable", "get");
+    qryItem.setAttribute("select", "value, keyed_name");
+    qryItem.setProperty("keyed_name", "vm_%");
+    qryItem.setPropertyCondition("keyed_name", "like");
+    let results = qryItem.apply();
+
+    let count = results.getItemCount();
+    let usageConditionDefaultValue;
+    let usageConditionMaximumValue;
+    for (let i = 0; i < count; ++i) {
+        let item = results.getItemByIndex(i);
+        let keyedName = item.getProperty("keyed_name");
+        if (keyedName === 'vm_newAssetDefault') {
+            usageConditionDefaultValue = item.getProperty("value");
+        } else if (keyedName === 'vm_newAssetMax') {
+            usageConditionMaximumValue = item.getProperty("value");
+        }
+    }
+
+    formControls.limitText = document.querySelector('[id="' + document.fieldsTab.LimitText + '"] input');
+    formControls.limitText.setAttribute('value', usageConditionDefaultValue);
+    formControls.maximumLimitText = document.getElementById(document.fieldsTab.LimitMaximumValue);
+    const limitLabel = "(Max. Limit " + usageConditionMaximumValue + ")"
+    formControls.maximumLimitText.innerHTML = limitLabel.italics();
+
+    this.loadModelData(dataModel);
+    this.initStoreFromModel(dataStore, dataModel);
+
+    dialogContext.modules.RenderUtils = RenderUtils;
+    dialogContext.data.dataModel = dataModel;
+    dialogContext.data.dataStore = dataStore;
+
+    // tree control initialization
+    treeControl = new GroupTreeGridAdapter({
+        connectId: 'groupsGrid', dataStore: dataStore, modeData: {
+            groups: {
+                selected: { label: 'Selected', cssClass: 'checkboxActionButton' }
+            }
+        }
+    });
+    treeControl.renderCellHTML = this.renderVariableListCellHTML;
+    treeControl._createTree();
+
+    treeEventListeners.push(connect.connect(treeControl.gridContainer, 'gridMenuInit', this.onTreeGridMenuInit));
+    treeEventListeners.push(connect.connect(treeControl.gridContainer, 'gridMenuClick', this.onTreeGridMenuClick));
+    treeEventListeners.push(connect.connect(treeControl.gridContainer, 'gridKeyPress', this.onTreeGridKeyPress));
+    treeEventListeners.push(connect.connect(treeControl, 'onExecuteAction', this.onExecuteGridAction));
+
+    dialogContext.eventListeners.treeControl = treeEventListeners;
+    this.addDomEventListener(window, 'beforeunload', this.onBeforeUnload.bind(this));
+
+    this.isUIControlsCreated = true;
+    let allModelItems = dataModel.getAllItems();
+    let modelItem;
+    let i;
+    for (i = 0; i < allModelItems.length; i++) {
+        modelItem = allModelItems[i];
+        if (modelItem.setItemGroup) {
+            modelItem.removeItemGroup('selected', { skipRecursive: true, suppressEvent: true });
+        }
+    }
+
+    treeControl.gridContainer.updateRenderedRows();
+    let loadedData = {};
+    let features = usageConditonDalaLoader.getFeaturesArray(variabilityItemId);
+    let optionsInfoByFeatureId = new Map();
+    let focusedBooleanCell = {};
+    let selectedRows = [];
+    let gridData = {};
+    let sortableAssetsData = [];
+    let multiSortData = [];
+
+    const GRID_FIXED_COLUMN_NAMES = {
+        state: 'state',
+    };
+
+    dojo.addClass("UsageGrid", "vm-usage-condition-table-editor");
+
+    let gridContainerElement = document.querySelector('#UsageGrid');
+    gridContainerElement.classList.add('vm-usage-condition-table-editor');
+
+    const gridElement = document.createElement('div');
+    gridElement.id = 'gridElement';
+    gridElement.classList.add('vm-usage-condition-table-editor__grid');
+
+    gridContainerElement.appendChild(gridElement);
+    this.grid = new window.Grid(gridElement, { search: true, editable: false, sortable: true, freezableColumns: true });
+    this.grid.on('mouseover', this.onMouseOverHandler.bind(this));
+    this.grid.on('resizeHead', this.onResizeHeadHandler.bind(this));
+    const DEFAULT_COLUMN_WIDTH = 32;
+    const SUBHEADER_HEIGHT = 160;
+
+    this.grid.settings.frozenColumns = Object.keys(GRID_FIXED_COLUMN_NAMES).length;
+
+    this.grid.getCellMetadata = function (headId, rowId, type) {
+        if (rowId === 'searchRow') {
+            const optionsInfo = optionsInfoByFeatureId.get(headId);
+            const optionNames = optionsInfo ? optionsInfo.optionNames : [];
+
+            return {
+                subheaderHeight: SUBHEADER_HEIGHT,
+                subheaders: optionNames,
+                subheaderContainerClassName: 'vm-aras-grid-row-cell-subheaders__subheader-container_vertical',
+                subheaderTextClassName: 'vm-aras-grid-row-cell-subheaders__subheader-text_vertical',
+                multiSelectUtilities: {
+                        singleSelectSubHeader: this.singleSelectSubHeader.bind(this),
+                        getSortingKeys: this.getSortingKeys.bind(this),
+                        clearMultiSortData: this.clearMultiSortData.bind(this),
+                        updateMultiSelectStatus: this.updateMultiSelectStatus.bind(this)
+                },
+                multisort: vmUsageConditionTableMultisort,
+                optionsInfo: optionsInfo,
+                gridData: gridData,
+                populate: this.populateRows.bind(this),
+                
+                onMouseClickHandler: function (e) {
+                    let rowIds = [];
+                    let rowsMap = this.grid._rows._store;
+                    for (let key of rowsMap) {
+                        rowIds.push(key);
+                    }
+
+                    let checkboxState = document.getElementById('checkbox' + 'state').checked;
+                    for (let i = 0; i < rowIds.length; i++) {
+                        let id = rowIds[i][0];
+                        let getCheckbox = document.getElementById('checkbox' + id);
+                        if (getCheckbox) {
+                            getCheckbox.checked = checkboxState;
+                        }
+                        
+                        if (checkboxState) {
+                            selectedRows.push(id);
+                             
+                             let selectedRowData=this.grid.rows._store.get(id);
+                             selectedRowData.selected=true;
+                             this.grid.rows._store.set(id,selectedRowData);
+                        } else {
+                            selectedRows = [];
+                            let selectedRowData=this.grid.rows._store.get(id);
+                             selectedRowData.selected=false;
+                             this.grid.rows._store.set(id,selectedRowData);
+                        }
+                    }
+                }.bind(this)
+            };
+        }
+
+        if (headId === GRID_FIXED_COLUMN_NAMES.state) {
+            return {
+                onMouseClickHandler: function (e) {
+                    let checkbox = document.getElementById('checkbox' + rowId);
+                    let checkboxState = checkbox.checked;
+                    if (!checkboxState) {
+                        let getCheckbox = document.getElementById('checkbox' + 'state');
+                        if (getCheckbox) {
+                            getCheckbox.checked = false;
+                        }
+
+                        let index;
+                        for (let i = 0; i < selectedRows.length; i++) {
+                            if (selectedRows[i] === rowId) {
+                                index = i;
+                            }
+                        }
+
+                        selectedRows.splice(index, 1);
+                        let selectedRowData=this.grid.rows._store.get(rowId);
+                         selectedRowData.selected=false;
+                        this.grid.rows._store.set(rowId,selectedRowData);
+                    } else {
+                        selectedRows.push(rowId);
+                        if (selectedRows.length === this.grid._rows._store.size) {
+                            let getCheckbox = document.getElementById('checkbox' + 'state');
+                            if (getCheckbox){
+                                getCheckbox.checked = true;
+                            }
+                        }
+                        let selectedRowData=this.grid.rows._store.get(rowId);
+                        selectedRowData.selected=true;
+                        this.grid.rows._store.set(rowId,selectedRowData);
+                    }
+                }.bind(this)
+            };
+        }
+
+        return {
+            focusedBoolean: focusedBooleanCell,
+            isBooleanValuesSelectionAvailable: true
+        }
+    }.bind(this);
+
+    this.grid.getCellType = function (headId, rowId, value, type) {
+        if (headId === GRID_FIXED_COLUMN_NAMES.state) {
+            return 'vm_checkbox';
+        }
+
+        return 'vm_multipleBooleanValuesSelection';
+    }.bind(this);
+    
+    this.getSortingKeys = function() {
+            return multiSortData.map((i) => i.optionId);
+        }
+
+        this.singleSelectSubHeader =function (data) {
+            multiSortData.push(data);
+        }
+
+        this.clearMultiSortData =function () {
+            multiSortData = [];
+        }
+
+        this.updateMultiSelectStatus =function (optionId, subheaderText) {
+            const selectedItem = multiSortData.find(i => i.optionId.includes(optionId));
+            if (selectedItem) {
+                multiSortData = multiSortData.map((item) => {
+                    if (item.optionId.includes(optionId)) {
+                        if (item.ascending) {
+                            const formattedOptionId = optionId.includes("!") ? optionId.split("!")[1] : optionId;
+                            item = { ...item, ascending: false, optionId: formattedOptionId };
+                        } else {
+                            item = { ...item, ascending: true, optionId: "!" + optionId };
+                        }
+                    }
+                    return item;
+                });
+            } else {
+                multiSortData.push({ optionId: "!" + optionId, subheaderText, ascending: true });
+            }
+        }
+
+    this.populateRowWithSelectedOptions = function (row, selectedOptionIdsByFeatureId) {
+        optionsInfoByFeatureId.forEach(function (optionsInfo, featureId) {
+            const optionCellValues = {};
+            const selectedOptionIds = selectedOptionIdsByFeatureId[featureId];
+            optionsInfo.optionIds.forEach(function (optionId) {
+                if (optionId === selectedOptionIds) {
+                    optionCellValues[optionId] = true;
+                } else {
+                    optionCellValues[optionId] = false;
+                }
+            });
+
+            row[featureId] = optionCellValues;
+        });
+    }.bind(this);
+
+    this.populateHead = function () {
+        const head = new Map();
+
+        head.set(GRID_FIXED_COLUMN_NAMES.state, {
+            label: '',
+            width: DEFAULT_COLUMN_WIDTH,
+            resizable: false,
+            searchType: 'vm_subheadersCheckbox'
+        });
+
+        features.forEach(function (feature) {
+            optionsInfoByFeatureId.set(feature.id, {
+                optionIds: feature.optionIds,
+                optionNames: feature.optionNames
+            });
+
+            const headWidth = DEFAULT_COLUMN_WIDTH * feature.optionNames.length;
+
+            head.set(feature.id, {
+                label: feature.name,
+                width: headWidth,
+                minWidth: headWidth,
+                searchType: 'vm_subheaders'
+            });
+        });
+
+        this.grid.head = head;
+    }.bind(this);
+    
+    
+    let mappedRowIds = [];
+    this.populateRows = function (assets, features) {    
+        const featureIds = features.map(i => i.id);
+        
+        gridData = { features };
+        const rows = new Map();
+        const sortedRows = new Map();
+        let row = {};
+        let rowId=null;
+        if(assets){
+            
+           assets = assets.map((i) => i.rowId);
+            assets.forEach((rowId) =>{
+                sortedRows.set(rowId,grid.rows._store.get(rowId));
+            });
+            this.grid.rows =sortedRows;
+        
+        } else {
+            
+            document.getElementById('checkbox' + 'state').checked = false;
+            for (let i = 0; i < selectedRows.length; i++) {
+                let getCheckbox = document.getElementById('checkbox' + selectedRows[i]);
+                if (getCheckbox) {
+                    getCheckbox.checked = false;
+                }
+            }
+            
+            loadedData.validCombinations.forEach((combination, index) =>{
+                let innovator = new Innovator();
+                let rowId = innovator.getNewID();
+                mappedRowIds.push(rowId);
+                    row = {
+                        width: DEFAULT_COLUMN_WIDTH,
+                        selected:false,
+                };
+                    
+                let selectedOptionIdsByFeatureId = new Map();
+                combination.forEach((item) =>{
+                    selectedOptionIdsByFeatureId[item.variableId] = item.itemId;
+                });
+                    
+                this.populateRowWithSelectedOptions(row, selectedOptionIdsByFeatureId);
+                rows.set(rowId, row);
+                this.grid.rows = rows;
+            });
+        }
+        sortableAssetsData = [];
+        let maprownew = {};
+        const sortedRowIds = assets ? assets : mappedRowIds;
+            sortedRowIds.forEach((rowId) => {
+                let assetData =this.grid.rows.get(rowId);
+                featureIds.forEach((id) => {
+                    const subHeaderData = assetData[id];
+                    maprownew = {...maprownew,...subHeaderData,rowId: rowId};
+                  
+                });
+                sortableAssetsData.push(maprownew);
+            })
+            
+            mappedRowIds = [];
+            gridData = { ...gridData, sortableAssetsData };
+    }.bind(this);
+
+    this.populateHead();
+
+}).bind(this);
+
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>vm_loadUsageConditionsDialog</name>
+ </Item>
+</AML>

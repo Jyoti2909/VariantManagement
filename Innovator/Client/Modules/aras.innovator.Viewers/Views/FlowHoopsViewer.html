@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>3D Viewer</title>
+
+        <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/viewer/hoops_web_viewer.css" type="text/css" />
+        <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/viewer/hoops_remote.css" type="text/css" />
+        <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/viewer/hoops_web_viewer_default.css" type="text/css" />
+        <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/ui/LoadingBar.css" type="text/css" />
+        <link rel="stylesheet" href="../Scripts/3rdPartyLibs/hoopswebviewer/css/3rdParty/jquery-ui-1.8.18.custom.css" type="text/css" />
+
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/3rdParty/jquery/jquery-1.8.3.min.js"></script>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/3rdParty/jquery/jquery-ui-1.10.3.min.js"></script>
+
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/3rdParty/scenejs.js"></script>
+	
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/ui/LoadingBar.js"></script>
+
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/hoops_web_viewer.js"></script>
+    <script type="text/javascript" src="../Scripts/3rdPartyLibs/hoopswebviewer/js/hoops_web_viewer_remote.js"></script>
+
+    <script>
+		var hwv = null;
+		
+        function viewFile(fileUrl) 
+		{
+            var canvasId = "theCanvas";
+
+            hwv = new HWV_CSR(canvasId);
+			
+			var progress = new LoadingBar(); // uses hwv variable internally
+			
+            hwv.setFilename(fileUrl);
+            hwv.start();
+        }
+    </script>
+
+</head>
+<body>
+    <div id="content"><div id="theCanvas"><div id="progressdiv"><div class="progress-label"></div></div></div></div>
+</body>
+</html>

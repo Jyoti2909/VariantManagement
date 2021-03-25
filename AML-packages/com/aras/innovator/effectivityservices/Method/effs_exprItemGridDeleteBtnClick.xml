@@ -1,0 +1,35 @@
+﻿<AML>
+ <Item type="Method" id="8DBE400998DB4C0BBE617C38BC4F109E" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const dialogSettings = {
+	title: aras.getResource('../Modules/aras.innovator.core.EffectivityServices', 'effectivity_expression_item_grid.delete_confirmation.title')
+};
+const dialogMessage = aras.getResource('../Modules/aras.innovator.core.EffectivityServices', 'effectivity_expression_item_grid.delete_confirmation.message');
+
+aras.getMostTopWindowWithAras().ArasModules.Dialog.confirm(dialogMessage, dialogSettings).then(function(result) {
+	if (result !== 'ok') {
+		return;
+	}
+
+	const effectivityContext = options.effectivityContext;
+	const grid = effectivityContext.grid;
+	const itemIdsToDelete = grid.selectedRowIds;
+	const effectivityExpressionItemTypeName = effectivityContext.effectivityExpressionItemTypeName;
+
+	const itemCount = itemIdsToDelete.length;
+	for (let i = 0; i < itemCount; i++) {
+		const itemIdToDelete = itemIdsToDelete[i];
+		const isDeleteSucceeded = aras.deleteItem(effectivityExpressionItemTypeName, itemIdToDelete, true);
+		if (isDeleteSucceeded) {
+			grid.deleteRow(itemIdToDelete);
+		}
+	}
+
+	effectivityContext.toolbar.setItemEnabled(
+		'effs_expressionItemGridToolbarDeleteItemButton',
+		grid.selectedRowIds.length > 0);
+});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_exprItemGridDeleteBtnClick</name>
+ </Item>
+</AML>

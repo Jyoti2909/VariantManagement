@@ -1,0 +1,44 @@
+﻿<AML>
+ <Item type="Method" id="8CBA8919106C4C73B649AB93A963B1D3" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				try
+				{
+					Main(contextItem);
+					return contextItem;
+				}
+				catch (ItemException e)
+				{
+					return e.ErrorItem;
+				}
+			}
+
+			private void Main(Item contextItem)
+			{
+				Item promoteAffectedItems = _dal.NewItem("Method", "GAG_PromoteGECOAffectedItems");
+				promoteAffectedItems.setProperty("activity_id", contextItem.getID());
+				promoteAffectedItems.setProperty("promotion_name", "Start Task");
+				promoteAffectedItems = _dal.ApplyItem(promoteAffectedItems);
+				Contract.ThrowIfError(promoteAffectedItems);
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_PromotionStartTask</name>
+ </Item>
+</AML>

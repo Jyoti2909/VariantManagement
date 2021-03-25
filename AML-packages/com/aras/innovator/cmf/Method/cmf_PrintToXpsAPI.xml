@@ -1,0 +1,284 @@
+﻿<AML>
+ <Item type="Method" id="E5BB38411F4E4D95AD4B6009D23D94E0" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[PrintingDialog = function() {
+	var topWindow = aras.getMostTopWindowWithAras(window);
+	this.dialogArguments = parent.frameElement.dialogArguments || topWindow.frameElement.dialogArguments;
+	this.documentItem = this.dialogArguments.documentItem;
+	this.formControls = {};
+	this.pathModule = topWindow.Path;
+	this.id = this.documentItem.getID();
+	this.itemType = this.documentItem.getType();
+
+	this.dataValues = {
+		'width': '8.5',
+		'height': '11',
+		'innerBorder': '1',
+		'outerBorder': '2',
+		'paddings': '0.25'
+	};
+
+	this.floatPropDef = {};
+	this.floatPropDef['data_type'] = 'float';
+
+	this.initializeControls();
+	this.setChageEvents();
+	this.setDefaultValues();
+};
+
+PrintingDialog.prototype.setChageEvents = function() {
+	var self = this;
+
+	this.formControls.pageWidthInput.onchange = function() {
+		self.ValidateAndSaveValue(this, 'width');
+	};
+	this.formControls.pageHeightInput.onchange = function() {
+		self.ValidateAndSaveValue(this, 'height');
+	};
+	this.formControls.pageInnerBorderInput.onchange = function() {
+		self.ValidateAndSaveValue(this, 'innerBorder');
+	};
+	this.formControls.pageOuterBorderInput.onchange = function() {
+		self.ValidateAndSaveValue(this, 'outerBorder');
+	};
+	this.formControls.pagePaddingsInput.onchange = function() {
+		self.ValidateAndSaveValue(this, 'paddings');
+	};
+};
+
+PrintingDialog.prototype.initializeControls = function() {
+
+	//buttons section
+	this.formControls.printButton = document.getElementById(document.fieldsTab['print_button']);
+	this.formControls.printButton.addEventListener('click', function() {
+		this.convertDocument();
+	}.bind(this));
+
+	this.formControls.closeButton = document.getElementById(document.fieldsTab['cancel_button']);
+	this.formControls.closeButton.addEventListener('click', this.Close.bind(this));
+
+	// input section
+	this.formControls.pageWidthInput = document.querySelector('[id=\'' + document.fieldsTab['width_input'] + '\'] input');
+	this.formControls.pageHeightInput = document.querySelector('[id=\'' + document.fieldsTab['height_input'] + '\'] input');
+	this.formControls.pageInnerBorderInput = document.querySelector('[id=\'' + document.fieldsTab['inner_border_input'] + '\'] input');
+	this.formControls.pageOuterBorderInput = document.querySelector('[id=\'' + document.fieldsTab['outer_border_input'] + '\'] input');
+	this.formControls.pagePaddingsInput = document.querySelector('[id=\'' + document.fieldsTab['paddings_input'] + '\'] input');
+	this.formControls.displayUnitList = getFieldComponentByName('display_unit_list');
+	this.fillSelect(this.formControls.displayUnitList, [{
+			v: 'inches',
+			l: 'Inches'
+		},
+		{
+			v: 'pixels',
+			l: 'Pixels'
+		}]);
+
+	this.formControls.headersPrintingTypeList = getFieldComponentByName('headers_list');
+	this.fillSelect(this.formControls.headersPrintingTypeList, [{
+		v: 'single',
+		l: 'Single'
+	},
+	{
+		v: 'per_page',
+		l: 'For each page'
+	}]);
+
+	this.formControls.conversionResultList = getFieldComponentByName('conversion_result');
+	this.fillSelect(this.formControls.conversionResultList, [{
+		v: 'window',
+		l: 'Window'
+	},
+	{
+		v: 'file',
+		l: 'File'
+	}]);
+
+	this.formControls.printingView = getFieldComponentByName('views_list');
+	this.fillViews();
+};
+
+PrintingDialog.prototype.convertDocument = function() {
+
+	var item = aras.newIOMItem(this.itemType, 'cmf_CreatePublishingTask');
+	item.setID(this.id);
+
+	if (!this.ValidateAndSaveValue(this.formControls.pageWidthInput, 'width') ||
+		!this.ValidateAndSaveValue(this.formControls.pageHeightInput, 'height') ||
+		!this.ValidateAndSaveValue(this.formControls.pageInnerBorderInput, 'innerBorder') ||
+		!this.ValidateAndSaveValue(this.formControls.pageOuterBorderInput, 'outerBorder') ||
+		!this.ValidateAndSaveValue(this.formControls.pagePaddingsInput, 'paddings')) {
+		return;
+	}
+
+	item.setProperty('page_width', this.dataValues.width);
+	item.setProperty('page_height', this.dataValues.height);
+	item.setProperty('page_padding', this.dataValues.paddings);
+	item.setProperty('outer_border_width', this.dataValues.outerBorder);
+	item.setProperty('inner_border_width', this.dataValues.innerBorder);
+	item.setProperty('view_id', this.formControls.printingView.getValue());
+	item.setProperty('size_type', this.formControls.displayUnitList.getValue());
+	item.setProperty('headers_printing_type', this.formControls.headersPrintingTypeList.getValue());
+
+	var createTaskResult = item.apply();
+	taskId = createTaskResult.getResult();
+
+	// if task was created
+	if (taskId) {
+		var dialogOptions = {};
+		var mainWindow = aras.getMainWindow();
+		var targetWindow = window === mainWindow ? mainWindow.main : window;
+		var self = this;
+		var dialogParameters = {
+				aras: aras,
+				itemType: 'ConversionTask',
+				itemId: taskId,
+				propertyName: 'status',
+				propertyState: ['Succeeded', 'Failed', 'Discarded'],
+				title: 'Wait for task completion',
+				dialogWidth: 300, dialogHeight: 160, resizable: false,
+				content: 'waitPropertyStatusDialog.html'
+			};
+
+		targetWindow.ArasModules.Dialog.show('iframe', dialogParameters).promise.then(function(taskState) {
+			if (taskState && taskState == 'Succeeded') {
+				setTimeout(function() {
+					self.processConversionResult(taskId);
+					self.Close();
+				}, 0);
+			}
+		});
+	}
+};
+
+PrintingDialog.prototype.ValidateAndSaveValue = function(input, name) {
+	var propertyValue = input.value;
+	if (!propertyValue || !aras.isPropertyValueValid(this.floatPropDef, propertyValue)) {
+		aras.AlertError(aras.getResource('', 'cmf.incorrect_input_data_float'));
+		input.value = aras.convertFromNeutral(this.dataValues[name], this.floatPropDef['data_type']);
+		input.focus();
+		return false;
+	}
+	var number = aras.convertToNeutral(propertyValue, this.floatPropDef['data_type']);
+
+	if (!this.validate(number)) {
+		aras.AlertError(aras.getResource('', 'cmf.incorrect_input_data_positive'));
+		input.value = aras.convertFromNeutral(this.dataValues[name], this.floatPropDef['data_type']);
+		input.focus();
+		return false;
+	}
+
+	this.dataValues[name] = number;
+	return true;
+};
+
+PrintingDialog.prototype.validate = function(arg) {
+	if (Number(arg) >= 0) {
+		return true;
+	}
+	return false;
+};
+
+PrintingDialog.prototype.Close = function() {
+	this.dialogArguments.dialog.close();
+};
+
+PrintingDialog.prototype.fillSelect = function(selectControl, values) {
+	for (i = 0; i < values.length; i++) {
+		selectControl.component.state.list.push({
+			value: values[i].v,
+			label: values[i].l
+		});
+	}
+	selectControl.setValue(selectControl.component.state.list[0].value);
+};
+
+PrintingDialog.prototype.fillViews = function() {
+	var printingView = this.formControls.printingView;
+	var itemTypeId = aras.getItemTypeId(this.itemType);
+	var request = '' +
+		'<Item type=\'cmf_ContentType\' action=\'get\' where="[CMF_CONTENTTYPE].[LINKED_ITEM_TYPE]=\'' + itemTypeId + '\'" select=\'id\'>' +
+			'<Relationships>' +
+				'<Item type=\'cmf_ContentTypeView\' action=\'get\' select=\'related_id\' >' +
+					'<related_id>' +
+						'<Item type=\'cmf_TabularView\' action=\'get\' select=\'id,name\'/>' +
+					'</related_id>' +
+				'</Item>' +
+			'</Relationships>' +
+		'</Item>';
+
+	var serverResponce = aras.soapSend('ApplyItem', request);
+
+	if (!serverResponce.isFault()) {
+		var views = serverResponce.getResult().selectNodes('Item/Relationships/Item/related_id/Item[@type=\'cmf_TabularView\']');
+		for (i = 0; i < views.length; i++) {
+			var name = views[i].selectSingleNode('name').text;
+			var id = views[i].selectSingleNode('id').text;
+			printingView.component.state.list.push({
+				value: id,
+				label: name
+			});
+		}
+
+		printingView.setValue(printingView.component.state.list[0].value);
+	}
+};
+
+PrintingDialog.prototype.setDefaultValues = function() {
+	this.formControls.pageWidthInput.value = aras.convertFromNeutral(this.dataValues.width, this.floatPropDef['data_type']);
+	this.formControls.pageHeightInput.value = aras.convertFromNeutral(this.dataValues.height, this.floatPropDef['data_type']);
+	this.formControls.pagePaddingsInput.value = aras.convertFromNeutral(this.dataValues.paddings, this.floatPropDef['data_type']);
+
+	this.formControls.pageOuterBorderInput.value = aras.convertFromNeutral(this.dataValues.outerBorder, this.floatPropDef['data_type']);
+	this.formControls.pageInnerBorderInput.value = aras.convertFromNeutral(this.dataValues.innerBorder, this.floatPropDef['data_type']);
+};
+
+PrintingDialog.prototype.processConversionResult = function(taskId) {
+	var conversionResult = aras.soapSend('ApplyItem', '<Item type=\'ConversionTaskResult\' action=\'get\' select=\'file_id\'><source_id>' +
+		taskId + '</source_id></Item>');
+	if (!conversionResult.isFault()) {
+		var resultItem = conversionResult.getResult().selectSingleNode('Item');
+		var fileId = aras.getItemProperty(resultItem, 'file_id');
+		var fileItem = aras.soapSend('ApplyItem', '<Item type=\'File\' action=\'get\' id=\'' + fileId + '\'></Item>');
+
+		if (!fileItem.isFault()) {
+			var resultAction = this.formControls.conversionResultList.getValue();
+			var fileNode = fileItem.getResult().selectSingleNode('Item');
+
+			switch (resultAction) {
+				case 'window':
+					this.showConvertedFile(fileNode);
+					break;
+				case 'file':
+					var documentName = this.documentItem.getProperty('name');
+
+					this.downloadConvertedFile(fileNode, documentName);
+					break;
+			}
+		}
+	}
+};
+
+PrintingDialog.prototype.showConvertedFile = function(fileNode) {
+	if (fileNode) {
+		aras.uiShowItemEx(fileNode, undefined);
+	}
+};
+
+PrintingDialog.prototype.downloadConvertedFile = function(fileNode, preferedFileName) {
+	if (fileNode) {
+		var fileName = preferedFileName || aras.getItemProperty(fileNode, 'filename');
+		var downloadResult = aras.downloadFile(fileNode, fileName);
+
+		if (downloadResult) {
+			aras.AlertSuccess(aras.getResource('', 'file_management.file_succesfully_downloaded', fileName), aras.getMostTopWindowWithAras(window));
+		}
+	}
+};
+
+PrintingDialog = new PrintingDialog();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cmf_PrintToXpsAPI</name>
+ </Item>
+</AML>

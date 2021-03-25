@@ -1,0 +1,110 @@
+﻿<AML>
+ <Item type="Method" id="509B9AF4A5884E1683FC8B89784D11C6" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var action = inArgs.action;
+var permType = inArgs.permType;
+var itemTypeId = inArgs.xClassItemTypeId;
+var xClassTree = window.item;
+var relationships = aras.getRelationships(window.item, 'xClass');
+if (!relationships || relationships.length === 0) {
+	relationships = aras.getItemRelationships('xClassificationTree', window.item.getAttribute('id'), 'xClass');//aras.getRelationships(xClassTree, 'xClass');
+}
+if (!relationships) {
+	return;
+}
+var rootXClass = Array.prototype.find.call(relationships, function(xClass) {
+	return aras.getItemProperty(xClass, 'name').toLowerCase() === aras.getItemProperty(xClassTree, 'name').toLowerCase();
+});
+
+if (!rootXClass) {
+	return;
+}
+var type;
+var relType;
+if (permType === 'propertyValue') {
+	relType = 'xClass_xPropValue_Perm';
+	type = 'Permission_PropertyValue';
+} else if (permType === 'classification') {
+	relType = 'xClass_Classification_Perm';
+	type = 'Permission_ItemClassification';
+}
+
+var existingPermission;
+var existingPermissionRelships = aras.getRelationships(rootXClass, relType);
+if (!existingPermissionRelships || existingPermissionRelships.length === 0) {
+	existingPermissionRelships = aras.getItemRelationships('xClass', rootXClass.getAttribute('id'), relType);
+	var rels = rootXClass.selectSingleNode('Relationships');
+	if (!rels) {
+		rels = aras.createXmlElement('Relationships', rootXClass);
+	}
+	if (existingPermissionRelships) {
+		Array.prototype.forEach.call(existingPermissionRelships, function(rel) {
+			rels.appendChild(rel);
+		});	
+	}
+}
+
+existingPermission = window.item.selectSingleNode('Relationships/Item[@id="' + rootXClass.getAttribute('id') +
+'"]/Relationships/Item[@type="' + relType + '" and itemtype_id="' + itemTypeId + '"]');
+
+if (action === 'getExistingPermission') {
+	return existingPermission;
+}
+
+var resultPromise;
+if (action === 'create') {
+	var newItemNd = aras.newItem(type);
+	aras.itemsCache.addItem(newItemNd);
+	aras.setItemProperty(newItemNd, 'locked_by_id', aras.getCurrentUserID());
+	aras.uiShowItemEx(newItemNd, 'new');
+	resultPromise = Promise.resolve(newItemNd);
+} else if (action === 'pick') {
+	var params = {
+		aras: window.aras,
+		itemtypeName: type,
+		type: 'SearchDialog'
+	};
+	resultPromise = ArasModules.MaximazableDialog.show('iframe', params).promise;
+	resultPromise.isSearchDialog = true;
+} else if (action === 'view') {
+	if (existingPermission) {
+		aras.uiShowItem(type, aras.getItemProperty(existingPermission, 'related_id'));
+	} else {
+		return;
+	}
+}
+if (resultPromise) {
+	resultPromise.then(function(item) {
+		var isSetNothingFromSearchDialog = resultPromise.isSearchDialog && item && item.itemID === '';
+		if (!item || isSetNothingFromSearchDialog && !existingPermission) {
+			return;
+		}
+		if (item.item) {
+			item = item.item;
+		}
+		if (!rootXClass.getAttribute('isNew')) {
+			rootXClass.setAttribute('action', 'edit');
+		}
+		var action;
+		if (!existingPermission) {
+			existingPermission = aras.newItem(relType);
+			aras.setItemProperty(existingPermission, 'itemtype_id', itemTypeId);
+			aras.setItemProperty(existingPermission, 'related_id', item);
+			rootXClass.selectSingleNode('Relationships').appendChild(existingPermission);
+		} else if (isSetNothingFromSearchDialog) {
+			existingPermission.setAttribute('action', 'delete');
+		} else {
+			aras.setItemProperty(existingPermission, 'related_id', item);
+			if (!existingPermission.getAttribute('isTemp')) {
+				existingPermission.setAttribute('action', 'edit');
+			} else if (existingPermission.getAttribute('action') == 'delete') {
+				existingPermission.setAttribute('action', 'add');
+			}
+		}
+		window.item.setAttribute('isDirty', '1');
+	});
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>xPermissionWorker</name>
+ </Item>
+</AML>

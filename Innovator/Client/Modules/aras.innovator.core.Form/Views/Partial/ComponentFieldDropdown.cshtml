@@ -1,0 +1,398 @@
+﻿@using System
+@using System.Linq
+@using System.Text
+@using System.Text.RegularExpressions
+@using Models.AML.Enums
+@using Models.AML.ItemTypes
+@using Models.Helpers
+@model Models.FieldRenderModel
+
+@functions {
+	void AddAssignedEvent(ref string eventsString, string eventName, string methodName)
+	{
+		if (!String.IsNullOrEmpty(eventsString))
+		{
+			eventsString += ",";
+		}
+		eventsString += eventName + ":" + methodName;
+	}
+}
+
+@{
+	var fieldId = Model.FieldNode.Id;
+	var fieldType = Model.FieldNode.FieldType;
+	var fieldNm = Model.FieldNode.Name;
+
+	var fieldLabel = Model.FieldNode.Label.IsNull || string.IsNullOrEmpty(Model.FieldNode.Label.Value) ?  Model.FieldNode.Name : Model.FieldNode.Label.Value;
+	var propNm = String.Empty;
+	var propDataType = String.Empty;
+	if (!Model.PropertyNode.IsNull)
+	{
+		propNm = Model.PropertyNode.Name;
+		propDataType = Model.PropertyNode.DataType;
+	}
+
+	var expressionFunctionCode = String.Empty;
+
+	// Generated field attributes
+	var tabIndex = Model.FieldNode.TabStop ? Model.FieldNode.TabIndex.Value : "-1";
+	tabIndex = String.IsNullOrEmpty(tabIndex) ? "" : tabIndex;
+	var required = (!Model.PropertyNode.IsNull && Model.PropertyNode.IsRequired) ? " sys_f_div_select_required" : String.Empty;
+	var IsRequired = (!Model.PropertyNode.IsNull && Model.PropertyNode.IsRequired) ? true : false;
+	var isReadOnly = ((!Model.PropertyNode.IsNull && Model.PropertyNode.ReadOnly) || Model.Mode == "edit_form" || Model.Mode == "view_form") ? true : false;
+	var isDisabled = ((!Model.PropertyNode.IsNull && Model.FieldNode.IsDisabled) || Model.Mode == "edit_form" || Model.Mode == "view_form") ? true : false;
+	var assignedFieldEvents = String.Empty;
+
+	// Support variables
+	var noBlank = Model.FieldNode.ListNoBlank;
+	var onchange = String.Empty;
+
+	// Generated style attributes
+	var displayLengthUnit = Model.FieldNode.DisplayLengthUnit;
+	var displayLength = Model.FieldNode.DisplayLength;
+	var style = String.Empty;
+	var selectWidth = String.Empty;
+
+	if (!displayLength.IsNull && !String.IsNullOrEmpty(displayLengthUnit))
+	{
+		selectWidth = displayLength.Value + displayLengthUnit;
+		style = " style=\"width:" + displayLength.Value + displayLengthUnit + ";\" ";
+	}
+	style += "class=\"" + fieldNm + " sys_f_select";
+	if (fieldType == FieldType.ListBoxMultiSelect)
+	{
+		style += @" sys_ft_listbox_multi_select"" multiple=""yes"" ";
+	}
+	else
+	{
+		style += @""" ";
+	}
+
+	// Option tag generating
+
+	// First "default" cell adding
+	var optionLabels = new List<string>();
+	if (!noBlank)
+	{
+		optionLabels.Add(string.Empty);
+	}
+	var listId = Model.PropertyNode.DataSource.Value;
+	if (!String.IsNullOrEmpty(listId))
+	{
+		var options = MethodsExUtils.GetListValues(Model.ListNode, Model.FilterListNode, listId, propDataType);
+		var nds = Model.PropertyNode.DataSource.Item; // TODO: Getting full DS item or delete? (unused)
+		if (nds != null)
+		{
+			options = nds.Relationships.Items.Where(item => item.Id == Model.PropertyNode.Id).ToList();
+		}
+
+		foreach (var item in options)
+		{
+			var option = (Value)item;
+			var val = option.ValueField;
+			var label = option.Label.Value;
+			if (option.Label.IsNull)
+			{
+				label = val;
+			}
+			optionLabels.Add(label);
+		}
+	}
+
+	if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		if (Model.Mode != "search")
+		{
+			assignedFieldEvents = MethodsExUtils.AssignFieldEventExForComponent(Model.FieldNode, String.Empty);
+		}
+
+		if (!String.IsNullOrEmpty(propNm))
+		{
+			onchange += @"<script type=""text/javascript"">
+					function onchange" + fieldId + @"(event) {
+						event = window.event || event;
+						var target = event.srcElement || event.target;
+						";
+
+			onchange += @"var tmpSelectedVal = " + "field" + fieldId + "Component.getValue();" + @"
+					  if (window.handleItemChange) {
+						  handleItemChange('" + propNm + "', tmpSelectedVal);\r\n"
+						 + "\r\n}\r\n";
+
+			onchange += @"if (window.handleItemChange)
+						handleItemChange('" + propNm + @"', tmpSelectedVal)
+				}
+				</script>";
+				AddAssignedEvent(ref assignedFieldEvents, "change", "onchange" + fieldId);
+		}
+
+		@:<div id="div_select_@(fieldId)"></div>
+	}
+	else
+	{
+		@:<div id="div_select_@(fieldId)" class="sys_f_div_select@(Html.Raw(required))">
+			<select size="1" id="@(fieldId)" name="@(fieldNm)" class="@(fieldNm) sys_f_select" tabindex="@(tabIndex)" disabled=@(isDisabled)>
+			@foreach (var label in optionLabels)
+			{
+				<option>@label</option>
+			}
+			</select>
+	}
+
+	// Another options for field lists
+	if (!Model.PropertyNode.IsNull)
+	{
+		if (!String.IsNullOrEmpty(listId))
+		{
+			if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+			{
+				var pattern = Model.PropertyNode.Pattern;
+				if (propDataType == "filter list" && !pattern.IsNull)
+				{
+					var funcName = "system_" + fieldId + "_options";
+					<script type="text/javascript">
+						function @(funcName)(event)
+						{
+							// this handler will be called from source filter list control
+							event = event || window.event;
+							event.srcElement = event.srcElement || event.target;
+							var selectElem = document.getElementById("@(fieldId)");
+							if (event.propertyName != "value" || !selectElem) {
+								return true;
+							}
+
+							var oldVal = field@(fieldId)Component.getValue();
+							var initialVal = observersHash.getElementById('@(propNm)_system').getInitialValue();
+							field@(fieldId)Component.setValue('');
+							var filterVal = event.srcElement.value;
+							var optionNds = aras.getListFilterValues("@(listId)");
+							if (filterVal !== '') optionNds = aras.uiGetFilteredListEx(optionNds, "^" + filterVal + "$");
+							if (optionNds.length == 0 && document.formNd)
+							{
+								optionNds = document.formNd.selectNodes("//Item/Relationships/Item[@@type='Body']/Relationships/Item[@@type='Field']/propertytype_id[@@keyed_name='@Model.PropertyNode.Name']/Item/data_source/Item/Relationships/Item[filter='" + filterVal + "']");
+							}
+
+							const list = optionNds.map(optionNd => {
+								const inactive = aras.getItemProperty(optionNd, 'inactive') === '1';
+								const value = aras.getItemProperty(optionNd, 'value');
+								let label = aras.getItemProperty(optionNd, 'label') || value;
+								label = aras.preserveTags(label);
+
+								return {
+									label: label,
+									value: value,
+									inactive: inactive
+								};
+							}).filter(option => {
+								// otions should not be filtered out during from populating
+								// they will be removed by init method because field's value may be unknown at now
+
+								const shouldBeDeleted = document.isFormPopulated && option.inactive && option.value !== initialVal;
+								return option.value === oldVal || !shouldBeDeleted;
+							});
+
+							@if (!noBlank)
+							{
+								<text>
+									list.unshift({label: '', value: ''});
+								</text>
+							}
+
+							let curSelectedIndex = list.findIndex(x=>x.value === oldVal);
+							if (curSelectedIndex === -1) {
+								curSelectedIndex = 0;
+							}
+
+							field@(fieldId)Component.component.setState({list: list});
+
+							@if (noBlank)
+							{
+								@:if (list[0].value != oldVal) { field@(fieldId)Component.setValue(list[0].value); }
+							}
+							else
+							{
+								<text>
+									field@(fieldId)Component.setValue(list[curSelectedIndex].value);
+									if (window.handleItemChange && field@(fieldId)Component.getValue() !== oldVal) {
+										handleItemChange(selectElem.name, selectElem.value);
+									}
+								</text>
+							}
+						}
+
+						if (observersHash.getElementById("@(pattern)_system"))
+							observersHash.getElementById("@(pattern)_system").attachEvent("onpropertychange", @(funcName));
+					</script>
+				}
+			}
+		}
+	}
+
+
+		//field onChange
+		@Html.Raw(onchange)
+		@:
+
+	if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		<script type="text/javascript">
+			function system_@(fieldId)_selectedIndex(event) {
+				event = event || window.event;
+				event.srcElement = event.srcElement || event.target;
+				var ctrlElem = event.srcElement;
+				var select = field@(fieldId)Component;
+				if (event.propertyName != "value" || !ctrlElem || !select) {
+					return true;
+				}
+				var selectValue = select.getValue();
+				if (selectValue == ctrlElem.value) return true;
+				var val = ctrlElem.value;
+				select.setValue(val || '');
+				return true;
+			}
+
+			function system_@(fieldId)_init(event) {
+				event = event || {};
+				const select = field@(fieldId)Component;
+				if (event.propertyName !== "initValue" || !select) {
+					return true;
+				}
+
+				select.component.setState({
+					list: select.component.state.list.filter(option=>!(option.inactive && option.value !== event.target.value))
+				});
+
+				return true;
+			}
+
+			function system_@(fieldId)_blur(event) {
+				var value = field@(fieldId)Component.getValue();
+				if (field@(fieldId)Component.component.validate()) {
+					if (window.handleItemChange) {
+						handleItemChange('@(propNm)', value);
+					}
+				} else {
+					var mostTopWindow = aras.getMostTopWindowWithAras();
+					var confirmDialog = mostTopWindow.ArasModules.Dialog.show('iframe', {
+						buttons: {
+							btnYes: aras.getResource('', 'common.ok'),
+							btnCancel: aras.getResource('', 'common.cancel')
+						},
+						defaultButton: 'btnCancel',
+						aras: aras,
+						dialogHeight: 180,
+						dialogWidth: 300,
+						message: aras.getResource('', 'component_dropdown_blur_msg', '@Html.Raw(HttpUtility.JavaScriptStringEncode(fieldLabel))'),
+						content: 'groupChgsDialog.html'
+					});
+					confirmDialog.promise.then(function(result) {
+						var res = result === 'btnYes';
+						if (res) {
+							field = this;
+							setTimeout('field.focus();',0);
+						} else {
+							var oldVal = observersHash.getElementById('@(propNm)_system').value;
+							field@(fieldId)Component.setValue(oldVal || '');
+						}
+					}.bind(this));
+				}
+			}
+
+			@if (!String.IsNullOrEmpty(propNm))
+			{
+				@:if (observersHash.getElementById("@(propNm)_system")) {
+				@:	observersHash.getElementById("@(propNm)_system").attachEvent("onpropertychange", system_@(fieldId)_selectedIndex);
+				@:	observersHash.getElementById("@(propNm)_system").attachEvent("oninit", system_@(fieldId)_init);
+				@:}
+			}
+
+			@if (!isDisabled && !isReadOnly)
+			{
+				expressionFunctionCode += @"field" + fieldId + @"Component.setReadOnly(!isEditMode);";
+			} else {
+				expressionFunctionCode += @"field" + fieldId + @"Component.setReadOnly('" + isReadOnly + "'.toLowerCase() === 'true');";
+				expressionFunctionCode += @"field" + fieldId + @"Component.setDisabled('" + isDisabled + "'.toLowerCase() === 'true');";
+			}
+		</script>
+		<script>
+			var field@(fieldId)Component;
+			var field@(fieldId)Options = [];
+			@if (!String.IsNullOrEmpty(listId))
+			{
+
+				var options = MethodsExUtils.GetListValues(Model.ListNode, Model.FilterListNode, listId, propDataType);
+				var nds = Model.PropertyNode.DataSource.Item; // TODO: Getting full DS item or delete? (unused)
+				if (nds != null)
+				{
+					options = nds.Relationships.Items.Where(item => item.Id == Model.PropertyNode.Id).ToList();
+				}
+				if (!noBlank)
+				{
+					<text>
+						field@(fieldId)Options.push({label: '', value: ''});
+					</text>
+				}
+				foreach (var item in options)
+				{
+					var option = (Value)item;
+					var val = option.ValueField;
+					var label = option.Label.Value;
+					bool isInactive = option.Inactive;
+					if (option.Label.IsNull)
+					{
+						label = val;
+					}
+				<text>
+					field@(fieldId)Options.push({label: '@Html.Raw(HttpUtility.JavaScriptStringEncode(label))', value: '@Html.Raw(HttpUtility.JavaScriptStringEncode(val))', inactive: @(isInactive ? "true" : "false")});
+				</text>
+				}
+			}
+
+			var filterList = document.createElement('aras-filter-list');
+			filterList.setAttribute('aria-labelledby', '@(fieldId)_label');
+			filterList.setState({
+				list: field@(fieldId)Options
+			});
+
+			filterList.format = function(template) {
+				var input = template.children[0];
+				input.attrs = Object.assign(input.attrs || {}, {
+					id: '@(fieldId)',
+					tabIndex: '@(tabIndex)',
+					name: '@(fieldNm)',
+					'aria-labelledby': '@(fieldId)_label'
+				});
+				@if (IsRequired) {
+					@:input.attrs.required = true;
+				}
+				return template;
+			};
+			@if(!displayLength.IsNull && !String.IsNullOrEmpty(displayLengthUnit)) {
+				@:filterList.state.width = '@(displayLength.Value)@(displayLengthUnit)';
+			} else {
+				@:filterList.state.width = 'auto';
+			}
+
+			var container = document.getElementById('div_select_@(fieldId)');
+			container.appendChild(filterList);
+
+			field@(fieldId)Component = new Field(document.getElementById('@(fieldId)span').querySelector('.aras-field__value'), filterList, '@(assignedFieldEvents)');
+			field@(fieldId)Component.on('focusout', system_@(fieldId)_blur);
+		</script>
+	}
+
+	<script type="text/javascript">
+		function expression_@(fieldId)_setExpression(isEditMode)
+		{
+			@Html.Raw(expressionFunctionCode)
+		}
+		setTimeout('expression_@(fieldId)_setExpression(document.isEditMode)', 0);
+	</script>
+
+	if (!String.IsNullOrEmpty(propNm) && !String.IsNullOrEmpty(Model.PropertyNode.DataSource.Value) && (Model.Mode != "edit_form" && Model.Mode != "view_form"))
+	{
+		<script type="text/javascript">
+			field@(fieldId)Component.setValue('');
+		</script>
+	}
+}

@@ -1,0 +1,340 @@
+﻿<AML>
+ <Item type="Form" id="06FA7C4E5BB244BF89A169D14924F7BB" action="add">
+  <category_form>0</category_form>
+  <description>Special dialog for select and add files from other instance</description>
+  <height>500</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>450</width>
+  <name>FE_SelectFiles</name>
+  <Relationships>
+   <Item type="Body" id="4D325970AB6D4D69B1429DE7E01404B9" action="add">
+    <sort_order>128</sort_order>
+    <source_id keyed_name="FE_SelectFiles" type="Form">06FA7C4E5BB244BF89A169D14924F7BB</source_id>
+    <Relationships>
+     <Item type="Field" id="317B381027E34896BA3718F8C8B1252C" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<script type="text/javascript">
+	var configuration,
+		dlgArgs = aras.getMostTopWindowWithAras(window).window.dialogArguments;
+
+	if (dlgArgs) {
+		aras = dlgArgs.aras;
+		var rootItem = dlgArgs.mainItemTypeName,
+			itemtypeId = dlgArgs.itemtypeId,
+			selectNode = dlgArgs.selectNode,
+			filesIds = dlgArgs.filesIds,
+			treeGrid = null;
+	}
+
+	function initTreeGrid() {
+		var cell,
+			xml = getTreeGridXml();
+
+		treeGrid.InitXml(xml);
+		treeGrid.expandAll();
+		var array = treeGrid.items_Experimental.getAllId();
+
+		if (itemtypeId != undefined) {
+			for (var i = 0; i < filesIds.length; i++) {
+				cell = treeGrid.cells(filesIds[i].fileId, 1);
+				if (cell)
+					cell.setValue(true);
+			}
+		}
+
+		if (selectNode != undefined) {
+			var pathNodes = selectNode.paths;
+			if (pathNodes == undefined) {
+				return;
+			}
+			for (var i = 0; i < pathNodes.length; i++) {
+				cell = treeGrid.cells(pathNodes[i].id, 1);
+				if (cell) {
+					cell.setValue(true);
+				}
+			}
+		}
+		else {
+			for (var i = 0; i < array.length; i++) {
+				cell = treeGrid.cells(array[i], 1);
+				if (cell && cell.isCheckbox()) {
+					cell.setValue(true);
+				}
+			}
+		}
+	}
+
+	function onClickItem(tbItem) {
+		tbItem.setEnabled(false);
+		switch (tbItem.getId()) {
+			case "collapse":
+				treeGrid.collapseAll();
+				break;
+			case "expand":
+				treeGrid.expandAll();
+				break;
+			case "select":
+				var conf = getConfiguration();
+				parent.returnValue = ({ configuration: configuration, paths: conf.paths, fileIds: conf.confArray });
+				aras.getMostTopWindowWithAras(window).window.close();
+				break;
+		}
+		tbItem.setEnabled(true);
+	}
+
+	function getConfiguration() {
+		var paths = [],
+			rowId,
+			cell,
+			rec,
+			confArray = [],
+			res = treeGrid.items_Experimental.getAllId();
+
+		if (itemtypeId == undefined) {
+			for (var i = 0; i < res.length; i++) {
+				rowId = res[i];
+				cell = treeGrid.cells(rowId, 1);
+				if (cell.isChecked()) {
+					for (var j = 0; j < configuration.length; j++) {
+						rec = configuration[j];
+						for (var t = 0; t < rec.fileProps.length; t++) {
+							if (rec.fileProps[t].id == rowId) {
+								paths.push({ path: rec.index + "/" + rec.fileProps[t].name, id: rec.fileProps[t].id });
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+		else {
+			var parentalType,
+				prevProperty,
+				count = 0;
+			for (var i = 0; i < res.length; i++) {
+				var rowId = res[i];
+				var cell = treeGrid.cells(rowId, 1);
+				if (cell.isCheckbox()) {
+					var pathProperty = getPropertyRowName(rowId);
+					if (pathProperty) {
+						prevProperty = pathProperty.split('/');
+						prevProperty = prevProperty[prevProperty.length - 1];
+					}
+					if (cell.isChecked() && !pathProperty) {
+						var pathArray;
+						for (var j = 0; j < configuration.length; j++) {
+							if (configuration[j].type == parentalType) {
+								pathArray = configuration[j].index;
+								break;
+							}
+						}
+
+						var result = createAML(pathArray + "/" + prevProperty);
+						pathArray = result.pathArray;
+
+						var query = new Item();
+						query.loadAML(result.xml);
+						result = query.apply();
+
+						var relNodes = result.dom.selectNodes("//" + pathArray.join('/')),
+							parenatlId;
+						for (var t = 0; t < relNodes.length; t++) {
+							var node = relNodes[t]
+							if (prevProperty != "related_id") {
+								parenatlId = node.getAttribute("id");
+								break;
+							}
+							else if (node.selectNodes("related_id/Item[@type='File'][@id='" + rowId + "']").length == 1) {
+								parenatlId = node.getAttribute("id");
+								break;
+							}
+						}
+						confArray.push({ fileId: rowId, propName: prevProperty, parentalType: parentalType, parentalId: parenatlId });
+					}
+				}
+				else {
+					parentalType = (configuration != undefined) ? configuration[count].type : undefined;
+					count++;
+				}
+			}
+
+		}
+		return ({ paths: paths, confArray: confArray });
+	}
+
+	function onTreeGridClick(row, col) {
+		var rowId = treeGrid.getSelectedId();
+		if (rowId) {
+			var cell = treeGrid.cells(rowId, col);
+			if (cell && cell.isCheckbox()) {
+				var path = getPropertyRowName(rowId);
+				var isCheck = !cell.isChecked();
+				cell.setValue(isCheck);
+				if (path && itemtypeId != undefined) {
+					var idlist = getFilesByProperty(path);
+
+					for (var i = 0; i < idlist.length; i++) {
+						cell = treeGrid.cells(idlist[i], 1);
+						cell.setValue(isCheck);
+					}
+				}
+			}
+		}
+	}
+
+	function createAML(path) {
+		var pathArray = [],
+			nodeName = path.split("/"),
+			propName = nodeName[nodeName.length - 1],
+			xml = aras.createXMLDocument(),
+			node,
+			element;
+
+		for (var j = 0; j < nodeName.length - 1; j++) {
+			node = nodeName[j];
+
+			if (node == "Relationships" || node == "related_id") {
+				element = xml.createElement(node);
+				xml.selectSingleNode(pathArray.join("/")).appendChild(element);
+				pathArray.push(node);
+			}
+			else {
+				element = xml.createElement("Item");
+				element.setAttribute("type", node);
+				element.setAttribute("action", "get");
+				if (j == 0) {
+					element.setAttribute("id", itemtypeId);
+				}
+				if (j == nodeName.length - 2) {
+					element.setAttribute("select", propName + ", id");
+				}
+				if (nodeName[j + 1] == "related_id") {
+					element.setAttribute("select", "id, related_id");
+				}
+
+				if (pathArray.length != 0) {
+					xml.selectSingleNode(pathArray.join("/")).appendChild(element);
+				}
+				else {
+					xml.appendChild(element);
+				}
+				pathArray.push("Item");
+			}
+		}
+
+		return ({ xml: xml.xml, pathArray: pathArray, propName: propName });
+	}
+
+	function getFilesByProperty(path) {
+		var res = createAML(path),
+			pathArray = res.pathArray,
+			result,
+			nodes,
+			idlist = [];
+
+		var query = new Item();
+		query.loadAML(res.xml);
+		result = query.apply();
+
+		nodes = (res.propName == "related_id") ? result.dom.selectNodes("//" + pathArray.join("/") + "/" + res.propName + "/Item[@type='File']/id") : result.dom.selectNodes("//" + pathArray.join("/") + "/" + res.propName);
+		for (var t = 0; t < nodes.length; t++) {
+			var node = nodes[t];
+			if (node.getAttribute("keyed_name") && aras.getItemById("File", node.text, 0)) {
+				idlist.push(node.text);
+			}
+		}
+		return idlist;
+	}
+
+	function getPropertyRowName(rowId) {
+		if (configuration != undefined) {
+			for (var i = 0; i < configuration.length; i++) {
+				var node = configuration[i];
+				for (var j = 0; j < node.fileProps.length; j++) {
+					if (rowId == node.fileProps[j].id) {
+						return node.index + "/" + node.fileProps[j].name;
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	onload = function onload_handler() {
+		if (!dlgArgs) {
+			return;
+		}
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", { connectId: "top" }, function(control) {
+			toolbar = control;
+			toolbar.loadXml(aras.getI18NXMLResource("selectFiles_toolbar.xml"));
+			toolbar.show();
+			clientControlsFactory.on(toolbar, {
+				"onClick": onClickItem
+			});
+		});
+
+		clientControlsFactory.createControl("Aras.Client.Controls.Experimental.StatusBar", { aras: aras, resourceUrl: aras.getI18NXMLResource("defaultstatusbar2.xml", aras.getBaseURL())}, function(control){
+			statusbar = control;
+			document.getElementById("bottom").appendChild(statusbar.domNode);
+		});
+
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.TreeGridContainer", {connectId: "treeGridCont"}, function(control){
+			treeGrid = control;
+			treeGrid.setMultiselect(false);
+			clientControlsFactory.on(treeGrid, {
+				"gridClick": onTreeGridClick,
+				"gridXmlLoaded": onXmlLoaded
+			});
+			initTreeGrid();
+		});
+	}
+
+	function onXmlLoaded() {
+		treeGrid.ShowInputRow(false);
+	}
+
+	function getTreeGridXml() {
+		var xmlFileBase = aras.getBaseURL() + "/styles/selectConfigurationTree.xsl",
+			treeLoadXml = aras.createXMLDocument(),
+			methodArgs = {},
+			res;
+
+		treeLoadXml.load(xmlFileBase);
+		methodArgs.itemtype = rootItem;
+		methodArgs.itemtypeId = itemtypeId;
+		res = aras.evalItemMethod("FE_GetTreeItemType", "", methodArgs);
+		if (!res) {
+			return;
+		}
+		configuration = res.configuration;
+		return aras.applyXsltString(res.aml, treeLoadXml.xml);
+	}
+</script>
+<div style="width: 100%; height: 100%; position: fixed; top: 0px; left: 0px; margin: 0px; padding: 0px;" id="BorderContainer">
+	<div id="top" style="height: 30px; width: 100%"></div>
+	<div id="treeGridCont" style="padding: 0px; top: 30px; bottom: 20px; width: 100%; position: fixed;"></div>
+	<div id="bottom" style="height: 20px; position: fixed; bottom: 0px; width: 100%"></div>
+</div>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <positioning>static</positioning>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="4D325970AB6D4D69B1429DE7E01404B9" type="Body">4D325970AB6D4D69B1429DE7E01404B9</source_id>
+      <tab_stop>1</tab_stop>
+      <x>0</x>
+      <y>0</y>
+      <name>html0</name>
+     </Item>
+    </Relationships>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

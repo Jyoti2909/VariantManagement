@@ -1,0 +1,1043 @@
+﻿<AML>
+ <Item type="Method" id="8E2B057F9D4043F7A0D720957D9DA198" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+		return Execute(this);
+	}
+
+	internal static Item Execute(Item thisItem)
+	{
+		List<RelViewData> relViewsData = GetRelViewsData(thisItem);
+
+		if (relViewsData.Count == 0)
+		{
+			return thisItem;
+		}
+		//get item types
+		Item itemTypesRequest = thisItem.newItem("ItemType", "get");
+		itemTypesRequest.setAttribute("select", "id, name, is_versionable");
+		List<string> reverseItNames = relViewsData.Select(i => i.ReverseItName).Distinct().ToList();
+		List<string> itNames = relViewsData.Select(i => i.ItName).Distinct().ToList();
+		List<string> reverseItNamesAndItNames = reverseItNames.Union(itNames).ToList();
+		string reverseItNamesAndItNamesString = String.Empty;
+		const string itemTypeNameProperty = "name";
+		foreach (string itName in reverseItNamesAndItNames)
+		{
+			if (!string.IsNullOrEmpty(reverseItNamesAndItNamesString))
+			{
+				reverseItNamesAndItNamesString += ",";
+			}
+			reverseItNamesAndItNamesString += "'" + System.Security.SecurityElement.Escape(itName) + "'";
+		}
+
+		itemTypesRequest.setPropertyCondition(itemTypeNameProperty, "in");
+		itemTypesRequest.setProperty(itemTypeNameProperty, reverseItNamesAndItNamesString);
+		Item propertiesRequest = itemTypesRequest.createRelationship("Property", "get");
+		string[] propertyItPropertyNamesToSetInFedIt = { "name", "data_type", "data_source", "stored_length", "label", "sort_order", "is_hidden" };
+		string[] propertyItPropertyNamesToSelect = propertyItPropertyNamesToSetInFedIt.Union(new[] { "scale", "prec", "column_width" }).ToArray();
+		propertiesRequest.setAttribute("select", string.Join(", ", propertyItPropertyNamesToSelect));
+		Item itemTypes = itemTypesRequest.apply();
+
+		var processedReverseItNames = new Dictionary<string, string>();
+
+		var federatedItemTypeNamesById = new Dictionary<string, string>();
+		foreach (RelViewData relViewData in relViewsData)
+		{
+			bool isToUseFederatedItemType = string.IsNullOrEmpty(relViewData.ReversePropertyName);
+			string tgvdId = CreateFedItemTypeTgvdAndQueryDefinition(thisItem, relViewData, itemTypes, processedReverseItNames,
+				propertyItPropertyNamesToSetInFedIt, federatedItemTypeNamesById, isToUseFederatedItemType);
+
+			if (isToUseFederatedItemType)
+			{
+				ReplaceOldGridByTgvdUsageInRelView(thisItem, relViewData.RelViewId, "../Solutions/PLM/scripts/TgvGrids/Tab.html",
+					"'tgvdId=" + tgvdId + "'");
+			}
+			else
+			{
+				string parameters = "'tgvdId=" + tgvdId + "&startConditionProvider=ItemDefault({\"" + relViewData.ReversePropertyName + "\":\"id\"})'";
+				ReplaceOldGridByTgvdUsageInRelView(thisItem, relViewData.RelViewId, "../Modules/aras.innovator.TreeGridView/Views/MainPage.html", parameters);
+			}
+		}
+
+		if (federatedItemTypeNamesById.Count != 0)
+		{
+			DeleteFormsAndViewsForFederatedIt(thisItem, federatedItemTypeNamesById);
+		}
+
+		return thisItem;
+	}
+
+	private static string CreateFedItemTypeTgvdAndQueryDefinition(Item thisItem, RelViewData relViewData, Item itemTypes, Dictionary<string, string> processedReverseItNames,
+		string[] propertyItPropertyNamesToSetInFedIt, Dictionary<string, string> federatedItemTypeNamesById, bool isToUseFederatedItemType)
+	{
+		List<Item> originalProperties;
+		int minNotHiddenPropSortOrder;
+		List<Item> notHiddenOriginalProps;
+		List<Item> hiddenOriginalPropsToShow;
+		List<Item> hiddenPropsToDelete;
+		Item itemType = GetItemTypeAndProperties(relViewData, itemTypes, out originalProperties, out minNotHiddenPropSortOrder,
+			out notHiddenOriginalProps, out hiddenOriginalPropsToShow, out hiddenPropsToDelete);
+
+		string itemTypeId;
+		if (isToUseFederatedItemType)
+		{
+			string federatedItemTypeName;
+			CreateFederatedItemType(thisItem, processedReverseItNames, relViewData, propertyItPropertyNamesToSetInFedIt,
+				out itemTypeId, out federatedItemTypeName, originalProperties, itemType);
+			if (!string.IsNullOrEmpty(federatedItemTypeName) && !federatedItemTypeNamesById.ContainsKey(itemTypeId))
+			{
+				federatedItemTypeNamesById.Add(itemTypeId, federatedItemTypeName);
+			}
+		}
+		else
+		{
+			itemTypeId = itemType.getID();
+		}
+
+		string queryDefinitionName;
+		string queryItemRefId;
+		string queryDefinitionId = CreateQueryDefinition(thisItem, relViewData, itemTypeId, isToUseFederatedItemType,
+			notHiddenOriginalProps, hiddenOriginalPropsToShow, out queryDefinitionName, out queryItemRefId);
+
+		string tgvdId = CreateTreeGridViewDefinition(thisItem, queryDefinitionId, queryDefinitionName, notHiddenOriginalProps,
+			hiddenOriginalPropsToShow, hiddenPropsToDelete, relViewData, itemTypes, queryItemRefId, minNotHiddenPropSortOrder, isToUseFederatedItemType);
+		return tgvdId;
+	}
+
+	private static Item GetItemTypeAndProperties(RelViewData relViewData, Item itemTypes, out List<Item> originalProperties,
+		out int minNotHiddenPropSortOrder, out List<Item> notHiddenOriginalProps, out List<Item> hiddenOriginalPropsToShow, out List<Item> hiddenPropsToDelete)
+	{
+		string xPath = XPathResult + string.Format(CultureInfo.InvariantCulture, "/Item[name='{0}']",
+			relViewData.ReverseItName);
+		Item itemType = itemTypes.getItemsByXPath(xPath);
+		Item properties = itemType.getItemsByXPath("Relationships/Item[@type='Property']");
+		int propertiesCount = properties.getItemCount();
+		originalProperties = new List<Item>();
+		minNotHiddenPropSortOrder = int.MaxValue;
+		for (int j = 0; j < propertiesCount; j++)
+		{
+			Item prop = properties.getItemByIndex(j);
+			if (prop.getProperty("is_hidden") != "1")
+			{
+				int sortOrder = int.Parse(prop.getProperty("sort_order"), CultureInfo.InvariantCulture);
+				minNotHiddenPropSortOrder = Math.Min(minNotHiddenPropSortOrder, sortOrder);
+			}
+			if (relViewData.ReversePropertyName == prop.getProperty("name"))
+			{
+				continue;
+			}
+			originalProperties.Add(prop);
+		}
+
+		notHiddenOriginalProps = originalProperties.Where(i => i.getProperty("is_hidden") != "1").ToList();
+		hiddenOriginalPropsToShow = originalProperties.Where(delegate (Item i)
+		{
+			string propName = i.getProperty("name");
+			return i.getProperty("is_hidden") == "1" &&
+				   (propName == "generation" || propName == "major_rev" || propName == "comments" || propName == "locked_by_id");
+		}).ToList();
+		hiddenPropsToDelete = originalProperties.Where(delegate (Item i)
+		{
+			string propName = i.getProperty("name");
+			return i.getProperty("is_hidden") == "1" && propName != "generation" && propName != "major_rev" && propName != "comments" && propName != "locked_by_id";
+		}).ToList();
+		return itemType;
+	}
+
+	private static void ReplaceOldGridByTgvdUsageInRelView(Item thisItem, string relViewId, string startPage, string parameters)
+	{
+		Item relView = thisItem.newItem("Relationship View", "edit");
+		relView.setAttribute("doGetItem", "0");
+		relView.setID(relViewId);
+		relView.setProperty("start_page", startPage);
+		relView.setProperty("parameters", parameters);
+		Item relViewResult = relView.apply();
+		if (relViewResult.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(relViewResult.dom);
+		}
+	}
+
+	private static string CreateTreeGridViewDefinition(Item thisItem, string queryDefinitionId, string queryDefinitionName,
+		List<Item> notHiddenOriginalProps, List<Item> hiddenOriginalProps, List<Item> hiddenPropsToDelete, RelViewData relViewData, Item itemTypes,
+		string queryItemRefId, int minNotHiddenPropSortOrder, bool isFederatedIt)
+	{
+		Item tgvd = thisItem.newItem("rb_TreeGridViewDefinition", "merge");
+		tgvd.setAttribute("doGetItem", "0");
+		tgvd.setProperty("query_definition", queryDefinitionId);
+		string id = CalculateId(queryDefinitionName, "Tree Grid View Definition");
+		tgvd.setID(id);
+		tgvd.setProperty("name", queryDefinitionName); //note that the property name is used inside "CreateColumnDefinitionsAndColumnMappings"
+
+		string treeRowDefinitionRefId = CalculateId(queryDefinitionName, "Tree Row Definition");
+		CreateColumnDefinitionsAndColumnMappings(thisItem, notHiddenOriginalProps, hiddenOriginalProps, hiddenPropsToDelete, tgvd, relViewData,
+			treeRowDefinitionRefId, minNotHiddenPropSortOrder);
+
+		if (isFederatedIt)
+		{
+			Item queryDefinitionParameterMap = tgvd.createRelationship("rb_QueryDefinitionParameterMap", "merge");
+			id = CalculateId(queryDefinitionName, "Query Definition Parameter Map");
+			queryDefinitionParameterMap.setID(id);
+			string itNameXPath = XPathResult + string.Format(CultureInfo.InvariantCulture, "/Item[name='{0}']", relViewData.ItName);
+			Item itemTypeByItName = itemTypes.getItemsByXPath(itNameXPath);
+			queryDefinitionParameterMap.setProperty("user_input_data_source", itemTypeByItName.getID());
+			queryDefinitionParameterMap.setProperty("user_input_data_type", "item");
+			queryDefinitionParameterMap.setProperty("qd_parameter_name", "StartItemId");
+		}
+
+		Item treeRowDefinition = tgvd.createRelationship("rb_TreeRowDefinition", "merge");
+		id = CalculateId(queryDefinitionName, "Tree Row Definition");
+		treeRowDefinition.setID(id);
+		treeRowDefinition.setProperty("query_item_ref_id", queryItemRefId);
+		treeRowDefinition.setProperty("ref_id", treeRowDefinitionRefId);
+
+		Item treeRowReference = tgvd.createRelationship("rb_TreeRowReference", "merge");
+		id = CalculateId(queryDefinitionName, "Tree Row Reference");
+		treeRowReference.setID(id);
+		treeRowReference.setProperty("child_ref_id", treeRowDefinitionRefId);
+		treeRowReference.setProperty("reference_type", "child");
+		treeRowReference.setProperty("view_order", "128"); //we have only one row, so its view_order can be any
+
+		Item tgvdResult = tgvd.apply();
+		if (tgvdResult.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(tgvdResult.dom);
+		}
+
+		string tgvdId = tgvd.getID();
+		CreateItemPresentationConfiguration(thisItem, tgvdId);
+
+		return tgvdId;
+	}
+
+	private static void CreateItemPresentationConfiguration(Item thisItem, string tgvdId)
+	{
+		Item itemPresentationConfiguration = thisItem.newItem("ItemPresentationConfiguration", "merge");
+		string id = CalculateId(tgvdId, "Item Presentation Configuration");
+		itemPresentationConfiguration.setID(id);
+		itemPresentationConfiguration.setAttribute("doGetItem", "0");
+		itemPresentationConfiguration.setProperty("client_type", "js");
+		itemPresentationConfiguration.setProperty("item_type_id", "6AFE8A9127ED48FFB2F9183B9922981B");
+		itemPresentationConfiguration.setProperty("item_id", tgvdId);
+		itemPresentationConfiguration.setProperty("presentation_config_id", "E69ED81B946D48C99C21D9DB6878F702"); //PE_ReverseItems
+		Item itemPresentationConfigurationResult = itemPresentationConfiguration.apply();
+		if (itemPresentationConfigurationResult.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(itemPresentationConfigurationResult.dom);
+		}
+	}
+
+	private static void CreateColumnDefinitionsAndColumnMappings(Item thisItem, IEnumerable<Item> notHiddenOriginalProps, IEnumerable<Item> hiddenOriginalProps,
+		IEnumerable<Item> hiddenPropsToDelete, Item tgvd, RelViewData relViewData, string treeRowDefinitionRefId, int minNotHiddenPropSortOrder)
+	{
+		int maxSortOrder = int.MinValue;
+		bool isGenerationHidden = true;
+		bool isMajorRevHidden = true;
+		bool isCommentsHidden = true;
+		bool isLockedByIdHidden = true;
+
+		foreach (Item prop in notHiddenOriginalProps)
+		{
+			string propName = prop.getProperty("name");
+			switch (propName)
+			{
+				case "generation":
+					isGenerationHidden = false;
+					break;
+				case "major_rev":
+					isMajorRevHidden = false;
+					break;
+				case "comments":
+					isCommentsHidden = false;
+					break;
+				case "locked_by_id":
+					isLockedByIdHidden = false;
+					break;
+			}
+			string sortOrderString = prop.getProperty("sort_order");
+			int sortOrder = int.Parse(sortOrderString, CultureInfo.InvariantCulture);
+			maxSortOrder = Math.Max(sortOrder, maxSortOrder);
+			bool isFirstColumn = minNotHiddenPropSortOrder == sortOrder;
+			CreateColumnDefinitionAndColumnMapping(thisItem, tgvd, relViewData, treeRowDefinitionRefId, prop, propName, isFirstColumn,
+				prop.getProperty("sort_order"));
+		}
+
+		foreach (Item prop in hiddenOriginalProps)
+		{
+			string propName = prop.getProperty("name");
+			switch (propName)
+			{
+				case "generation":
+					if (relViewData.IsStartPageCad && isGenerationHidden)
+					{
+						maxSortOrder++;
+						CreateColumnDefinitionAndColumnMapping(thisItem, tgvd, relViewData, treeRowDefinitionRefId, prop, propName, false,
+							maxSortOrder.ToString(CultureInfo.InvariantCulture));
+					}
+					break;
+				case "major_rev":
+					if (relViewData.IsStartPageCad && isMajorRevHidden)
+					{
+						maxSortOrder++;
+						CreateColumnDefinitionAndColumnMapping(thisItem, tgvd, relViewData, treeRowDefinitionRefId, prop, propName, false,
+							maxSortOrder.ToString(CultureInfo.InvariantCulture));
+					}
+					break;
+				case "comments":
+					if (relViewData.IsStartPageCad && isCommentsHidden)
+					{
+						maxSortOrder++;
+						CreateColumnDefinitionAndColumnMapping(thisItem, tgvd, relViewData, treeRowDefinitionRefId, prop, propName, false,
+							maxSortOrder.ToString(CultureInfo.InvariantCulture));
+					}
+					break;
+				case "locked_by_id":
+					if (isLockedByIdHidden)
+					{
+						maxSortOrder++;
+						CreateColumnDefinitionAndColumnMapping(thisItem, tgvd, relViewData, treeRowDefinitionRefId, prop, propName, false,
+							maxSortOrder.ToString(CultureInfo.InvariantCulture));
+					}
+					break;
+			}
+		}
+
+		foreach (Item prop in hiddenPropsToDelete)
+		{
+			DeleteColumnDefinitionAndColumnMapping(tgvd, prop.getProperty("name"));
+		}
+	}
+
+	private static void DeleteColumnDefinitionAndColumnMapping(Item tgvd, string propName)
+	{
+		Item columnDefinition = DeleteColumnDefinition(tgvd, propName);
+		CreateColumnMappingRelationship(tgvd.getProperty("name"), propName, columnDefinition, "delete");
+	}
+
+	private static Item CreateColumnMappingRelationship(string tgvdName, string propName, Item columnDefinition, string action)
+	{
+		Item columnMapping = columnDefinition.createRelationship("rb_ColumnMapping", action);
+		string id = CalculateId(tgvdName, "Column Mapping " + propName);
+		columnMapping.setID(id);
+		return columnMapping;
+	}
+
+	private static void CreateColumnDefinitionAndColumnMapping(Item thisItem, Item tgvd, RelViewData relViewData,
+		string treeRowDefinitionRefId, Item prop, string propName, bool isFirstColumn, string positionOrderToSet)
+	{
+		string dataType;
+		Item columnDefinition = CreateColumnDefinition(thisItem, tgvd, prop, propName, positionOrderToSet, out dataType, isFirstColumn);
+		Item columnMapping = CreateColumnMappingRelationship(tgvd.getProperty("name"), propName, columnDefinition, "merge");
+
+		string textTemplate;
+		string itemTypeName;
+		string itemId;
+		string listValueTemplate;
+		string listName;
+		string scale;
+		string precision;
+		var cellViewType = GetCellViewTypeFromDataType(dataType, out textTemplate, out itemTypeName, out itemId, out listValueTemplate, out listName, out scale, out precision);
+
+		switch (cellViewType)
+		{
+			case "Decimal":
+				scale = prop.getProperty("scale");
+				precision = prop.getProperty("prec");
+				break;
+			case "Item":
+				itemTypeName = prop.getPropertyAttribute("data_source", "keyed_name");
+				itemId = "{" + QueryItemAlias + "." + propName + "}";
+				break;
+			case "List":
+				listName = prop.getPropertyAttribute("data_source", "keyed_name");
+				listValueTemplate = "{" + QueryItemAlias + "." + propName + "}";
+				break;
+		}
+
+		columnMapping.setProperty("cell_view_type", cellViewType);
+
+		if (cellViewType != "List")
+		{
+			textTemplate = "{" + QueryItemAlias + "." + propName;
+			if (cellViewType == "Item")
+			{
+				textTemplate += "/@keyed_name";
+			}
+			textTemplate += "}";
+		}
+
+		var template = BuildColumnTemplate(relViewData, isFirstColumn, textTemplate, itemTypeName, itemId, listValueTemplate, listName, scale, precision);
+		columnMapping.setProperty("template", template);
+		if (isFirstColumn)
+		{
+			string type = !string.IsNullOrEmpty(relViewData.ReversePropertyName) ? relViewData.ReverseItName : "{" + QueryItemAlias + ".real_it_name}";
+			string dataTemplate = "{\"id\": \"{" + QueryItemAlias + ".id}\", \"type\": \"" + type + "\"}";
+			columnMapping.setProperty("data_template", dataTemplate);
+		}
+		columnMapping.setProperty("tree_row_ref_id", treeRowDefinitionRefId);
+	}
+
+	private static string GetCellViewTypeFromDataType(string dataType, out string textTemplate, out string itemTypeName,
+		out string itemId, out string listValueTemplate, out string listName, out string scale, out string precision)
+	{
+		string cellViewType;
+
+		textTemplate = string.Empty;
+		itemTypeName = string.Empty;
+		itemId = string.Empty;
+		listValueTemplate = string.Empty;
+		listName = string.Empty;
+		scale = string.Empty;
+		precision = string.Empty;
+		switch (dataType)
+		{
+			case "string":
+			case "text":
+			case "integer":
+				cellViewType = "Text";
+				break;
+			case "float":
+				cellViewType = "Float";
+				break;
+			case "decimal":
+				cellViewType = "Decimal";
+				break;
+			case "boolean":
+				cellViewType = "Boolean";
+				break;
+			case "date":
+				cellViewType = "Date";
+				break;
+			case "item":
+				cellViewType = "Item";
+				break;
+			case "list":
+				cellViewType = "List";
+				break;
+			case "color":
+				cellViewType = "Color";
+				break;
+			default:
+				//types: image, md5, sequence, filter list, color list, federated, formatted text, foreign, ml_string, mv_list, global_version, 
+				//ubigint are not supported. So, we just set Text to have 'some' value for them.
+				cellViewType = "Text";
+				break;
+		}
+		return cellViewType;
+	}
+
+	private static Item DeleteColumnDefinition(Item tgvd, string propName)
+	{
+		Item columnDefinition = CreateColumnDefinitionRelationship(tgvd, propName, "delete");
+		return columnDefinition;
+	}
+
+	private static Item CreateColumnDefinitionRelationship(Item tgvd, string propName, string action)
+	{
+		Item columnDefinition = tgvd.createRelationship("rb_ColumnDefinition", action);
+		string id = CalculateId(tgvd.getProperty("name"), "Column Definition " + propName);
+		columnDefinition.setID(id);
+		return columnDefinition;
+	}
+
+	private static Item CreateColumnDefinition(Item thisItem, Item tgvd, Item prop, string propName,
+		string positionOrderToSet, out string dataType, bool isFirstColumn)
+	{
+		Item columnDefinition = CreateColumnDefinitionRelationship(tgvd, propName, "merge");
+		Item method = thisItem.newItem("Method", "get");
+		method.setProperty("name", "rb_DefaultColumnBuilderMethod");
+		columnDefinition.setPropertyItem("builder_method", method);
+		dataType = prop.getProperty("data_type");
+		columnDefinition.setProperty("name", propName);
+		string positionOrder = positionOrderToSet.ToString(CultureInfo.InvariantCulture);
+		string label = prop.getProperty("label");
+		if (propName == "locked_by_id")
+		{
+			label = "Claimed By";
+			switch (tgvd.getProperty("name"))
+			{
+				case "PE_CAD_ReverseItemsCAD":
+					positionOrder = "1091";
+					break;
+				case "PE_CAD_ReverseItemsPart":
+					positionOrder = "771";
+					break;
+				case "PE_Manufacturer_ReverseItems_ManufPart":
+					positionOrder = "581";
+					break;
+				case "PE_ManufPart_ReverseItemsPart":
+					positionOrder = "771";
+					break;
+			}
+		}
+
+		string header = !string.IsNullOrEmpty(label) ? label : propName;
+		if (string.Equals(dataType, "item", StringComparison.OrdinalIgnoreCase))
+		{
+			header += " [...]";
+		}
+		columnDefinition.setProperty("header", header);
+		columnDefinition.setProperty("position_order", positionOrder);
+		columnDefinition.setProperty("sort_order", positionOrder);
+		string width = prop.getProperty("column_width");
+		if (string.IsNullOrEmpty(width))
+		{
+			width = "100"; //see file SearchMode\simple.xml. It's set to 100 and saved in Preferences in Rel. Grid (prev. implementation of Grids)
+		}
+		if (prop.getProperty("is_hidden") == "1")
+		{
+			width = "40";
+		}
+		if (propName == "locked_by_id")
+		{
+			width = "100";
+		}
+		if (isFirstColumn)
+		{
+			int widthInt = int.Parse(width, CultureInfo.InvariantCulture);
+			const int additionalSizeForIcon = 50;
+			width = (widthInt + additionalSizeForIcon).ToString(CultureInfo.InvariantCulture);
+		}
+		columnDefinition.setProperty("width", width);
+		return columnDefinition;
+	}
+
+	private static string BuildColumnTemplate(RelViewData relViewData, bool isFirstColumn, string textTemplate,
+		string itemTypeName, string itemId, string listValueTemplate, string listName, string scale, string precision)
+	{
+		string icon = string.Empty;
+		string template = string.Empty;
+		if (isFirstColumn && string.IsNullOrEmpty(relViewData.ReversePropertyName))
+		{
+			icon = "{" + QueryItemAlias + "." + GetPropertyNameForFirstColumn(relViewData.IsStartPageCad) + "}";
+		}
+		template += !string.IsNullOrEmpty(icon) ? "{\"icon\":\"" + icon + "\"," : "{";
+		template += "\"text_template\":\"" + textTemplate + "\"";
+		if (!string.IsNullOrEmpty(itemTypeName))
+		{
+			template += ",\"item_type_name\":\"" + itemTypeName + "\"";
+		}
+		if (!string.IsNullOrEmpty(itemId))
+		{
+			template += ",\"item_id\":\"" + itemId + "\"";
+		}
+		if (!string.IsNullOrEmpty(listValueTemplate))
+		{
+			template += ",\"list_value_template\":\"" + listValueTemplate + "\"";
+		}
+		if (!string.IsNullOrEmpty(listName))
+		{
+			template += ",\"list_name\":\"" + listName + "\"";
+		}
+		if (!string.IsNullOrEmpty(scale))
+		{
+			template += ",\"scale\":\"" + scale + "\"";
+		}
+		if (!string.IsNullOrEmpty(precision))
+		{
+			template += ",\"precision\":\"" + precision + "\"";
+		}
+		template += "}";
+		return template;
+	}
+
+	private static List<RelViewData> GetRelViewsData(Item thisItem)
+	{
+		string relViewIdList = null;
+		if (thisItem.getPropertyAttribute("rel_views_id_list", "condition") == "in")
+		{
+			relViewIdList = thisItem.getProperty("rel_views_id_list");
+		}
+		Item relViewsRequest = thisItem.newItem("Relationship View", "get");
+		if (string.IsNullOrEmpty(relViewIdList))
+		{
+			relViewsRequest.setAttribute("where",
+				"start_page='../Solutions/PLM/scripts/CADReverseItemsGrid.html' or start_page='../Solutions/PLM/scripts/ReverseItemsGrid.html'");
+		}
+		else
+		{
+			relViewsRequest.setPropertyCondition("id", "in");
+			relViewsRequest.setProperty("id", relViewIdList);
+		}
+
+		relViewsRequest.setAttribute("select", "start_page, parameters, source_id(source_id)");
+		Item relViews = relViewsRequest.apply();
+		int relViewsCount = relViews.getItemCount();
+		var relViewsParameters = new List<RelViewData>();
+		for (int i = 0; i < relViewsCount; i++)
+		{
+			Item relView = relViews.getItemByIndex(i);
+			string parameters = relView.getProperty("parameters");
+			Item relType = relView.getPropertyItem("source_id");
+			string sourceItemTypeName = relType.getPropertyAttribute("source_id", "name");
+			if (string.IsNullOrEmpty(parameters))
+			{
+				continue;
+			}
+			//remove quotes at the end and at the start
+			parameters = parameters.Substring(1, parameters.Length - 2);
+			string[] parameterWithNames = parameters.Split('&');
+			var relViewParameters = new RelViewData
+			{
+				RelViewId = relView.getID()
+			};
+			foreach (string parameterWithName in parameterWithNames)
+			{
+				string[] parameterWithNameSplitted = parameterWithName.Split('=');
+				string parameterName = parameterWithNameSplitted[0];
+				string parameterValue = parameterWithNameSplitted[1];
+				switch (parameterName)
+				{
+					case "ITName":
+						relViewParameters.ItName = parameterValue.Replace(" ", "") == "'+itemTypeName+'"
+							? sourceItemTypeName
+							: parameterValue;
+						break;
+					case "itemID":
+						const string supportedItemIdParameterValue = "'+itemID+'";
+						if (parameterValue.Replace(" ", "") != supportedItemIdParameterValue)
+						{
+							string errorMessage = string.Format(CultureInfo.InvariantCulture,
+								"Parameter value of Relationship View with id: {0} is not supported. Only parameter value '{1}'" +
+								" is supported.", relView.getID(), supportedItemIdParameterValue);
+							throw new ArgumentException(errorMessage);
+						}
+						break;
+					case "reverseITName":
+						relViewParameters.ReverseItName = parameterValue;
+						break;
+					case "reverseRelationshipName":
+						relViewParameters.ReverseRelationshipName = parameterValue;
+						break;
+					case "reversePropertyName":
+						relViewParameters.ReversePropertyName = parameterValue;
+						break;
+					case "resolution":
+						relViewParameters.Resolution = parameterValue;
+						break;
+				}
+			}
+			if (string.IsNullOrEmpty(relViewParameters.Resolution))
+			{
+				relViewParameters.Resolution = "Version";
+			}
+			string startPage = relView.getProperty("start_page");
+			string startPageLastSegment = String.Empty;
+			if (!string.IsNullOrEmpty(startPage))
+			{
+				string[] startPageSegments = startPage.Split('/');
+				if (startPageSegments.Length != 0)
+				{
+					startPageLastSegment = startPageSegments[startPageSegments.Length - 1];
+				}
+			}
+			relViewParameters.IsStartPageCad = String.Equals(startPageLastSegment, "CADReverseItemsGrid.html",
+				StringComparison.OrdinalIgnoreCase);
+			relViewsParameters.Add(relViewParameters);
+		}
+		return relViewsParameters;
+	}
+
+	private const string QueryItemAlias = "Root";
+
+	internal static string CreateQueryDefinition(Item thisItem, RelViewData relViewData, string itemTypeId, bool isFederatedIt, IEnumerable<Item> notHiddenOriginalProps,
+		IEnumerable<Item> hiddenOriginalProps, out string queryDefinitionName, out string queryItemRefId)
+	{
+		Item queryDefinition = thisItem.newItem("qry_QueryDefinition", "merge");
+		if (relViewData.RelViewId == "540DF9D605A14DCB870A73AC97D5BEFD" && relViewData.ReverseItName == "CAD")
+		{
+			queryDefinitionName = "PE_CAD_ReverseItemsCAD";
+		}
+		else if (relViewData.RelViewId == "181FEAD375D44BD69D8EF5E3171CAE6F" && relViewData.ReverseItName == "Part")
+		{
+			queryDefinitionName = "PE_CAD_ReverseItemsPart";
+		}
+		else if (relViewData.RelViewId == "01DDD1CCFBF7408793B614181C582F22" && relViewData.ReverseItName == "Manufacturer Part")
+		{
+			queryDefinitionName = "PE_Manufacturer_ReverseItems_ManufPart";
+		}
+		else if (relViewData.RelViewId == "BF5B305866314080871F75D77E15E9C7" && relViewData.ReverseItName == "Part")
+		{
+			queryDefinitionName = "PE_ManufPart_ReverseItemsPart";
+		}
+		else
+		{
+			queryDefinitionName = GenerateNameBasedOnReverseItName(relViewData.ReverseItName) + "_" + thisItem.getNewID().Substring(0, 5);
+		}
+
+
+		string id = CalculateId(queryDefinitionName, "Query Definition");
+		queryDefinition.setID(id);
+		queryDefinition.setProperty("name", queryDefinitionName);
+		Item queryItem = queryDefinition.createRelationship("qry_QueryItem", "merge");
+		id = CalculateId(queryDefinitionName, "Query Item");
+		queryItem.setID(id);
+		if (isFederatedIt)
+		{
+			string filterXml = string.Format(CultureInfo.InvariantCulture,
+				@"<condition>
+	<eq>
+		<property name=""id"" />
+		<constant>/*Condition will be added onGet of ItemType*/{{ITName: '{0}', itemID: '$StartItemId', reverseITName: '{1}', reverseRelationshipName:'{2}', resolution: '{3}'}}</constant>
+	</eq>
+</condition>", relViewData.ItName, relViewData.ReverseItName,
+				relViewData.ReverseRelationshipName,
+				relViewData.Resolution);
+			queryItem.setProperty("filter_xml", filterXml);
+		}
+		else
+		{
+			string filterXml = @"<condition>
+					<eq>
+						<property name=""is_current"" />
+						<constant>1</constant>
+					</eq>
+				</condition>";
+			queryItem.setProperty("filter_xml", filterXml);
+		}
+		queryItem.setProperty("item_type", itemTypeId);
+		queryItem.setProperty("alias", QueryItemAlias);
+		queryItemRefId = CalculateId(queryDefinitionName, "Query Item Ref Id");
+		queryItem.setProperty("ref_id", queryItemRefId);
+
+		int maxSortOrder = 0;
+
+		CreateQueryItemSelectProperties(relViewData, notHiddenOriginalProps, hiddenOriginalProps, queryDefinitionName, queryItem, maxSortOrder);
+
+		if (isFederatedIt)
+		{
+			CreateQueryItemSelectProperty(queryItem, GetPropertyNameForFirstColumn(relViewData.IsStartPageCad), queryDefinitionName);
+		}
+		else
+		{
+			CreateQueryItemSelectPropertyRelationship(queryItem, GetPropertyNameForFirstColumn(true), queryDefinitionName,
+				"delete");
+			CreateQueryItemSelectPropertyRelationship(queryItem, GetPropertyNameForFirstColumn(false), queryDefinitionName,
+				"delete");
+		}
+
+		CreateQueryItemSelectProperty(queryItem, "id", queryDefinitionName);
+		if (isFederatedIt)
+		{
+			CreateQueryItemSelectProperty(queryItem, "real_it_name", queryDefinitionName);
+
+			Item queryParameter = queryDefinition.createRelationship("qry_QueryParameter", "merge");
+			id = CalculateId(queryDefinitionName, "Query Parameter");
+			queryParameter.setID(id);
+			queryParameter.setProperty("name", "StartItemId");
+		}
+		else
+		{
+			CreateQueryItemSelectPropertyRelationship(queryItem, "real_it_name", queryDefinitionName, "delete");
+		}
+
+		Item queryReference = queryDefinition.createRelationship("qry_QueryReference", "merge");
+		id = CalculateId(queryDefinitionName, "Query Reference");
+		queryReference.setID(id);
+		queryReference.setProperty("child_ref_id", queryItemRefId);
+		queryDefinition.setAttribute("doGetItem", "0");
+		Item queryDefinitionResult = queryDefinition.apply();
+
+		if (queryDefinitionResult.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(queryDefinitionResult.dom);
+		}
+		return queryDefinition.getID();
+	}
+
+	private static void CreateQueryItemSelectProperties(RelViewData relViewData, IEnumerable<Item> notHiddenOriginalProps,
+		IEnumerable<Item> hiddenOriginalProps, string queryDefinitionName, Item queryItem, int maxSortOrder)
+	{
+		bool isGenerationHidden = true;
+		bool isMajorRevHidden = true;
+		bool isCommentsHidden = true;
+		bool isLockedByIdHidden = true;
+
+		foreach (Item prop in notHiddenOriginalProps)
+		{
+			string propName = prop.getProperty("name");
+			switch (propName)
+			{
+				case "generation":
+					isGenerationHidden = false;
+					break;
+				case "major_rev":
+					isMajorRevHidden = false;
+					break;
+				case "comments":
+					isCommentsHidden = false;
+					break;
+				case "locked_by_id":
+					isLockedByIdHidden = false;
+					break;
+			}
+			Item selectProperty = CreateQueryItemSelectProperty(queryItem, propName, queryDefinitionName);
+			string sortOrderString = prop.getProperty("sort_order");
+			int sortOrder = int.Parse(sortOrderString, CultureInfo.InvariantCulture);
+			maxSortOrder = Math.Max(sortOrder, maxSortOrder);
+			selectProperty.setProperty("sort_order", sortOrderString); //just to compare with existing in PE QueryDefinitions easier.
+		}
+
+		foreach (Item prop in hiddenOriginalProps)
+		{
+			string propName = prop.getProperty("name");
+			switch (propName)
+			{
+				case "generation":
+					if (relViewData.IsStartPageCad && isGenerationHidden)
+					{
+						Item selectProperty = CreateQueryItemSelectProperty(queryItem, propName, queryDefinitionName);
+						maxSortOrder++;
+						selectProperty.setProperty("sort_order", maxSortOrder.ToString(CultureInfo.InvariantCulture));
+					}
+					break;
+				case "major_rev":
+					if (relViewData.IsStartPageCad && isMajorRevHidden)
+					{
+						Item selectProperty = CreateQueryItemSelectProperty(queryItem, propName, queryDefinitionName);
+						maxSortOrder++;
+						selectProperty.setProperty("sort_order", maxSortOrder.ToString(CultureInfo.InvariantCulture));
+					}
+					break;
+				case "comments":
+					if (relViewData.IsStartPageCad && isCommentsHidden)
+					{
+						Item selectProperty = CreateQueryItemSelectProperty(queryItem, propName, queryDefinitionName);
+						maxSortOrder++;
+						selectProperty.setProperty("sort_order", maxSortOrder.ToString(CultureInfo.InvariantCulture));
+					}
+					break;
+				case "locked_by_id":
+					if (isLockedByIdHidden)
+					{
+						Item selectProperty = CreateQueryItemSelectProperty(queryItem, propName, queryDefinitionName);
+						maxSortOrder++;
+						selectProperty.setProperty("sort_order", maxSortOrder.ToString(CultureInfo.InvariantCulture));
+					}
+					break;
+			}
+		}
+	}
+
+	private static string GetPropertyNameForFirstColumn(bool isStartPageCad)
+	{
+		return isStartPageCad ? "link_status" : "it_open_icon";
+	}
+
+	private static Item CreateQueryItemSelectPropertyRelationship(Item queryItem, string propName, string queryDefinitionName, string action)
+	{
+		Item selectProperty = queryItem.createRelationship("qry_QueryItemSelectProperty", action);
+		string id = CalculateId(queryDefinitionName, propName);
+		selectProperty.setID(id);
+		return selectProperty;
+	}
+
+	private static Item CreateQueryItemSelectProperty(Item queryItem, string propName, string queryDefinitionName)
+	{
+		Item selectProperty = CreateQueryItemSelectPropertyRelationship(queryItem, propName, queryDefinitionName, "merge");
+		selectProperty.setProperty("property_name", propName);
+		return selectProperty;
+	}
+
+	private static void DeleteFormsAndViewsForFederatedIt(Item thisItem, Dictionary<string, string> federatedItemTypeNamesById)
+	{
+		string sourceIds = String.Empty;
+		string formNames = String.Empty;
+		foreach (KeyValuePair<string, string> federatedItemTypeNameById in federatedItemTypeNamesById)
+		{
+			if (!string.IsNullOrEmpty(sourceIds))
+			{
+				sourceIds += ",";
+				formNames += ",";
+			}
+			sourceIds += "'" + System.Security.SecurityElement.Escape(federatedItemTypeNameById.Key) + "'";
+			formNames += "'" + System.Security.SecurityElement.Escape(federatedItemTypeNameById.Value) + "'";
+		}
+		Item view = thisItem.newItem("View", "delete");
+		view.setAttribute("where", "source_id in (" + sourceIds + ")");
+		Item viewResult = view.apply();
+		if (viewResult.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(viewResult.dom);
+		}
+
+		Item form = thisItem.newItem("Form", "delete");
+		form.setAttribute("where", "name in (" + formNames + ")");
+		Item formResult = form.apply();
+		if (formResult.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(formResult.dom);
+		}
+	}
+
+	private static string GenerateNameBasedOnReverseItName(string reverseItName)
+	{
+		const int itemTypeNameMaxLength = 30;
+		const string prefix = "PE_Reverse";
+
+		string federatedItemTypeName = (prefix + reverseItName);
+		if (federatedItemTypeName.Length > itemTypeNameMaxLength)
+		{
+			federatedItemTypeName = federatedItemTypeName.Substring(0, itemTypeNameMaxLength);
+		}
+
+		switch (federatedItemTypeName)  //it's for existing in PE items.
+		{
+			case "PE_ReverseCAD":
+				federatedItemTypeName = "PE_ReverseItemsFedCAD";
+				break;
+			case "PE_ReversePart":
+				federatedItemTypeName = "PE_ReverseItemsFedPart";
+				break;
+		}
+
+		return federatedItemTypeName;
+	}
+
+	private static string CalculateId(string itemName, string propertyName)
+	{
+		var xxHashAlgorithmHelper = new XxHashAlgorithmHelper();
+		string refIdHash = BitConverter.ToString(xxHashAlgorithmHelper.ComputeHash(Encoding.UTF8.GetBytes(itemName)));
+		string propNameHash = BitConverter.ToString(xxHashAlgorithmHelper.ComputeHash(Encoding.UTF8.GetBytes(propertyName)));
+		string id = string.Format(CultureInfo.InvariantCulture, "{0}{1}", refIdHash, propNameHash)
+			.Replace("-", string.Empty);
+
+		return id;
+	}
+
+	private static void CreateFederatedItemType(Item thisItem, Dictionary<string, string> processedFedItIdByReverseItName,
+	RelViewData relViewData, string[] propertyItPropertyNamesToSet, out string federatedItemTypeId,
+	out string federatedItemTypeName, List<Item> originalProperties, Item originalItemType)
+	{
+		federatedItemTypeId = null;
+		Item federatedItemType = thisItem.newItem("ItemType", "merge");
+
+		//set properties of item type Property
+
+		federatedItemTypeName = GenerateNameBasedOnReverseItName(relViewData.ReverseItName);
+
+		string id = CalculateId(federatedItemTypeName, "Fed Item Type");
+		federatedItemType.setID(id);
+
+		foreach (Item existingProperty in originalProperties)
+		{
+			string name = existingProperty.getProperty("name");
+			if (new List<string> { "classification", "config_id", "created_by_id", "created_on", "css", "current_state", "generation", "id", "is_current",
+			"is_released", "keyed_name", "locked_by_id", "major_rev", "managed_by_id", "minor_rev", "modified_by_id", "modified_on", "new_version",
+			"not_lockable", "owned_by_id", "permission_id", "state", "team_id" }.Contains(name)
+				|| (existingProperty.getProperty("is_hidden") == "1" && name != "comments"))
+			{
+				continue;
+			}
+
+			if (name == "it_open_icon" || name == "real_it_name" || name == "link_status")
+			{
+				string message = string.Format(CultureInfo.InvariantCulture, "ItemType \"{0}\" has property \"{1}\". It cannot " +
+					"be handled because it's automatically generated property for automatically generated item type.",
+					originalItemType.getProperty("name"), name);
+				throw new Aras.Server.Core.InnovatorServerException(message);
+			}
+
+			Item propertyToAdd = federatedItemType.createRelationship("Property", "merge");
+			id = CalculateId(federatedItemTypeName, name);
+			propertyToAdd.setID(id);
+
+			foreach (string propName in propertyItPropertyNamesToSet)
+			{
+				propertyToAdd.setProperty(propName, existingProperty.getProperty(propName));
+			}
+		}
+
+		CreateAutogeneratedProperty(federatedItemType, federatedItemTypeName, "it_open_icon", "image", "ItemType Small Icon", null);
+		CreateAutogeneratedProperty(federatedItemType, federatedItemTypeName, "real_it_name", "string", "Real ItemType Name", "30");
+		CreateAutogeneratedProperty(federatedItemType, federatedItemTypeName, "link_status", "string", "Link Status", "256");
+
+		//we can return from the function only after setting federatedItemTypeProperties because it will use even if to return. 
+		if (processedFedItIdByReverseItName.ContainsKey(relViewData.ReverseItName))
+		{
+			federatedItemTypeId = processedFedItIdByReverseItName[relViewData.ReverseItName];
+			return;
+		}
+
+		federatedItemTypeId = federatedItemType.getID();
+
+		//set properties of Fed. Item Type
+		processedFedItIdByReverseItName.Add(relViewData.ReverseItName, federatedItemType.getID());
+		federatedItemType.setProperty("implementation_type", "federated");
+		federatedItemType.setProperty("name", federatedItemTypeName);
+
+		//add Server Event
+		Item serverEvent = federatedItemType.createRelationship("Server Event", "merge");
+		id = CalculateId(federatedItemTypeName, "Server Event");
+		serverEvent.setID(id);
+		serverEvent.setProperty("event_version", "version_1");
+		serverEvent.setProperty("server_event", "onGet");
+		Item method = serverEvent.newItem("Method", "get");
+		method.setProperty("name", "PE_ReverseItemsFed_OnGet");
+		serverEvent.setPropertyItem("related_id", method);
+
+		federatedItemType.setProperty("is_versionable", originalItemType.getProperty("is_versionable"));
+
+		federatedItemType.setAttribute("doGetItem", "0");
+		Item federatedItemTypeResult = federatedItemType.apply();
+
+		if (federatedItemTypeResult.isError())
+		{
+			throw new Aras.Server.Core.InnovatorServerException(federatedItemTypeResult.dom);
+		}
+	}
+
+	private static void CreateAutogeneratedProperty(Item itemType, string federatedItemTypeName, string propertyName,
+		string dataType, string label, string storedLength)
+	{
+		Item prop = itemType.createRelationship("Property", "merge");
+		string id = CalculateId(federatedItemTypeName, propertyName);
+		prop.setID(id);
+		prop.setProperty("name", propertyName);
+		prop.setProperty("data_type", dataType);
+		prop.setProperty("label", label);
+		prop.setProperty("stored_length", storedLength);
+	}
+}
+
+internal class XxHashAlgorithmHelper
+{
+	private readonly object _xxHashAlgorithm;
+	private readonly System.Reflection.MethodInfo _computeHashMethodInfo;
+
+	internal XxHashAlgorithmHelper()
+	{
+		System.Reflection.Assembly targetAssembly = System.Reflection.Assembly.Load("Aras.Cryptography");
+		Type xxHash64AlgorithmBuilderType = targetAssembly.GetTypes().Single(t => t.Name == "XxHash64AlgorithmBuilder");
+		var xxHash64AlgorithmBuilder = Activator.CreateInstance(xxHash64AlgorithmBuilderType);
+
+		System.Reflection.MethodInfo buildMethodInfo = xxHash64AlgorithmBuilderType.GetMethod("Build");
+
+		_xxHashAlgorithm = buildMethodInfo.Invoke(xxHash64AlgorithmBuilder, null);
+		_computeHashMethodInfo = _xxHashAlgorithm.GetType().GetMethod("ComputeHash", new[] { typeof(byte[]) });
+	}
+
+	internal byte[] ComputeHash(byte[] dataBytes)
+	{
+		byte[] result = (byte[])_computeHashMethodInfo.Invoke(_xxHashAlgorithm, new object[] { dataBytes });
+		return result;
+	}
+}
+
+public class RelViewData
+{
+	public string ItName { get; set; }
+	public string ReverseItName { get; set; }
+	public string ReverseRelationshipName { get; set; }
+	public string Resolution { get; set; }
+	public bool IsStartPageCad { get; set; }
+	public string RelViewId { get; set; }
+	public string ReversePropertyName
+	{
+		get; set;
+
+		]]></method_code>
+  <method_type>C#</method_type>
+  <name>PE_ReplaceGridsByTgv</name>
+ </Item>
+</AML>

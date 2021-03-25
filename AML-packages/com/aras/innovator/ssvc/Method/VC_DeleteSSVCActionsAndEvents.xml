@@ -1,0 +1,43 @@
+﻿<AML>
+ <Item type="Method" id="C2B4415970F44A66B52DB445B9FDC8F2" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var itemTypeId = this.getProperty("source_id");
+	Item query = this.newItem("DiscussionTemplate", "get");
+	query.setProperty("source_id", itemTypeId);
+	query = query.apply();
+	if (query.getItemCount() == 0)
+	{
+		Item result = DeleteCreateDiscussionDefinitionAction(itemTypeId, CCO.DB.InnDatabase.QuoteValue);
+		if (result.isError())
+		{
+			return result;
+		}
+		result = DeleteOnAfterCopyServerEvent(itemTypeId, CCO.DB.InnDatabase.QuoteValue);
+		if (result.isError())
+		{
+			return result;
+		}	
+	}
+
+	return this;
+}
+
+private Item DeleteCreateDiscussionDefinitionAction(String itemTypeId, Func<string, string> dbQuoteValue)
+{
+	const string actionId = "5B155B40AD8F405D812EF95BC5848214"; // action "Create Discussion Definition"
+	Item itemAction = this.newItem("Item Action", "delete");
+	itemAction.setAttribute("where", "related_id = '" + dbQuoteValue(actionId) + "' and source_id = '" + dbQuoteValue(itemTypeId) + "'");
+	return itemAction.apply();
+}
+
+private Item DeleteOnAfterCopyServerEvent(String itemTypeId, Func<string, string> dbQuoteValue)
+{
+	const string methodId = "22232D22D323449A936C1B30169D8602"; // method "VC_CopyDiscussionDefinition"
+	Item serverEvent = this.newItem("Server Event", "delete");
+	serverEvent.setAttribute("where", "related_id = '" + dbQuoteValue(methodId) + "' and source_id ='" + dbQuoteValue(itemTypeId) + "'");
+	return serverEvent.apply();
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_DeleteSSVCActionsAndEvents</name>
+ </Item>
+</AML>

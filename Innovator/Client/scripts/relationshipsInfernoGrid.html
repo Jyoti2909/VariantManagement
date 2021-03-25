@@ -1,0 +1,343 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+<head>
+	<title></title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" type="text/css" href="../styles/common.min.css" />
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../javascript/dojox/form/resources/CheckedMultiSelect.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../Modules/aras.innovator.ExtendedClassification/styles/xClassEditor.css";
+		@import "../javascript/include.aspx?classes=ExtendedClassification.css";
+
+		html, body {
+			overflow: hidden;
+			position: relative;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+			font-family: Roboto, 'Noto Sans JP', Arial, sans-serif;
+		}
+
+		#searchPlaceholder, #xClassBarPlaceholder {
+			margin-bottom: 12px;
+		}
+
+		#searchPlaceholderCell {
+			display: table-cell !important;
+		}
+
+		#tb1 {
+			border-top: 0px solid !important;
+		}
+
+		.preventDoubleBorder {
+			margin-top: -1px;
+		}
+
+		.claro .dndDragNodeContainer {
+			padding: 0;
+			border-bottom: none;
+		}
+
+		.claro .dndDragNodeContainer .dndDragSource {
+			margin-left: 0;
+			border: none;
+		}
+
+		.dropbox {
+			position: absolute;
+			right: 0px;
+			bottom: 0px;
+			top: 0px;
+			left: 0px;
+			z-index: 200;
+			background-color: rgba(255, 255, 255, 0.9);
+			border: 1px dashed rgb(179, 179, 179);
+			box-sizing: border-box;
+		}
+		.dropboxInternalContainer{
+			position: absolute;
+			top: 50%;
+			left: 0;
+			right: 0;
+			text-align: center;
+			font-size: 14px;
+			color: #a3a3a3;
+			margin-top: -41px;
+		}
+		.dropboxInternalContainer img{
+			height: 51px;
+			display: inline;
+			margin-bottom: 5px;
+		}
+	</style>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=RelationshipsGridFactory"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../javascript/dojo', async: true"></script>
+	<script type="text/javascript" src="../javascript/dojo/commonForToolbarAndGrid.js"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?files=TopWindowHelper,relationshipsGridFunctions&classes=DragAndDrop,ScriptSet2,ScriptSet6,ToolbarWrapper,ModulesHelper"></script>
+	<script type="text/javascript" src="../Modules/aras.innovator.core.Controls/Scripts/Controls/RelationshipsGrid/styleRelationshipsGrid.js"></script>
+	<script type="text/javascript">
+		// For Advanced search grid
+		// dojo/searchGrid is a layer-bundle of dojo scripts for grid
+		require(['dojo/searchGrid', 'Aras/Client/Controls/Public/GridContainer']);
+		// note, that aras is used, e.g., in search_container.js and SearchGridObject.js. Do not rename it.
+		var topWindow_Experimental = TopWindowHelper.getMostTopWindowWithAras(window),
+			aras = topWindow_Experimental.aras;
+
+		var scripts_url = (aras) ? aras.getScriptsURL() : "";
+		if (scripts_url) document.writeln('<base HREF="' + scripts_url + '" ></base>');
+		//tag base is used with full closing tag because of bug in IE6, where <base> and <base /> causes
+		//tag body becomes child of base tag, instead of proper behavior where base should be child of html tag.
+
+		//workaround for FF Bug 548397 - window.getComputedStyle() returns null inside an iframe with display: none
+		window.getComputedStyleNative = window.getComputedStyle;
+		window.getComputedStyle = function (element, pseudoElt) {
+			return window.getComputedStyleNative(element, pseudoElt) || topWindow_Experimental.getComputedStyle(element, pseudoElt);
+		};
+		ArasModules.soap(null, {async: true, url: aras.getServerURL(), headers: aras.getHttpHeadersForSoapMessage('ApplyItem')});
+		const relationshipsGridType = 'BaseRelationshipsGridWrapper';
+		window.relationshipsGrid = RelationshipsGridFactory.Create(relationshipsGridType);
+	</script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ColumnSelectionFactory,arasInnovatorCUI"></script>
+	<script type="text/javascript" src="../jsBundles/cui.js"></script>
+	<script>
+			window.cui = new CUI_ConfigurableUI();
+
+			initializeRelationshipsGridFunctions(window);
+	</script>
+	<script type="text/javascript">
+		let columnSelectionMediator;
+		let skipCuiToolbarsCreation = (window.frameElement && window.frameElement.skipCuiToolbars) || (QueryString("skipcuitoolbars").toString() == "1");
+		var toolbar = null;
+		var toolbarReady = false,
+			grid = null,
+			gridApplet = null,
+			FilePropertyManager = null,
+			//Get reationships object
+			relationships = parent.relationships,
+			lookUp = showInputHelperDialog,
+			isAltKeyPressed,
+			beforeSaveHandlerKey,
+			editWait,
+			gridResizeHelper = { diff: 0, repeatTimer: null };
+
+		window.addEventListener("keydown", keyDownHandler);
+
+		window.addEventListener("keyup", keyUpHandler);
+
+		onload = onLoadHandler;
+
+		window.addEventListener('DOMContentLoaded', domContentLoadingHandler);
+
+		var callback4NewCmd = null;
+		var callbackFunction4NewCmd_data_bf = true;
+	</script>
+
+	<script type="text/javascript">
+		var bCreateNew = false;
+		var mainWnd = aras.getMainWindow();
+		if (!mainWnd.Cache) {
+			mainWnd.Cache = mainWnd.aras.newObject();
+		}
+
+		var userID = aras.getUserID();
+		var loginName = aras.getLoginName();
+
+		var scriptReady = false;
+
+		var gridReady = false;
+		var toolbarLoaded = false;
+
+		var activeToolbar = null;
+
+		var PickRelatedOption = undefined;
+		var CreateRelatedOption = undefined;
+		var NoRelatedOption = undefined;
+
+		var related_visible = true;
+
+		var replaceButtonEnabled = false;
+		var replaceFlag = true;
+		var replaceToNull = true;
+		var canNewFlag = true;
+
+		var redlineController = new RedlineController();
+		var varName_searchModeId;
+		var varName_searchAml;
+
+		//var Cache = mainWnd.Cache;
+		var Cache = new Object(); // short lived cache for the lists only for the duration of this window.
+		Cache.Lists = mainWnd.aras.newObject();
+
+		//Global cache item files
+		var FilesCache = new Object();
+
+		//+++ global variables to use custom event handlers
+		var relatedItemTypeName = "";
+		var relationshipTypeName = "";
+		//^^^ global variables to use custom event handlers
+
+		//global variables
+		var RelType_ID = QueryString("relTypeID").toString();
+
+		var WorkFlowProc = QueryString("WorkFlowProc").toString();
+
+		var RelType_Nm = "";
+		var RelType_Lbl = "";
+		var RelType_Nd = null;
+		var MAX_OCCURS, MIN_OCCURS;
+		var RELATED_IT_NAME = "";
+		var RELATED_IT_LABEL = "";
+		var RELATED_IS_DEPENDENT = false;
+
+		var DescByItemType_ID = "";
+		var DescByItemType_Nd = null;
+		var DescByVisibleProps = null;
+
+		var RelatedItemType_ID = "";
+		var RelatedItemType_Nd = null;
+		var RelatedVisibleProps = null;
+
+		//--- ui
+		var bSHOW_INPUT_ROW = false; // determine show or hide input row in grid
+		var CAN_RUN_SEARCH = false;
+		var isToolbarUsed = (QueryString("toolbar").toString() == "1");
+		var CUSTOM_TOOLBAR_SRC = QueryString("custom_toolbar_src").toString();
+		var bGridStarted = false;
+
+		/// keyedName
+		var bKEYEDNAME_INPUT_IS_IN_PROGRESS = false;  //  ability to directly key a value in the field/cell(against Dialog)
+
+		var itemID = QueryString("itemID").toString();
+		var itemTypeName = QueryString("ITName").toString();
+		var itemTypeId = aras.getItemTypeId(itemTypeName);
+
+		var relationshipTypeActions = new Object();
+		var relationshipActions = new Object();
+
+		var item = null;
+
+		var propsArr = new Array(); //array of properties attributes: name, DRL, data_type, data_source
+
+		var AUTO_SEARCH_FLAG = false;
+
+		var languagesCount = 1;
+
+		var CONTROLS_STATE_ARRAY = new Object(); //is used for popup menu initialization
+		//setControlEnabled saves information here
+		//to synchronize toolbar controls and popup menu state
+		var ExcludedPopupMenuEntries = new Object();
+		var ExplicitPopupMenuEntriesVisibilities = new Object();
+		var ExplicitToolbarIconsEnabling = new Object();
+		var LATEST_DOM_FROM_SERVER = aras.createXMLDocument();
+		LATEST_DOM_FROM_SERVER.loadXML("<latest_result/>");
+
+		var isEditMode = (QueryString("editMode").toString() == "1");
+		var isPopupDisabled = (QueryString("popupDisabled").toString() == "1");
+
+		// UI
+		var RTActionsCount = 0;
+
+		var deletedFont_const = "Arial-italic-8";
+		var deletedTextColor_const = "#b0b0b0";
+
+		var currSelCell = null; //variables to know what cell is being edited
+		var currSelRowId = ""; //setted in onGridCellEdit
+		var currSelCol = ""; //setted in onGridCellEdit
+
+		var actionsMenuInitialized = false;
+
+		// +++ timeouts
+		var UT_tmt = 0;
+		// --- timeouts
+
+		var rowEventsNames = new Array();
+		var rowEventsMethods_code = new Array();
+		var cellEventsNames = new Array();
+		var cellEventsMethods_code = new Array();
+		var sortPriority = null;
+		var addRowInProgress_Number = 0;
+
+		var FileIT_ID_const = aras.getFileItemTypeID();
+		var popupMenuRowId = "";
+		var popupMenuCol = "";
+
+		searchLocation = "Relationships Grid";
+
+		if (!onInitialize()) {
+			aras.AlertError(aras.getResource("", "relationshipsgrid.initialize_relshipgrid"), null, null, window);
+			topWindow_Experimental.close();
+		}
+
+		initItem();
+
+		var base$onbeforeunload = window.onbeforeunload;
+		onbeforeunload = onbeforeunload_handler_rg;
+
+		var redlineInitId;
+
+		var Synchronizers = new Object();
+
+		var deletedRows = new Object();
+
+		var zeroError = { number: 0, description: aras.getResource("", "relationshipsgrid.ok") };
+
+		var InvalidCellValueAction = { ContinueEdit: 1, Discard: 2 };
+
+		window.ArasModules.intl.locale = aras.getSessionContextLocale();
+
+		aras.setWindowLangAttribute(window);
+		aras.setWindowTitle(
+			window,
+			aras.getResource('', 'frames.item_relationship', RelType_Nm)
+		);
+	</script>
+</head>
+<body class="claro">
+	<div style="display: none;" class="grid_icon_fix"></div>
+	<div style="width: 100%; height: 100%;" id="BorderContainer">
+		<div id="topContainer">
+			<div id="toolbarContainer" style="display: none;" class="preventDoubleBorder">
+				<div id="toolbar_container_cell">
+					<span id="tb1"></span>
+				</div>
+				<script>
+					if (isToolbarUsed || CUSTOM_TOOLBAR_SRC) {
+						tmpIsToolbarUsed = true;
+						if (CUSTOM_TOOLBAR_SRC) {
+							var customToolbarFrame = document.createElement("iframe");
+							customToolbarFrame.setAttribute("id", "toolbar_slot_custom_iframe");
+							customToolbarFrame.setAttribute("src", CUSTOM_TOOLBAR_SRC);
+							customToolbarFrame.setAttribute("frameborder", "0");
+							customToolbarFrame.setAttribute("style", "width: 100%; height: 28px; display: block;");
+							document.getElementById("toolbar_container_cell").appendChild(customToolbarFrame);
+						}
+						if (!cuiToolbarsRequired()) {
+							document.getElementById("toolbarContainer").style.display = "";
+						}
+					}
+				</script>
+			</div>
+			<div id="relationship-toolbars" style="display: none;"></div>
+			<div id="searchPlaceholder" style="display: none;" class="preventDoubleBorder"></div>
+			<div id="xClassBarPlaceholder" class="hidden"></div>
+		</div>
+		<div id="dropbox" class="dropbox" style="display: none;">
+			<div class="dropboxInternalContainer">
+				<img src="../images/FileDragAndDrop.svg">
+				<br/>
+				<span>Drop files here!</span>
+			</div>
+		</div>
+		<div id="gridTD" class="aras-grid_relationship"></div>
+		<aras-pagination></aras-pagination>
+	</div>
+</body>
+</html>

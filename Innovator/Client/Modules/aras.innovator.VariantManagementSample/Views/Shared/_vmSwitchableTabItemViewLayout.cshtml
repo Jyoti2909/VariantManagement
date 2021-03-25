@@ -1,0 +1,27 @@
+﻿@{
+	Layout = "../../../aras.innovator.core.ItemWindow/Views/Shared/_cuiTabItemViewLayout.cshtml";
+
+	string state = Request.QueryString["state"];
+}
+
+@RenderBody()
+
+@section extra_header
+{
+	<link rel="stylesheet" href="@Url.ContentWithSalt("~/Modules/aras.innovator.VariantManagementSample/styles/_vmSwitchableTabItemViewLayout.css")" />
+
+	<script src="@Url.ContentWithSalt("~/Modules/aras.innovator.VariantManagementSample/Scripts/vmSwitcherManager.js")"></script>
+	<script src="@Url.ContentWithSalt("~/Modules/aras.innovator.VariantManagementSample/Scripts/vmSwitchableTabItemViewController.js")"></script>
+
+	<script>
+		document.addEventListener('loadSideBar', function() {
+			const sidebarTabs = window.getSidebar().tabs;
+			const switcherElement = document.querySelector('.aras-item-view__viewers');
+			const switcherManager = new VmSwitcherManager(window.aras, switcherElement);
+
+			window.vmSwitchableTabItemViewController = new VmSwitchableTabItemViewController(sidebarTabs, switcherManager);
+		});
+	</script>
+
+	@RenderSection("extra_view_header", false)
+}

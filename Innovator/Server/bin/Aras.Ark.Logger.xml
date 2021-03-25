@@ -1,0 +1,842 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.Ark.Logger</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.Ark.Logger.Builder.ILoggerBuilder">
+            <summary>
+            Aras/Serilog Logger Builder Interface
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.EnableDebug">
+            <summary>
+            Enable logging for the debugging mode
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.EnableConsole">
+            <summary>
+            Enable logging to the console
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.EnableFile">
+            <summary>
+            Enable logging to the file
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.EnableInnovator">
+            <summary>
+            Enable logging to the Innovator Items
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.SetupConsole(Aras.Ark.Logger.Models.ConsoleOptions)">
+            <summary>
+            Setup logging to the console
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.SetupFile(Aras.Ark.Logger.Models.FileOptions)">
+            <summary>
+            Setup logging to the file
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.SetupInnovator(Aras.Ark.Logger.Models.InnovatorOptions)">
+            <summary>
+            Setup logging to the Innovator Items
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.DisableDebug">
+            <summary>
+            Disable logging for the debugging mode
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.DisableConsole">
+            <summary>
+            Disable logging to the Console
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.DisableFile">
+            <summary>
+            Disable logging to the File
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.DisableInnovator">
+            <summary>
+            Disable logging to the Innovator Items
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.DisableAllOutputs">
+            <summary>
+            Disable all outputs. Reset Settings
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.ILoggerBuilder.BuildLogger">
+            <summary>
+            Run build of the logger accordingly configuration
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.Builder.LoggerBuilder">
+            <summary>
+            Aras/Serilog Logger Builder for console
+            </summary>
+            <summary>
+            Aras/Serilog Logger Builder
+            </summary>
+            <summary>
+            Aras/Serilog Logger Builder for File Logging
+            </summary>
+            <summary>
+            Aras/Serilog Logger Builder for Innovator
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.SetupConsole(Aras.Ark.Logger.Models.ConsoleOptions)">
+            <summary>
+            Setup logging to the console
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.EnableConsole">
+            <summary>
+            Enable logging to the console
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.DisableConsole">
+            <summary>
+            Disable logging to the Console
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="F:Aras.Ark.Logger.Builder.LoggerBuilder.LogFilePath">
+            <summary>
+            Default log file path of logger
+            </summary>
+        </member>
+        <member name="F:Aras.Ark.Logger.Builder.LoggerBuilder.OutputTemplate">
+            <summary>The output template</summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Builder.LoggerBuilder.OutputConfiguration">
+            <summary>
+            Output configuration
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.#ctor(System.String,System.Xml.XPath.IXPathNavigable,Aras.Ark.Logger.Mappers.IConfigMapperFactory,Aras.IOM.Innovator,Aras.Server.Core.CallContext)">
+            <summary>
+            Logger Builder Constructor
+            With option to use Innovator
+            </summary>
+            <param name="methodName">Name of method</param>
+            <param name="contextItem">Context of logging</param>
+            <param name="configMapperFactory">Factory which creates configuration</param>
+            <param name="innovator">Innovator instance from the context</param>
+            <param name="callContext">method call context</param>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.#ctor(System.String,Aras.Ark.Logger.Mappers.IConfigMapper)">
+            <summary>Logger Builder Constructor</summary>
+            <param name="contextItem"></param>
+            <param name="configMapper"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.EnableDebug">
+            <summary>
+            Enable logging for the debugging mode
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.DisableDebug">
+            <summary>
+            Disable logging for the debugging mode
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.DisableAllOutputs">
+            <summary>
+            Disable all outputs. Reset Settings
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.BuildLogger">
+            <summary>
+            Run build of the logger accordingly configuration
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.BuildConfiguration">
+            <summary>
+            Build configuration for the logger
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.UseSuggestedSetting">
+            <summary>
+            Method to apply suggested configuration
+            This method is called if something went wrong
+            This is the place where we can organize default configuration for the
+            logger builder
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.SetupFile(Aras.Ark.Logger.Models.FileOptions)">
+            <summary>
+            Setup logging to the file
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.EnableFile">
+            <summary>
+            Enable logging to the file
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.DisableFile">
+            <summary>
+            Disable logging to the File
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.SetupInnovator(Aras.Ark.Logger.Models.InnovatorOptions)">
+            <summary>
+            Setup logging to the Innovator Items
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.EnableInnovator">
+            <summary>
+            Enable logging to the Innovator Items
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.Builder.LoggerBuilder.DisableInnovator">
+            <summary>
+            Disable logging to the Innovator Items
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.Cleaners.CleanType">
+            <summary>
+            CleanType
+            </summary>
+        </member>
+        <member name="F:Aras.Ark.Logger.Cleaners.CleanType.File">
+            <summary>
+            File.
+            </summary>
+        </member>
+        <member name="F:Aras.Ark.Logger.Cleaners.CleanType.Item">
+            <summary>
+            Item.
+            </summary>
+        </member>
+        <member name="F:Aras.Ark.Logger.Cleaners.CleanType.All">
+            <summary>
+            All.
+            </summary>
+        </member>
+        <member name="T:Aras.Ark.Logger.Cleaners.CleanerStrategy">
+            <summary>
+            FileCleanerFactory class
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Cleaners.CleanerStrategy.#ctor(Aras.Ark.Logger.Models.OutputConfiguration)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="outputConfiguration"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.Cleaners.CleanerStrategy.Execute(System.String,System.Double)">
+            <summary>
+            Execute Cleaners
+            </summary>
+            <param name="cleanType"></param>
+            <param name="expirationDays"></param>
+        </member>
+        <member name="T:Aras.Ark.Logger.Cleaners.FileCleaner">
+            <summary>
+            FileCleaner
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Cleaners.FileCleaner.#ctor(Aras.Ark.Logger.Models.OutputConfiguration)">
+            <summary>
+            FileCleaner Constructor
+            </summary>
+            <param name="outputConfiguration"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.Cleaners.FileCleaner.Clean(System.Double)">
+            <summary>
+            Clean files
+            </summary>
+            <param expirationDays="customSectionName"></param>
+        </member>
+        <member name="T:Aras.Ark.Logger.Cleaners.ICleaner">
+            <summary></summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Cleaners.ICleaner.Clean(System.Double)">
+            <summary>Clean</summary>
+        </member>
+        <member name="T:Aras.Ark.Logger.Cleaners.ICleanerStrategy">
+            <summary></summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Cleaners.ICleanerStrategy.Execute(System.String,System.Double)">
+            <summary>Execute</summary>
+        </member>
+        <member name="T:Aras.Ark.Logger.Cleaners.ItemCleaner">
+            <summary>
+            ItemCleaner
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Cleaners.ItemCleaner.#ctor(Aras.Ark.Logger.Models.OutputConfiguration)">
+            <summary>
+            ItemCleaner Constructor
+            </summary>
+            <param name="outputConfiguration"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.Cleaners.ItemCleaner.Clean(System.Double)">
+            <summary>
+            Clean items
+            </summary>
+            <param expirationDays="customSectionName"></param>
+        </member>
+        <member name="T:Aras.Ark.Logger.DAL.IInnovatorDAL">
+            <summary>
+            InnovatorDAL Interface
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.DAL.IInnovatorDAL.NewItem(System.String,System.String)">
+            <summary>
+            New Item
+            </summary>
+            <param name="type"></param>
+            <param name="action"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.DAL.IInnovatorDAL.ApplyItem(Aras.IOM.Item)">
+            <summary>
+            ApplyItem
+            </summary>
+            <param name="item"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.DAL.IInnovatorDAL.ApplyInSeparateTransaction(Aras.IOM.Item)">
+            <summary>
+            Apply In Separate Transaction
+            </summary>
+            <param name="item"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.DAL.IInnovatorDAL.ApplyInSeparateTransaction(System.String)">
+            <summary>
+            Apply In Separate Transaction
+            </summary>
+            <param name="query"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.DAL.InnovatorDAL">
+            <summary>
+            InnovatorDAL
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.DAL.InnovatorDAL.#ctor(Aras.IOM.Innovator,Aras.Server.Core.CallContext)">
+            <summary>
+            Constructor
+            </summary>
+            <param name="innovator"></param>
+            <param name="callContext"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.DAL.InnovatorDAL.NewItem(System.String,System.String)">
+            <summary>
+            New Item
+            </summary>
+            <param name="type"></param>
+            <param name="action"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.DAL.InnovatorDAL.ApplyItem(Aras.IOM.Item)">
+            <summary>
+            Apply Item
+            </summary>
+            <param name="item"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.DAL.InnovatorDAL.ApplyInSeparateTransaction(Aras.IOM.Item)">
+            <summary>
+            Apply In Separate Transaction
+            </summary>
+            <param name="item"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.Ark.Logger.DAL.InnovatorDAL.ApplyInSeparateTransaction(System.String)">
+            <summary>
+            Apply In Separate Transaction
+            </summary>
+            <param name="query"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.LoggerExceptionHandler">
+            <summary>
+            Class that is responsible for logging of exceptions that occur in Logger internal logic.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerExceptionHandler.WriteLogToFile(System.Exception)">
+            <summary>
+            Write exception log to the loggerExceptions.txt file in dll directory.
+            </summary>
+            <param name="loggerException"></param>
+        </member>
+        <member name="T:Aras.Ark.Logger.Models.ConsoleOptions">
+            <summary>
+            Console options
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.ConsoleOptions.Enabled">
+            <summary>
+            Set if console is enabled
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.ConsoleOptions.MinimumLevel">
+            <summary>
+            Minimum Level
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.ConsoleOptions.OutputTemplate">
+            <summary>
+            Output Template
+            </summary>
+        </member>
+        <member name="T:Aras.Ark.Logger.Models.FileOptions">
+            <summary>File Options</summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.FileOptions.Enabled">
+            <summary>
+            Set if File Logging is enabled
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.FileOptions.MinimumLevel">
+            <summary>
+            Minimum Level
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.FileOptions.Path">
+            <summary>
+            Path to the file
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.FileOptions.FileSizeLimitBytes">
+            <summary>
+            Log file size limit in bytes.
+            Once the limit is reached, no further events will be written until the next roll point (if rolling is specified).
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.FileOptions.FlushToDiskInterval">
+            <summary>
+            Interval between writings to log file in milliseconds.
+            By default every logging event triggers writing operation, which may cause performance issues.
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.FileOptions.RollingInterval">
+            <summary>
+            Interval between creations of new log files.
+            By default all events will be written into the same file.
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.FileOptions.RollOnFileSizeLimit">
+            <summary>
+            If this flag is set to true - new log file will be created after reaching file size limit.
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.FileOptions.OutputTemplate">
+            <summary>
+            Output Template
+            </summary>
+        </member>
+        <member name="T:Aras.Ark.Logger.Models.InnovatorOptions">
+            <summary>Innovator Options</summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.InnovatorOptions.Enabled">
+            <summary>
+            Set if Innovator is enabled
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.InnovatorOptions.MinimumLevel">
+            <summary>
+            Minimum Level
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.InnovatorOptions.InnovatorDAL">
+            <summary>
+            InnovatorDAL
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.InnovatorOptions.LoggingSessionDetails">
+            <summary>
+            Logging Session Details
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.InnovatorOptions.MethodName">
+            <summary>
+            Name of method
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.InnovatorOptions.BatchSize">
+            <summary>
+            Logs count in one AML query
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.InnovatorOptions.OutputTemplate">
+            <summary>
+            Output Template
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.InnovatorOptions.SessionId">
+            <summary>
+            Session id of current session
+            </summary>
+        </member>
+        <member name="T:Aras.Ark.Logger.Models.MethodContext">
+            <summary>
+            Method context
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.MethodContext.MethodName">
+            <summary>
+            Name of method
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.MethodContext.Context">
+            <summary>
+            AMl context of method
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Models.MethodContext.#ctor(System.String,System.String)">
+            <summary>
+            MethodContext constructor
+            </summary>
+            <param name="methodName">Name of method</param>
+            <param name="context">Context of method</param>
+        </member>
+        <member name="T:Aras.Ark.Logger.Models.Output`1">
+            <summary>
+            Output
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Models.Output`1.#ctor">
+            <summary>
+            Constructor
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.Output`1.Enabled">
+            <summary>
+            Enable output
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.Output`1.Options">
+            <summary>
+            Settings for output
+            </summary>
+        </member>
+        <member name="T:Aras.Ark.Logger.Models.OutputConfiguration">
+            <summary>Output Configuration</summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.OutputConfiguration.Console">
+            <summary>
+            Console
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.OutputConfiguration.File">
+            <summary>
+            File
+            </summary>
+        </member>
+        <member name="P:Aras.Ark.Logger.Models.OutputConfiguration.Innovator">
+            <summary>
+            Innovator
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Models.OutputConfiguration.#ctor">
+            <summary>
+            Constructor
+            </summary>
+        </member>
+        <member name="T:Aras.Ark.Logger.SerilogSinks.LoggerSinkConfigurationExtensions">
+            <summary>Logger Sink Configuration Extensions</summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.SerilogSinks.LoggerSinkConfigurationExtensions.InnovatorSink(Serilog.Configuration.LoggerSinkConfiguration,Aras.Ark.Logger.Models.InnovatorOptions,System.String)">
+            <summary>Innovators the sink.</summary>
+            <param name="loggerConfiguration">The logger configuration.</param>
+            <param name="innovatorOptions">The innovator options.</param>
+            <param name="outputTemplate">The output template.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.Mappers.IConfigMapper">
+            <summary></summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Mappers.IConfigMapper.Map(System.String)">
+            <summary>Maps this instance.</summary>
+            <param name="customSectionName"></param>
+            <returns>OutputConfiguration</returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.Mappers.ConfigMapperFactory">
+            <summary>
+            ConfigMapperFactory class
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Mappers.ConfigMapperFactory.CreateConfigMapper">
+            <summary>
+            Creates ConfigMapper
+            </summary>
+            <returns>ConfigMapper</returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.Mappers.IConfigMapperFactory">
+            <summary>
+            IConfigMapperFactory interface
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Mappers.IConfigMapperFactory.CreateConfigMapper">
+            <summary>
+            Creates IConfigMapper
+            </summary>
+            <returns>IConfigMapper</returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.Mappers.XmlDocumentConfigMapperFactory">
+            <summary>
+            XmlDocumentConfigMapperFactory class
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Mappers.XmlDocumentConfigMapperFactory.#ctor(System.Xml.XPath.IXPathNavigable)">
+            <summary>
+            Factory constructor 
+            </summary>
+            <param name="document">Xml config</param>
+        </member>
+        <member name="M:Aras.Ark.Logger.Mappers.XmlDocumentConfigMapperFactory.CreateConfigMapper">
+            <summary>
+            Creates XmlDocumentConfigMapper
+            </summary>
+            <returns>XmlDocumentConfigMapper</returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.Mappers.XmlDocumentConfigMapper">
+            <summary>
+            XmlDocumentConfigMapper maps configuration from xml document.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Mappers.XmlDocumentConfigMapper.#ctor(System.Xml.XPath.IXPathNavigable)">
+            <summary>
+            XmlDocumentConfigMapper constructor
+            </summary>
+            <param name="config"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.Mappers.XmlDocumentConfigMapper.Map(System.String)">
+            <summary>Maps configuration from xml document.</summary>
+            <param name="customSectionName"></param>
+            <returns>OutputConfiguration</returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.Mappers.ConfigMapper">
+            <summary>
+            ConfigMapper
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Mappers.ConfigMapper.Map(System.String)">
+            <summary>
+            Maps this instance.
+            </summary>
+            <param name="customSectionName"></param>
+            <returns>
+            OutputConfiguration
+            </returns>
+            <exception cref="T:System.Xml.Schema.XmlSchemaValidationException"></exception>
+        </member>
+        <member name="T:Aras.Ark.Logger.Services.ILoggerConfigXmlValidation">
+            <summary></summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Services.ILoggerConfigXmlValidation.Validate(System.String,System.String)">
+            <summary>Validates the specified XML path.</summary>
+            <param name="xmlPath">The XML path.</param>
+            <param name="xsdPath">The XSD path.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.Services.LoggerConfigXmlValidation">
+            <summary></summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.Services.LoggerConfigXmlValidation.Validate(System.String,System.String)">
+            <summary>Validates the specified XML path.</summary>
+            <param name="xmlPath">The XML path.</param>
+            <param name="xsdPath">The XSD path.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.ILogger">
+            <summary>
+            Wrapper for a currently used logging library.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Debug(System.Exception,System.String,System.Object[])">
+            <summary>
+            Write debug level log to the sink.
+            </summary>
+            <param name="exception"></param>
+            <param name="messageTemplate"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Debug(System.String,System.Object[])">
+            <summary>
+            Write debug level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Verbose(System.Exception,System.String,System.Object[])">
+            <summary>
+            Write verbose level log to the sink.
+            </summary>
+            <param name="exception"></param>
+            <param name="messageTemplate"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Verbose(System.String,System.Object[])">
+            <summary>
+            Write verbose level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Information(System.String,System.Exception,System.Object[])">
+            <summary>
+            Write information level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="exception"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Information(System.String,System.Object[])">
+            <summary>
+            Write information level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Warning(System.String,System.Exception,System.Object[])">
+            <summary>
+            Write warning level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="exception"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Warning(System.String,System.Object[])">
+            <summary>
+            Write warning level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Error(System.String,System.Exception,System.Object[])">
+            <summary>
+            Write error level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="exception"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Error(System.String,System.Object[])">
+            <summary>
+            Write error level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Fatal(System.String,System.Exception,System.Object[])">
+            <summary>
+            Write fatal level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="exception"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Fatal(System.String,System.Object[])">
+            <summary>
+            Write fatal level log to the sink.
+            </summary>
+            <param name="messageTemplate"></param>
+            <param name="args"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.ILogger.Clean(System.String,System.Double)">
+            <summary>
+            Write fatal level log to the sink.
+            </summary>
+            <param name="cleanType"></param>
+            <param name="expirationDays"></param>
+        </member>
+        <member name="P:Aras.Ark.Logger.ILogger.SessionId">
+            <summary>
+            Get current session id
+            </summary>
+            <returns>Current session id</returns>
+        </member>
+        <member name="T:Aras.Ark.Logger.LoggerWrapper">
+            <summary>
+            Wrapper for a currently used logging library.
+            </summary>
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.#ctor(Serilog.Core.Logger,Aras.Ark.Logger.Models.OutputConfiguration)">
+            <summary>
+            LoggerWrapper constructor.
+            </summary>
+            <param name="serilogLogger"></param>
+            <param name="outputConfiguration"></param>
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Debug(System.Exception,System.String,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Debug(System.String,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Verbose(System.Exception,System.String,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Verbose(System.String,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Information(System.String,System.Exception,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Information(System.String,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Warning(System.String,System.Exception,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Warning(System.String,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Error(System.String,System.Exception,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Error(System.String,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Fatal(System.String,System.Exception,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Fatal(System.String,System.Object[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Clean(System.String,System.Double)">
+            <inheritdoc />
+        </member>
+        <member name="M:Aras.Ark.Logger.LoggerWrapper.Dispose">
+            <inheritdoc />
+        </member>
+        <member name="P:Aras.Ark.Logger.LoggerWrapper.SessionId">
+            <inheritdoc />
+        </member>
+    </members>
+</doc>

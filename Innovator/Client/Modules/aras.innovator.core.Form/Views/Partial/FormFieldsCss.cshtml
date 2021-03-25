@@ -1,0 +1,63 @@
+﻿@using System
+@using System.Text.RegularExpressions
+@using Models.AML.Enums
+@using Models.AML.ItemTypes
+@model System.Collections.Generic.List<Models.AML.ItemTypes.Item>
+<!-- fields CSS -->
+<style type="text/css">
+@{
+	var regExSpace = new Regex(@"\s", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	var regExThisFieldRule = new Regex(@"{\$this field rule}", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Compiled);
+	foreach (var item in Model)
+	{
+		var field = (Field) item;
+		var css = field.Css.Value;
+		var fieldName = field.Name;
+		if (!String.IsNullOrEmpty(css))
+		{
+			var ruleName = ".sys_fn_" + regExSpace.Replace(fieldName, "_");
+			var fieldCss = regExThisFieldRule.Replace(css, ruleName);
+			if (fieldCss == css)
+			{
+				<text>
+					@ruleName
+					{
+						@Html.Raw(css)
+					} 
+				</text>
+			}
+			else
+			{
+				@Html.Raw(fieldCss)
+				@:
+			}		   
+		}
+		@:.@fieldName 
+		@:{
+			if (!String.IsNullOrEmpty(field.BGColor.Value))
+			{
+				@:background-color:@Html.Raw(field.BGColor.Value);
+			}
+			if (field.FieldType == FieldType.Label)
+			{
+				if (!String.IsNullOrEmpty(field.FontFamily))
+				{
+					@:font-family:@Html.Raw(field.FontFamily);
+				}
+				if (!String.IsNullOrEmpty(field.FontSize))
+				{
+					@:font-size:@Html.Raw(field.FontSize);
+				}
+				if (!String.IsNullOrEmpty(field.FontWeight))
+				{
+					@:font-weight:@Html.Raw(field.FontWeight);
+				}   
+				if (!String.IsNullOrEmpty(field.FontColor))
+				{
+					@:color:@Html.Raw(field.FontColor);
+				}	   
+			}
+		@:}
+	}
+}
+</style>

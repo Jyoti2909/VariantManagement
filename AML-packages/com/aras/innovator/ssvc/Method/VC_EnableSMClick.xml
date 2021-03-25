@@ -1,0 +1,94 @@
+﻿<AML>
+ <Item type="Method" id="84A9D5F70BE14CCF87BDBB8FE36FE5A5" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (!aras.commonProperties.IsSSVCLicenseOk) {
+	var fakeItemType = new Item('', '');
+	var tmpXml = '<Item type=\'ItemType\' id=\'tmp_id_B11375B3522440E887BBF723D093F958\'>' +
+			'<Relationships><Item type=\'Property\'><name>tmp_to_avoid_js_error</name></Item></Relationships></Item>';
+	fakeItemType.loadAML(tmpXml);
+	var param = {
+		title: aras.getResource('', 'ssvc.aras_secure_social'),
+		formId: 'B11375B3522440E887BBF723D093F958', //SSVC_GetLicenseMessage
+		aras: aras,
+		isEditMode: false,
+		item: new Item('tmp_type_name_B11375B3522440E887BBF723D093F958', ''),
+		itemTypeNd: fakeItemType.node,
+		dialogHeight: 250, dialogWidth: 600,
+		content: 'ShowFormAsADialog.html'
+	};
+	aras.getMostTopWindowWithAras(window).ArasModules.Dialog.show('iframe', param);
+	return;
+}
+this.disabled = true;
+var inn = aras.newIOMInnovator();
+var itemTypeId = document.item.getAttribute('id');
+var response = inn.applyMethod('VC_CreateDefaultTemplate', '<item_type_id>' + itemTypeId + '</item_type_id>');
+if (response.isError()) {
+	aras.AlertError(response);
+	return;
+}
+
+if (!addActionForAddingToBookmarks(itemTypeId)) {
+	return;
+}
+
+var method = aras.newIOMItem('Method', 'get');
+method.setAttribute('select', 'method_code');
+method.setAttribute('where', 'name=\'VC_SMButtonsPopulate\'');
+method = method.apply();
+if (method.isError()) {
+	aras.AlertError(method);
+	return;
+}
+var evalMethod = window.eval;
+evalMethod(method.getProperty('method_code'));
+var relCheckboxId = document.fieldsTab['is_relationship'].replace('span', '');
+var relCheckboxNode = document.getElementById(relCheckboxId);
+relCheckboxNode.setAttribute('disabled', true);
+
+function addActionForAddingToBookmarks(typeId) {
+	var actionId = getAddToBmrkActionId();
+	if (!actionId) {
+		return false;
+	}
+	if (!doesItemHaveAddToBookmarksAction(typeId, actionId)) {
+		var action = aras.newIOMItem('Item Action', 'add');
+		action.setProperty('source_id', typeId);
+		action.setProperty('related_id', actionId);
+		var result = action.apply();
+		if (result.isError()) {
+			aras.AlertError(result.getErrorString());
+			return false;
+		}
+	}
+	return true;
+}
+
+function getAddToBmrkActionId() {
+	var actionName = 'VC_AddItemsToBookmarks';
+	var action = aras.newIOMItem('Action', 'get');
+	action.setProperty('name', actionName);
+	var result = action.apply();
+	if (result.isError()) {
+		aras.AlertError(result.getErrorString());
+		return false;
+	} else {
+		return result.getID();
+	}
+}
+
+function doesItemHaveAddToBookmarksAction(itemTypeId, actionId) {
+	var check = aras.newIOMItem('Item Action', 'get');
+	check.setProperty('source_id', itemTypeId);
+	check.setProperty('related_id', actionId);
+	var result = check.apply();
+	if (result.isError() || result.getItemCount() < 1) {
+		return false;
+	}
+	return true;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>VC_EnableSMClick</name>
+ </Item>
+</AML>

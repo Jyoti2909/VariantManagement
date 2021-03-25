@@ -1,0 +1,192 @@
+﻿<AML>
+ <Item type="Method" where="config_id='F01803D08F2644CB89A6277119A87FE1'" action="edit">
+  <method_code><![CDATA[Aras.ConversionFramework.Models.ConversionTask task = new Aras.ConversionFramework.Models.ConversionTask()
+{
+  Item = this
+};
+
+Innovator inn = this.getInnovator();
+
+Dictionary<string, string> files = new Dictionary<string, string>
+{
+	{ "thumbnail", String.Empty },
+	{ "viewable", String.Empty },
+	{ "monolithicModel", String.Empty },
+	{ "shatteredModel", String.Empty },
+	{ "view", String.Empty }
+};
+
+Item results = task.Item.getItemsByXPath("Relationships/Item[@type='ConversionTaskResult']");
+for(int resIndex = 0; resIndex < results.getItemCount(); resIndex++)
+{
+  Item result = results.getItemByIndex(resIndex);
+  switch(result.getProperty("kind", ""))
+  {
+  	case "png":
+  	  files["thumbnail"] = "vault:///?fileId=" + result.getProperty("file_id", "");
+  	  break;
+  	case "pdf":
+  	  files["viewable"] = result.getProperty("file_id", "");
+  	  break;
+  	case "prc":
+  	  files["monolithicModel"] = result.getProperty("file_id", "");
+  	  break;
+	case "scs":
+	  files["view"] = result.getProperty("file_id", "");
+  	  break;
+	case "xml":
+	  files["shatteredModel"] = result.getProperty("file_id", "");
+  	  break;
+  }
+}
+
+if(files.Any(item => !String.IsNullOrEmpty(item.Value)))
+{
+	List<String> depIds = new List<String>();
+    Item dependencies = task.Item.getItemsByXPath("Relationships/Item[@type='ConversionTaskDependency']");
+    for(int depIndex = 0; depIndex < dependencies.getItemCount(); depIndex++)
+    {
+      Item dependency = dependencies.getItemByIndex(depIndex);
+      depIds.Add(dependency.getProperty("dependency_id", ""));
+    }
+    
+    if(depIds.Count > 0)
+    {
+        bool dynamicAssemblyEnabled = false;
+        if(!string.IsNullOrEmpty(task.UserData))
+        {
+            XmlDocument userDataDocument = new XmlDocument();
+            userDataDocument.LoadXml(task.UserData);
+			XmlNode dynamicAssemblyEnabledNode = userDataDocument.DocumentElement.SelectSingleNode("DynamicAssemblyEnabled");
+			if (dynamicAssemblyEnabledNode != null) {
+    			string dynamicAssemblyEnabledStr = dynamicAssemblyEnabledNode.InnerText;
+    			dynamicAssemblyEnabled = ("TRUE".Equals(dynamicAssemblyEnabledStr.ToUpperInvariant()) || 
+    			                            "YES".Equals(dynamicAssemblyEnabledStr.ToUpperInvariant()));
+			}
+        }
+
+        String updateQuery = @"<AML>
+        <Item type='CAD' idlist='" + String.Join(",", depIds.ToArray()) + @"' action='update'>
+         {0}
+         {1}
+         {2}
+         {3}
+        </Item>
+        </AML>";
+        updateQuery = String.Format(updateQuery,
+            !String.IsNullOrEmpty(files["thumbnail"]) ? ("<thumbnail>" + files["thumbnail"] + "</thumbnail>\n") : "" ,
+            !String.IsNullOrEmpty(files["viewable"]) ? ("<viewable_file>" + files["viewable"] + "</viewable_file>\n") : "",
+            !String.IsNullOrEmpty(files["monolithicModel"]) ? ("<monolithic_model_file>" + files["monolithicModel"] + "</monolithic_model_file>\n") : "",
+            dynamicAssemblyEnabled ? "<dynamic_enabled>1</dynamic_enabled>\n" : "");
+	          
+        // Creates FileRepresentation native_file -> scs
+        XmlDocument document = new XmlDocument();
+        document.LoadXml(task.UserData);
+		XmlNode convertToType = document.DocumentElement.SelectSingleNode("ConvertToTypes/type");
+		if (convertToType == null || (convertToType != null && convertToType.InnerText != "PDF"))
+		{
+            if(!string.IsNullOrEmpty(files["view"]) || !string.IsNullOrEmpty(files["shatteredModel"]))
+            {
+                XmlNode nativeFileIdNode = document.DocumentElement.SelectSingleNode("NativeFileId");
+                string nativeFileId = nativeFileIdNode.InnerText;
+                Item nativeFile = inn.newItem("File", "get");
+                nativeFile.setID(nativeFileId);
+                nativeFile.setProperty("select", "file_type");
+                nativeFile = nativeFile.apply();
+
+                if(nativeFile.isError())
+                {
+                    return nativeFile;
+                }
+
+                string nativeFileTypeId = nativeFile.getProperty("file_type");
+                Item fileRepresentationType = inn.newItem("fr_RepresentationType", "get");
+                fileRepresentationType.setProperty("source_id", nativeFileTypeId);
+                fileRepresentationType.setProperty("name", "SCS Representation");
+                fileRepresentationType = fileRepresentationType.apply();
+
+                if (fileRepresentationType.isError())
+                {
+                    return fileRepresentationType;
+                }
+
+                string representationTypeId = fileRepresentationType.getID();
+                Item fileRepresentation = inn.newItem("fr_Representation", "add");
+
+                fileRepresentation.setProperty("source_id", nativeFileId);
+                fileRepresentation.setProperty("representation_type_id", representationTypeId);
+
+                if(!string.IsNullOrEmpty(files["view"]))
+                {
+                    Item scsRepresentationFile = fileRepresentation.createRelationship("fr_RepresentationFile", "add");
+                    scsRepresentationFile.setProperty("related_id", files["view"]);
+                    scsRepresentationFile.setProperty("kind", "scs");
+                }
+
+                if(!string.IsNullOrEmpty(files["shatteredModel"]))
+                {
+                    Item xmlRepresentationFile = fileRepresentation.createRelationship("fr_RepresentationFile", "add");
+                    xmlRepresentationFile.setProperty("related_id", files["shatteredModel"]);
+                    xmlRepresentationFile.setProperty("kind", "xml_assemblytree");
+                }
+
+                Aras.Server.Security.Identity identity = Aras.Server.Security.Identity.GetByName("File Representation Manager");
+                bool granted = Aras.Server.Security.Permissions.GrantIdentity(identity);
+
+                try
+                {
+                    fileRepresentation = fileRepresentation.apply();
+                }
+                finally
+                {
+                    if (granted)
+                    {
+                        Aras.Server.Security.Permissions.RevokeIdentity(identity);
+                    }
+                }
+
+                if (fileRepresentation.isError())
+                {
+                    return fileRepresentation;
+                }
+            }
+        }
+
+		Item result = inn.applyAML(updateQuery);
+
+		if(result.isError())
+		{
+			return result;
+		}
+	
+        if (!string.IsNullOrEmpty(files["shatteredModel"]))
+        {
+			// When file's count for conversion is equal to 1 it means conversion of CAD component
+			// and CAD item bounding box related properties should be populated in this case.
+			XmlNodeList filesNd = document.DocumentElement.SelectNodes("FilesToLoad/file");
+			if (filesNd.Count <= 1)
+			{
+                string cadId = depIds.ToArray()[0];
+                string parametersTemplate = @"<cad_id>{0}</cad_id><shattered_xml_id>{1}</shattered_xml_id>";
+                string parameters = string.Format(CultureInfo.InvariantCulture, parametersTemplate, cadId, files["shatteredModel"]);
+
+                Item methodRes = inn.applyMethod("CR_3DCADtoDyn_FillBoundingBoxes", parameters);
+			}
+
+			// When CAD assembly was converted for opening by 'Dynamic HOOPS Viewer' appropriate 'CAD Instance'
+			// items should be created based on information from assembly tree XML created by HOOPS converter
+            if (dynamicAssemblyEnabled)
+            {
+                string rootCadId = depIds.ToArray()[0];
+                string inParams = @"<root_cad_id>{0}</root_cad_id><master_xml_id>{1}</master_xml_id>";
+                string res = string.Format(CultureInfo.InvariantCulture, inParams, rootCadId, files["shatteredModel"]);
+
+                Item methodResult = inn.applyMethod("CR_3DCADtoDyn_CreateCadInstances", res);
+            }
+        }
+	}
+}
+
+return task.Item;]]></method_code>
+ </Item>
+</AML>

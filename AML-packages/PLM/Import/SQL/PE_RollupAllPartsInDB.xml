@@ -1,0 +1,276 @@
+﻿<AML>
+ <Item type="SQL" id="34C575E26E3A46EBBD9D0FFD2193D470" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>PE_RollupAllPartsInDB</old_name>
+  <sqlserver_body><![CDATA[/*
+name: PE_RollupAllPartsInDB
+solution: PLM
+created: 06-OCT-2006
+purpose: Rollup all Parts cost and weight in DB
+notes:
+*/
+
+CREATE PROCEDURE PE_RollupAllPartsInDB
+AS
+BEGIN
+  -- 1. Set cost to NULL on Parts with no Part Goal for cost
+  UPDATE PART
+  SET cost=NULL, cost_basis=NULL
+  FROM PART all_parts
+    INNER JOIN
+      (SELECT p.id id
+       FROM PART p LEFT OUTER JOIN PART_GOAL pg ON p.id=pg.source_id
+       WHERE (pg.goal IS NULL) OR (pg.goal != 'Cost')) no_cost
+    ON all_parts.id=no_cost.id;
+  
+  -- 2. Set weight to NULL on Parts with no Part Goal for weight
+  UPDATE PART
+  SET weight=NULL, weight_basis=NULL
+  FROM PART all_parts
+    INNER JOIN
+      (SELECT p.id id
+       FROM PART p LEFT OUTER JOIN PART_GOAL pg ON p.id=pg.source_id
+       WHERE (pg.goal IS NULL) OR (pg.goal != 'Weight')) no_weight
+    ON all_parts.id=no_weight.id;
+  
+  DECLARE @TMP_PARTS TABLE(id CHAR(32) COLLATE database_default PRIMARY KEY);
+  
+  -- 3. Find leaf Parts
+  INSERT INTO @TMP_PARTS(id)
+  SELECT p.id
+  FROM PART p LEFT OUTER JOIN PART_BOM pb ON p.id=pb.source_id
+  WHERE pb.id IS NULL;
+  
+  -- 4. In all leaf Part Goals calculated_value must be NULL
+  UPDATE PART_GOAL
+  SET calculated_value=NULL
+  FROM PART_GOAL pg INNER JOIN @TMP_PARTS p ON p.id=pg.source_id;
+  
+  -- 5. Set correct costs on leaf Parts
+  UPDATE PART
+  SET cost=new_cost.new_value, cost_basis=new_cost.new_basis
+  FROM PART p
+    INNER JOIN
+      (SELECT p.id id, ISNULL(actual_value,ISNULL(estimated_value,target_value)) new_value,
+         CASE
+           WHEN actual_value IS NOT NULL THEN 'Actual'
+           WHEN estimated_value IS NOT NULL THEN 'Estimated'
+           WHEN target_value IS NOT NULL THEN 'Target'
+           ELSE NULL
+         END new_basis
+       FROM @TMP_PARTS p INNER JOIN PART_GOAL pg ON p.id=pg.source_id
+       WHERE pg.goal='Cost') new_cost
+    ON p.id=new_cost.id;
+  
+  -- 6. Set correct weights on leaf Parts
+  UPDATE PART
+  SET weight=new_weight.new_value, weight_basis=new_weight.new_basis
+  FROM PART p
+    INNER JOIN
+      (SELECT p.id id, ISNULL(actual_value,ISNULL(estimated_value,target_value)) new_value,
+         CASE
+           WHEN actual_value IS NOT NULL THEN 'Actual'
+           WHEN estimated_value IS NOT NULL THEN 'Estimated'
+           WHEN target_value IS NOT NULL THEN 'Target'
+           ELSE NULL
+         END new_basis
+       FROM @TMP_PARTS p INNER JOIN PART_GOAL pg ON p.id=pg.source_id
+       WHERE pg.goal='Weight') new_weight
+    ON p.id=new_weight.id;
+  
+  DELETE FROM @TMP_PARTS;
+  
+  -- 3. Update all parts and check for infinite loop
+  CREATE TABLE #tmp_PARTS_TO_USE(id CHAR(32) COLLATE database_default PRIMARY KEY);
+  INSERT INTO #tmp_PARTS_TO_USE(id)
+  SELECT id
+  FROM PART;
+  
+  IF (@@ROWCOUNT = 0) /* there are no Parts in DB */
+  BEGIN
+    GOTO finish;
+  END
+  
+  CREATE TABLE #tmp_BOMS_TO_USE(id CHAR(32) COLLATE database_default PRIMARY KEY,
+                               source_id CHAR(32) COLLATE database_default,
+                               related_id CHAR(32) COLLATE database_default);
+  
+  INSERT INTO #tmp_BOMS_TO_USE(id, source_id, related_id)
+  SELECT id, source_id, related_id
+  FROM PART_BOM
+  WHERE related_id IS NOT NULL;
+  
+  IF (@@ROWCOUNT > 0) /* there are Part BOMs in DB */
+  BEGIN
+    CREATE INDEX ind_tmp_BOMS_TO_USE_source_id ON #tmp_BOMS_TO_USE(source_id);
+    CREATE INDEX ind_tmp_BOMS_TO_USE_related_id ON #tmp_BOMS_TO_USE(related_id);
+  END
+  
+  /* +++ iterate over leaf Parts. And calculate their costs. Check for infinite loop also. */
+  DECLARE @PARTS_TO_ROLLUP INT;
+  DECLARE @CURRENT_PARTS TABLE(id CHAR(32) COLLATE database_default PRIMARY KEY);
+  
+  WHILE (1=1)
+  BEGIN
+    DECLARE @LEAF_PARTS_COUNT INT;
+    
+    /* find leaf nodes */
+    INSERT INTO @TMP_PARTS(id)
+    SELECT p.id
+    FROM #tmp_PARTS_TO_USE p LEFT OUTER JOIN #tmp_BOMS_TO_USE pb ON p.id=pb.source_id
+    WHERE pb.id IS NULL;
+    
+    SET @LEAF_PARTS_COUNT = @@ROWCOUNT;
+    
+    IF (@LEAF_PARTS_COUNT = 0) /* there are no leaf nodes any more */
+    BEGIN
+      DECLARE @infinitive_loop_parent_id CHAR(32); /* id of some "parent" Part from infinite loop */
+      DECLARE @infinitive_loop_child_id CHAR(32);  /* id of "child" Part from infinite loop */
+      
+      SELECT TOP 1 @infinitive_loop_parent_id = pb.source_id, @infinitive_loop_child_id=pb.related_id
+      FROM #tmp_BOMS_TO_USE pb INNER JOIN #tmp_PARTS_TO_USE p ON pb.source_id=p.id;
+      
+      IF (@infinitive_loop_parent_id IS NULL) /* there is no infinite loop. There no Parts any more. */
+      BEGIN
+        BREAK;
+      END
+      
+      DECLARE @parent_part_keyed_name VARCHAR(128);
+      DECLARE @child_part_keyed_name VARCHAR(128);
+      
+      SELECT @parent_part_keyed_name=ISNULL(keyed_name,id)
+      FROM PART
+      WHERE id=@infinitive_loop_parent_id;
+      
+      SELECT @child_part_keyed_name=ISNULL(keyed_name,id)
+      FROM PART
+      WHERE id=@infinitive_loop_child_id;
+      
+      DECLARE @infiniteLoopMsg VARCHAR(2000); /* 2000>>128+32+128+32 */
+      DECLARE @infiniteLoopSeverity INT;     /* the user-defined severity level associated with this message */
+      DECLARE @infiniteLoopState INT;        /* Is an arbitrary integer from 1 through 127 that represents information about the invocation state of the error. */
+      
+      SET @infiniteLoopMsg = '<B>The BOM structure contains circular references</B>. Please check dependency between Part "' + 
+        @parent_part_keyed_name + '" (' + @infinitive_loop_parent_id + ') and "' +
+        @child_part_keyed_name + '" (' + @infinitive_loop_child_id + ').';
+      SET @infiniteLoopSeverity = 16; /* Severity Levels 11 through 16: These messages indicate errors that can be corrected by the user. */
+      SET @infiniteLoopState = 1;
+      
+      RAISERROR(@infiniteLoopMsg, @infiniteLoopSeverity, @infiniteLoopState)
+      RETURN @@ERROR;
+    END
+    
+    DELETE FROM @CURRENT_PARTS;
+    
+    INSERT INTO @CURRENT_PARTS(id)
+    SELECT DISTINCT pb.source_id
+    FROM #tmp_BOMS_TO_USE pb INNER JOIN @TMP_PARTS p ON p.id=pb.related_id;
+    
+    -- . Update calculated cost value on Part Goals
+    UPDATE PART_GOAL
+    SET calculated_value=new_cost.new_val
+    FROM PART_GOAL pg
+      INNER JOIN
+        (SELECT pg.id id,
+           CASE
+             WHEN SUM(
+                    CASE child_p.cost_basis
+                      WHEN 'Actual' THEN 0
+                      WHEN 'Calculated' THEN 0
+                      WHEN 'Estimated' THEN 0
+                      ELSE 1
+                    END
+                  ) > 0 THEN NULL
+             ELSE SUM( ISNULL(child_p.cost,0)*ISNULL(child_pb.quantity, 0) )
+           END new_val
+         FROM @CURRENT_PARTS current_p
+           INNER JOIN PART_GOAL pg ON pg.source_id=current_p.id
+           INNER JOIN PART_BOM child_pb ON child_pb.source_id=current_p.id
+           INNER JOIN PART child_p ON child_pb.related_id=child_p.id
+         WHERE pg.goal='Cost'
+         GROUP BY pg.id) new_cost
+      ON pg.id=new_cost.id;
+      
+    -- . Set correct costs on current Parts
+    UPDATE PART
+    SET cost=new_cost.new_value, cost_basis=new_cost.new_basis
+    FROM PART p
+      INNER JOIN
+        (SELECT p.id id, ISNULL(actual_value,ISNULL(calculated_value,ISNULL(estimated_value,target_value))) new_value,
+           CASE
+             WHEN actual_value IS NOT NULL THEN 'Actual'
+             WHEN calculated_value IS NOT NULL THEN 'Calculated'
+             WHEN estimated_value IS NOT NULL THEN 'Estimated'
+             WHEN target_value IS NOT NULL THEN 'Target'
+             ELSE NULL
+           END new_basis
+         FROM @CURRENT_PARTS p INNER JOIN PART_GOAL pg ON p.id=pg.source_id
+         WHERE pg.goal='Cost') new_cost
+      ON p.id=new_cost.id;
+    
+    -- . Update calculated weight value on Part Goals
+    UPDATE PART_GOAL
+    SET calculated_value=new_weight.new_val
+    FROM PART_GOAL pg
+      INNER JOIN
+        (SELECT pg.id id,
+           CASE
+             WHEN SUM(
+                    CASE child_p.weight_basis
+                      WHEN 'Actual' THEN 0
+                      WHEN 'Calculated' THEN 0
+                      WHEN 'Estimated' THEN 0
+                      ELSE 1
+                    END
+                  ) > 0 THEN NULL
+             ELSE SUM( ISNULL(child_p.weight,0)*ISNULL(child_pb.quantity, 0) )
+           END new_val
+         FROM @CURRENT_PARTS current_p
+           INNER JOIN PART_GOAL pg ON pg.source_id=current_p.id
+           INNER JOIN PART_BOM child_pb ON child_pb.source_id=current_p.id
+           INNER JOIN PART child_p ON child_pb.related_id=child_p.id
+         WHERE pg.goal='Weight'
+         GROUP BY pg.id) new_weight
+      ON pg.id=new_weight.id;
+    
+    -- . Set correct weights on current Parts
+    UPDATE PART
+    SET weight=new_weight.new_value, weight_basis=new_weight.new_basis
+    FROM PART p
+      INNER JOIN
+        (SELECT p.id id, ISNULL(actual_value,ISNULL(calculated_value,ISNULL(estimated_value,target_value))) new_value,
+           CASE
+             WHEN actual_value IS NOT NULL THEN 'Actual'
+             WHEN calculated_value IS NOT NULL THEN 'Calculated'
+             WHEN estimated_value IS NOT NULL THEN 'Estimated'
+             WHEN target_value IS NOT NULL THEN 'Target'
+             ELSE NULL
+           END new_basis
+         FROM @CURRENT_PARTS p INNER JOIN PART_GOAL pg ON p.id=pg.source_id
+         WHERE pg.goal='Weight') new_weight
+      ON p.id=new_weight.id;
+    
+    /* delete BOMs pointing to leaf Parts */
+    DELETE FROM #tmp_BOMS_TO_USE
+    WHERE related_id IN (SELECT id FROM @TMP_PARTS);
+    
+    /* delete leaf Parts */
+    DELETE FROM #tmp_PARTS_TO_USE
+    WHERE id IN (SELECT id FROM @TMP_PARTS);
+
+    DELETE FROM @TMP_PARTS;
+  END
+  DROP TABLE #tmp_BOMS_TO_USE;
+  DROP TABLE #tmp_PARTS_TO_USE;
+  /* +++ iterate over leaf Parts */
+
+finish:
+  SELECT 1 success;
+END
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>PE_RollupAllPartsInDB</name>
+ </Item>
+</AML>

@@ -1,0 +1,90 @@
+﻿<AML>
+ <Item type="Method" id="45700D9A7D214C03B019FBDF00F75E14" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var rels = this.getRelationships();
+var relsCount = rels.getItemCount();
+if (relsCount == 0)
+{
+	return this.getInnovator().newError("There is no properties for check.");
+}
+
+var propsByItemtype = new Dictionary<string, List<string>>();
+
+var rgx = new System.Text.RegularExpressions.Regex("[\\[\\]]");
+for (var i = 0; i < relsCount; i++)
+{
+	var current = rels.getItemByIndex(i);
+
+	var parsedDbName = rgx.Replace(current.getProperty("db_name"), "").Split('.');
+	var itName = parsedDbName[1];
+	string propertyName = parsedDbName[2].ToLowerInvariant();
+	if (propsByItemtype.ContainsKey(itName))
+	{
+		propsByItemtype[itName].Add(propertyName);
+	}
+	else
+	{
+		propsByItemtype.Add(itName, new List<string>(){ propertyName });
+	}
+}
+
+var template =
+	"<Item type='ItemType' action='get' select='name, id'>" +
+	"	<name>{0}</name>" +
+	"	<Relationships>" +
+	"		<Item type='Property' select='name, id'>" +
+	"			{1}" +
+	"		</Item>" +
+	"	</Relationships>" +
+	"</Item>";
+
+var aml = "";
+
+foreach (var itemtype in propsByItemtype)
+{
+	string amlPropertyNameConditionOr = "<OR>";
+	foreach (string propertyName in itemtype.Value)
+	{
+		amlPropertyNameConditionOr += "<name>" + System.Security.SecurityElement.Escape(propertyName) + "</name>";
+	}
+	amlPropertyNameConditionOr += "</OR>";
+	aml += string.Format(CultureInfo.InvariantCulture, template, System.Security.SecurityElement.Escape(itemtype.Key), amlPropertyNameConditionOr);
+}
+
+var result = this.getInnovator().applyAML("<AML>" + aml + "</AML>");
+if (result.isError())
+{
+	return result;
+}
+
+var itemtypes = result.getItemsByXPath("//Item[@type='ItemType']");
+var itemsWithAllowedProps = this.newItem("Method", "GetItemTypeProperties");
+for (var i = 0; i < itemtypes.getItemCount(); i++)
+{
+	var itemtype = itemtypes.getItemByIndex(i);
+	var methodRel = this.newItem(itemtype.getProperty("name"));
+	methodRel.setID(itemtype.getID());
+	itemsWithAllowedProps.addRelationship(methodRel);
+}
+
+itemsWithAllowedProps = itemsWithAllowedProps.apply();
+if (itemsWithAllowedProps.isError())
+{
+	return itemsWithAllowedProps;
+}
+
+foreach (var itemtype in propsByItemtype)
+{
+	var itemTypeName = itemtype.Key;
+	var items = itemtype.Value.Select(prop => itemsWithAllowedProps.getItemsByXPath("//Item[instance_data='" + itemTypeName + "']/Relationships/Item[name='" + prop + "']"));
+	if (items.Any(item => item.node == null))
+	{
+		return this.getInnovator().newResult("true");
+	}
+}
+
+return this.getInnovator().newResult("false");]]></method_code>
+  <method_type>C#</method_type>
+  <name>IsReportContainsExcludedProps</name>
+ </Item>
+</AML>

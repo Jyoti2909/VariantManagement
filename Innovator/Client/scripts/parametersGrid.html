@@ -1,0 +1,1060 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+<title></title>
+<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules"></script>
+<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js"
+		data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../javascript/dojo'"></script>
+<script type="text/javascript" src="../javascript/include.aspx?classes=XmlDocument"></script>
+<script type="text/javascript" src="../javascript/QueryString.js"></script>
+<script type="text/javascript" src="../javascript/include.aspx?classes=ScriptSet2"></script>
+<script type="text/javascript" src="../javascript/include.aspx?classes=ScriptSet6"></script>
+<script type="text/javascript" src="../javascript/include.aspx?classes=Dependencies"></script>
+
+<style type="text/css">
+	@import "../javascript/dojo/resources/dojo.css";
+	@import "../javascript/dijit/themes/claro/claro.css";
+	@import "../javascript/dojox/grid/resources/claroGrid.css";
+	@import "../javascript/dojox/form/resources/CheckedMultiSelect.css";
+	@import "../javascript/include.aspx?classes=common.css";
+	@import "../styles/default.css";
+	@import "../styles/common.min.css";
+
+	html, body {
+		overflow: hidden;
+		width: 100%;
+		height: 100%;
+		margin: 0px;
+		padding: 0px;
+	}
+</style>
+
+<script type="text/javascript">
+// Tab
+var tabID = new QueryString("relTypeID").toString();
+var isParametersTabVisible = true;
+var parametersTabName = "Parameters";
+
+// Query Parameters
+var item = null;
+var itemID = new QueryString("itemID").toString();
+var itemTypeName = new QueryString("ITName").toString();
+var isEditMode = (new QueryString("editMode").toString() == '1');
+var args = window.frameElement ? window.frameElement.dialogArguments : window.dialogArguments;
+args = args || {};
+var isForceEscapeHTMLInData = args.isForceEscapeHTMLInData;
+var itemTypeNodeArg = args.itemTypeNodeArg;
+if (!itemTypeNodeArg) {
+	itemTypeNd = parent.aras.getItemTypeDictionary(itemTypeName).node;
+} else {
+	itemTypeNd = itemTypeNodeArg;
+	item = args.itemNodeArg;
+}
+
+onload = function onloadHandler() {
+	if (args && typeof(args.beforeOnload) === "function") {
+		args.beforeOnload(window);
+	}
+}
+// Grid variables
+var grid = null;
+var prevCellEditValue = null;
+
+// Current edit item parameters
+var currSelCell = null;	// Variables to know what cell is being edited
+var currSelRowId = '';	// Setted in startCellEdit
+var currSelColumn = '';	// Setted in startCellEdit
+
+// Other
+var bKEYEDNAME_INPUT_IS_IN_PROGRESS = false; // ability to directly key a value in the field/cell(against Dialog)
+var treeDom = null; // Current transformed XML for item
+var listsInfo = null;
+var languagesCount = 1;
+
+// Keyboard handlers
+var isAltKeyPressed;
+var aras = parent.aras;
+
+// Starting grid parameters
+var gridParameters = {
+	connectId: "gridTD",
+	canEdit_Experimental: canEditCell,
+	validateCell_Experimental: validateCell
+};
+
+	window.addEventListener('DOMContentLoaded', function() {
+		ArasModules.soap(null, {async: true, method: 'ApplyItem', url: parent.aras.getServerURL(), headers: parent.aras.getHttpHeadersForSoapMessage('ApplyItem')});
+	});
+
+clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", gridParameters, function(control) {
+
+	grid = control;
+	grid.grid_Experimental.focus.focusGridView = function() {};
+
+	if (!isForceEscapeHTMLInData) {
+		grid.grid_Experimental.escapeHTMLInData = false;
+	}
+	clientControlsFactory.on(grid, {
+		"gridXmlLoaded": onXmlLoaded,
+		"onApplyEdit_Experimental": applyCellEdit,
+		"onStartEdit_Experimental": startCellEdit,
+		"onInputHelperShow_Experimental": onShowInputHelperDialog
+	});
+
+
+	window.addEventListener("beforeunload", function () {
+		if (currSelCell) {
+			saveEditedData();
+		}
+	});
+
+	window.addEventListener("keydown", function (ev) {
+		ev = ev || window.event;
+		isAltKeyPressed = ev.altKey;
+	});
+
+	window.addEventListener("keyup", function (ev) {
+		ev = ev || window.event;
+		isAltKeyPressed = ev.altKey;
+	});
+
+	if (parent.aras.getLanguagesResultNd() && parent.aras.getLanguagesResultNd().selectNodes("Item[@type='Language']")) {
+		languagesCount = parent.aras.getLanguagesResultNd().selectNodes("Item[@type='Language']").length;
+	}
+
+	window.onresize = function ()
+	{
+		// For proper MV List editing while resizing page (with open dropdown menu)
+		if (grid.grid_Experimental.edit.isEditing()) {
+			grid.grid_Experimental.edit.apply();
+		}
+	};
+
+	refreshParametersTab();
+});
+
+if (parent.relationshipsControl) {
+	parent.relationshipsControl.try2RefreshParametersTab = refreshParametersTab;
+}
+
+/**
+ * @param rowId selected grid Row ID
+ * @param field selected grid field name
+ * @returns {@code true} if field is editable
+ */
+function canEditCell(rowId, field) {
+	var columnIndex = grid.columns_Experimental.get(field, "index");
+
+	var itemIsTempOrLocked = (parent.aras.isTempEx(item) || parent.aras.isLocked(item));
+	// If item isn't locked or item isn't temp (new item)
+	if (!itemIsTempOrLocked) {
+		return false;
+	}
+
+	// If field is non-editable
+	if (grid.grid_Experimental.getCell(columnIndex).editableType == 'NOEDIT') {
+		return false;
+	}
+
+	// Check property node is exist
+	var propNd = getPropertyByID(rowId);
+	var propName = parent.aras.getItemProperty(propNd, "name");
+	var propValue = parent.aras.getItemProperty(item, propName);
+
+	if (!propNd) {
+		return false;
+	}
+
+	// Set current edit cells
+	currSelColumn = grid.columns_Experimental.get(field, "index");
+	if (currSelColumn) {
+		currSelCell = grid.cells(rowId, currSelColumn);
+		currSelRowId = rowId;
+	}
+
+	// Set previous value of cell for using in popup dialogs
+	prevCellEditValue = propValue;
+
+	// Lets find special dialog for value type
+	var propDataType = parent.aras.getItemProperty(propNd, "data_type");
+
+	switch (propDataType) {
+		case 'date':
+			var format = parent.aras.getItemProperty(propNd, 'pattern');
+			var dotNetFormat = parent.aras.getDotNetDatePattern(format);
+			showDateDialog(propValue, dotNetFormat);
+			return false;
+		case 'item':
+			var propDataSource = parent.aras.getItemProperty(propNd, 'data_source');
+			var propDataSourceType = parent.aras.getItemTypeName(propDataSource);
+			grid.grid_Experimental.getCell(columnIndex).dataSourceName = propDataSourceType;
+			if (propDataSourceType === 'File') {
+				var fileId = parent.aras.getItemProperty(item, propName);
+				if (!isAltKeyPressed) {
+					showFileDialog(fileId)
+				}
+				else {
+					showFileDialogAltPressed();
+				}
+				return false;
+			}
+			return true;
+		case 'color':
+			showColorDialog(propValue);
+			return false;
+		case 'text':
+			showTextAreaDialog(itemIsTempOrLocked);
+			return false;
+		case 'image':
+			var imgSrcReg = /^<img src=["']([^'"]*)['"]/;
+			if (imgSrcReg.test(propValue)) {
+				propValue = "<img src='" + propValue + "' style='width:20px;height:20px' align='left'>"; // TODO: To CSS
+			}
+			showImageDialog(propValue);
+			return false;
+		case 'formatted text':
+			showHTMLEditorDialog(itemIsTempOrLocked);
+			return false;
+		case 'sequence':
+			return true;
+		case 'filter list':
+			var filteredValues = GetFilteredValuesForProperty(propNd);
+			if (filteredValues) {
+				var _listValues = filteredValues.values;
+				var _listLabels = filteredValues.labels;
+				if (filteredValues.values.indexOf(grid.GetCellValue(rowId, currSelColumn)) === -1)
+				{
+					grid.cells(rowId, currSelColumn).SetValue("");
+				}
+				grid.cells(rowId, currSelColumn).setCombo(_listLabels, _listValues);
+			}
+			grid.columns_Experimental.set(field, "editType", "FilterComboBox");
+			break;
+		case 'ml_string':
+			if (languagesCount > 1) {
+				grid.columns_Experimental.set(field, "editType", "InputHelper");
+			}
+			return true;
+		case 'color list':
+		case 'mv_list':
+			// Renew CheckedMultiSelect widget for its option field reinitialization
+			var widget = this.grid_Experimental.layout.structure[0].cells[0][1].widget;
+			if (widget != null) {
+				widget.destroyRecursive(false);
+				this.grid_Experimental.layout.structure[0].cells[0][1].widget = null;
+			}
+			break;
+	}
+	return true;
+}
+
+/***
+ * Start cell editing event
+ * @param rowId grid Row ID
+ * @param field grid field name
+ */
+function startCellEdit(rowId, field) {
+	if (currSelColumn) {
+		var propNd = getPropertyByID(rowId);
+		var propName = parent.aras.getItemProperty(propNd, "name");
+
+		// Saving previous cell value
+		prevCellEditValue = parent.aras.getItemProperty(item, propName);
+
+		var propDataType = parent.aras.getItemProperty(propNd, "data_type");
+
+		// TODO: Temporary fix to pass smoke tests, will be changed soon after cell editType implementing
+		var cellOptions;
+		switch (propDataType) {
+			case 'ml_string':
+				grid.columns_Experimental.set(field, "editType", "InputHelper");
+				break;
+			case 'item':
+				grid.columns_Experimental.set(field, "editType", "InputHelper");
+				currSelCell.InputHelperEnabled = true;
+				break;
+			case 'list':
+			case 'color list':
+				// Typical list implementation
+				cellOptions = getListInfoForCell(currSelCell);
+				if (cellOptions) {
+					grid.columns_Experimental.set(field, "editType", "FilterComboBox");
+					grid.columns_Experimental.set(field, "comboList", cellOptions.label);
+					currSelCell.InputHelperEnabled = true;
+				}
+				break;
+			case 'mv_list':
+				cellOptions = getListInfoForCell(currSelCell);
+				if (cellOptions) {
+					grid.columns_Experimental.set(field, "editType", "CheckedMultiSelect");
+					grid.columns_Experimental.set(field, "comboList", cellOptions.value, cellOptions.label);
+				}
+				break;
+			case 'filter list':
+				if (propName == 'pattern') {
+					var props = item.selectNodes('Relationships/Item[@type="Property" and (not(@action) or (@action!="delete" and @action!="purge"))]');
+					var _listValues = [''];
+					for (var i = 0; i < props.length; i++) {
+						var propNm = parent.aras.getItemProperty(props[i], 'name');
+						_listValues.push(propNm);
+					}
+
+					_listValues.sort();
+
+					grid.columns_Experimental.set(field, "editType", "FilterComboBox");
+					grid.columns_Experimental.set(field, "comboList", _listValues);
+				}
+				break;
+			default:
+				// Reset all input helpers into column
+				grid.columns_Experimental.set(field, "editType", undefined);
+				grid.columns_Experimental.set(field, "comboList", undefined);
+				currSelCell.InputHelperEnabled = undefined;
+		}
+	}
+}
+
+/***
+ * Event firing when Save event received to iFrame
+ * @param rowId grid Row ID
+ * @param field filed name
+ * @param value new field value
+ * @returns {boolean} operation result
+ */
+function applyCellEdit(rowId, field, value) {
+	if (rowId == "input_row") {
+		applyCellEditCommon.call(this, rowId, field, value);
+		return false;
+	}
+
+	if (!bKEYEDNAME_INPUT_IS_IN_PROGRESS) {
+		var res = onParamsGridCellEdit(rowId, currSelColumn);
+		if (res) {
+			currSelCell = null;
+		}
+	}
+	else {
+		onInputKeyedNameFinished(value, currSelColumn);
+	}
+	return true;
+}
+
+/***
+ * Refreshing grid parameters tab
+ */
+function refreshParametersTab() {
+	// If curSelCell != null - editing didn't finishing yet : focusing editcell
+	if (currSelCell)
+	{
+		currSelCell.focusWidget();
+	}
+
+	initItem();
+
+	// Lets get classification item XML description
+	if (args.getGridContainerXmlCallback) {
+		treeDom = args.getGridContainerXmlCallback();
+	} else {
+		var classification = parent.aras.getItemProperty(item, 'classification');
+		treeDom = parent.aras.uiGenerateParametersGrid(itemTypeName, classification);
+	}
+
+	listsInfo = treeDom.selectSingleNode("/table/listsInfo");
+
+	grid.InitXML_Experimental(treeDom.xml);
+}
+
+// TODO: Need to rewrite item initialization
+function initItem() {
+	if (!itemTypeNodeArg) {
+		item = parent.aras.getItemById(itemTypeName, itemID, 0);
+	}
+}
+
+/***
+ * Fired when XML loading into grid
+ */
+function onXmlLoaded() {
+	// Sort grid
+	grid.grid_Experimental.sort(function (a, b) {
+		return a.seq - b.seq;
+	});
+
+	var rowsNum = grid.grid_Experimental.rowCount;
+	for (var i = 0; i < rowsNum; i++) {
+		var rowID = grid.getRowId(i);
+		var propNd = getPropertyByID(rowID);
+		if (!propNd) {
+			continue;
+		}
+
+		var propName = parent.aras.getItemProperty(propNd, "name");
+		var propDataType = parent.aras.getItemProperty(propNd, "data_type");
+
+		var propValue = parent.aras.getItemProperty(item, propName);
+		var propTxt = propValue;
+
+		var f2Header = " [...]";
+		var addHeader = false;
+
+		// Set list ids to cells
+		if (propDataType.search(/^list$|^color list$|^filter list$|^mv_list$/) == 0) {
+			var listId = getListNumberByRowID(rowID);
+			if (listId > -1) {
+				grid.cells(rowID, 1).setListId(listId);
+			}
+		}
+
+		var value = propValue;
+		var cell = grid.cells(rowID, 1);
+
+		// Transforming field text depend on type
+		switch (propDataType) {
+			case 'item':
+				var propDataSource = parent.aras.getItemProperty(propNd, 'data_source');
+				if (propDataSource) {
+					var itemType = parent.aras.getItemFromServer('ItemType', propDataSource, 'name');
+					if (itemType) {
+						addHeader = true;
+					}
+				}
+
+				if (propValue) {
+					if (item.selectSingleNode(propName + "/@keyed_name")) {
+						propTxt = item.selectSingleNode(propName + "/@keyed_name").text;
+					}
+					if (!propTxt) {
+						var type = '';
+						if (item.selectSingleNode(propName + "/@type")) {
+							type = item.selectSingleNode(propName + "/@type").text;
+						}
+						propTxt = parent.aras.getKeyedName(propValue, type);
+					}
+				}
+				break;
+			case 'date':
+				addHeader = true;
+				if (propValue) {
+					var format = parent.aras.getItemProperty(propNd, "pattern");
+					var dotNetFormat = parent.aras.getDotNetDatePattern(format);
+					propTxt = parent.aras.convertFromNeutral(propValue, 'date', dotNetFormat);
+				}
+				break;
+			case 'text':
+			case 'formatted text':
+				addHeader = true;
+				break;
+			case 'color':
+				value = propValue ? propValue : '#ffffff';
+				cell.setBgColor_Experimental(value);
+				propTxt = '';
+				addHeader = true;
+				break;
+			case 'color list':
+				cell.setBgColor_Experimental(propValue ? propValue : '#ffffff');
+				break;
+			case 'mv_list':
+				// Set actual, selected items to field comma separated
+				// NOTE: Using values instead options because in TypeEditCell selected items checked by InDatum (= values)
+				propTxt = propValue;
+				break;
+			case 'image':
+				addHeader = true;
+				if (propValue) {
+					propTxt = '<img src="' + propValue + '" style="width:20px;height:20px" align="left">'; // TODO: To CSS
+				}
+				else {
+					propTxt = '';
+				}
+				break;
+			case 'boolean':
+				propTxt = '<checkbox state="' + propValue + '">';
+				break;
+			case 'md5':
+				propTxt = "***";
+				break;
+		}
+
+		// Setting formatted value to the grid cell
+		cell.setValue(propTxt);
+
+		// Add [...] header if needed
+		var header = grid.cells(rowID, 0).getValue();
+		if (addHeader && header.indexOf(f2Header) < 0) {
+			header += f2Header;
+			grid.cells(rowID, 0).setValue(header);
+		}
+	}
+
+	// Update grid after loading XML (need for IE)
+	grid.grid_Experimental.update();
+}
+
+/***
+ * On press F2 key || InputHelper control click event
+ * @param rowID current rowId
+ * @param column current column
+ */
+function onShowInputHelperDialog(rowID, column) {
+	var propNd = getPropertyByID(rowID);
+	if (!propNd) {
+		return;
+	}
+
+	var dataSource = parent.aras.getItemProperty(propNd, "data_source");
+	if (!dataSource) {
+		return;
+	}
+
+	var propName = parent.aras.getItemProperty(propNd, "name");
+	var sourceIt = parent.aras.getItemFromServer('ItemType', dataSource, 'name');
+	if (!sourceIt) {
+		return;
+	}
+	setTimeout("showSearchDialog('" + sourceIt.getProperty('name') + "', '" + propName + "')", 10);
+}
+
+/**
+ * Fired after successful cell edit
+ * @param rowId grid row id
+ * @param col grid column
+ */
+function onParamsGridCellEdit(rowId, col) {
+	var cell = grid.cells(rowId, col);
+
+	if (!cell.wasChanged()) {
+		return true;
+	}
+
+	var val = '';
+	var visibleVal = '';
+
+	if (cell.isCheckbox()) {
+		val = cell.isChecked() ? 1 : 0;
+	}
+	else {
+		val = cell.getValue();
+	}
+
+	var propNd = getPropertyByID(rowId);
+	var propDataType = parent.aras.getItemProperty(propNd, "data_type");
+	switch (propDataType) {
+		case 'boolean':
+			visibleVal = '<checkbox state="' + val + '">';
+			break;
+		case 'item':
+			var itemDataSource = parent.aras.getItemProperty(propNd, "data_source");
+			var propSource_ITName = parent.aras.getItemTypeName(itemDataSource);
+			visibleVal = val;
+			var isItemExist = parent.aras.uiGetItemByKeyedName(propSource_ITName, val);
+			if (isItemExist) {
+				val = isItemExist;
+			}
+			else {
+				val = '';
+			}
+			break;
+		case 'md5':
+			val = parent.aras.calcMD5(val);
+			visibleVal = "***";
+			break;
+		case 'color list':
+			cell.setBgColor_Experimental(val ? val : "#ffffff");
+			visibleVal = val;
+			break;
+		default:
+			visibleVal = val;
+			break;
+	}
+	if (propDataType == "list") {
+		RemoveFilterValuesOnChangeList(propNd, col);
+	}
+	setupProperty(val, visibleVal, col, rowId);
+	return true;
+}
+
+/**
+ * Fired after cell editing
+ * @param val current item value
+ * @param rowId grid row id
+ */
+function onInputKeyedNameFinished(val, rowId) {
+	bKEYEDNAME_INPUT_IS_IN_PROGRESS = false;
+	if (val == '') {
+		setupProperty('', '', currSelColumn, rowId);
+		return true;
+	}
+
+	var propNd = getPropertyByID(rowId);
+	if (!propNd) {
+		return true;
+	}
+
+	var itemDataSource = parent.aras.getItemProperty(propNd, "data_source");
+	if (!itemDataSource) {
+		return true;
+	}
+
+	var itemTypeName = parent.aras.getItemTypeName(itemDataSource);
+
+	var tmpItem = parent.aras.uiGetItemByKeyedName(itemTypeName, val);
+
+	if (tmpItem) {
+		var keyedName = tmpItem.selectSingleNode('keyed_name').text;
+		var res = tmpItem.cloneNode(false);
+		res.setAttribute("action", "skip");
+		res.setAttribute("keyed_name", keyedName);
+		setupProperty(res, keyedName, currSelColumn, rowId);
+	}
+	else {
+		parent.aras.AlertError(parent.aras.getResource("", "parametersgrid.wrong_value_it", itemTypeName));
+		bKEYEDNAME_INPUT_IS_IN_PROGRESS = true;
+		return false;
+	}
+
+	return true;
+}
+
+/**
+ * Get property item by him ID
+ * @param propID property ID
+ */
+function getPropertyByID(propID) {
+	return itemTypeNd.selectSingleNode('Relationships/Item[@type="Property" and @id="' + propID + '"]');
+}
+
+/***
+ * Event firing after editing value in any special form
+ * @param dialogRes dialog output value
+ * @param acceptEmptyString may accept empty result?
+ * @param specialCase
+ */
+function onAfterSpecialDialog(dialogRes, acceptEmptyString, specialCase) {
+	if (acceptEmptyString && (dialogRes == undefined || dialogRes == null) || (!acceptEmptyString) && (!dialogRes)) {
+		grid.requestFocus();
+		return;
+	}
+
+	if ((specialCase !== undefined) && (dialogRes === specialCase)) {
+		dialogRes = "";
+	}
+
+	setupProperty(dialogRes, dialogRes, currSelColumn, currSelRowId);
+
+	currSelCell = null;
+	currSelColumn = null;
+	currSelRowId = null;
+	prevCellEditValue = null;
+
+	grid.requestFocus();
+}
+
+/***
+ * Show item search dialog
+ * @param IT_Name Item Type name
+ * @param propName property name
+ */
+function showSearchDialog(IT_Name, propName) {
+	var params =
+	{
+		aras: window.aras,
+		itemtypeName: IT_Name,
+		itemContext: item,
+		itemSelectedID: "",
+		sourceItemTypeName: item.getAttribute("type"),
+		sourcePropertyName: propName
+	};
+
+	var callback = function (dlgRes) {
+		if (dlgRes == undefined) {
+			return false;
+		}
+		try {
+			bKEYEDNAME_INPUT_IS_IN_PROGRESS = false;
+			if (dlgRes.itemID) {
+				var keyedName = dlgRes.keyed_name;
+				var res = dlgRes.item.cloneNode(false);
+				res.setAttribute("action", "skip");
+				res.setAttribute("keyed_name", keyedName);
+				setupProperty(res, keyedName, currSelColumn, currSelRowId);
+			}
+			else {
+				setupProperty('', '', currSelColumn, currSelRowId);
+			}
+			currSelCell = null;
+			grid.turnEditOff();
+		}
+		catch (ex) {
+			console.log("Error while showSearchDialog():" + ex.message);
+		}
+	};
+	params.type = "SearchDialog";
+	ArasModules.MaximazableDialog.show('iframe', params).promise.then(callback);
+}
+
+/**
+ * Show html editor dialog for selected cell
+ * @param openToEdit is edit dialog?
+ */
+function showHTMLEditorDialog(openToEdit) {
+	if (openToEdit == 'false') {
+		var content = prevCellEditValue.replace(/\\/g, "\\\\").replace(/\\n/g, '\n').replace(/'/g, '\\\'');
+		ArasModules.Dialog.show("iframe", {
+			resizable: true,
+			content: "javascript: '" + content + "'"
+		});
+	}
+	else {
+		var params =
+		{
+			sHTML: prevCellEditValue,
+			aras: aras,
+			title: parent.aras.getResource("", "htmleditor.inn_formatted_text_editor")
+		};
+		var callback = function (val) {
+			onAfterSpecialDialog(val, true);
+		};
+
+		params.type = "HTMLEditorDialog";
+		ArasModules.Dialog.show('iframe', params).promise.then(callback);
+	}
+}
+
+/**
+ * Show text editor dialog for selected cell
+ * @param openToEdit is edit dialog?
+ */
+function showTextAreaDialog(openToEdit) {
+	if (openToEdit == undefined) {
+		openToEdit = false;
+	}
+
+	var params = {
+		isEditMode: openToEdit,
+		content: prevCellEditValue,
+		aras: aras,
+		type: "Text"
+	};
+	ArasModules.Dialog.show("iframe", params).promise.then(function (res) {
+		onAfterSpecialDialog(res, true);
+	});
+}
+
+/**
+ * Show color editor dialog for selected cell
+ * @param oldColor color
+ */
+function showColorDialog(oldColor) {
+	ArasModules.Dialog.show("iframe", { oldColor: oldColor, aras: aras, type: "Color"}).promise.then(function (newColor) {
+		onAfterSpecialDialog(newColor, false);
+	});
+}
+
+/**
+ * Show image dialog
+ * @param img image to show
+ */
+function showImageDialog(img) {
+	img = img || "";
+	var params = {
+		aras: aras,
+		image: img,
+		type: "ImageBrowser"
+	};
+	ArasModules.Dialog.show("iframe", params).promise.then(function (res) {
+		onAfterSpecialDialog(res, false, "set_nothing");
+	});
+}
+
+/**
+ * Show file dialog
+ * @param fileId file property
+ * TODO: this function called with arg, but arg didn't used
+ */
+function showFileDialog(fileId) {
+	parent.aras.vault.selectFile().then((function(file) {
+		const fileNd = parent.aras.newItem('File', file);
+		parent.aras.itemsCache.addItem(fileNd);
+		
+		grid.requestFocus();
+		if (!fileNd) {
+			return;
+		}
+
+		onAfterSpecialDialog(fileNd, false);
+	}).bind(this));
+}
+
+/**
+ * Show file dialog
+ */
+function showFileDialogAltPressed() {
+	var fileNd = parent.aras.SelectFileFromPackage('FE_SelectFileFromPackage', false);
+
+	//var fileNd = aras.newItem('File');
+	parent.aras.itemsCache.addItem(fileNd);
+
+	grid.requestFocus();
+	if (!fileNd) {
+		return true;
+	}
+	onAfterSpecialDialog(fileNd, false);
+}
+
+/**
+ * Show date dialog
+ * @param oldDate date
+ * @param format date format
+ */
+function showDateDialog(oldDate, format) {
+	if (!currSelCell) {
+		return;
+	}
+
+	var wndRect = parent.aras.uiGetElementCoordinates(currSelCell.cellNod_Experimental);
+	var params = {
+		date: parent.aras.convertFromNeutral(oldDate, 'date', format),
+		format: format,
+		aras: parent.aras,
+		top: wndRect.top - wndRect.screenTop,
+		left: wndRect.left - wndRect.screenLeft,
+		type: "Date"
+	};
+	(window.parent || window).ArasModules.Dialog.show("iframe", params).promise.then(function (newDate) {
+		if (newDate !== undefined) {
+			newDate = parent.aras.convertToNeutral(newDate, 'date', format);
+		}
+		onAfterSpecialDialog(newDate, true);
+	});
+}
+
+/***
+ * Save item property to database and grid
+ * @param propVal property name
+ * @param propTxt property value
+ * @param colId grid column id
+ * @param rowId grid row id
+ */
+function setupProperty(propVal, propTxt, colId, rowId) {
+	var cell = grid.cells(rowId, colId);
+	if (!cell) {
+		if (!currSelCell) {
+			return;
+		}
+		else {
+			cell = currSelCell;
+		}
+	}
+	var row;
+	if (!rowId) {
+		row = currSelRowId;
+	}
+	else {
+		row = rowId;
+	}
+
+	var propNode = getPropertyByID(row);
+	if (!propNode) {
+		return;
+	}
+
+	var propName = parent.aras.getItemProperty(propNode, "name");
+	var propDataType = parent.aras.getItemProperty(propNode, "data_type");
+
+	parent.aras.setItemProperty(item, propName, propVal);
+
+	// Format cell value text by data type
+	var formattedCellValue = propTxt;
+	switch (propDataType) {
+		case 'date':
+			var format = parent.aras.getItemProperty(propNode, "pattern");
+			var dotNetFormat = parent.aras.getDotNetDatePattern(format);
+			formattedCellValue = parent.aras.convertFromNeutral(propVal, 'date', dotNetFormat);
+			break;
+		case 'boolean':
+			formattedCellValue = (propVal == 1);
+			break;
+		case 'color':
+			cell.setBgColor_Experimental(propVal ? propVal : "#ffffff");
+			formattedCellValue = '';
+			break;
+		case 'color list':
+			cell.setBgColor_Experimental(propTxt ? propTxt : "#ffffff");
+			formattedCellValue = propTxt;
+			break;
+		case 'mv_list':
+			formattedCellValue = propVal;
+			break;
+		case 'image':
+			if (propTxt) {
+				formattedCellValue = "<img src='" + propTxt + "' style='width:20px;height:20px' align='left'>"; // TODO: To CSS
+			}
+			break;
+		case 'ml_string':
+			parent.aras.setItemPropertyAttribute(item, propName, 'xml:lang', parent.aras.getSessionContextLanguageCode());
+			break;
+		case 'item':
+			var itemDataSource = parent.aras.getItemProperty(propNode, "data_source");
+			if (itemDataSource) {
+				var itemTypeName = parent.aras.getItemTypeName(itemDataSource);
+				// For file itemtype: get filename node value from AML
+				if (itemTypeName === 'File') {
+					formattedCellValue = parent.aras.getItemProperty(propVal, 'filename');
+				}
+				else {
+					formattedCellValue = propTxt;
+				}
+			}
+			break;
+	}
+
+	// Set generated cell value
+	cell.setValue(formattedCellValue);
+
+	// Update grid if needed
+	if (top.updateItemsGrid && !itemTypeNodeArg) {
+		top.updateItemsGrid(item);
+	}
+}
+
+/**
+ * Filter property for grid
+ * @param propertyNode item property
+ */
+function GetFilteredValuesForProperty(propertyNode) {
+	// Get pattern name from property node
+	var pattern = parent.aras.getItemProperty(propertyNode, 'pattern');
+	var propertyName = parent.aras.getItemProperty(propertyNode, 'name');
+	var propertyId = parent.aras.getItemProperty(propertyNode, "source_id");
+
+	// Get filter value and pass it as parameter
+	var filterValue = parent.aras.getItemProperty(item, pattern);
+	var filteredObject = parent.aras.uiGetFilteredObject4Grid(propertyId, propertyName, filterValue);
+	if (filteredObject.hasError) {
+		return [""];
+	}
+	else {
+		return filteredObject;
+	}
+}
+
+/**
+ * Get list number from grid row ID
+ * @param rowID row id of grid
+ */
+function getListNumberByRowID(rowID) {
+	if (!listsInfo) {
+		return -1;
+	}
+
+	var listInfo = listsInfo.selectSingleNode("list[@rowID='" + rowID + "']");
+	if (!listInfo) {
+		return -1;
+	}
+
+	var res = listInfo.getAttribute("listNumber");
+	if (res == null) {
+		return -1;
+	}
+
+	return res;
+}
+
+/***
+ * Return list info for current cell
+ * @param cell cell object
+ * @returns {Array} result ([0] - list options, [1] - list options labels)
+ */
+function getListInfoForCell(cell) {
+	var result = [];
+	var tableList = treeDom.selectSingleNode('table/list[@id="' + getListNumberByRowID(cell.GetRowId()) + '"]');
+	if (tableList) {
+		var options = [];
+		var optionsLabels = [];
+		for (var i = 0; i < tableList.childNodes.length; i++) {
+			var tempOption = tableList.childNodes[i].getAttribute('value');
+			var tempOptionsLabel = tableList.childNodes[i].getAttribute('label');
+
+			options.push(tempOption);
+			optionsLabels.push(tempOptionsLabel || tempOption);
+		}
+		result = {label: optionsLabels || "&nbsp;", value: options};
+	}
+	return result;
+}
+
+/**
+ * Remove filter for grid after changing list
+ * @param propertyNode property node
+ * @param column grid column
+ */
+function RemoveFilterValuesOnChangeList(propertyNode, column) {
+	var propertyName = parent.aras.getItemProperty(propertyNode, 'name');
+	var properties = itemTypeNd.selectNodes("//Item[@type='Property' and data_type='filter list' and pattern='" + propertyName + "']/@id");
+
+	for (var i = 0; i < properties.length; i++) {
+		// Clear values in filter list cells
+		var rowId = properties[i].value;
+		setupProperty("", "", column, rowId);
+	}
+}
+
+/**
+ * Save edited grid data
+ */
+function saveEditedData() {
+	if (grid) {
+		grid.turnEditOff();
+	}
+}
+
+/***
+ * Vaildate current cell data
+ * @param rowId current rowId
+ * @param column current column
+ * @param value current cell value
+ * @returns {boolean} validation result
+ */
+function validateCell(rowId, column, value) {
+	if (rowId === "input_row") {
+		return true;
+	}
+
+	var propNd = getPropertyByID(rowId);
+	if (!propNd) {
+		return true;
+	}
+
+	var propDataType = parent.aras.getItemProperty(propNd, "data_type");
+	var itemDataSource = parent.aras.getItemProperty(propNd, "data_source");
+
+	if (propDataType === 'item') {
+		var propSource_ITName = parent.aras.getItemTypeName(itemDataSource);
+		var tmpItem = parent.aras.uiGetItemByKeyedName(propSource_ITName, value);
+		return !(!tmpItem && value);
+	}
+	else {
+		var propertyDef =
+		{
+			data_type: propDataType,
+			pattern: parent.aras.getItemProperty(propNd, "pattern"),
+			is_required: (parent.aras.getItemProperty(propNd, "is_required") === "1"),
+			stored_length: parseInt(parent.aras.getItemProperty(propNd, "stored_length"))
+		};
+		if (propDataType == 'md5') {
+			value = parent.aras.calcMD5(value);
+		}
+		if (!parent.aras.isPropertyValueValid(propertyDef, value, "invariantLocale")) {
+			grid.edit_Experimental.setErrorMessage(parent.aras.ValidationMsg);
+			return false;
+		}
+	}
+	return true;
+}
+</script>
+</head>
+<body class="claro">
+<div id="gridTD" style="height: 100%"></div>
+</body>
+</html>

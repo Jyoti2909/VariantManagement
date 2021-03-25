@@ -1,0 +1,550 @@
+﻿<AML>
+ <Item type="Report" id="4466DA427F4E4E8293E627192320AA9B" action="add">
+  <label xml:lang="en">Item Access Report</label>
+  <location>client</location>
+  <method keyed_name="ExecuteItemAccessReportClient" type="Method">
+   <Item type="Method" action="get" select="id">
+    <name>ExecuteItemAccessReportClient</name>
+   </Item>
+  </method>
+  <report_query />
+  <target>window</target>
+  <type>item</type>
+  <xsl_stylesheet><![CDATA[<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" xmlns:msxsl="urn:schemas-microsoft-com:xslt" xmlns:user="urn:user-scripts" xmlns:aras="http://www.aras.com" version="1.0">
+  <xsl:output method="html" omit-xml-declaration="yes" standalone="yes" indent="yes" cdata-section-elements="script msxsl:script"/>
+  <xsl:template match="/ItemAccessReport">
+    <html>
+      <head>
+        <style type="text/css" userData="Global">
+          body {
+          font-family: Calibri
+          }
+          div.table_wrapper {
+          margin-bottom: 20px;
+          }
+          table {
+          border-collapse: collapse;
+          width: 75%;
+          margin: auto;
+          }
+          th {
+          text-align: left;
+          }
+          td,th {
+          padding: 2px 10px 2px 10px;
+          border:1px rgb(191, 191, 191) solid;
+          }
+          .background-grey {
+          background: rgb(217, 217, 217);
+          }
+          .background-yellow {
+          background: rgb(254,247,175);
+          }
+          .none-border-top {
+          border-top: none;
+          }
+          .none-border-bottom {
+          border-bottom: none;
+          }
+          .background-light-grey {
+          background: rgb(242, 242, 242);
+          }
+          tr.table-row {
+          font-style: italic;
+          }
+          .text-bold {
+          font-weight: bold;
+          }
+          .color-green {
+          color: rgb(0, 176, 80);
+          }
+          .link {
+          text-decoration: underline;
+          cursor: pointer;
+          color: #3668b1;
+          }
+          tbody > .rows-separator:not(:first-child) {
+          border-top: 5px rgb(191, 191, 191) solid;
+          }
+          tr.rows-separator {
+          font-weight: bold;
+          }
+          .report-header {
+          font-size: 20px;
+          }
+        </style>
+        <script type="text/javascript">
+          function openItem(itemType, id) {
+          var aras = window.parent.aras;
+          var item = aras.getItemById(itemType, id, 0);
+          if(item) {
+          aras.uiShowItemEx(item, null);
+          }
+          }
+          function openAccessReport(itemType, itemId){
+          var aras = window.parent.aras;
+          var item = aras.getItemById(itemType, itemId, 0);
+          var report = aras.getItemByKeyedName('Report', 'Item Access Report');
+          aras.runReport(report, aras.getItemTypeId(itemType), item);
+          }
+        </script>
+      </head>
+      <body topmargin="50" leftmargin="50">
+        <xsl:apply-templates select="ItemSection"/>
+        <xsl:if test="ActivePermissionSection/*">
+            <xsl:apply-templates select="ActivePermissionSection"/>
+        </xsl:if>
+        <xsl:if test="SrcAccessInEffectSection/*">
+            <xsl:apply-templates select="SrcAccessInEffectSection"/>
+        </xsl:if>
+        <xsl:if test="ActiveMacPolicySection/ItemActiveMacPolicyReportRows/*">
+          <xsl:apply-templates select="ActiveMacPolicySection"/>
+        </xsl:if>
+        <xsl:if test="ActiveDacPermissionSection/*">
+          <xsl:apply-templates select="ActiveDacPermissionSection"/>
+        </xsl:if>
+        <xsl:if test="ItemMethodSection/ItemMethodReportRows/*">
+          <xsl:apply-templates select="ItemMethodSection"/>
+        </xsl:if>
+      </body>
+    </html>
+  </xsl:template>
+  <xsl:template match="ItemSection">
+    <div class="table_wrapper">
+      <table cellspacing="0" cellpadding="0">
+        <col width="10%"/>
+        <col/>
+        <thead>
+          <tr class="background-grey">
+            <th colspan="2">
+              <span class="report-header">
+                <xsl:value-of select="ItemTypeLabel"/>&#160;<xsl:value-of select="ItemName"/>&#160;ACCESS&#160;REPORT
+              </span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <xsl:call-template name="ItemInfoRow">
+            <xsl:with-param name="title">Creator</xsl:with-param>
+            <xsl:with-param name="value" select="Creator/Name"/>
+            <xsl:with-param name="itemType" select="Creator/Type"/>
+            <xsl:with-param name="id" select="Creator/Id"/>
+          </xsl:call-template>
+          <xsl:call-template name="ItemInfoRow">
+            <xsl:with-param name="title">Owner</xsl:with-param>
+            <xsl:with-param name="value" select="Owner/Name"/>
+            <xsl:with-param name="itemType" select="Owner/Type"/>
+            <xsl:with-param name="id" select="Owner/Id"/>
+          </xsl:call-template>
+          <xsl:call-template name="ItemInfoRow">
+            <xsl:with-param name="title">Manager</xsl:with-param>
+            <xsl:with-param name="value" select="Manager/Name"/>
+            <xsl:with-param name="itemType" select="Manager/Type"/>
+            <xsl:with-param name="id" select="Manager/Id"/>
+          </xsl:call-template>
+          <xsl:call-template name="ItemInfoRow">
+            <xsl:with-param name="title">Team</xsl:with-param>
+            <xsl:with-param name="value" select="Team/Name"/>
+            <xsl:with-param name="itemType" select="Team/Type"/>
+            <xsl:with-param name="id" select="Team/Id"/>
+          </xsl:call-template>
+          <tr class="table-row">
+            <td align="right">State:</td>
+            <td class="color-green">
+              <xsl:value-of select="State"/>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </xsl:template>
+  <xsl:template match="ActivePermissionSection">
+    <div class="table_wrapper">
+      <table>
+        <col/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <thead>
+          <tr class="background-grey">
+            <th colspan="7">
+              ACTIVE PERMISSION
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="7">
+              <i>Name: </i>
+              <xsl:call-template name="Link">
+                <xsl:with-param name="id" select="Id"/>
+                <xsl:with-param name="itemType" select="'Permission'"/>
+                <xsl:with-param name="value" select="Name"/>
+              </xsl:call-template>
+            </td>
+          </tr>
+          <xsl:call-template name="Permission" />
+
+        </tbody>
+      </table>
+    </div>
+  </xsl:template>
+  <xsl:template match="SrcAccessInEffectSection">
+    <div class="table_wrapper">
+      <table>
+        <col/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <thead>
+          <tr class="background-yellow">
+            <th colspan="7" class="none-border-bottom">
+                USE SRC ACCESS in Effect (Open Source Access Report)
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="background-yellow table-row">
+            <td colspan="7" class="none-border-top">
+                Note: <xsl:value-of select="DisclaimerNote"/>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="7">
+              <xsl:call-template name="AccessReportLink">
+                <xsl:with-param name="id" select="ParentItemId"/>
+                <xsl:with-param name="itemType" select="ParentItemType"/>
+                <xsl:with-param name="value"><xsl:value-of select = "ParentItemName" /> Access Report</xsl:with-param>
+              </xsl:call-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </xsl:template>
+  <xsl:template match="ActiveDacPermissionSection">
+    <div class="table_wrapper">
+      <table cellspacing="0" cellpadding="0">
+        <col/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <col width="13%"/>
+        <thead>
+          <tr class="background-grey">
+            <th colspan="7">
+              ACTIVE DAC PERMISSIONS
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <xsl:for-each select="ActiveDacPermission">
+            <tr class="rows-separator">
+              <td colspan="3">
+                <i>Root item: </i>
+                <xsl:call-template name="Link">
+                  <xsl:with-param name="id" select="RootItemId"/>
+                  <xsl:with-param name="itemType" select="RootItemTypeName"/>
+                  <xsl:with-param name="value" select="RootItemName"/>
+                </xsl:call-template>
+              </td>
+              <td colspan="4">
+                <i>Root Itemtype: </i>
+                <xsl:call-template name="Link">
+                  <xsl:with-param name="id" select="RootItemTypeId"/>
+                  <xsl:with-param name="itemType" select="'ItemType'"/>
+                  <xsl:with-param name="value" select="RootItemTypeName"/>
+                </xsl:call-template>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="3">
+                <i>DAC Definition: </i>
+                <xsl:call-template name="Link">
+                  <xsl:with-param name="id" select="DacId"/>
+                  <xsl:with-param name="itemType" select="'dac_DomainDefinition'"/>
+                  <xsl:with-param name="value" select="DacName"/>
+                </xsl:call-template>
+              </td>
+              <td colspan="4">
+                <i>Derived Relationship Family: </i>
+                <xsl:call-template name="Link">
+                  <xsl:with-param name="id" select="DrfId"/>
+                  <xsl:with-param name="itemType" select="'dr_RelationshipFamily'"/>
+                  <xsl:with-param name="value" select="DrfName"/>
+                </xsl:call-template>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <i>Team: </i>
+                <xsl:call-template name="Link">
+                  <xsl:with-param name="id" select="Team/Id"/>
+                  <xsl:with-param name="value" select="Team/Name"/>
+                  <xsl:with-param name="itemType" select="Team/Type"/>
+                </xsl:call-template>
+              </td>
+              <td colspan="3">
+                <i>Root  Permission Filter: </i>
+                <xsl:call-template name="Link">
+                  <xsl:with-param name="id" select="RootPermissionId"/>
+                  <xsl:with-param name="itemType" select="'Permission'"/>
+                  <xsl:with-param name="value" select="RootPermissionName"/>
+                </xsl:call-template>
+              </td>
+              <td colspan="3">
+                <i>Child State Filter: </i>
+                <i class="color-green">
+                  <xsl:value-of select="AppliedStateFilter"/>
+                </i>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="7">
+                <i>Applied Permission Name: </i>
+                <xsl:call-template name="Link">
+                  <xsl:with-param name="id" select="ActivePermission/Id"/>
+                  <xsl:with-param name="itemType" select="'Permission'"/>
+                  <xsl:with-param name="value" select="ActivePermission/Name"/>
+                </xsl:call-template>
+              </td>
+            </tr>
+            <xsl:apply-templates select="ActivePermission"/>
+          </xsl:for-each>
+        </tbody>
+      </table>
+    </div>
+  </xsl:template>
+  <xsl:template match="ActiveMacPolicySection">
+    <div class="table_wrapper">
+      <table cellspacing="0" cellpadding="0">
+        <col/>
+        <col width="75%"/>
+        <thead>
+          <tr class="background-grey">
+            <th colspan="7">
+              ITEMTYPE MAC POLICIES
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <xsl:for-each select="ItemActiveMacPolicyReportRows/ItemActiveMacPolicyReportRow">
+            <tr class="table-row">
+              <td>
+                <span>
+                  Name:
+                  <xsl:call-template name="Link">
+                    <xsl:with-param name="id" select="Id"/>
+                    <xsl:with-param name="itemType" select="'mp_MacPolicy'"/>
+                    <xsl:with-param name="value" select="Name"/>
+                  </xsl:call-template>
+                </span>
+              </td>
+              <td>
+                <span>
+                  Description: <xsl:value-of select="Description"/>
+                </span>
+              </td>
+            </tr>
+          </xsl:for-each>
+        </tbody>
+      </table>
+    </div>
+  </xsl:template>
+  <xsl:template match="ItemMethodSection">
+    <div class="table_wrapper">
+      <table cellspacing="0" cellpadding="0">
+        <col/>
+        <col width="25%"/>
+        <col width="25%"/>
+        <thead>
+          <tr class="background-grey">
+            <th colspan="7">
+              ITEM METHODS (May or May Not Affect Access Control)
+            </th>
+          </tr>
+          <tr class="table-row background-light-grey">
+            <td>Name</td>
+            <td align="left">Event</td>
+            <td align="left">Type</td>
+          </tr>
+        </thead>
+        <tbody>
+          <xsl:for-each select="ItemMethodReportRows/ItemMethodReportRow">
+            <tr>
+              <td>
+                <xsl:call-template name="Link">
+                  <xsl:with-param name="id" select="MethodId"/>
+                  <xsl:with-param name="itemType" select="'Method'"/>
+                  <xsl:with-param name="value" select="MethodName"/>
+                </xsl:call-template>
+              </td>
+              <td>
+                <span class="color-green">
+                  <xsl:value-of select="EventName"/>
+                </span>
+              </td>
+              <td>
+                <span class="color-green">
+                  <xsl:value-of select="MethodType"/>
+                </span>
+              </td>
+            </tr>
+          </xsl:for-each>
+        </tbody>
+      </table>
+    </div>
+  </xsl:template>
+  <xsl:template name="hasPermission">
+    <xsl:param name="value"/>
+    <td class="text-bold color-green" align="center">
+      <xsl:if test="$value = 'true'">
+        ✓
+      </xsl:if>
+    </td>
+  </xsl:template>
+  <xsl:template name="ItemInfoRow">
+    <xsl:param name="title"/>
+    <xsl:param name="value"/>
+    <xsl:param name="itemType"/>
+    <xsl:param name="id"/>
+    <xsl:if test="$value != ''">
+      <tr class="table-row">
+        <td align="right">
+          <xsl:value-of select="$title"/>:
+        </td>
+        <td>
+          <xsl:call-template name="Link">
+            <xsl:with-param name="id" select="$id"/>
+            <xsl:with-param name="value" select="$value"/>
+            <xsl:with-param name="itemType" select="$itemType"/>
+          </xsl:call-template>
+        </td>
+      </tr>
+    </xsl:if>
+  </xsl:template>
+  <xsl:template name="Link">
+    <xsl:param name="value"/>
+    <xsl:param name="itemType"/>
+    <xsl:param name="id"/>
+    <xsl:param name="addParenthesis"/>
+    <xsl:param name="showEmpty"/>
+    <xsl:if test="$value != '' or $showEmpty">
+      <span class="link">
+        <xsl:attribute name="onclick">openItem("<xsl:value-of select="$itemType"/>", "<xsl:value-of select="$id"/>")</xsl:attribute>
+        <xsl:choose>
+          <xsl:when test="$addParenthesis">
+            (<xsl:value-of select="$value"/>)
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="$value"/>
+          </xsl:otherwise>
+        </xsl:choose>
+      </span>
+    </xsl:if>
+  </xsl:template>
+  <xsl:template name="AccessReportLink">
+    <xsl:param name="value"/>
+    <xsl:param name="itemType"/>
+    <xsl:param name="id"/>
+    <xsl:if test="$value != ''">
+      <span class="link">
+        <xsl:attribute name="onclick">openAccessReport("<xsl:value-of select="$itemType"/>", "<xsl:value-of select="$id"/>")</xsl:attribute>
+        <xsl:value-of select="$value"/>
+      </span>
+    </xsl:if>
+  </xsl:template>
+  <xsl:template name="Permission" match="ActivePermission">
+    <tr class="table-row background-light-grey">
+      <td>Identity</td>
+      <td align="center">Get</td>
+      <td align="center">Update</td>
+      <td align="center">Delete</td>
+      <td align="center">Discover</td>
+      <td align="center">Show Permission</td>
+      <td align="center">Change Access</td>
+    </tr>
+    <xsl:for-each select="SystemAccesses/Access">
+      <tr class="table-row">
+        <td>
+          <xsl:call-template name="Link">
+            <xsl:with-param name="id" select="Identity/Id"/>
+            <xsl:with-param name="itemType" select="Identity/Type"/>
+            <xsl:with-param name="value" select="Identity/Name"/>
+          </xsl:call-template>
+          <xsl:call-template name="Link">
+            <xsl:with-param name="id" select="Role/Id"/>
+            <xsl:with-param name="itemType" select="Role/Type"/>
+            <xsl:with-param name="value" select="Role/Name"/>
+            <xsl:with-param name="addParenthesis" select="1"/>
+          </xsl:call-template>
+        </td>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanGet"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanUpdate"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanDelete"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanDiscover"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="ShowPermissionsWarning"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanChangeAccess"/>
+        </xsl:call-template>
+      </tr>
+    </xsl:for-each>
+    <xsl:for-each select="TeamAccesses/Access">
+      <tr class="table-row">
+        <td>
+          <xsl:call-template name="Link">
+            <xsl:with-param name="id" select="Identity/Id"/>
+            <xsl:with-param name="itemType" select="Identity/Type"/>
+            <xsl:with-param name="value" select="Identity/Name"/>
+          </xsl:call-template>
+          <xsl:call-template name="Link">
+            <xsl:with-param name="id" select="Role/Id"/>
+            <xsl:with-param name="itemType" select="Role/Type"/>
+            <xsl:with-param name="value" select="Role/Name"/>
+            <xsl:with-param name="addParenthesis" select="1"/>
+            <xsl:with-param name="showEmpty" select="1"/>
+          </xsl:call-template>
+        </td>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanGet"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanUpdate"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanDelete"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanDiscover"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="ShowPermissionsWarning"/>
+        </xsl:call-template>
+        <xsl:call-template name="hasPermission">
+          <xsl:with-param name="value" select="CanChangeAccess"/>
+        </xsl:call-template>
+      </tr>
+    </xsl:for-each>
+  </xsl:template>
+</xsl:stylesheet>]]></xsl_stylesheet>
+  <name>Item Access Report</name>
+ </Item>
+</AML>

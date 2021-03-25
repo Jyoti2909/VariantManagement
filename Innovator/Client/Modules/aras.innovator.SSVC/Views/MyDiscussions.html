@@ -1,0 +1,122 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<script type="text/javascript">
+			var aras = parent.aras;
+			var topWnd = aras.getMostTopWindowWithAras();
+
+			if (!aras.commonProperties.IsSSVCLicenseOk) {
+				window.location = "GetLicense.html";
+			}
+		</script>
+		<link rel="stylesheet" href="../../../javascript/include.aspx?classes=arasClaro.css,common.css" />
+		<link rel="stylesheet" href="../../../styles/default.css" />
+		<link rel="stylesheet" href="../../../styles/common.min.css" />
+		<link rel="stylesheet" href="../../../javascript/include.aspx?classes=discussion.css" />
+		<link rel="stylesheet" href="../styles/BookmarksTree.css" />
+
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,ScriptSet1, QueryString"></script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js, ModulesHelper" data-dojo-config="baseUrl:'../../../javascript/dojo'"></script>
+		<script type="text/javascript">
+			ArasModules.soap(null, {
+				headers: aras.getHttpHeadersForSoapMessage(),
+				url: aras.getServerURL(),
+				method: "ApplyItem"
+			});
+		</script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=DiscussionStatic"></script>
+		<script>
+			require([
+				'../../../Modules/aras.innovator.SSVC/Scripts/Feed.js',
+				'../../../Modules/aras.innovator.SSVC/Scripts/FilterPopup.js',
+				'../../../Modules/aras.innovator.SSVC/Scripts/ReplyToolbar.js',
+				'../../../Modules/aras.innovator.SSVC/Scripts/UserControl.js',
+				'../../../Modules/aras.innovator.SSVC/Scripts/MessageEditor.js'
+			]);
+		</script>
+
+		<script type="text/javascript" src="../Scripts/forumActions.js"></script>
+		<script type="text/javascript" src="../Scripts/bookmarksTree.js"></script>
+		<script type="text/javascript" src="../Scripts/treeMenuActions.js"></script>
+		<script type="text/javascript" src="../Scripts/MainBookmarksTree.js"></script>
+
+		<script type="text/javascript">
+			document.addEventListener("DOMContentLoaded", function() {
+				require(["dojo/parser"], function (parser) { parser.parse(); });
+				window.FeedObj = new SSVC.UI.Feed.MyFeed({ params: {} });
+				window.FeedObj.placeAt(discussion);
+				require(["../Scripts/UserSelect.js"], function (userSelect) {
+					dojo.setObject('SSVC.UI.UserSelect', userSelect);
+					window.SelectUserObj = new SSVC.UI.UserSelect({ params: {} });
+					window.SelectUserObj.placeAt(document.getElementById("treeContainer"));
+				});
+				require(["../Scripts/ForumSelect.js"], function (forumSelect) {
+					dojo.setObject('SSVC.UI.ForumSelect', forumSelect);
+					window.SelectForumObj = new SSVC.UI.ForumSelect({ params: {} });
+					window.SelectForumObj.placeAt(document.getElementById("treeContainer"));
+				});
+				ssvcEventsManager.addEventListener("onTreeItemSelect", handleTreeItemSelect);
+				ssvcEventsManager.addEventListener("onTreeItemReload", handleTreeItemReload);
+			});
+		</script>
+	</head>
+	<body class="claro">
+		<div data-dojo-type="dijit/layout/BorderContainer" data-dojo-props="gutters:false, liveSplitters:false" style="width: 100%; height: 100%;">
+			<div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'center'" baseClass="dijitContentPaneNoPadding" id="discussionPanel"></div>
+			<div data-dojo-type="dijit/layout/ContentPane" data-dojo-props="region: 'right', splitter: true, minSize:350" baseClass="dijitContentPaneNoPadding" id="bookmarksTree" style="width: 350px;">
+				<div data-dojo-type="dijit/layout/ContentPane" id="treeContainer">
+					<div class="side-header" id="treeHeader">
+						<label class="sys_f_label" id="myBookmarksLabel"></label>
+						<div class="ssvc-bookmarks-search">
+							<input type="text" name="searchBox" id="searchBox" onkeydown="handleSearchKey(event)" placeholder="Search bookmarks..." tabindex="0" />
+							<div id="searchBtn" onclick="runBookmarksSearch()"></div>
+						</div>
+						<span title="Refresh" id="refreshTree" class="MarkupButton RefreshFeedButton refresh-bookmark-tree-btn"></span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+		<script type="text/javascript">
+			var discussion = document.getElementById("discussionPanel");
+			var ssvcEventsManager = (function () {
+				var events = {};
+				return {
+					addEventListener: function(eventName, eventHandler){
+						if (!events[eventName]){
+							events[eventName] = [];
+						}
+						events[eventName].push(eventHandler);
+					},
+					fireEvent: function(eventName, args){
+						if (!events[eventName]) return;
+						for (var i = 0; i < events[eventName].length; i++){
+							events[eventName][i].call({}, args);
+						}
+					}
+				}
+			})();
+
+			function handleTreeItemSelect(args) {
+				if (args.itemTypeName === "TocCategory") {
+					discussion.style.visibility = "hidden";
+				} else {
+					discussion.style.visibility = "visible";
+					FeedObj.reload(args);
+					aras.browserHelper.toggleSpinner((topWnd.main || topWnd).document, false);
+				}
+			}
+
+			function handleTreeItemReload(args) {
+				if (args.itemTypeName === "TocCategory") {
+					discussion.style.visibility = "hidden";
+				} else {
+					discussion.style.visibility = "visible";
+					FeedObj.executeFilter();
+					aras.browserHelper.toggleSpinner((topWnd.main || topWnd).document, false);
+				}
+			}
+		</script>
+</html>

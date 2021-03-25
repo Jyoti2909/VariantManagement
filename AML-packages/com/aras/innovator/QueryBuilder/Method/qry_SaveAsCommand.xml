@@ -1,0 +1,85 @@
+﻿<AML>
+ <Item type="Method" id="0E0548CC16C945F49EAC6E3FDD699F3F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const getNewNameWithCounter = function(itemTypeName, name, counter) {
+	let newName = 'Copy (' + counter + ') of ' + name;
+	let item = aras.newIOMItem(itemTypeName, 'get');
+	item.setAttribute('select', 'id');
+	item.setProperty('name', newName);
+	item = item.apply();
+	if (!item.isError()) {
+		newName = getNewNameWithCounter(itemTypeName, name, counter + 1);
+	}
+	return newName;
+};
+
+const getNewName = function(itemTypeName, name) {
+	let newName = 'Copy of ' + name;
+	let item = aras.newIOMItem(itemTypeName, 'get');
+	item.setAttribute('select', 'id');
+	item.setProperty('name', newName);
+	item = item.apply();
+	if (!item.isError()) {
+		newName = getNewNameWithCounter(itemTypeName, name, 0);
+	}
+	return newName;
+};
+
+const copyItem = function(itemTypeName, itemId) {
+	let item = aras.newIOMItem(itemTypeName, 'get');
+	item.setID(itemId);
+	item.setAttribute('levels', '2');
+	item = item.apply();
+	item.removeProperty('id');
+	item.removeProperty('config_id');
+	item.removeAttribute('id');
+	item.setAction('add');
+	let name = item.getProperty('name');
+	name = getNewName(itemTypeName, name);
+	item.setProperty('name', name);
+	const relationships = item.getRelationships();
+	for (let i = 0; i < relationships.getItemCount(); i++) {
+		const relationship = relationships.getItemByIndex(i);
+		relationship.removeProperty('id');
+		relationship.removeProperty('config_id');
+		relationship.removeAttribute('id');
+		relationship.setAction('add');
+		const nestedRelationships = relationship.getRelationships();
+		for (let j = 0; j < nestedRelationships.getItemCount(); j++) {
+			const nestedRelationship = nestedRelationships.getItemByIndex(j);
+			nestedRelationship.removeProperty('id');
+			nestedRelationship.removeProperty('config_id');
+			nestedRelationship.removeAttribute('id');
+			nestedRelationship.setAction('add');
+		}
+	}
+	item = item.apply();
+	return item.node;
+
+};
+
+const topWindow = aras.getMostTopWindowWithAras(window);
+const workerFrame = topWindow.work;
+if (workerFrame) {
+	const itemId = workerFrame.grid.selection_Experimental.get('id');
+	if (!itemId) {
+		aras.AlertError(aras.getResource('', 'itemsgrid.select_item_type_first', itemTypeLabel));
+		return false;
+	}
+	const copiedItem = copyItem(workerFrame.itemTypeName, itemId);
+	if (copiedItem) {
+		const rowId = copiedItem.getAttribute('id');
+		workerFrame.grid.selection_Experimental.clear();
+		callbackF_afterAddRow = function() {
+			callbackF_afterAddRow = null;
+			workerFrame.onSelectItem(rowId);
+		};
+		workerFrame.insertRowSearchGrids(copiedItem);
+	} else {
+		return false;
+	}
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>qry_SaveAsCommand</name>
+ </Item>
+</AML>

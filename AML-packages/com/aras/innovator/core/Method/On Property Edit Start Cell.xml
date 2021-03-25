@@ -1,0 +1,55 @@
+﻿<AML>
+ <Item type="Method" id="A18EAEA1BBDF4878A10EA94F924317DC" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[/*version:2*/
+var dataType = getRelationshipProperty(relationshipID, 'data_type');
+var res = false;
+
+if ((dataType == 'string' || dataType == 'ml_string' || dataType == 'mv_list' || dataType == 'md5' ||
+	dataType == 'filter list' || dataType == 'color list' || dataType == 'list') && (propertyName == 'stored_length')) {
+	res = true;
+}
+
+if (((dataType == 'float') || (dataType == 'decimal')) && ((propertyName == 'prec') || (propertyName == 'scale'))) {
+	res = true;
+}
+
+if (((dataType == 'list') || (dataType == 'sequence') || (dataType == 'item') ||
+	(dataType == 'filter list') || (dataType == 'color list') || (dataType == 'mv_list')) && (propertyName == 'data_source')) {
+	res = true;
+}
+
+function runDialog() {
+	params.content = 'foreignPropSelectTree.html';
+	params.title = aras.getResource('', 'foreignpropselecttree.foreign_prop_selec_tree');
+	aras.getMostTopWindowWithAras(window).ArasModules.Dialog.show('iframe', params).promise.then(function(res) {
+		if (res) {
+			setRelationshipProperty(relationshipID, 'data_source', res['data_source']);
+			var relNd = item.selectSingleNode('Relationships/Item[@type="' + relationshipTypeName + '" and @id="' + relationshipID + '"]');
+			aras.setItemProperty(relNd,'foreign_property', res['foreign_property']);
+		}
+	});
+}
+
+if (dataType == 'foreign' && propertyName == 'data_source') {
+	if (!item.getAttribute('propsLoaded')) {
+		aras.getItemRelationships('ItemType', item.getAttribute('id'), 'Property');
+		item.setAttribute('propsLoaded', '1');
+	}
+
+	var params = {
+		aras: aras,
+		item: item,
+		dialogHeight: 600,
+		dialogWidth: 250,
+		resizable: true
+	};
+
+	setTimeout(runDialog,10);
+}
+return res;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>On Property Edit Start Cell</name>
+ </Item>
+</AML>

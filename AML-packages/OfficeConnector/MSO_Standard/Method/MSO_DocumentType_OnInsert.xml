@@ -1,0 +1,38 @@
+﻿<AML>
+ <Item type="Method" id="955BF689C0304C7FBC0E4D6A032D8DD7" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var currentItem = parent.thisItem.getItemsByXPath("//Item[@id='"+relationshipID+"']");
+var currentClassification = currentItem.getProperty("document_type", "");
+var currentItemType = currentItem.getPropertyAttribute("master_item_type","keyed_name");
+if (currentClassification.indexOf("Copy of") !== -1)
+{
+    var thisItemType = aras.newIOMItem("ItemType", "get");
+    thisItemType.setProperty("keyed_name",currentItemType);
+    thisItemType = thisItemType.apply();
+    if(thisItemType.isError()) {
+        return;
+    }
+    var struct = thisItemType.getProperty("class_structure", "");
+    if (!struct) {
+        return;
+    }
+    
+    var structDom = aras.createXMLDocument();
+    structDom.loadXML(struct);
+    var structArray = structDom.selectNodes("class/class");
+    for (var i = 0; i < structArray.length; i++ ) {
+        if(structDom.selectNodes("class/class")[i].getAttribute("name").toString().indexOf("Copy of") !== -1)
+        {
+            return;
+        }
+    }
+    
+    newClassification = currentClassification.replace("Copy of ","");
+    currentItem.setProperty("document_type", newClassification);
+    updateRow(currentItem.node);
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>MSO_DocumentType_OnInsert</name>
+ </Item>
+</AML>

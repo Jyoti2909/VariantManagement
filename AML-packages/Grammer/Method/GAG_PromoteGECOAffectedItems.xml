@@ -1,0 +1,2329 @@
+﻿<AML>
+ <Item type="Method" id="665F22B70C26415CBF841BC475650C07" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			var dal = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dal);
+			return businessLogic.Run(this);
+}
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly DataAccessLayer _dal;
+
+			public BusinessLogic(DataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string promotionName = contextItem.getProperty("promotion_name");
+				string activityId = contextItem.getProperty("activity_id");
+				Item geco = GetGecoByActivityId(activityId);
+				string classification = geco.getProperty("classification");
+				GECOPromotion gecoPromotion = GetGecoPromotionByType(promotionName, classification);
+				gecoPromotion.PromoteGecoAffectedItems(geco);
+				return contextItem;
+			}
+
+			protected Item GetGecoByActivityId(string activityId)
+			{
+				Item gecoBase = _dal.NewItem("Activity", "GAG_GetGecoByActivity");
+				gecoBase.setID(activityId);
+
+				gecoBase = _dal.ApplyItem(gecoBase);
+
+				Item geco = _dal.NewItem("GAG_EngineeringChangeObject", "get");
+				geco.setID(gecoBase.getID());
+				geco.setProperty("select", "classification,gag_sap_change_number");
+
+				geco = _dal.ApplyItem(geco);
+
+				return geco.isError() ? throw new ItemException(geco) : geco;
+			}
+
+			private GECOPromotion GetGecoPromotionByType(string promotionName, string classification)
+			{
+				Func<DataAccessLayer, string, GECOPromotion> gecoPromotion;
+				switch (promotionName)
+				{
+					case "Start Task":
+						gecoPromotion = StartTask.GetInstance;
+						break;
+					case "Start Review":
+					case "C-Part Check completed":
+						gecoPromotion = StartReview.GetInstance;
+						break;
+					case "Rework Completed":
+						gecoPromotion = ReworkCompleted.GetInstance;
+						break;
+					case "Rework Required":
+						gecoPromotion = ReworkRequired.GetInstance;
+						break;
+					case "Development Release":
+						gecoPromotion = DevelopmentRelease.GetInstance;
+						break;
+					case "Cancel GECO":
+						gecoPromotion = CancelGeco.GetInstance;
+						break;
+					case "Master Data Review Completed":
+						gecoPromotion = MasterDataReviewCompleted.GetInstance;
+						break;
+					case "Internal Review Completed":
+						gecoPromotion = InternalReviewCompleted.GetInstance;
+						break;
+					case "External Review Completed":
+						gecoPromotion = ExternalReviewCompleted.GetInstance;
+						break;
+					default:
+						throw new ArgumentException($"Unknown {promotionName} promotion.");
+				}
+
+				return gecoPromotion.Invoke(_dal, classification);
+			}
+		}
+		//[PartialPath("Constants/AffectedItemDestination")]
+		[Flags]
+		internal enum AffectedItemDestination
+		{
+			NewItem = 1,
+			OriginalItem = 2,
+			Any = 3
+		}
+		//[PartialPath("Constants/GECOAction")]
+		internal static class GecoAction
+		{
+			public const string Revise = "Revise";
+
+			public const string Release = "Release";
+
+			public const string None = "None";
+
+			public static bool CompareActions(string currentAction, string conditionAction)
+			{
+				return string.IsNullOrEmpty(conditionAction) || currentAction == conditionAction;
+			}
+		}
+		//[PartialPath("DAL/DataAccessLayer")]
+		public class DataAccessLayer : Aras.Common.DataAccessLayer, IDataAccessLayer
+		{
+			public DataAccessLayer(Innovator innovator, Aras.Server.Core.CallContext callContext) : base(innovator, callContext) { }
+
+			public IEnumerable<Item> GetTabItems(string relationship, string sourceId)
+			{
+				Item tab = NewItem(relationship, "get");
+				tab.setProperty("source_id", sourceId);
+				tab = ApplyItem(tab);
+				if (tab.isEmpty())
+				{
+					return Array.Empty<Item>();
+				}
+
+				Contract.ThrowIfError(tab);
+				return tab.Enumerate();
+			}
+		}
+		//[PartialPath("DAL/IDataAccessLayer")]
+		public interface IDataAccessLayer : Aras.Common.IDataAccessLayer
+		{
+			IEnumerable<Item> GetTabItems(string relationship, string sourceId);
+		}
+		//[PartialPath("DTO/PromotionCondition")]
+		internal class PromotionCondition
+		{
+			public PromotionConditionEvent OnAfterPromotion { get; set; }
+
+			public PromotionConditionEvent OnAfterNewGeneration { get; set; }
+
+			public string Classification { get; set; } = GecoClassification.Any;
+
+			public string FromState { get; set; }
+
+			public string Action { get; set; }
+
+			public string FinalState { get; set; }
+
+			public Validator Validator { get; set; }
+
+			public AffectedItemDestination ApplyTo { get; set; } = AffectedItemDestination.Any;
+
+			public bool IsCreateNewGeneration { get; set; } = false;
+		}
+		//[PartialPath("Constants/GECOClassification")]
+		internal static class GecoClassification
+		{
+			public const string CadRelease = "Release & Change/CAD Document";
+
+			public const string CadPreRelease = "Pre-Release & Change/CAD Document";
+
+			public const string Any = "";
+
+			public const string PartPreRelease = "Pre-Release & Change/Mechanical Part";
+
+			public const string PartRelease = "Release & Change/Mechanical Part";
+
+			public const string AnyCad = CadPreRelease + ";" + CadRelease;
+
+			public const string AnyPart = PartPreRelease + ";" + PartRelease;
+
+			public static bool IsCadClassification(string classification)
+			{
+				return classification == CadPreRelease ||
+						classification == CadRelease ||
+						classification == AnyCad;
+			}
+
+			public static bool IsPartClassification(string classification)
+			{
+				return classification == PartPreRelease ||
+						classification == PartRelease ||
+						classification == AnyPart;
+			}
+
+			public static bool CompareClassifications(
+				string currentClassification,
+				string conditionClassification)
+			{
+				if (currentClassification == conditionClassification)
+				{
+					return true;
+				}
+				switch (conditionClassification)
+				{
+					case AnyCad:
+						return IsCadClassification(currentClassification);
+					case AnyPart:
+						return IsPartClassification(currentClassification);
+					case Any:
+						return true;
+					default:
+						return false;
+				}
+			}
+
+			public static bool IsPartPreRelease(string classification)
+			{
+				return classification.StartsWith("Pre-Release & Change", StringComparison.CurrentCulture);
+			}
+		}
+		//[PartialPath("DTO/PromotionData")]
+		internal class PromotionData
+		{
+			public Item OriginalItem { get; set; }
+
+			public Item NewItem { get; set; }
+
+			public Item Geco { get; set; }
+
+			public Item GecoChangeControlled { get; set; }
+
+			public AffectedItemDestination Destination =>
+				NewItem != null ? AffectedItemDestination.NewItem : AffectedItemDestination.OriginalItem;
+
+			public Item WorkItem => NewItem ?? OriginalItem;
+		}
+		//[PartialPath("Validators/Validator")]
+		public abstract class Validator
+		{
+			private readonly IStep _step;
+
+			protected IDataAccessLayer Dal { get; }
+			protected IGECOProvider GECOProvider { get; }
+
+			protected abstract Dictionary<string, IEnumerable<Item>> GetRelationshipsItems(Item item);
+
+			protected Validator(IDataAccessLayer dal, IGECOProvider gecoProvider, IStep step)
+			{
+				GECOProvider = gecoProvider ?? throw new ArgumentNullException(nameof(gecoProvider));
+				_step = step ?? throw new ArgumentNullException(nameof(step));
+				Dal = dal ?? throw new ArgumentNullException(nameof(dal));
+			}
+
+			public void Validate(Item item, Item geco)
+			{
+				GECOProvider.LoadAffectedItems(geco ?? throw new ArgumentNullException(nameof(geco)));
+				var context = new ValidationContext(GetRelationshipsItems(item))
+				{
+					CurrentGECO = geco,
+					RootItem = item ?? throw new ArgumentNullException(nameof(item)),
+				};
+
+				IEnumerable<string> errors = _step.Handle(context).ToList();
+				if (errors.Any())
+				{
+					string errorMessage = BuildErrorMessage(item, errors);
+					throw new ItemException(Dal.NewError(errorMessage));
+				}
+			}
+
+			protected virtual IEnumerable<Item> GetRelatedItems(string relationshipName, Item item)
+			{
+				_ = item ?? throw new ArgumentNullException(nameof(item));
+				return Dal.GetTabItems(relationshipName, item.getID())
+					.Select(x => x.getRelatedItem());
+			}
+
+			private static string BuildErrorMessage(Item item, IEnumerable<string> errors)
+			{
+				int totalErrors = errors.Count();
+				string itemNumber = item.getProperty("item_number");
+				var errorMessage = new StringBuilder();
+				errorMessage.AppendLine($"{totalErrors} errors in {itemNumber}:");
+				foreach (string error in errors)
+				{
+					errorMessage.AppendLine(error);
+				}
+
+				return errorMessage.ToString();
+			}
+		}
+		//[PartialPath("Validators/CADValidator")]
+		internal class CADValidator : Validator
+		{
+			internal static IRelationshipNameProvider CADStructureNameProvider = new CADStructureNameProvider();
+
+			public CADValidator(IDataAccessLayer dal, IGECOProvider gecoProvider, IStep step) : base(dal, gecoProvider, step) { }
+
+			protected override Dictionary<string, IEnumerable<Item>> GetRelationshipsItems(Item item)
+			{
+				if (item == null)
+				{
+					throw new ArgumentNullException(nameof(item));
+				}
+
+				string cadStructureName = CADStructureNameProvider.TabName;
+
+				return new Dictionary<string, IEnumerable<Item>>
+				{
+					{ cadStructureName , GetRelatedItems(cadStructureName, item) }
+				};
+			}
+		}
+		//[PartialPath("Validators/PartValidator")]
+		internal class PartValidator : Validator
+		{
+			public static IRelationshipNameProvider PartCADStructureNameProvider =
+				new PartCADStructureNameProvider();
+
+			public static IRelationshipNameProvider PartBOMStructureNameProvider =
+				new PartBOMStructureNameProvider();
+
+			public PartValidator(IDataAccessLayer dal, IGECOProvider gecoProvider, IStep step) : base(dal, gecoProvider, step) { }
+
+			protected override Dictionary<string, IEnumerable<Item>> GetRelationshipsItems(Item item)
+			{
+				if (item == null)
+				{
+					throw new ArgumentNullException(nameof(item));
+				}
+
+				string partBOMName = PartBOMStructureNameProvider.TabName;
+				string partCADName = PartCADStructureNameProvider.TabName;
+
+				return new Dictionary<string, IEnumerable<Item>>
+				{
+					{ partBOMName, GetRelatedItems(partBOMName, item) },
+					{ partCADName, GetRelatedItems(partCADName, item) }
+				};
+			}
+		}
+
+		//[PartialPath("Promotions/Shared/GECOPromotion")]
+		internal abstract class GECOPromotion
+		{
+			protected DataAccessLayer Dal { get; }
+
+			protected string CurrentClassification { get; }
+
+			protected string AffectedItemType
+			{
+				get
+				{
+					if (GecoClassification.IsCadClassification(CurrentClassification))
+					{
+						return "CAD";
+					}
+					if (GecoClassification.IsPartClassification(CurrentClassification))
+					{
+						return "Part";
+					}
+
+					return string.Empty;
+				}
+			}
+
+			protected string NameIdentityForGrant { get; set; } = "Aras PLM";
+
+			protected GECOPromotion(DataAccessLayer dataAccessLayer, string classification)
+			{
+				CurrentClassification = classification;
+				if (string.IsNullOrEmpty(AffectedItemType))
+				{
+					throw new FormatException($"Unknown \"{CurrentClassification}\" classification");
+				}
+
+				Dal = dataAccessLayer;
+			}
+
+			protected virtual void ProcessingGecoChangeControlled(PromotionData promotedData)
+			{
+				string action = promotedData.GecoChangeControlled.getProperty("gag_action");
+
+				PromotionCondition originalItemPromotedBy = PromoteItemByCondition(
+					promotedData.OriginalItem,
+					action,
+					promotedData,
+					AffectedItemDestination.OriginalItem);
+
+				if (originalItemPromotedBy?.IsCreateNewGeneration == true)
+				{
+					promotedData.NewItem = CreateNewGenerationInGecoChangeControlled(
+						promotedData.Geco,
+						promotedData.GecoChangeControlled,
+						promotedData.OriginalItem);
+
+					originalItemPromotedBy.OnAfterNewGeneration?.Invoke(promotedData, Dal);
+				}
+
+				if (promotedData.NewItem != null)
+				{
+					PromoteItemByCondition(
+						promotedData.NewItem,
+						action,
+						promotedData,
+						AffectedItemDestination.NewItem);
+				}
+			}
+
+			protected PromotionCondition PromoteItemByCondition(
+				Item item,
+				string gecoAction,
+				PromotionData promotionData,
+				AffectedItemDestination destination)
+			{
+				string originalItemState = item.getProperty("state");
+				PromotionCondition itemCondition = GetAllowedState(
+					originalItemState,
+					gecoAction,
+					destination);
+				if (itemCondition?.ApplyTo.HasFlag(destination) == true)
+				{
+					PromoteItem(item, itemCondition.FinalState);
+					itemCondition.OnAfterPromotion?.Invoke(promotionData, Dal);
+				}
+
+				return itemCondition;
+			}
+
+			protected void ValidateItemByCondition(
+				Item item,
+				Item geco,
+				string gecoAction,
+				AffectedItemDestination destination)
+			{
+				string originalItemState = item.getProperty("state");
+				PromotionCondition itemCondition = GetAllowedState(
+					originalItemState,
+					gecoAction,
+					destination);
+				if (itemCondition?.ApplyTo.HasFlag(destination) == true)
+				{
+					Validator validator = itemCondition.Validator;
+					validator?.Validate(item, geco);
+				}
+			}
+
+			protected virtual Item CreateNewGenerationInGecoChangeControlled(
+				Item geco,
+				Item gecoChangeControlled,
+				Item originalItem
+			)
+			{
+				Item newGeneration = CreateNewGeneration(originalItem);
+				gecoChangeControlled = UpdateGecoChangeControlled(
+					gecoChangeControlled,
+					originalItem.getID(),
+					newGeneration.getID());
+				Contract.ThrowIfError(gecoChangeControlled);
+				return newGeneration;
+			}
+
+			protected Item ChangeIsCurrent(ref PromotionData promotionData)
+			{
+				if (promotionData.NewItem == null)
+				{
+					return null;
+				}
+
+				string currentItemId = promotionData.NewItem.getID();
+				StringBuilder query = new StringBuilder();
+				query.Append(GetQueryForUpdateIsCurrent(currentItemId, uniquness: currentItemId, isCurrent: "0"));
+				query.Append(";");
+				query.Append(GetQueryForUpdateIsCurrent(promotionData.OriginalItem.getID(), uniquness: "NULL", isCurrent: "1"));
+				promotionData = SwapCurrentAndOriginalItems(promotionData);
+				return Dal.ApplySql(query.ToString());
+			}
+
+			protected static PromotionData SwapCurrentAndOriginalItems(PromotionData promotionData)
+			{
+				Item currentItem = promotionData.NewItem;
+				Item originalItem = promotionData.OriginalItem;
+				SwapItems(ref currentItem, ref originalItem);
+				promotionData.NewItem = currentItem;
+				promotionData.OriginalItem = originalItem;
+				return promotionData;
+			}
+
+			protected static void SwapItems(ref Item firstItem, ref Item secondItem)
+			{
+				Item tempItem = firstItem;
+				firstItem = secondItem;
+				secondItem = tempItem;
+			}
+
+			protected string GetQueryForUpdateIsCurrent(string itemId, string uniquness, string isCurrent)
+			{
+				StringBuilder updateQueryForChangeIsCurrent = new StringBuilder();
+				updateQueryForChangeIsCurrent.AppendFormat(
+					CultureInfo.CurrentCulture,
+					" UPDATE innovator.{0} ",
+					AffectedItemType
+				);
+				updateQueryForChangeIsCurrent.AppendFormat(
+					CultureInfo.CurrentCulture,
+					" SET IS_CURRENT={0},[ARAS:UNIQUENESS_HELPER]='{1}' ",
+					isCurrent,
+					uniquness
+				);
+				updateQueryForChangeIsCurrent.AppendFormat(CultureInfo.CurrentCulture, " where id='{0}' ", itemId);
+				return updateQueryForChangeIsCurrent.ToString();
+			}
+
+			public abstract IEnumerable<PromotionCondition> PromotionMap { get; }
+
+			protected virtual PromotionCondition GetAllowedState(
+				string state,
+				string action,
+				AffectedItemDestination destination = AffectedItemDestination.Any
+			)
+			{
+				IEnumerable<PromotionCondition> availablePromotions = PromotionMap.Where(p =>
+						p.FromState == state &&
+						GecoClassification.CompareClassifications(CurrentClassification, p.Classification) &&
+						GecoAction.CompareActions(action, p.Action) &&
+						(destination == AffectedItemDestination.Any || p.ApplyTo.HasFlag(destination))
+					);
+				return availablePromotions.SingleOrDefault();
+			}
+
+			public virtual void PromoteGecoAffectedItems(Item geco)
+			{
+				Aras.Server.Security.Identity identityForGrant = Aras.Server.Security.Identity.GetByName(NameIdentityForGrant);
+				bool permissionWasGranted = Aras.Server.Security.Permissions.GrantIdentity(identityForGrant);
+				IEnumerable<PromotionData> promotionData = GetPromotionData(geco);
+				ValidateAffectedItems(promotionData);
+				EnumerateGecoAffectedItems(promotionData);
+				if (permissionWasGranted)
+				{
+					Aras.Server.Security.Permissions.RevokeIdentity(identityForGrant);
+				}
+			}
+
+			protected virtual void ValidateAffectedItems(IEnumerable<PromotionData> promotionData)
+			{
+				foreach (PromotionData data in promotionData)
+				{
+					string action = data.GecoChangeControlled.getProperty("gag_action");
+					ValidateItemByCondition(
+						data.NewItem ?? data.OriginalItem,
+						data.Geco,
+						action,
+						data.NewItem != null ? AffectedItemDestination.NewItem : AffectedItemDestination.OriginalItem);
+				}
+			}
+
+			protected virtual void EnumerateGecoAffectedItems(IEnumerable<PromotionData> promotionData)
+			{
+				promotionData
+					.ToList()
+					.ForEach(ProcessingGecoChangeControlled);
+			}
+
+			protected Item GetGecoChangeControlled(string gecoId)
+			{
+				Item gecoChangeControlledItem = Dal.NewItem("GAG_GECO ChangeControlled", "get");
+				gecoChangeControlledItem.setProperty("source_id", gecoId);
+				gecoChangeControlledItem.setAttribute("select", "related_id, gag_new_item, gag_action");
+				gecoChangeControlledItem = Dal.ApplyItem(gecoChangeControlledItem);
+				return gecoChangeControlledItem.isError()
+					? throw new ItemException(gecoChangeControlledItem)
+					: gecoChangeControlledItem;
+			}
+
+			protected Item PromoteItem(Item item, params string[] states)
+			{
+				foreach (string state in states)
+				{
+					Item promotedItem = Dal.PromoteItem(item, state, comments: null);
+
+					if (promotedItem.isError())
+					{
+						throw new ItemException(promotedItem);
+					}
+				}
+
+				return item;
+			}
+
+			protected virtual Item CreateNewGeneration(Item item)
+			{
+				string itemId = item.getID();
+				Item nextGeneration = Dal.NewItem(item.getType(), "version");
+				nextGeneration.setID(itemId);
+				nextGeneration.setAttribute("unlock", "1");
+				nextGeneration = Dal.ApplyItem(nextGeneration);
+				Contract.ThrowIfError(nextGeneration);
+				return nextGeneration;
+			}
+
+			protected virtual Item UpdateGecoChangeControlled(
+				Item gecoChangeControlled,
+				string currentId,
+				string newGenerationId
+			)
+			{
+				Item updateGecoChangeControlled = Dal.NewItem(gecoChangeControlled.getType(), "edit");
+				updateGecoChangeControlled.setID(gecoChangeControlled.getID());
+				updateGecoChangeControlled.setProperty("related_id", currentId);
+				updateGecoChangeControlled.setProperty("gag_new_item", newGenerationId);
+				updateGecoChangeControlled = Dal.ApplyItem(updateGecoChangeControlled);
+				Contract.ThrowIfError(updateGecoChangeControlled);
+				return updateGecoChangeControlled;
+			}
+
+			private IEnumerable<PromotionData> GetPromotionData(Item geco)
+			{
+				Item relationships = GetGecoChangeControlled(geco.getID());
+				foreach (Item gecoChangeControlled in relationships.Enumerate())
+				{
+					Item originalItem = gecoChangeControlled.getPropertyItem("related_id");
+					string newItemId = gecoChangeControlled.getProperty("gag_new_item");
+					Item newItem = null;
+					if (!string.IsNullOrEmpty(newItemId))
+					{
+						newItem = Dal.NewItem(AffectedItemType, "get");
+						newItem.setID(newItemId);
+						newItem = Dal.ApplyItem(newItem);
+						Contract.ThrowIfError(newItem);
+					}
+
+					yield return new PromotionData
+					{
+						OriginalItem = originalItem,
+						NewItem = newItem,
+						Geco = geco,
+						GecoChangeControlled = gecoChangeControlled
+					};
+				}
+			}
+		}
+		//[PartialPath("Promotions/CAD/DevelopmentRelease")]
+		internal class DevelopmentRelease : GECOPromotion
+		{
+			protected DevelopmentRelease(DataAccessLayer dataAccessLayer, string classification) : base(dataAccessLayer, classification)
+			{
+			}
+
+			public static DevelopmentRelease GetInstance(DataAccessLayer dataAccessLayer, string classification)
+			{
+				return new DevelopmentRelease(dataAccessLayer, classification);
+			}
+
+			public override IEnumerable<PromotionCondition> PromotionMap =>
+				new List<PromotionCondition>()
+				{
+					new PromotionCondition {
+						FromState = "25",
+						Classification = GecoClassification.CadPreRelease,
+						Action = GecoAction.Revise,
+						FinalState = "30",
+						Validator = ValidatorFactory.GetCADPreReleaseFrom25To30Validator(Dal),
+						ApplyTo = AffectedItemDestination.NewItem
+					},
+					new PromotionCondition {
+						FromState = "25",
+						Classification = GecoClassification.CadPreRelease,
+						Action = GecoAction.Release,
+						FinalState = "30",
+						Validator = ValidatorFactory.GetCADPreReleaseFrom25To30Validator(Dal),
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+					new PromotionCondition {
+						FromState = "25",
+						Classification = GecoClassification.PartPreRelease,
+						Action = GecoAction.Revise,
+						FinalState = "30",
+						Validator = ValidatorFactory.GetPartPreReleaseFrom25To30Validator(Dal),
+						ApplyTo = AffectedItemDestination.NewItem,
+					},
+					new PromotionCondition {
+						FromState = "25",
+						Classification = GecoClassification.PartPreRelease,
+						Action = GecoAction.Release,
+						FinalState = "30",
+						Validator = ValidatorFactory.GetPartPreReleaseFrom25To30Validator(Dal),
+						ApplyTo = AffectedItemDestination.OriginalItem,
+					},
+					new PromotionCondition {
+						FromState = "25",
+						Classification = GecoClassification.CadRelease,
+						FinalState = "50",
+						Action = GecoAction.Revise,
+						ApplyTo = AffectedItemDestination.NewItem,
+						Validator = ValidatorFactory.GetCADReleaseFrom25To50Validator(Dal)
+					},
+					new PromotionCondition {
+						FromState = "25",
+						Classification = GecoClassification.CadRelease,
+						FinalState = "50",
+						Action = GecoAction.Release,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+						Validator = ValidatorFactory.GetCADReleaseFrom25To50Validator(Dal)
+					},
+					new PromotionCondition {
+						FromState = "28",
+						FinalState = "29",
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+					new PromotionCondition {
+						FromState = "60",
+						Classification = GecoClassification.CadRelease,
+						FinalState = "90",
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+				};
+		}
+		//[PartialPath("Promotions/CAD/ReworkCompleted")]
+		internal class ReworkCompleted : GECOPromotion
+		{
+			protected ReworkCompleted(DataAccessLayer dataAccessLayer, string classification) : base(dataAccessLayer, classification)
+			{
+			}
+
+			public static ReworkCompleted GetInstance(DataAccessLayer dataAccessLayer, string classification)
+			{
+				return new ReworkCompleted(dataAccessLayer, classification);
+			}
+
+			public override IEnumerable<PromotionCondition> PromotionMap =>
+				new List<PromotionCondition>()
+				{
+					new PromotionCondition {
+						FromState = "10",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.CadRelease,
+						FinalState = "25",
+						ApplyTo = AffectedItemDestination.NewItem,
+						OnAfterPromotion = new PromotionConditionEvent()
+							.AddEvent(Methods.ChangeRevisionToAlphabetical)
+					},
+					new PromotionCondition {
+						FromState = "10",
+						Action = GecoAction.Release,
+						Classification = GecoClassification.CadRelease,
+						FinalState = "25",
+						ApplyTo = AffectedItemDestination.OriginalItem,
+						OnAfterPromotion = new PromotionConditionEvent()
+							.AddEvent(Methods.ChangeRevisionToAlphabetical)
+					}
+				};
+
+			public override void PromoteGecoAffectedItems(Item geco)
+			{
+				Item workflowProcess = Dal.NewItem("Workflow Process", "get");
+				workflowProcess.setProperty("keyed_name", geco.getProperty("keyed_name"));
+
+				Item activity = Dal.NewItem("Activity", "get");
+				activity.setProperty("state", "Active");
+				activity.setProperty("keyed_name", "Rework");
+
+				Item workflowProcessActivities = Dal.NewItem("Workflow Process Activity", "get");
+				workflowProcessActivities.setPropertyItem("source_id", workflowProcess);
+				workflowProcessActivities.setPropertyItem("related_id", activity);
+
+				workflowProcessActivities = Dal.ApplyItem(workflowProcessActivities);
+				if (workflowProcessActivities.isError())
+				{
+					if (workflowProcessActivities.isEmpty())
+					{
+						base.PromoteGecoAffectedItems(geco);
+					}
+					else
+					{
+						throw new ItemException(workflowProcessActivities);
+					}
+				}
+			}
+		}
+		//[PartialPath("Promotions/Shared/ReworkRequired")]
+		internal class ReworkRequired : GECOPromotion
+		{
+			protected ReworkRequired(DataAccessLayer dataAccessLayer, string classification) : base(dataAccessLayer, classification)
+			{
+			}
+
+			public static ReworkRequired GetInstance(DataAccessLayer dataAccessLayer, string classification)
+			{
+				return new ReworkRequired(dataAccessLayer, classification);
+			}
+
+			public override IEnumerable<PromotionCondition> PromotionMap =>
+				new List<PromotionCondition>()
+				{
+					new PromotionCondition
+					{
+						FromState = "25",
+						FinalState = "10",
+						Action = GecoAction.Release,
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+					new PromotionCondition
+					{
+						FromState = "25",
+						FinalState = "10",
+						Action = GecoAction.Revise,
+						ApplyTo = AffectedItemDestination.NewItem
+					},
+					new PromotionCondition
+					{
+						FromState = "35",
+						FinalState = "10",
+						Action = GecoAction.Release,
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+					new PromotionCondition
+					{
+						FromState = "35",
+						FinalState = "10",
+						Action = GecoAction.Revise,
+						ApplyTo = AffectedItemDestination.NewItem
+					},
+					new PromotionCondition
+					{
+						FromState = "45",
+						FinalState = "10",
+						Action = GecoAction.Release,
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+					new PromotionCondition
+					{
+						FromState = "45",
+						FinalState = "10",
+						Action = GecoAction.Revise,
+						ApplyTo = AffectedItemDestination.NewItem
+					},
+				};
+		}
+		//[PartialPath("Promotions/Shared/CancelGECO")]
+		internal class CancelGeco : GECOPromotion
+		{
+			protected CancelGeco(DataAccessLayer dataAccessLayer, string classification) : base(dataAccessLayer, classification)
+			{
+			}
+
+			public static CancelGeco GetInstance(DataAccessLayer dataAccessLayer, string classification)
+			{
+				return new CancelGeco(dataAccessLayer, classification);
+			}
+
+			public override IEnumerable<PromotionCondition> PromotionMap =>
+				new List<PromotionCondition>()
+				{
+					new PromotionCondition
+					{
+						FromState = "10",
+						Action = GecoAction.Revise,
+						FinalState = "19",
+						ApplyTo = AffectedItemDestination.NewItem
+					},
+					new PromotionCondition {
+						FromState = "28",
+						FinalState = "30",
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+					new PromotionCondition {
+						FromState = "60",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.CadRelease,
+						FinalState = "50",
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+					new PromotionCondition {
+						FromState = "60",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.PartRelease,
+						FinalState = "50",
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+				};
+
+			protected override void ProcessingGecoChangeControlled(PromotionData updatedPromotionData)
+			{
+				base.ProcessingGecoChangeControlled(updatedPromotionData);
+				ChangeIsCurrent(ref updatedPromotionData);
+			}
+		}
+		//[PartialPath("Promotions/Part/ExternalReviewCompleted")]
+		internal class ExternalReviewCompleted : GECOPromotion
+		{
+			protected ExternalReviewCompleted(DataAccessLayer dataAccessLayer, string classification) : base(dataAccessLayer, classification)
+			{
+			}
+
+			public static ExternalReviewCompleted GetInstance(DataAccessLayer dataAccessLayer, string classification)
+			{
+				return new ExternalReviewCompleted(dataAccessLayer, classification);
+			}
+
+			public override IEnumerable<PromotionCondition> PromotionMap =>
+				new List<PromotionCondition>
+				{
+					new PromotionCondition
+					{
+						FromState = "45",
+						FinalState = "50",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.PartRelease,
+						ApplyTo = AffectedItemDestination.NewItem,
+					},
+					new PromotionCondition
+					{
+						FromState = "45",
+						FinalState = "50",
+						Action = GecoAction.Release,
+						Classification = GecoClassification.PartRelease,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+					},
+					new PromotionCondition
+					{
+						FromState = "60",
+						FinalState = "90",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.PartRelease,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+					},
+					new PromotionCondition
+					{
+						FromState = "28",
+						FinalState = "29",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.PartRelease,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+					},
+				};
+		}
+		//[PartialPath("Validators/Steps/BaseStep")]
+		public abstract class BaseStep : IStep
+		{
+			protected IStep NextStep { get; private set; }
+			protected IGECOProvider GECOProvider { get; }
+			public string Name { get; }
+
+			protected BaseStep(IGECOProvider gecoProvider, string name)
+			{
+				if (string.IsNullOrWhiteSpace(name))
+				{
+					throw new ArgumentNullException(nameof(name));
+				}
+
+				Name = name;
+				GECOProvider = gecoProvider ?? throw new ArgumentNullException(nameof(gecoProvider));
+			}
+
+			public virtual void SetNext(IStep nextStep)
+			{
+				NextStep = nextStep ?? throw new ArgumentNullException(nameof(nextStep));
+			}
+
+			public abstract IEnumerable<string> Handle(ValidationContext context);
+
+			protected IEnumerable<Item> GetActualItems(Item geco, params Item[] relatedItems)
+			{
+				foreach (Item relatedItem in relatedItems)
+				{
+					foreach (Item actualItem in GECOProvider.GetActualItems(geco, relatedItem))
+					{
+						yield return actualItem;
+					}
+				}
+			}
+
+			protected ValidationResult GetValidationResult(Item geco, Item item, ValidationErrorType errorType, string errorMessage)
+			{
+				return new ValidationResult
+				{
+					Name = Name,
+					Geco = geco,
+					Item = item,
+					Type = GetType(),
+					ErrorType = errorType,
+					ErrorMessage = errorMessage
+				};
+			}
+
+			protected static string GetItemNumber(Item item)
+			{
+				if (item == null)
+				{
+					throw new ArgumentNullException(nameof(item));
+				}
+
+				return item.getProperty("item_number");
+			}
+
+			protected static string GetState(Item item)
+			{
+				if (item == null)
+				{
+					throw new ArgumentNullException(nameof(item));
+				}
+
+				return item.getProperty("state");
+			}
+
+			protected static string GetGecoNumber(Item geco)
+			{
+				if (geco == null)
+				{
+					throw new ArgumentNullException(nameof(geco));
+				}
+
+				return geco.getProperty("gag_plm_change_object_number");
+			}
+		}
+		//[PartialPath("Promotions/Part/InternalReviewCompleted")]
+		internal class InternalReviewCompleted : GECOPromotion
+		{
+			protected InternalReviewCompleted(DataAccessLayer dataAccessLayer, string classification) : base(dataAccessLayer, classification)
+			{
+			}
+
+			public static InternalReviewCompleted GetInstance(DataAccessLayer dataAccessLayer, string classification)
+			{
+				return new InternalReviewCompleted(dataAccessLayer, classification);
+			}
+
+			public override IEnumerable<PromotionCondition> PromotionMap =>
+				new List<PromotionCondition>
+				{
+					new PromotionCondition
+					{
+						FromState = "35",
+						FinalState = "45",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.PartRelease,
+						Validator = ValidatorFactory.GetPartReleaseFrom35To45Validator(Dal),
+						ApplyTo = AffectedItemDestination.NewItem,
+					},
+					new PromotionCondition
+					{
+						FromState = "35",
+						FinalState = "45",
+						Action = GecoAction.Release,
+						Classification = GecoClassification.PartRelease,
+						Validator = ValidatorFactory.GetPartReleaseFrom35To45Validator(Dal),
+						ApplyTo = AffectedItemDestination.OriginalItem,
+					},
+				};
+		}
+		//[PartialPath("Validators/Steps/ItemTabStatesValidator")]
+		public class ItemTabStatesValidator : IStep
+		{
+			private IStep _nextStep;
+			private readonly IEnumerable<string> _allowedStates;
+			private readonly IRelationshipNameProvider _relationshipNameProvider;
+
+			public string Name { get; }
+
+			public ItemTabStatesValidator(
+				string name,
+				IRelationshipNameProvider relationshipNameProvider,
+				IEnumerable<string> allowedStates)
+			{
+				if (string.IsNullOrWhiteSpace(name))
+				{
+					throw new ArgumentNullException(nameof(name));
+				}
+
+				Name = name;
+				_allowedStates = allowedStates
+					?? throw new ArgumentNullException(nameof(allowedStates));
+				_relationshipNameProvider = relationshipNameProvider
+					?? throw new ArgumentNullException(nameof(relationshipNameProvider));
+			}
+
+			public IEnumerable<string> Handle(ValidationContext context)
+			{
+				if (context == null)
+				{
+					throw new ArgumentNullException(nameof(context));
+				}
+
+				string relationshipName = _relationshipNameProvider.TabName;
+				if (!context.RelationshipItems.TryGetValue(relationshipName, out IEnumerable<Item> relatedItems))
+				{
+					throw new InvalidOperationException($"{nameof(context.RelationshipItems)} does not have {relationshipName}");
+				}
+
+				foreach (Item invalidItem in GetInvalidItems(relatedItems, _allowedStates))
+				{
+					string invalidItemName = invalidItem.getProperty("item_number"); ;
+					string invalidItemState = invalidItem.getProperty("state");
+					string message = $"{invalidItemName} in {invalidItemState} state.";
+					context.AddError(new ValidationResult
+					{
+						Name = Name,
+						Type = GetType(),
+						Geco = context.CurrentGECO,
+						Item = invalidItem,
+						ErrorType = ValidationErrorType.StateError,
+						ErrorMessage = message
+					});
+				}
+
+				return _nextStep?.Handle(context);
+			}
+
+			private static IEnumerable<Item> GetInvalidItems(IEnumerable<Item> items, IEnumerable<string> allowedStates)
+			{
+				return items.Where(x =>
+				{
+					string currentState = x.getProperty("state");
+					return !allowedStates.Contains(currentState);
+				});
+			}
+
+			public void SetNext(IStep nextStep)
+			{
+				_nextStep = nextStep ?? throw new ArgumentNullException(nameof(nextStep));
+			}
+		}
+		//[PartialPath("Promotions/Part/MasterDataReviewCompleted")]
+		internal class MasterDataReviewCompleted : GECOPromotion
+		{
+			protected MasterDataReviewCompleted(DataAccessLayer dataAccessLayer, string classification) : base(dataAccessLayer, classification)
+			{
+			}
+
+			public static MasterDataReviewCompleted GetInstance(DataAccessLayer dataAccessLayer, string classification)
+			{
+				return new MasterDataReviewCompleted(dataAccessLayer, classification);
+			}
+
+			public override IEnumerable<PromotionCondition> PromotionMap =>
+				new List<PromotionCondition>
+				{
+					new PromotionCondition
+					{
+						FromState = "25",
+						FinalState = "35",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.PartRelease,
+						ApplyTo = AffectedItemDestination.NewItem,
+					},
+					new PromotionCondition
+					{
+						FromState = "25",
+						FinalState = "35",
+						Action = GecoAction.Release,
+						Classification = GecoClassification.PartRelease,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+					},
+				};
+		}
+		//[PartialPath("Providers/IRelationshipNameProvider")]
+		public interface IRelationshipNameProvider
+		{
+			string TabName { get; }
+
+			string TypeName { get; }
+		}
+		//[PartialPath("Promotions/Shared/StartReview")]
+		internal class StartReview : GECOPromotion
+		{
+			protected StartReview(DataAccessLayer dataAccessLayer, string classification) : base(dataAccessLayer, classification)
+			{
+			}
+
+			public static StartReview GetInstance(DataAccessLayer dataAccessLayer, string classification)
+			{
+				return new StartReview(dataAccessLayer, classification);
+			}
+
+			public override IEnumerable<PromotionCondition> PromotionMap =>
+				new List<PromotionCondition>()
+				{
+					new PromotionCondition
+					{
+						Classification = GecoClassification.CadRelease,
+						FromState = "10",
+						FinalState = "25",
+						Action = GecoAction.Release,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+						Validator = ValidatorFactory.GetCADReleaseFrom10To25Validator(Dal),
+						OnAfterPromotion = new PromotionConditionEvent()
+							.AddEvent(Methods.ChangeRevisionToAlphabetical)
+					},
+					new PromotionCondition
+					{
+						Classification = GecoClassification.CadRelease,
+						FromState = "10",
+						Action = GecoAction.Revise,
+						FinalState = "25",
+						ApplyTo = AffectedItemDestination.NewItem,
+						Validator = ValidatorFactory.GetCADReleaseFrom10To25Validator(Dal),
+						OnAfterPromotion = new PromotionConditionEvent()
+							.AddEvent(Methods.ChangeRevisionToAlphabetical)
+					},
+					new PromotionCondition
+					{
+						Classification = GecoClassification.CadPreRelease,
+						FromState = "10",
+						FinalState = "25",
+						Action = GecoAction.Release,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+						Validator = ValidatorFactory.GetCADPreReleaseFrom10To25Validator(Dal)
+					},
+					new PromotionCondition
+					{
+						Classification = GecoClassification.CadPreRelease,
+						FromState = "10",
+						Action = GecoAction.Revise,
+						FinalState = "25",
+						ApplyTo = AffectedItemDestination.NewItem,
+						Validator = ValidatorFactory.GetCADPreReleaseFrom10To25Validator(Dal)
+					},
+					new PromotionCondition
+					{
+						Classification = GecoClassification.PartPreRelease,
+						FromState = "10",
+						FinalState = "25",
+						Action = GecoAction.Release,
+						Validator = ValidatorFactory.GetPartPreReleaseFrom10To25Validator(Dal),
+						ApplyTo = AffectedItemDestination.OriginalItem,
+					},
+					new PromotionCondition
+					{
+						Classification = GecoClassification.PartRelease,
+						FromState = "10",
+						FinalState = "25",
+						Action = GecoAction.Release,
+						Validator = ValidatorFactory.GetPartReleaseFrom10To25Validator(Dal),
+						ApplyTo = AffectedItemDestination.OriginalItem,
+						OnAfterPromotion = new PromotionConditionEvent()
+							.AddEvent(Methods.ChangeRevisionToAlphabetical)
+					},
+					new PromotionCondition
+					{
+						Classification = GecoClassification.PartPreRelease,
+						FromState = "10",
+						Action = GecoAction.Revise,
+						FinalState = "25",
+						Validator = ValidatorFactory.GetPartPreReleaseFrom10To25Validator(Dal),
+						ApplyTo = AffectedItemDestination.NewItem,
+					},
+					new PromotionCondition
+					{
+						Classification = GecoClassification.PartRelease,
+						FromState = "10",
+						Action = GecoAction.Revise,
+						FinalState = "25",
+						Validator = ValidatorFactory.GetPartReleaseFrom10To25Validator(Dal),
+						ApplyTo = AffectedItemDestination.NewItem,
+						OnAfterPromotion = new PromotionConditionEvent()
+							.AddEvent(Methods.ChangeRevisionToAlphabetical)
+					},
+				};
+		}
+		//[PartialPath("Providers/CADStructureNameProvider")]
+		internal class CADStructureNameProvider : IRelationshipNameProvider
+		{
+			public string TabName => "CAD Structure";
+
+			public string TypeName => "CAD";
+		}
+		//[PartialPath("Providers/PartBOMStructureNameProvider")]
+		internal class PartBOMStructureNameProvider : IRelationshipNameProvider
+		{
+			public string TabName => "Part BOM";
+
+			public string TypeName => "Part";
+		}
+		//[PartialPath("Providers/PartCADStructureNameProvider")]
+		internal class PartCADStructureNameProvider : IRelationshipNameProvider
+		{
+			public string TabName => "Part CAD";
+
+			public string TypeName => "CAD";
+		}
+		//[PartialPath("Promotions/Shared/StartTask")]
+		internal class StartTask : GECOPromotion
+		{
+			protected StartTask(DataAccessLayer dataAccessLayer, string classification) : base(dataAccessLayer, classification)
+			{
+			}
+
+			public static StartTask GetInstance(DataAccessLayer dataAccessLayer, string classification)
+			{
+				return new StartTask(dataAccessLayer, classification);
+			}
+
+			public override IEnumerable<PromotionCondition> PromotionMap =>
+				new List<PromotionCondition>()
+				{
+					new PromotionCondition
+					{
+						FromState = "30",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.AnyCad,
+						FinalState = "28",
+						IsCreateNewGeneration = true,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+					},
+					new PromotionCondition
+					{
+						FromState = "30",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.AnyPart,
+						FinalState = "28",
+						IsCreateNewGeneration = true,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+						OnAfterNewGeneration = new PromotionConditionEvent()
+							.AddEvent(Methods.ClearReleaseInformation)
+					},
+					new PromotionCondition
+					{
+						FromState = "50",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.CadRelease,
+						FinalState = "60",
+						IsCreateNewGeneration = true,
+						ApplyTo = AffectedItemDestination.OriginalItem
+					},
+					new PromotionCondition
+					{
+						FromState = "50",
+						Action = GecoAction.Revise,
+						Classification = GecoClassification.PartRelease,
+						FinalState = "60",
+						IsCreateNewGeneration = true,
+						ApplyTo = AffectedItemDestination.OriginalItem,
+						OnAfterNewGeneration = new PromotionConditionEvent()
+							.AddEvent(Methods.ClearReleaseInformation)
+					},
+				};
+
+			protected override void ProcessingGecoChangeControlled(PromotionData promotionData)
+			{
+				base.ProcessingGecoChangeControlled(promotionData);
+				bool isCurrentClassification = GecoClassification.CompareClassifications(
+					CurrentClassification,
+					GecoClassification.AnyPart);
+
+				if (isCurrentClassification && promotionData.WorkItem?.getType() == "Part")
+				{
+					UpdateSapChangeNumber(promotionData.Geco, promotionData.WorkItem);
+				}
+			}
+
+			protected void UpdateSapChangeNumber(Item geco, Item item)
+			{
+				Item updateChangeNumber =
+					Dal.NewItem("Part", "edit");
+				updateChangeNumber.setID(item.getID());
+				string gecoNumber = geco.getProperty("gag_sap_change_number");
+				updateChangeNumber.setProperty("gag_change_num", gecoNumber);
+				updateChangeNumber.setAttribute("version", "0");
+				updateChangeNumber = Dal.ApplyItem(updateChangeNumber);
+				Contract.ThrowIfError(updateChangeNumber);
+			}
+		}
+		//[PartialPath("Validators/Steps/CurrentGECOValidator")]
+		public class CurrentGECOValidator : BaseStep
+		{
+			private readonly IEnumerable<string> _allowedStates;
+			private readonly IRelationshipNameProvider _relationshipNameProvider;
+
+			public CurrentGECOValidator(
+				string name,
+				IGECOProvider gecoProvider,
+				IRelationshipNameProvider relationshipNameProvider,
+				IEnumerable<string> allowedStates)
+			: base(gecoProvider, name)
+			{
+				_allowedStates = allowedStates ?? throw new ArgumentNullException(nameof(allowedStates));
+				_relationshipNameProvider = relationshipNameProvider
+											?? throw new ArgumentNullException(nameof(relationshipNameProvider));
+			}
+
+			public override IEnumerable<string> Handle(ValidationContext context)
+			{
+				if (context == null)
+				{
+					throw new ArgumentNullException(nameof(context));
+				}
+
+				string relationshipName = _relationshipNameProvider.TabName;
+				if (!context.RelationshipItems.TryGetValue(relationshipName, out IEnumerable<Item> relatedItems))
+				{
+					throw new InvalidOperationException($"{nameof(context.RelationshipItems)} does not have {relationshipName}");
+				}
+
+				foreach (Item relatedItem in relatedItems)
+				{
+					context.AddErrors(Validate(relatedItem, context.CurrentGECO));
+				}
+
+				return NextStep?.Handle(context);
+			}
+
+			private IEnumerable<ValidationResult> Validate(Item item, Item currentGECO)
+			{
+				string gecoNumber = GetGecoNumber(currentGECO);
+				bool isCurrentGECOContains = GECOProvider.GECOContainsItem(currentGECO, item.getID());
+				string itemNumber = GetItemNumber(item);
+				string state = GetState(item);
+				if (_allowedStates.Contains(state) && !isCurrentGECOContains)
+				{
+					yield return GetValidationResult(
+						currentGECO,
+						item,
+						ValidationErrorType.GECOLocatedError,
+						$"{itemNumber} with {state} state must be in the same GECO.");
+					yield break;
+				}
+
+				foreach (Item actualItem in GetActualItems(currentGECO, item))
+				{
+					IEnumerable<Item> affectedItems = GECOProvider.FindAffectedItems(currentGECO, actualItem.getID()).ToList();
+					foreach (Item affectedItem in affectedItems)
+					{
+						string action = affectedItem.getProperty("gag_action");
+						itemNumber = GetItemNumber(actualItem);
+						state = GetState(actualItem);
+						if (isCurrentGECOContains && !_allowedStates.Contains(state) && action != GecoAction.None)
+						{
+							yield return GetValidationResult(
+								currentGECO,
+								item,
+								ValidationErrorType.StateError,
+								$"{itemNumber} in current GECO ({gecoNumber}) can be only in {string.Join(", ", _allowedStates)} state, but now in {state} state.");
+							yield break;
+						}
+
+						if (action == GecoAction.None)
+						{
+							yield return GetValidationResult(
+								currentGECO,
+								actualItem,
+								ValidationErrorType.WrongActionError,
+								BuildActionMessage(itemNumber, gecoNumber, action, state));
+						}
+
+						if (string.IsNullOrWhiteSpace(action))
+						{
+							yield return GetValidationResult(
+								currentGECO,
+								actualItem,
+								ValidationErrorType.WrongActionError,
+								BuildActionMessage(itemNumber, gecoNumber, "empty", state));
+						}
+					}
+				}
+			}
+
+			private static string BuildActionMessage(string itemNumber, string gecoNumber, string action, string state)
+			{
+				return $"{itemNumber} with state {state} cannot have '{action}' action in current GECO ({gecoNumber}).";
+			}
+		}
+		//[PartialPath("Validators/Steps/OtherGECOValidator")]
+		public class OtherGECOValidator : BaseStep
+		{
+			private readonly IEnumerable<string> _availableClassifications;
+			private readonly IEnumerable<string> _allowedStates;
+			private readonly IRelationshipNameProvider _relationshipNameProvider;
+
+			public OtherGECOValidator(
+				string name,
+				IGECOProvider gecoProvider,
+				IRelationshipNameProvider relationshipNameProvider,
+				IEnumerable<string> availableClassifications,
+				IEnumerable<string> allowedStates)
+			: base(gecoProvider, name)
+			{
+				_availableClassifications = availableClassifications ??
+					throw new ArgumentNullException(nameof(availableClassifications));
+				_allowedStates = allowedStates ?? throw new ArgumentNullException(nameof(allowedStates));
+				_relationshipNameProvider = relationshipNameProvider ??
+					throw new ArgumentNullException(nameof(relationshipNameProvider));
+			}
+
+			public override IEnumerable<string> Handle(ValidationContext context)
+			{
+				if (context == null)
+				{
+					throw new ArgumentNullException(nameof(context));
+				}
+
+				string relationshipName = _relationshipNameProvider.TabName;
+				if (!context.RelationshipItems.TryGetValue(relationshipName, out IEnumerable<Item> relatedItems))
+				{
+					throw new InvalidOperationException($"{nameof(context.RelationshipItems)} does not have {relationshipName}");
+				}
+
+				relatedItems = relatedItems.Where(x => _allowedStates.Contains(GetState(x)) || HasErrorOnCurrentGECO(x, context));
+				foreach (var relatedItem in relatedItems)
+				{
+					IEnumerable<Item> relatedGECOs = GECOProvider.GetRelatedGECOs(relatedItem)
+						.Where(x => x.getID() != context.CurrentGECO.getID());
+					context.AddErrors(Validate(relatedItem, relatedGECOs));
+				}
+
+				return NextStep?.Handle(context);
+			}
+
+			private IEnumerable<ValidationResult> Validate(Item item, IEnumerable<Item> relatedGecos)
+			{
+				string cadNumber = GetItemNumber(item);
+				string state = GetState(item);
+				relatedGecos = relatedGecos.ToList();
+				if (IsNotContainsOnActiveGECOs(item, relatedGecos))
+				{
+					yield return GetValidationResult(
+						null,
+						item,
+						ValidationErrorType.GECOLocatedError,
+						$"{cadNumber} is not contained in an active GECO.");
+					yield break;
+				}
+
+				foreach (Item relatedGeco in relatedGecos)
+				{
+					string classification = relatedGeco.getProperty("classification");
+					string gecoNumber = relatedGeco.getProperty("gag_plm_change_object_number");
+					IEnumerable<Item> affectedItems = GECOProvider.FindAffectedItems(relatedGeco, item.getID());
+					foreach (Item affectedItem in affectedItems)
+					{
+						string action = affectedItem.getProperty("gag_action");
+						if (!_availableClassifications.Contains(classification) && action != GecoAction.None)
+						{
+							yield return GetValidationResult(
+								relatedGeco,
+								item,
+								ValidationErrorType.GECOClassificationError,
+								$"{gecoNumber} GECO which contains {cadNumber} must have {string.Join(", ", _availableClassifications)} workflow type."
+							);
+						}
+
+						if (string.IsNullOrWhiteSpace(action))
+						{
+							yield return GetValidationResult(
+								relatedGeco,
+								item,
+								ValidationErrorType.WrongActionError,
+								BuildActionMessage(cadNumber, gecoNumber, "empty", state));
+						}
+					}
+				}
+			}
+
+			private bool HasErrorOnCurrentGECO(Item item, ValidationContext context)
+			{
+				return context.Errors.Any(x =>
+					x.Type == typeof(CurrentGECOValidator)
+					&& x.Item.getID() == item.getID()
+					&& _allowedStates.Contains(GetState(x.Item)));
+			}
+
+			/// <summary>
+			/// Method checks the gag_action property of affected an item and a state of a geco.
+			/// </summary>
+			/// <param name="item">Item to be checked</param>
+			/// <param name="relatedGecos">Related GECO for an item</param>
+			/// <returns>
+			/// Should returns true if a sequence does not contain active GECOS's with Release or Revise actions.
+			/// </returns>
+			private bool IsNotContainsOnActiveGECOs(Item item, IEnumerable<Item> relatedGecos)
+			{
+				return !relatedGecos.Any(x => GECOProvider.GECOIsActive(x) && GECOProvider.FindAffectedItems(x, item.getID()).All(ActionIsNotNoneOrEmpty));
+			}
+
+			private static bool ActionIsNotNoneOrEmpty(Item affectedItem)
+			{
+				return affectedItem.getProperty("gag_action") != GecoAction.None
+						&& !string.IsNullOrWhiteSpace(affectedItem.getProperty("gag_action"));
+			}
+
+			private static string BuildActionMessage(string itemNumber, string gecoNumber, string action, string state)
+			{
+				return $"{itemNumber} with state {state} cannot have '{action}' action in GECO ({gecoNumber}).";
+			}
+		}
+		//[PartialPath("Providers/IGECOProvider")]
+		public interface IGECOProvider
+		{
+			void LoadAffectedItems(Item geco);
+			bool GECOContainsItem(Item geco, string itemId);
+			bool GECOIsActive(Item geco);
+			IEnumerable<Item> GetActualItems(Item geco, Item item);
+			IEnumerable<Item> FindAffectedItems(Item geco, string itemId);
+			IEnumerable<Item> GetRelatedGECOs(Item item);
+		}
+		//[PartialPath("Providers/GECOProvider")]
+		public class GECOProvider : IGECOProvider
+		{
+			private const string AffectedItemsConditionTemplate =
+				"[GAG_GECO_CHANGECONTROLLED].GAG_NEW_ITEM = '{0}' OR [GAG_GECO_CHANGECONTROLLED].RELATED_ID = '{0}'";
+
+			private static readonly string[] _notActiveStates =
+				{
+					"Released",
+					"Canceled",
+					"In Planning"
+				};
+
+			private readonly IDataAccessLayer _dal;
+
+			public GECOProvider(IDataAccessLayer dal)
+			{
+				_dal = dal ?? throw new ArgumentNullException(nameof(dal));
+			}
+
+			public IEnumerable<Item> FindAffectedItems(Item geco, string itemId)
+			{
+				if (geco == null)
+				{
+					throw new ArgumentNullException(nameof(geco));
+				}
+
+				string condition = string.Format(CultureInfo.CurrentCulture, AffectedItemsConditionTemplate, itemId);
+				Item affectedItems = _dal.NewItem("GAG_GECO ChangeControlled", "get");
+				affectedItems.setProperty("source_id", geco.getID());
+				affectedItems.setAttribute("where", condition);
+				affectedItems = _dal.ApplyItem(affectedItems);
+				if (affectedItems.isEmpty())
+				{
+					return Array.Empty<Item>();
+				}
+
+				Contract.ThrowIfError(affectedItems);
+				return affectedItems.Enumerate();
+			}
+
+			public bool GECOContainsItem(Item geco, string itemId)
+			{
+				return FindAffectedItems(geco, itemId).Any();
+			}
+
+			public bool GECOIsActive(Item geco)
+			{
+				if (geco == null)
+				{
+					throw new ArgumentNullException(nameof(geco));
+				}
+
+				string state = geco.getProperty("state");
+				return !_notActiveStates.Contains(state);
+			}
+
+			public IEnumerable<Item> GetRelatedGECOs(Item item)
+			{
+				if (item == null)
+				{
+					throw new ArgumentNullException(nameof(item));
+				}
+
+				string condition = string.Format(CultureInfo.CurrentCulture, AffectedItemsConditionTemplate,
+					item.getID());
+				Item affectedItems = _dal.NewItem("GAG_GECO ChangeControlled", "get");
+				affectedItems.setAttribute("where", condition);
+				affectedItems = _dal.ApplyItem(affectedItems);
+				if (affectedItems.isEmpty())
+				{
+					return Array.Empty<Item>();
+				}
+
+				Contract.ThrowIfError(affectedItems);
+
+				string idlist = string.Join(",",
+					affectedItems.Enumerate().Select(geco => geco.getProperty("source_id")));
+				Item gecos = _dal.NewItem("GAG_EngineeringChangeObject", "get");
+				gecos.setAttribute("idlist", idlist);
+				gecos = _dal.ApplyItem(gecos);
+				if (gecos.isEmpty())
+				{
+					return Array.Empty<Item>();
+				}
+
+				Contract.ThrowIfError(gecos);
+				return gecos.Enumerate();
+			}
+
+			public IEnumerable<Item> GetActualItems(Item geco, Item item)
+			{
+				if (geco == null)
+				{
+					throw new ArgumentNullException(nameof(geco));
+				}
+
+				if (item == null)
+				{
+					throw new ArgumentNullException(nameof(item));
+				}
+
+				IEnumerable<Item> affectedItems = FindAffectedItems(geco, item.getID());
+				return affectedItems.Select(affectedItem =>
+				{
+					string action = affectedItem.getProperty("gag_action");
+					string gagNewItemId = affectedItem.getProperty("gag_new_item");
+					if (action == GecoAction.Release || action == GecoAction.None || action == GecoAction.Revise && string.IsNullOrWhiteSpace(gagNewItemId))
+					{
+						return affectedItem.getRelatedItem();
+					}
+
+					return GetItemById(gagNewItemId, item.getType());
+				}).Where(x => x != null);
+			}
+
+			public void LoadAffectedItems(Item geco)
+			{
+				if (geco == null)
+				{
+					throw new ArgumentNullException(nameof(geco));
+				}
+
+				Item affectedItems = _dal.NewItem("GAG_GECO ChangeControlled", "get");
+				affectedItems.setProperty("source_id", geco.getID());
+				affectedItems = _dal.ApplyItem(affectedItems);
+				if (affectedItems.isEmpty())
+				{
+					return;
+				}
+
+				Contract.ThrowIfError(affectedItems);
+				foreach (Item affectedItem in affectedItems.Enumerate())
+				{
+					geco.addRelationship(affectedItem);
+				}
+			}
+
+			private Item GetItemById(string id, string type)
+			{
+				Item item = _dal.NewItem(type, "get");
+				item.setID(id);
+				item = _dal.ApplyItem(item);
+				if (item.isEmpty())
+				{
+					throw new ItemException(_dal.NewError($"{type}({id}) have not found"));
+				}
+
+				Contract.ThrowIfError(item);
+				return item;
+			}
+		}
+		//[PartialPath("Validators/Steps/IStep")]
+		public interface IStep
+		{
+			string Name { get; }
+			void SetNext(IStep nextStep);
+			IEnumerable<string> Handle(ValidationContext context);
+		}
+		//[PartialPath("DTO/ValidationContext")]
+		public class ValidationContext
+		{
+			private List<ValidationResult> _errors = new List<ValidationResult>();
+
+			public IReadOnlyCollection<ValidationResult> Errors => _errors;
+			public Item RootItem { get; set; }
+			public Item CurrentGECO { get; set; }
+			public Dictionary<string, IEnumerable<Item>> RelationshipItems { get; }
+
+			public ValidationContext(Dictionary<string, IEnumerable<Item>> relationshipItems)
+			{
+				RelationshipItems = relationshipItems ?? throw new ArgumentNullException(nameof(relationshipItems));
+			}
+
+			public void AddError(ValidationResult validationResult)
+			{
+				_errors.Add(validationResult);
+			}
+
+			public void AddErrors(IEnumerable<ValidationResult> validationResults)
+			{
+				_errors.AddRange(validationResults);
+			}
+		}
+		//[PartialPath("Validators/ValidatorFactory")]
+		internal static class ValidatorFactory
+		{
+			public static Validator GetCADPreReleaseFrom10To25Validator(IDataAccessLayer dal)
+			{
+				var currentGecoStates = new[]
+				{
+					"10"
+				};
+
+				var ignoreStates = new[]
+				{
+					"28",
+					"29",
+					"30",
+					"50",
+					"60",
+					"90"
+				};
+
+				IGECOProvider gecoProvider = GetGECOProvider(dal);
+				IStep firstStep = GetCommonSteps(
+					gecoProvider,
+					currentGecoStates,
+					ignoreStates,
+					CADValidator.CADStructureNameProvider)
+					.AppendFinalStep(ignoreStates)
+					.Build();
+				return new CADValidator(dal, gecoProvider, firstStep);
+			}
+
+			public static Validator GetCADPreReleaseFrom25To30Validator(IDataAccessLayer dal)
+			{
+				var currentGecoStates = new[]
+				{
+					"25"
+				};
+
+				var ignoreStates = new[]
+				{
+					"28",
+					"29",
+					"30",
+					"50",
+					"60",
+					"90"
+				};
+
+				IGECOProvider gecoProvider = GetGECOProvider(dal);
+				IStep firstStep = GetCommonSteps(
+					gecoProvider,
+					currentGecoStates,
+					ignoreStates,
+					CADValidator.CADStructureNameProvider)
+					.AppendFinalStep(ignoreStates)
+					.Build();
+				return new CADValidator(dal, gecoProvider, firstStep);
+			}
+
+			public static Validator GetCADReleaseFrom25To50Validator(IDataAccessLayer dal)
+			{
+				var currentGecoStates = new[]
+				{
+					"25"
+				};
+
+				var ignoreStates = new[]
+				{
+					"50",
+					"60",
+					"90"
+				};
+
+				IGECOProvider gecoProvider = GetGECOProvider(dal);
+				IStep firstStep = GetCommonSteps(
+					gecoProvider,
+					currentGecoStates,
+					ignoreStates,
+					CADValidator.CADStructureNameProvider)
+					.AppendFinalStep(ignoreStates)
+					.Build();
+				return new CADValidator(dal, gecoProvider, firstStep);
+			}
+
+			public static Validator GetCADReleaseFrom10To25Validator(IDataAccessLayer dal)
+			{
+				var currentGecoStates = new[]
+				{
+					"10"
+				};
+
+				var otherGecosStates = new[]
+				{
+					"10",
+					"25"
+				};
+
+				var ignoreStates = new[]
+				{
+					"50",
+					"60",
+					"90"
+				}.Concat(otherGecosStates)
+					.ToArray();
+
+				var cadStructureNameProvider = new CADStructureNameProvider();
+				IGECOProvider gecoProvider = GetGECOProvider(dal);
+				IStep step = GetCommonSteps(
+						gecoProvider,
+						currentGecoStates,
+						ignoreStates,
+						cadStructureNameProvider)
+					.AppendOtherGECO(
+						gecoProvider,
+						cadStructureNameProvider,
+						new[] { GecoClassification.CadRelease },
+						otherGecosStates)
+					.AppendFinalStep(ignoreStates)
+					.Build();
+
+				return new CADValidator(dal, gecoProvider, step);
+			}
+
+			public static Validator GetPartPreReleaseFrom10To25Validator(IDataAccessLayer dal)
+			{
+				var currentGecoStates = new[]
+				{
+					"10"
+				};
+
+				var ignoreStates = new[]
+				{
+					"28",
+					"29",
+					"30",
+					"50",
+					"60",
+					"90"
+				};
+				IGECOProvider gecoProvider = GetGECOProvider(dal);
+				IStep tabStateValidator =
+					GetPartPreReleaseCommonSteps(gecoProvider, currentGecoStates, ignoreStates)
+						.AppendFinalStep(ignoreStates)
+						.Build();
+				return new PartValidator(dal, gecoProvider, tabStateValidator);
+			}
+
+			public static Validator GetPartPreReleaseFrom25To30Validator(IDataAccessLayer dal)
+			{
+				var currentGecoStates = new[]
+				{
+					"25"
+				};
+
+				var ignoreStates = new[]
+				{
+					"28",
+					"29",
+					"30",
+					"50",
+					"60",
+					"90"
+				};
+				IGECOProvider gecoProvider = GetGECOProvider(dal);
+				IStep tabStateValidator =
+					GetPartPreReleaseCommonSteps(gecoProvider, currentGecoStates, ignoreStates)
+						.AppendFinalStep(ignoreStates)
+						.Build();
+				return new PartValidator(dal, gecoProvider, tabStateValidator);
+			}
+
+			private static StepBuilder GetPartPreReleaseCommonSteps(
+				IGECOProvider gecoProvider,
+				string[] currentGecoStates,
+				string[] ignoreStates)
+			{
+				return GetCommonSteps(
+					gecoProvider,
+					currentGecoStates,
+					ignoreStates,
+					PartValidator.PartBOMStructureNameProvider)
+					.AddFirstItemTabStates(
+						PartValidator.PartCADStructureNameProvider,
+						ignoreStates);
+			}
+
+			public static Validator GetPartReleaseFrom10To25Validator(IDataAccessLayer dal)
+			{
+				var currentGecoStates = new[]
+				{
+					"10"
+				};
+
+				var ignoreStates = new[]
+				{
+					"50",
+					"60",
+					"90",
+				};
+
+				var otherGecosStates = new[]
+				{
+					"10",
+					"25",
+					"35",
+					"45",
+				};
+				IGECOProvider gecoProvider = GetGECOProvider(dal);
+				IStep tabStateValidator = GetCommonSteps(
+						gecoProvider,
+						currentGecoStates,
+						ignoreStates.Concat(otherGecosStates).ToArray(),
+						PartValidator.PartBOMStructureNameProvider)
+						.AddFirstItemTabStates(
+							PartValidator.PartCADStructureNameProvider,
+							ignoreStates)
+						.AddFirstOtherGECO(
+							gecoProvider,
+							PartValidator.PartBOMStructureNameProvider,
+							new[] { GecoClassification.PartRelease },
+							otherGecosStates)
+						.AppendFinalStep(ignoreStates)
+						.Build();
+				return new PartValidator(dal, gecoProvider, tabStateValidator);
+			}
+
+			public static Validator GetPartReleaseFrom35To45Validator(IDataAccessLayer dal)
+			{
+				var currentGecoStates = new[]
+				{
+					"35"
+				};
+
+				var ignoreStates = new[]
+				{
+					"50",
+					"60",
+					"90",
+				};
+
+				IGECOProvider gecoProvider = GetGECOProvider(dal);
+				IStep tabStateValidator = GetPartPreReleaseCommonSteps(
+					gecoProvider,
+					currentGecoStates,
+					ignoreStates)
+					.AppendFinalStep(ignoreStates)
+					.Build();
+				return new PartValidator(dal, gecoProvider, tabStateValidator);
+			}
+
+			private static StepBuilder GetCommonSteps(
+				IGECOProvider gecoProvider,
+				string[] currentGecoStates,
+				string[] ignoreStates,
+				IRelationshipNameProvider structureNameProvider)
+			{
+				return new StepBuilder()
+					.AppendItemTabStates(structureNameProvider, ignoreStates.Concat(currentGecoStates))
+					.AppendCurrentGECO(gecoProvider, structureNameProvider, currentGecoStates);
+			}
+
+			private static IGECOProvider GetGECOProvider(IDataAccessLayer dal)
+			{
+				return new GECOProvider(dal);
+			}
+		}
+		//[PartialPath("DTO/ValidationErrorType")]
+		public enum ValidationErrorType
+		{
+			StateError,
+			GECOLocatedError,
+			GECOClassificationError,
+			WrongActionError
+		}
+		//[PartialPath("DTO/ValidationResult")]
+		public class ValidationResult
+		{
+			public string Name { get; set; }
+			public Type Type { get; set; }
+			public Item Geco { get; set; }
+			public Item Item { get; set; }
+			public ValidationErrorType ErrorType { get; set; }
+			public string ErrorMessage { get; set; }
+		}
+		//[PartialPath("DTO/ValidatorInfoModel")]
+		public class ValidatorInfoModel
+		{
+			public string Name { get; set; }
+
+			public string Type { get; set; }
+
+			public IEnumerable<string> AllowedStates { get; set; }
+		}
+		//[PartialPath("Validators/Steps/FinalStep")]
+		public class FinalStep : IStep
+		{
+			private readonly IReadOnlyCollection<ValidatorInfoModel> _validatorInfo;
+			private readonly IEnumerable<string> _ignoreStates;
+
+			public string Name => "Final step";
+
+			public FinalStep(IReadOnlyCollection<ValidatorInfoModel> validatorInfo, IEnumerable<string> ignoreStates)
+			{
+				_ignoreStates = ignoreStates ?? throw new ArgumentNullException(nameof(ignoreStates));
+				_validatorInfo =
+					validatorInfo ?? throw new ArgumentNullException(nameof(validatorInfo));
+			}
+
+			public virtual void SetNext(IStep nextStep)
+			{
+				throw new NotImplementedException();
+			}
+
+			public IEnumerable<string> Handle(ValidationContext context)
+			{
+				_ = context ?? throw new ArgumentNullException(nameof(context));
+				var errorItemMapping = context.Errors
+					.GroupBy(x => x.Item.getID())
+					.ToDictionary(x => x.Key, x => x.ToList());
+				var itemIds = new List<string>();
+				foreach (Item errorItem in context.Errors.Select(x => x.Item))
+				{
+					string state = errorItem.getProperty("state");
+					string typeName = errorItem.getType();
+					if (_ignoreStates.Contains(state) || !ItemContainErrorInEachValidator(typeName, state, errorItem.getID(), errorItemMapping))
+					{
+						itemIds.Add(errorItem.getID());
+					}
+				}
+
+				return RemoveRelatedErrors(context.Errors, itemIds).Select(x => x.ErrorMessage);
+			}
+
+			private bool ItemContainErrorInEachValidator(string typeName, string state, string itemId, Dictionary<string, List<ValidationResult>> errorItemMapping)
+			{
+				IEnumerable<ValidatorInfoModel> relatedValidators = GetRelatedValidators(typeName, state);
+				IEnumerable<string> validatorsNames = relatedValidators.Select(x => x.Name);
+				IEnumerable<string> relatedErrorValidatorNames = errorItemMapping[itemId].Select(x => x.Name);
+
+				return validatorsNames.All(x => relatedErrorValidatorNames.Contains(x));
+			}
+
+			private IEnumerable<ValidatorInfoModel> GetRelatedValidators(string typeName, string state)
+			{
+				return _validatorInfo
+					.Where(x => x.Type == typeName && x.AllowedStates.Contains(state))
+					.ToList();
+			}
+
+			private static IList<ValidationResult> RemoveRelatedErrors(IEnumerable<ValidationResult> errors, IEnumerable<string> itemIds)
+			{
+				List<ValidationResult> result = new List<ValidationResult>(errors);
+				foreach (string itemId in itemIds)
+				{
+					errors
+						.Where(x => x.Item.getID() == itemId)
+						.ToList()
+						.ForEach(x => result.Remove(x));
+				}
+
+				return result;
+			}
+		}
+		//[PartialPath("Validators/Steps/StepBuilder")]
+		internal class StepBuilder
+		{
+			private IStep _firstStep;
+			private IStep _currentStep;
+			private readonly List<ValidatorInfoModel> _validatorInfo = new List<ValidatorInfoModel>();
+
+			public StepBuilder AppendItemTabStates(
+				IRelationshipNameProvider relationshipNameProvider,
+				IEnumerable<string> allowedStates)
+			{
+				string name = GetUniqueName() + nameof(ItemTabStatesValidator);
+				return Append(new ItemTabStatesValidator(name, relationshipNameProvider, allowedStates));
+			}
+
+			public StepBuilder AppendCurrentGECO(
+				IGECOProvider gecoProvider,
+				IRelationshipNameProvider relationshipNameProvider,
+				IEnumerable<string> allowedStates)
+			{
+				string name = GetUniqueName() + nameof(CurrentGECOValidator);
+				_validatorInfo.Add(new ValidatorInfoModel
+				{
+					Name = name,
+					Type = relationshipNameProvider.TypeName,
+					AllowedStates = allowedStates
+				});
+				return Append(new CurrentGECOValidator(name, gecoProvider, relationshipNameProvider, allowedStates));
+			}
+
+			public StepBuilder AppendOtherGECO(
+				IGECOProvider gecoProvider,
+				IRelationshipNameProvider relationshipNameProvider,
+				IEnumerable<string> availableClassifications,
+				IEnumerable<string> allowedStates)
+			{
+				string name = GetUniqueName() + nameof(OtherGECOValidator);
+				_validatorInfo.Add(new ValidatorInfoModel
+				{
+					Name = name,
+					Type = relationshipNameProvider.TypeName,
+					AllowedStates = allowedStates
+				});
+				return Append(new OtherGECOValidator(
+					name,
+					gecoProvider,
+					relationshipNameProvider,
+					availableClassifications,
+					allowedStates));
+			}
+
+			public StepBuilder AppendFinalStep(IEnumerable<string> ignoreStates)
+			{
+				return Append(new FinalStep(_validatorInfo, ignoreStates));
+			}
+
+			public StepBuilder AddFirstItemTabStates(
+				IRelationshipNameProvider relationshipNameProvider,
+				IEnumerable<string> allowedStates)
+			{
+				string name = GetUniqueName() + nameof(ItemTabStatesValidator);
+				return AddFirst(new ItemTabStatesValidator(name, relationshipNameProvider, allowedStates));
+			}
+
+			public StepBuilder AddFirstCurrentGECO(
+				IGECOProvider gecoProvider,
+				IRelationshipNameProvider relationshipNameProvider,
+				IEnumerable<string> allowedStates)
+			{
+				string name = GetUniqueName() + nameof(CurrentGECOValidator);
+				_validatorInfo.Add(new ValidatorInfoModel
+				{
+					Name = name,
+					Type = relationshipNameProvider.TypeName,
+					AllowedStates = allowedStates
+				});
+				return AddFirst(new CurrentGECOValidator(name, gecoProvider, relationshipNameProvider, allowedStates));
+			}
+
+			public StepBuilder AddFirstOtherGECO(
+				IGECOProvider gecoProvider,
+				IRelationshipNameProvider relationshipNameProvider,
+				IEnumerable<string> availableClassifications,
+				IEnumerable<string> allowedStates)
+			{
+				string name = GetUniqueName() + nameof(OtherGECOValidator);
+				_validatorInfo.Add(new ValidatorInfoModel
+				{
+					Name = name,
+					Type = relationshipNameProvider.TypeName,
+					AllowedStates = allowedStates
+				});
+				return AddFirst(new OtherGECOValidator(
+					name,
+					gecoProvider,
+					relationshipNameProvider,
+					availableClassifications,
+					allowedStates));
+			}
+
+			public StepBuilder AddFirst(IStep step)
+			{
+				if (_firstStep == null)
+				{
+					_firstStep = step;
+					_currentStep = step;
+				}
+				else
+				{
+					step.SetNext(_firstStep);
+					_firstStep = step;
+				}
+
+				return this;
+			}
+
+			public StepBuilder Append(IStep step)
+			{
+				if (_firstStep == null)
+				{
+					_firstStep = step;
+					_currentStep = step;
+				}
+				else
+				{
+					_currentStep.SetNext(step);
+					_currentStep = step;
+				}
+
+				return this;
+			}
+
+			public IStep Build()
+			{
+				return _firstStep;
+			}
+
+			private static string GetUniqueName()
+			{
+				return Guid.NewGuid().ToString();
+			}
+		}
+		//[PartialPath("Constants/Methods")]
+		internal static class Methods
+		{
+			public static Action<PromotionData, IDataAccessLayer> ChangeRevisionToAlphabetical => (data, dal) =>
+			{
+				Item item = data.WorkItem;
+				string gecoClassification = data.Geco.getProperty("classification");
+				string revision = item.getProperty("major_rev");
+				if (!GecoClassification.IsPartPreRelease(gecoClassification) && int.TryParse(revision, out _))
+				{
+					Item query = dal.NewItem(item.getType(), "edit");
+					query.setAttribute("version", "0");
+					query.setID(item.getID());
+					query.setProperty("major_rev", "A");
+					query = dal.ApplyItem(query);
+					Contract.ThrowIfError(query);
+				}
+			};
+
+			public static Action<PromotionData, IDataAccessLayer> ClearReleaseInformation => (data, dal) =>
+			{
+				Item item = data.WorkItem;
+				Item clearQuery = dal.NewItem(item.getType(), "edit");
+				clearQuery.setAttribute("version", "0");
+				clearQuery.setID(item.getID());
+				clearQuery.setProperty("gag_released_on", string.Empty);
+				clearQuery.setProperty("gag_released_by", string.Empty);
+				clearQuery = dal.ApplyItem(clearQuery);
+				Contract.ThrowIfError(clearQuery);
+				data.NewItem = clearQuery;
+			};
+		}
+		//[PartialPath("DTO/PromotionConditionEvent")]
+		internal class PromotionConditionEvent
+		{
+			private event Action<PromotionData, IDataAccessLayer> _event;
+
+			public PromotionConditionEvent AddEvent(Action<PromotionData, IDataAccessLayer> afterNewGenerationEvent)
+			{
+				_event += afterNewGenerationEvent;
+				return this;
+			}
+
+			public PromotionConditionEvent RemoveEvent(Action<PromotionData, IDataAccessLayer> afterNewGenerationEvent)
+			{
+				_event -= afterNewGenerationEvent;
+				return this;
+			}
+
+			public void Invoke(PromotionData data, IDataAccessLayer dal)
+			{
+				_event?.Invoke(data, dal);
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_PromoteGECOAffectedItems</name>
+ </Item>
+</AML>

@@ -1,0 +1,1031 @@
+﻿<TestCase author="vsmirnov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>Tests for dynamic assignments on GECO PreRelease CAD Workflow during path from Planning to End.</Description>
+	<Request runAs="cadUser1:1" position="1">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser1
+			When:
+				as cadUser1
+				add GECO
+					with Pre-Release & Change/CAD Document classification
+					with CAD1-10 set as Release
+					cadUser2 set as GAG_GECO CADDesigner
+					prodUser1 set as GAG_GECO DevReleaseApprover
+			Then:
+				new GECO is returned
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" id="D757528B7D3646899E0C164B4C470416" action="add" doGetItem="0">
+					<classification>Pre-Release &amp; Change/CAD Document</classification>
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" id="D1A0CBBEDCA14816931B2F05330029B7" action="add" doGetItem="0">
+							<related_id>1DD13D16F6154AA99D18FF3DE1C92B71</related_id>
+							<source_id>D757528B7D3646899E0C164B4C470416</source_id>
+							<gag_action>Release</gag_action>
+						</Item>
+						<Item type="GAG_GECO CADDesigner" id="7795E881A942455982889553790B60B4" action="add" doGetItem="0">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>cadUser2</keyed_name>
+								</Item>
+							</related_id>
+							<source_id>D757528B7D3646899E0C164B4C470416</source_id>
+						</Item>
+						<Item type="GAG_GECO DevReleaseApprover" id="392646A686B943F78035CE654D497CE6" action="add" doGetItem="0">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>prodUser1</keyed_name>
+								</Item>
+							</related_id>
+							<source_id>D757528B7D3646899E0C164B4C470416</source_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="D757528B7D3646899E0C164B4C470416" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="1DD13D16F6154AA99D18FF3DE1C92B71" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="cadUser1:1" position="2">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser1 and new GECO
+			When:
+				as cadUser1
+				get active InBasket Task
+			Then:
+				InBasket Task is returned
+				which means that workflow has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" typeId="BC7977377FFF40D59FF14205914E9C71" id="F61A549100A64628A1539567EB9BDBC6">
+							<assigned_to keyed_name="cadUser1" type="Identity">576D31D2EE2B40E894566F22EFF035B2</assigned_to>
+							<id keyed_name="Planning" type="InBasket Task">F61A549100A64628A1539567EB9BDBC6</id>
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/@keyed_name" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="cadUser1:1" position="3">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				get Activity with Tasks and Path assigned to the given InBasket Task Id 
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id/text()" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Task2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[3]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>F61A549100A64628A1539567EB9BDBC6</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Start CAD Task</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" typeId="937CE47DE2854308BE6FF5AB1CFB19D4" id="C4F89AA90A7746E5AFB1B9A78A93922C">
+							<id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type="Activity Assignment" typeId="85924010F3184E77B24E9142FDBB481B" id="F61A549100A64628A1539567EB9BDBC6">
+									<id keyed_name="F61A549100A64628A1539567EB9BDBC6" type="Activity Assignment">F61A549100A64628A1539567EB9BDBC6</id>
+									<source_id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="63911BD3FEEC439096A48B850ECF5ABC">
+									<id keyed_name="63911BD3FEEC439096A48B850ECF5ABC" type="Activity Task">63911BD3FEEC439096A48B850ECF5ABC</id>
+									<source_id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="007F3524F0264CB381459E96EB12E938">
+									<id keyed_name="007F3524F0264CB381459E96EB12E938" type="Activity Task">007F3524F0264CB381459E96EB12E938</id>
+									<source_id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Workflow Process Path" typeId="34682D3EB66141ECACC8796C9D3A42B8" id="C8F0917B60D84D688B92EC80B742E1CD">
+									<id keyed_name="C8F0917B60D84D688B92EC80B742E1CD" type="Workflow Process Path">C8F0917B60D84D688B92EC80B742E1CD</id>
+									<source_id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id/text()" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="cadUser1:1" position="4">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>C4F89AA90A7746E5AFB1B9A78A93922C</Activity>
+					<ActivityAssignment>F61A549100A64628A1539567EB9BDBC6</ActivityAssignment>
+					<Paths>
+						<Path id="C8F0917B60D84D688B92EC80B742E1CD">
+							<![CDATA[Start CAD Task]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="63911BD3FEEC439096A48B850ECF5ABC" completed="1"></Task>
+						<Task id="007F3524F0264CB381459E96EB12E938" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="C4F89AA90A7746E5AFB1B9A78A93922C" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="cadUser1:1" position="5">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser1 and GECO with Workflow in CAD Task activity
+			When:
+				as cadUser1
+				get active InBasket Task
+			Then:
+				No InBasket Task is returned
+				which means that workflow Activity is no longer assigned to Creator
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>0</faultcode>
+						<faultstring><![CDATA[No items of type InBasket Task found.]]></faultstring>
+						<detail>
+							<af:legacy_detail><![CDATA[No items of type InBasket Task found.]]></af:legacy_detail>
+							<af:legacy_faultstring>
+							</af:legacy_faultstring>
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_faultstring" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="cadUser2:1" position="6">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser2 and GECO with Workflow in CAD Task activity
+			When:
+				as cadUser2 which is Assigned to GECO CAD Designer tab
+				get active InBasket Task
+			Then:
+				InBasket Task is returned
+				which means that workflow Activity is dynamically assigned to this user
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" typeId="BC7977377FFF40D59FF14205914E9C71" id="FD9E28D23CC54941AC2220D0019EE1B0">
+							<assigned_to keyed_name="GECO-00000013 Managers" type="Identity">2C1C02CCA9D344A48B7EC60261411A70</assigned_to>
+							<id keyed_name="CAD Task" type="InBasket Task">FD9E28D23CC54941AC2220D0019EE1B0</id>
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/@keyed_name" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="cadUser2:1" position="7">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				get Activity with Tasks and Path assigned to the given InBasket Task Id 
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id/text()" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>F61A549100A64628A1539567EB9BDBC6</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Start Review</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" typeId="937CE47DE2854308BE6FF5AB1CFB19D4" id="C4F89AA90A7746E5AFB1B9A78A93922C">
+							<id keyed_name="CAD Task" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type="Activity Assignment" typeId="85924010F3184E77B24E9142FDBB481B" id="F61A549100A64628A1539567EB9BDBC6">
+									<id keyed_name="F61A549100A64628A1539567EB9BDBC6" type="Activity Assignment">F61A549100A64628A1539567EB9BDBC6</id>
+									<source_id keyed_name="CAD Task" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="63911BD3FEEC439096A48B850ECF5ABC">
+									<id keyed_name="63911BD3FEEC439096A48B850ECF5ABC" type="Activity Task">63911BD3FEEC439096A48B850ECF5ABC</id>
+									<source_id keyed_name="CAD Task" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Workflow Process Path" typeId="34682D3EB66141ECACC8796C9D3A42B8" id="C8F0917B60D84D688B92EC80B742E1CD">
+									<id keyed_name="C8F0917B60D84D688B92EC80B742E1CD" type="Workflow Process Path">C8F0917B60D84D688B92EC80B742E1CD</id>
+									<source_id keyed_name="CAD Task" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id/text()" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="cadUser2:1" position="8">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>C4F89AA90A7746E5AFB1B9A78A93922C</Activity>
+					<ActivityAssignment>F61A549100A64628A1539567EB9BDBC6</ActivityAssignment>
+					<Paths>
+						<Path id="C8F0917B60D84D688B92EC80B742E1CD">
+							<![CDATA[Start Review]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="63911BD3FEEC439096A48B850ECF5ABC" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="C4F89AA90A7746E5AFB1B9A78A93922C" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="approverUser:1" position="9">
+		<Comments>
+			<![CDATA[
+			Given:
+				approverUser which is a member of C-Part Check identity
+				and GECO with workflow in C-Part Check Activity
+			When:
+				as approverUser
+				get active InBasket Task
+			Then:
+				InBasket Task is returned
+				which means that C-Part Check Activity is assigned to approverUser
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" typeId="BC7977377FFF40D59FF14205914E9C71" id="F61A549100A64628A1539567EB9BDBC6">
+							<assigned_to keyed_name="C-Part Approver" type="Identity">781DEC5EC06F4B38920096DCA18703B7</assigned_to>
+							<id keyed_name="C-Part Check" type="InBasket Task">63EAA856143A44C19E3C29F9637519D5</id>
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/@keyed_name" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="approverUser:1" position="10">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				get Activity with Tasks and Path assigned to the given InBasket Task Id 
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id/text()" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>F61A549100A64628A1539567EB9BDBC6</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">C-Part Check completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" typeId="937CE47DE2854308BE6FF5AB1CFB19D4" id="C4F89AA90A7746E5AFB1B9A78A93922C">
+							<id keyed_name="C-Part Check" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type="Activity Assignment" typeId="85924010F3184E77B24E9142FDBB481B" id="F61A549100A64628A1539567EB9BDBC6">
+									<id keyed_name="F61A549100A64628A1539567EB9BDBC6" type="Activity Assignment">F61A549100A64628A1539567EB9BDBC6</id>
+									<source_id keyed_name="C-Part Check" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="63911BD3FEEC439096A48B850ECF5ABC">
+									<id keyed_name="63911BD3FEEC439096A48B850ECF5ABC" type="Activity Task">63911BD3FEEC439096A48B850ECF5ABC</id>
+									<source_id keyed_name="C-Part Check" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Workflow Process Path" typeId="34682D3EB66141ECACC8796C9D3A42B8" id="C8F0917B60D84D688B92EC80B742E1CD">
+									<id keyed_name="C8F0917B60D84D688B92EC80B742E1CD" type="Workflow Process Path">C8F0917B60D84D688B92EC80B742E1CD</id>
+									<source_id keyed_name="C-Part Check" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id/text()" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="approverUser:1" position="11">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>C4F89AA90A7746E5AFB1B9A78A93922C</Activity>
+					<ActivityAssignment>F61A549100A64628A1539567EB9BDBC6</ActivityAssignment>
+					<Paths>
+						<Path id="C8F0917B60D84D688B92EC80B742E1CD">
+							<![CDATA[C-Part Check completed]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="63911BD3FEEC439096A48B850ECF5ABC" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="C4F89AA90A7746E5AFB1B9A78A93922C" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="serviceUser:1" position="12">
+		<Comments>
+			<![CDATA[
+			Given:
+				serviceUser which is a member of CAD Service identity
+				and GECO with workflow in CAD Quality Check Activity
+			When:
+				as serviceUser
+				get active InBasket Task
+			Then:
+				InBasket Task is returned
+				which means that CAD Quality Check is assigned to approverUser
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" typeId="BC7977377FFF40D59FF14205914E9C71" id="F61A549100A64628A1539567EB9BDBC6">
+							<assigned_to keyed_name="CAD Service" type="Identity">781DEC5EC06F4B38920096DCA18703B7</assigned_to>
+							<id keyed_name="CAD Quality Check" type="InBasket Task">63EAA856143A44C19E3C29F9637519D5</id>
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/@keyed_name" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="serviceUser:1" position="13">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				get Activity with Tasks and Path assigned to the given InBasket Task Id 
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id/text()" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>F61A549100A64628A1539567EB9BDBC6</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">CAD Quality Check completed</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" typeId="937CE47DE2854308BE6FF5AB1CFB19D4" id="C4F89AA90A7746E5AFB1B9A78A93922C">
+							<id keyed_name="CAD Quality Check" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type="Activity Assignment" typeId="85924010F3184E77B24E9142FDBB481B" id="F61A549100A64628A1539567EB9BDBC6">
+									<id keyed_name="F61A549100A64628A1539567EB9BDBC6" type="Activity Assignment">F61A549100A64628A1539567EB9BDBC6</id>
+									<source_id keyed_name="CAD Quality Check" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="63911BD3FEEC439096A48B850ECF5ABC">
+									<id keyed_name="63911BD3FEEC439096A48B850ECF5ABC" type="Activity Task">63911BD3FEEC439096A48B850ECF5ABC</id>
+									<source_id keyed_name="CAD Quality Check" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Workflow Process Path" typeId="34682D3EB66141ECACC8796C9D3A42B8" id="C8F0917B60D84D688B92EC80B742E1CD">
+									<id keyed_name="C8F0917B60D84D688B92EC80B742E1CD" type="Workflow Process Path">C8F0917B60D84D688B92EC80B742E1CD</id>
+									<source_id keyed_name="CAD Quality Check" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id/text()" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="serviceUser:1" position="14">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>C4F89AA90A7746E5AFB1B9A78A93922C</Activity>
+					<ActivityAssignment>F61A549100A64628A1539567EB9BDBC6</ActivityAssignment>
+					<Paths>
+						<Path id="C8F0917B60D84D688B92EC80B742E1CD">
+							<![CDATA[CAD Quality Check completed]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="63911BD3FEEC439096A48B850ECF5ABC" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="C4F89AA90A7746E5AFB1B9A78A93922C" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="prodUser1:1" position="15">
+		<Comments>
+			<![CDATA[
+			Given:
+				prodUser1 and GECO with Workflow in Development Release activity
+			When:
+				as prodUser1 which is Assigned to GECO Development Release Approver tab
+				get active InBasket Task
+			Then:
+				InBasket Task is returned
+				which means that workflow Activity is dynamically assigned to this user
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" typeId="BC7977377FFF40D59FF14205914E9C71" id="F61A549100A64628A1539567EB9BDBC6">
+							<assigned_to keyed_name="CAD Service" type="Identity">781DEC5EC06F4B38920096DCA18703B7</assigned_to>
+							<id keyed_name="Development Release" type="InBasket Task">63EAA856143A44C19E3C29F9637519D5</id>
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to/@keyed_name" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="cadUser1:1" position="16">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadUser1 which is a member of CAD-Designer identity
+			When:
+				as cadUser1
+				get active InBasket Task
+			Then:
+				No InBasket Task is returned
+				which means that workflow Activity is only assigned to Development Release Approver
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>0</faultcode>
+						<faultstring><![CDATA[No items of type InBasket Task found.]]></faultstring>
+						<detail>
+							<af:legacy_detail><![CDATA[No items of type InBasket Task found.]]></af:legacy_detail>
+							<af:legacy_faultstring>
+							</af:legacy_faultstring>
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/SOAP-ENV:Fault/detail/af:legacy_faultstring" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="prodUser1:1" position="17">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				get Activity with Tasks and Path assigned to the given InBasket Task Id 
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id/text()" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Task2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[3]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>F61A549100A64628A1539567EB9BDBC6</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Development Release</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" typeId="937CE47DE2854308BE6FF5AB1CFB19D4" id="C4F89AA90A7746E5AFB1B9A78A93922C">
+							<id keyed_name="Development Release" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type="Activity Assignment" typeId="85924010F3184E77B24E9142FDBB481B" id="F61A549100A64628A1539567EB9BDBC6">
+									<id keyed_name="F61A549100A64628A1539567EB9BDBC6" type="Activity Assignment">F61A549100A64628A1539567EB9BDBC6</id>
+									<source_id keyed_name="Development Release" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="63911BD3FEEC439096A48B850ECF5ABC">
+									<id keyed_name="63911BD3FEEC439096A48B850ECF5ABC" type="Activity Task">63911BD3FEEC439096A48B850ECF5ABC</id>
+									<source_id keyed_name="Development Release" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Activity Task" typeId="46BDE53304404C28B5C45610E41C1DD5" id="63911BD3FEEC439096A48B850ECF5ABC">
+									<id keyed_name="63911BD3FEEC439096A48B850ECF5ABC" type="Activity Task">63911BD3FEEC439096A48B850ECF5ABC</id>
+									<source_id keyed_name="Development Release" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+								<Item type="Workflow Process Path" typeId="34682D3EB66141ECACC8796C9D3A42B8" id="C8F0917B60D84D688B92EC80B742E1CD">
+									<id keyed_name="C8F0917B60D84D688B92EC80B742E1CD" type="Workflow Process Path">C8F0917B60D84D688B92EC80B742E1CD</id>
+									<source_id keyed_name="Development Release" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id/text()" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id/text()" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="prodUser1:1" position="18">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment/text()" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity/text()" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>C4F89AA90A7746E5AFB1B9A78A93922C</Activity>
+					<ActivityAssignment>F61A549100A64628A1539567EB9BDBC6</ActivityAssignment>
+					<Paths>
+						<Path id="C8F0917B60D84D688B92EC80B742E1CD">
+							<![CDATA[Development Release]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="63911BD3FEEC439096A48B850ECF5ABC" completed="1"></Task>
+						<Task id="63911BD3FEEC439096A48B850ECF5ABC" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="C4F89AA90A7746E5AFB1B9A78A93922C" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="cadUser1:1" position="19">
+		<Comments>
+			<![CDATA[
+			Given:
+				Geco with Workflow in End Activity
+			When:
+				get GECO
+			Then:
+				GECO is returned with managed_by_id set to null
+				which means that this is final Workflow activity
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" id="D757528B7D3646899E0C164B4C470416" action="get" select="managed_by_id" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" typeId="5DCFF174F8144371B57B563263F31D42" id="D757528B7D3646899E0C164B4C470416">
+							<id keyed_name="GECO-00000001" type="GAG_EngineeringChangeObject">D757528B7D3646899E0C164B4C470416</id>
+							<managed_by_id is_null="1" />
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs="root:innovator">
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" id="D757528B7D3646899E0C164B4C470416" action="delete" />
+				<Item type="Workflow Process" action="delete" where="[WORKFLOW_PROCESS].created_by_id = 'AC7A409355B447FFA1C10C70F0F4719C'" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

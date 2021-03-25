@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="BFA3BE03444448F5916133D874712CF4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// all parameters passed to a document numbering method by integration
+//"mso_title" - title of the office document
+//"mso_classification" - Document classification (type)
+//"mso_templateId" - selected template ID
+//"mso_linkItemType" - primary linked item type
+//"mso_linkItemId" - primary linked item id
+
+string val = "1";
+try
+{
+	val = CCO.DB.InnDatabase.GetNextSequenceValue("name", "Default Document");
+	if(String.IsNullOrEmpty(val))
+		val = "1";
+}
+catch(Exception)
+{
+}
+
+this.setProperty("val", val);
+
+return this;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_Adhoc_Document_Numbering</name>
+ </Item>
+</AML>

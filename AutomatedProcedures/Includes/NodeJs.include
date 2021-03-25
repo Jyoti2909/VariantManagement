@@ -1,0 +1,16 @@
+﻿<project name="Nodejs">
+	<target name="Client.Npm.Install">
+		<property name="Path.To.Node.Js.Root.Dir" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\tools\NodeJs')}" />
+
+		<exec program="cmd.exe"
+					commandline="/C npm --version"
+					failonerror="false"
+					resultproperty="NPM.Envokation.Result"/>
+		<fail if="${NPM.Envokation.Result != '0'}"
+					message="ERROR! NodeJS is not installed. In order to pass validation please install NodeJS or set property Validate.JS to 'false'" />
+
+		<exec program="cmd.exe"
+					workingdir="${Path.To.Node.Js.Root.Dir}"
+					commandline="/C npm ci" />
+	</target>
+</project>

@@ -1,0 +1,78 @@
+﻿<TestCase author="apetrovsky@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>Setup for CAD Classification filter tests</Description>
+	<Request runAs="root:innovator">
+		<Variables>
+			<Variable id="Password.Hash.Of.1" action="apply" xpath="Query/AML/Item/password | Query/AML/Item/confirm_password" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="User" id="7C50A99EDC464B96BE1DF43501CA7994" action="add" doGetItem="0">
+					<login_name>cadUser3</login_name>
+					<password></password>
+					<confirm_password></confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type="Member" id="E34A257EBF364CEF828DA8041DA6EC8C" action="add" doGetItem="0">
+					<related_id>
+						<Item type="Identity" action="get" select="id">
+							<keyed_name>cadUser3</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>
+						<Item action="get" type="Identity" select="id">
+							<name>CAD-Designer</name>
+						</Item>
+					</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="User" id="7C50A99EDC464B96BE1DF43501CA7994" />
+						<Item type="Member" id="E34A257EBF364CEF828DA8041DA6EC8C">
+							<related_id>
+								<Item type="Identity" typeId="E582AB17663F4EF28460015B2BE9E094" id="866A931A25734009940395F69DBDA3E7">
+									<id keyed_name="cadUser3" type="Identity">866A931A25734009940395F69DBDA3E7</id>
+								</Item>
+							</related_id>
+						</Item>
+					</Result>
+					<Message>
+						<event name="ids_modified" value="7C50A99EDC464B96BE1DF43501CA7994|65CBCEA10A1F4D7B99BC6180FA2AF7DF" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Member']/related_id/Item" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs="root:innovator">
+		<Query>
+			<AML>
+				<Item type="Member" action="delete" id="E34A257EBF364CEF828DA8041DA6EC8C" />
+				<Item type="History" action="delete" where="[History].created_by_id = '7C50A99EDC464B96BE1DF43501CA7994'" />
+				<Item type="History Container" action="delete" where="[History_Container].created_by_id = '7C50A99EDC464B96BE1DF43501CA7994'" />
+				<Item type="User" action="delete" idlist="7C50A99EDC464B96BE1DF43501CA7994" />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<ApplyItemResponse>
+						<Result>Ok</Result>
+					</ApplyItemResponse>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</TestCaseCleanUp>
+</TestCase>

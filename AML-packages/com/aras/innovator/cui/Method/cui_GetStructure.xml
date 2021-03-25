@@ -1,0 +1,508 @@
+﻿<AML>
+ <Item type="Method" id="0CF1B12FD0A4440FBE7F2D8EA15DB88D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	var innovator = this.getInnovator();
+	var dataAccessLayer = new DataAccessLayer(innovator, this.dom, CCO.DB.InnDatabase);
+	var businessLogic = new BusinessLogic(dataAccessLayer, innovator, CCO.ErrorLookup);
+	const string CLIENT = "js";
+	string itemTypeID = this.getProperty("item_type_id");
+	string contextItemID = this.getProperty("item_id");
+	string sectionItemType = this.getProperty("section_itemtype");
+	string toSectionRelationshipType = this.getProperty("tosection_relationshiptype");
+	string toItemRelationshipType = this.getProperty("toitem_relationshiptype");
+	string sectionItemItemType = this.getProperty("sectionitem_itemtype");
+	string locationName = this.getProperty("location_name");
+	string itemClassification = this.getProperty("item_classification");
+	string parentProperty = this.getProperty("parent_property");
+	return businessLogic.GetStructure(
+		itemTypeID,
+		contextItemID,
+		sectionItemType,
+		toSectionRelationshipType,
+		toItemRelationshipType,
+		sectionItemItemType,
+		parentProperty,
+		locationName,
+		itemClassification,
+		CLIENT);
+}
+
+public class BusinessLogic
+{
+	private readonly IDataAccessLayer dataAccessLayer;
+	private readonly Innovator innovator;
+	private readonly Aras.Server.Core.Abstractions.IErrorLookup errorLookup;
+
+	public BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator, Aras.Server.Core.Abstractions.IErrorLookup errorLookup)
+	{
+		this.dataAccessLayer = dataAccessLayer;
+		this.innovator = innovator;
+		this.errorLookup = errorLookup;
+	}
+
+	public Item GetStructure(
+		string itemTypeID,
+		string contextItemID,
+		string sectionItemType,
+		string toSectionRelationshipType,
+		string toItemRelationshipType,
+		string sectionItemItemType,
+		string parentProperty,
+		string locationName,
+		string itemClassification,
+		string client)
+	{
+		#region Presentation Configuration
+		Item presentationConfigurationsItem = dataAccessLayer.GetPresentaionConfigurations(itemTypeID, contextItemID, client);
+		string globalPresentationConfigurationIds = presentationConfigurationsItem.getProperty("global");
+		string itemTypePresentationConfigurationIds = presentationConfigurationsItem.getProperty("itemType");
+		string instancePresentationConfigurationIds = presentationConfigurationsItem.getProperty("instance");
+
+		if (string.IsNullOrEmpty(globalPresentationConfigurationIds) && string.IsNullOrEmpty(itemTypePresentationConfigurationIds))
+		{
+			Item pcNotFoundError = innovator.newError(errorLookup.Lookup("GetItem_NoItemsFound", "PresentationConfiguration"));
+			pcNotFoundError.setErrorCode("0");
+			return pcNotFoundError;
+		}
+		string presentationConfigurationIds = string.Format(
+			CultureInfo.InvariantCulture,
+			"{0}{1}{2}",
+			globalPresentationConfigurationIds,
+			string.IsNullOrEmpty(globalPresentationConfigurationIds) || string.IsNullOrEmpty(itemTypePresentationConfigurationIds) ? string.Empty : ",",
+			itemTypePresentationConfigurationIds);
+		#endregion Presentation Configuration
+
+		#region sections
+		// check super user (root) case when doing role filter
+		string identitiesList = dataAccessLayer.GetCurrentUserIdentitiesList();
+
+		// Need split Global PresentationConfiguration and configurations that are created for item types. Sections from Global should be processed first.
+		Item pcbses = this.innovator.newItem();
+		Item pcbsesForNotGlobal = this.innovator.newItem();
+		Item configForInstance = this.innovator.newItem();
+		Item configurationsWithRels = dataAccessLayer.GetPresentationConfigurations(presentationConfigurationIds, locationName, identitiesList, sectionItemType, toSectionRelationshipType);
+		for (int i = 0; i < configurationsWithRels.getItemCount(); i++)
+		{
+			Item currentConfig = configurationsWithRels.getItemByIndex(i);
+			string name = currentConfig.getProperty("name");
+			Item rels = currentConfig.getRelationships();
+			if (rels.getItemCount() > 0)
+			{
+				if (name.Equals("Global"))
+				{
+					pcbses.appendItem(rels);
+				}
+				else
+				{
+					pcbsesForNotGlobal.appendItem(rels);
+				}
+			}
+		}
+
+		if (!string.IsNullOrEmpty(instancePresentationConfigurationIds))
+		{
+			Item instanceConfigurationWithRels = dataAccessLayer.GetPresentationConfigurations(
+				instancePresentationConfigurationIds, locationName, identitiesList, sectionItemType, toSectionRelationshipType);
+			for (int i = 0; i < instanceConfigurationWithRels.getItemCount(); i++)
+			{
+				Item currentConfig = instanceConfigurationWithRels.getItemByIndex(i);
+				Item rels = currentConfig.getRelationships();
+				if (rels.getItemCount() > 0)
+				{
+					configForInstance.appendItem(rels);
+				}
+			}
+		}
+
+		Item sections = this.innovator.newItem();
+
+		if (pcbses.getItemCount() > 1)
+		{
+			pcbses.removeItem(pcbses.getItemByIndex(0));
+			PrepareSections(sections, pcbses, itemClassification, toSectionRelationshipType);
+		}
+
+		if (pcbsesForNotGlobal.getItemCount() > 1)
+		{
+			pcbsesForNotGlobal.removeItem(pcbsesForNotGlobal.getItemByIndex(0));
+			PrepareSections(sections, pcbsesForNotGlobal, itemClassification, toSectionRelationshipType);
+			pcbses.appendItem(pcbsesForNotGlobal);
+		}
+
+		if (configForInstance.getItemCount() > 1)
+		{
+			configForInstance.removeItem(configForInstance.getItemByIndex(0));
+			PrepareSections(sections, configForInstance, itemClassification, toSectionRelationshipType);
+			pcbses.appendItem(configForInstance);
+		}
+
+		if (sections.getItemCount() < 2)
+		{
+			Item sectionNotFoundError = innovator.newError(errorLookup.Lookup("GetItem_NoItemsFound", sectionItemType));
+			sectionNotFoundError.setErrorCode("0");
+			return sectionNotFoundError;
+		}
+		sections.removeItem(sections.getItemByIndex(0));
+
+		sections = sections.getItemsByXPath("//Item[@type='" + sectionItemType + "']");
+		for (var i = 0; i < sections.getItemCount(); ++i)
+		{
+			Item section = sections.getItemByIndex(i);
+			XmlNode node = pcbses.dom.SelectSingleNode("//Item[@id='" + section.getID() + "']/../../item_classification");
+			if (node != null)
+			{
+				section.setProperty("item_classification", node.InnerText);
+			}
+		}
+
+		#endregion sections
+
+		var commandItems = new List<Item>();
+		for (var i = 0; i < sections.getItemCount(); ++i)
+		{
+			dataAccessLayer.LoadSectionItems(sections.getItemByIndex(i), commandItems, identitiesList, itemClassification == "%all_grouped_by_classification%", sectionItemItemType, toItemRelationshipType, parentProperty);
+		}
+
+		RemoveOrphans(commandItems, parentProperty);
+
+		if (commandItems.Count == 0)
+		{
+			Item itemsNotFoundError = innovator.newError(errorLookup.Lookup("GetItem_NoItemsFound", sectionItemItemType));
+			itemsNotFoundError.setErrorCode("0");
+			return itemsNotFoundError;
+		}
+
+		Item rtn = innovator.newItem();
+
+		rtn.dom.RemoveAll();
+
+		XmlNode rootNode = rtn.dom.CreateNode(XmlNodeType.Element, "AML", null);
+
+		rtn.dom.AppendChild(rootNode);
+
+		commandItems.ForEach(commandItem => {
+			XmlNode importedCommandItemNode = rtn.dom.ImportNode(commandItem.node, true);
+			rootNode.AppendChild(importedCommandItemNode);
+		});
+
+		rtn.node = commandItems.Count == 1 ? rootNode.ChildNodes[0] as XmlElement : null;
+		rtn.nodeList = commandItems.Count > 1 ? rootNode.ChildNodes : null;
+
+		return rtn;
+	}
+	
+	private static void RemoveOrphans(List<Item> commandItems, string parentProperty)
+	{
+		ICollection<Item> itemsToDelete = new List<Item>();
+		do
+		{
+			itemsToDelete.Clear();
+			ICollection<string> allControlIds = new HashSet<string>(commandItems.Select(item => item.getID()));
+			foreach (Item item in commandItems)
+			{
+				string parentId = item.getProperty(parentProperty);
+				if (!string.IsNullOrEmpty(parentId) && !allControlIds.Contains(parentId))
+				{
+					itemsToDelete.Add(item);
+				}
+			}
+			commandItems.RemoveAll(item => itemsToDelete.Contains(item));
+		} while (itemsToDelete.Count > 0);
+	}
+
+	private static void PrepareSections(Item sections, Item pcbses, string itemClassificationParam, string toSectionRelationshipType)
+	{
+		if (sections == null)
+		{
+			throw new ArgumentNullException("sections");
+		}
+		if (pcbses == null)
+		{
+			throw new ArgumentNullException("pcbses");
+		}
+		for (var i = 0; i < pcbses.getItemCount(); ++i)
+		{
+			Item pcbs = pcbses.getItemByIndex(i);
+			string pcbsItemClassification = pcbs.getProperty("item_classification");
+			if (IsPseudoClassification(itemClassificationParam) || pcbsItemClassification == itemClassificationParam
+				// can take default if no specific exists
+				|| string.IsNullOrEmpty(pcbsItemClassification) && pcbses.dom.SelectNodes(string.Format(CultureInfo.InvariantCulture, "//Item[@type='{1}']/item_classification[text()='{0}']", itemClassificationParam, toSectionRelationshipType)).Count == 0)
+			{
+				sections.appendItem(pcbs);
+			}
+		}
+	}
+
+	private static bool IsPseudoClassification(string itemClassificationParam)
+	{
+		return itemClassificationParam == "%all_grouped_by_location%" || itemClassificationParam == "%all_grouped_by_classification%";
+	}
+}
+
+public interface IDataAccessLayer
+{
+	Item GetPresentationConfigurations(string presentationConfigurationIds, string locationName, string identitiesList, string sectionItemType, string toSectionRelationshipType);
+
+	void LoadSectionItems(Item section, List<Item> items, string identitiesList, bool separateClassifications, string sectionItemItemType, string toItemRelationshipType, string parentProperty);
+
+	Item GetPresentaionConfigurations(string itemTypeID, string contextItemID, string client);
+
+	string GetCurrentUserIdentitiesList();
+}
+
+public class DataAccessLayer : IDataAccessLayer
+{
+	private readonly Innovator innovator;
+	private readonly XmlDocument requestItemDom;
+	private readonly Aras.Server.Core.IInnovatorDatabase innovatorDatabase;
+
+	public DataAccessLayer(Innovator innovator, XmlDocument requestItemDom, Aras.Server.Core.IInnovatorDatabase innovatorDatabase)
+	{
+		this.innovator = innovator;
+		this.requestItemDom = requestItemDom;
+		this.innovatorDatabase = innovatorDatabase;
+	}
+
+	public Item GetPresentaionConfigurations(string itemTypeID, string contextItemID, string client)
+	{
+		Item presentationConfigurationsItem = innovator.newItem("Method", "cui_GetPresentationConfigs");
+		presentationConfigurationsItem.setProperty("item_type_id", itemTypeID);
+		presentationConfigurationsItem.setProperty("item_id", contextItemID);
+		presentationConfigurationsItem.setProperty("client", client);
+		return presentationConfigurationsItem.apply();
+	}
+
+	public string GetCurrentUserIdentitiesList()
+	{
+		string userId = this.innovator.getUserID();
+		return Aras.Server.Security.Permissions.GetIdentitiesList(innovatorDatabase, userId);
+	}
+
+	public Item GetPresentationConfigurations(string presentationConfigurationIds, string locationName, string identitiesList, string sectionItemType, string toSectionRelationshipType)
+	{
+		string userIdentitiesClause = GetUserIdentitiesClause(identitiesList);
+		string aml = string.Format(CultureInfo.InvariantCulture, @"
+		<AML>
+			<Item type=""PresentationConfiguration"" idlist=""{0}"" action=""get"" select=""id,name"">
+				<Relationships>
+					<Item type=""{4}"" action=""get"" select=""related_id,modified_on,item_classification"" orderBy=""sort_order"">
+						{1}
+						<related_id>
+							<Item type=""{3}"" action=""get"" select=""builder_method,classification,label,location,name,item_classification,section,keyed_name"">
+								<location>
+									<Item type=""cui_Location""><name>{2}</name></Item>
+								</location>
+								<builder_method>
+									<Item type=""Method"" action=""get"" select=""name,method_type""/>
+								</builder_method>
+							</Item>
+						</related_id>
+					</Item>
+				</Relationships>
+			</Item>
+		</AML>", presentationConfigurationIds, userIdentitiesClause, System.Security.SecurityElement.Escape(locationName), System.Security.SecurityElement.Escape(sectionItemType), System.Security.SecurityElement.Escape(toSectionRelationshipType));
+
+		Item result = innovator.applyAML(aml);
+
+		var nodes = result.dom.SelectNodes("./*[local-name()='Envelope']/*[local-name()='Body']/Result/Item/Relationships/Item/related_id/Item/*[@is_null='1']");
+		foreach (XmlNode nullNode in nodes)
+		{
+			nullNode.ParentNode.RemoveChild(nullNode);
+		}
+
+		return result;
+	}
+
+	private string GetUserIdentitiesClause(string identitiesList)
+	{
+		string userId = innovator.getUserID();
+		string userIdentitiesClause = userId == "AD30A6D8D3B642F5A2AFED1A4B02BEFA"
+			? ""
+			: string.Format(CultureInfo.InvariantCulture, "<role condition=\"in\">{0}</role>", identitiesList);
+		return userIdentitiesClause;
+	}
+
+	[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Maintainability", "CA1502:AvoidExcessiveComplexity"), System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1002:DoNotExposeGenericLists")]
+	public void LoadSectionItems(Item section, List<Item> items, string identitiesList, bool separateClassifications, string sectionItemItemType, string toItemRelationshipType, string parentProperty)
+	{
+		Item commandItems = null;
+		if (section == null)
+		{
+			throw new ArgumentNullException("section");
+		}
+		if (items == null)
+		{
+			throw new ArgumentNullException("items");
+		}
+		if (section.getProperty("classification").ToUpperInvariant() == "METHOD")
+		{
+			Item method = section.getItemsByXPath("./builder_method/Item[@type='Method']");
+			if (method.getProperty("method_type") == "C#")
+			{
+				IEnumerable<XmlNode> parameters = requestItemDom.SelectSingleNode("//Item").ChildNodes.Cast<XmlNode>().Where(el => el.NodeType == XmlNodeType.Element);
+				var sb = new StringBuilder();
+				foreach (XmlElement param in parameters)
+				{
+					sb.AppendFormat(CultureInfo.InvariantCulture, "<{0}>{1}</{0}>", System.Security.SecurityElement.Escape(param.Name), System.Security.SecurityElement.Escape(param.InnerText));
+				}
+
+				sb.AppendFormat(CultureInfo.InvariantCulture, "<Data>{0}</Data>", string.Join("", items.Select(x=>x.node.OuterXml)));
+
+				commandItems = section.getInnovator().applyAML(string.Format(CultureInfo.InvariantCulture, @"
+					<AML>
+						<Item type=""Method"" action=""{0}"">
+						{1}
+						</Item>
+					</AML>", System.Security.SecurityElement.Escape(method.getProperty("name")), sb));
+			}
+			else
+			{
+				commandItems = section; // client builder method will be processed on client
+			}
+		}
+		else
+		{
+			commandItems = section.getInnovator().applyAML(string.Format(CultureInfo.InvariantCulture, @"
+			<AML>
+			<Item type=""{3}"" action=""get"" orderBy=""sort_order"">
+			<source_id>{0}</source_id>
+			{1}
+			<related_id>
+			<Item type=""{2}"" action=""get""  select=""additional_data,image,image_additional,include_events,label,aria_label,on_click_handler,on_init_handler,on_keydown_handler,tooltip_template,name,section,control_type,location,sort_order,item_classification,{4},action,itemtype,shortcut,group_id""/>
+			</related_id>
+			</Item>
+			</AML>",
+			System.Security.SecurityElement.Escape(section.getID()),
+			GetUserIdentitiesClause(identitiesList),
+			System.Security.SecurityElement.Escape(sectionItemItemType),
+			System.Security.SecurityElement.Escape(toItemRelationshipType),
+			System.Security.SecurityElement.Escape(parentProperty)));
+
+			var nodes = commandItems.dom.SelectNodes("./*[local-name()='Envelope']/*[local-name()='Body']/Result/Item/related_id/Item/*[@is_null='1']");
+			foreach(XmlNode nullNode in nodes)
+			{
+				nullNode.ParentNode.RemoveChild(nullNode);
+			}
+		}
+
+		for (var i = 0; i < commandItems.getItemCount(); ++i)
+		{
+			Item commandItem = commandItems.getItemByIndex(i);
+			bool isRelationship = commandItem.getAttribute("type") == toItemRelationshipType;
+			string action = isRelationship ? commandItem.getProperty("action") : "Add";
+			Item control;
+			control = isRelationship ? commandItem.getPropertyItem("related_id") : commandItem;
+			string itemSortOrder = isRelationship ? commandItem.getProperty("sort_order") : "";
+			if (control != null)
+			{
+				SetSectionDataToItem(control, section, itemSortOrder);
+			}
+
+			int index;
+			string controlClassification = control.getProperty("item_classification");
+			switch (action)
+			{
+				case "Add":
+					index = -1;
+					int lastMatchingClassificationIndex = -1;
+					int sortOrder = Convert.ToInt32(control.getProperty("sort_order") ?? int.MaxValue.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
+					for (var k = 0; k < items.Count; ++k)
+					{
+						if (separateClassifications && controlClassification != items[k].getProperty("item_classification"))
+						{
+							continue;
+						}
+						lastMatchingClassificationIndex = k;
+						if (Convert.ToInt32(items[k].getProperty("sort_order"), CultureInfo.InvariantCulture) > sortOrder)
+						{
+							index = k;
+							break;
+						}
+					}
+					
+					if (!string.IsNullOrEmpty(control.getProperty("sort_order")) && index == -1)
+					{
+						index = items.FindLastIndex(x => !string.IsNullOrEmpty(x.getProperty("sort_order")));
+						index = index == -1 ? -1 : index + 1;
+					}
+
+					if (index > -1)
+					{
+						items.Insert(index, control);
+					} else
+					{
+						if (lastMatchingClassificationIndex > -1 && lastMatchingClassificationIndex < items.Count - 1)
+						{
+							items.Insert(lastMatchingClassificationIndex + 1, control);
+						}
+						else
+						{
+							items.Add(control);
+						}
+					}
+					break;
+				case "Remove":
+					DoRemoveAction(items, separateClassifications, control.getID(), controlClassification);
+					break;
+				case "Replace":
+					string controlId = control.getID();
+					int position = items.FindIndex(item => item.getID() == controlId);
+					if (position != -1)
+					{
+						string alternateId = commandItem.getProperty("alternate");
+						if (string.IsNullOrEmpty(alternateId))
+						{
+							DoRemoveAction(items, separateClassifications, controlId, controlClassification);
+							break;
+						}
+
+						Item alternateItem = commandItem.getItemsByXPath("./alternate/Item");
+						if (alternateItem.node == null)
+						{
+							alternateItem = control.newItem(sectionItemItemType, "get");
+							alternateItem.setID(alternateId);
+							alternateItem = alternateItem.apply();
+						}
+						if (alternateItem.isError())
+						{
+							DoRemoveAction(items, separateClassifications, controlId, controlClassification);
+							break;
+						}
+
+						alternateItem = alternateItem.getItemByIndex(0);
+						SetSectionDataToItem(alternateItem, section, itemSortOrder);
+						items[position] = alternateItem;
+					}
+					break;
+				case "ClearAll":
+					string itemId = control.getID();
+					int pos = items.FindIndex(item => item.getID() == itemId);
+					if (pos > 0)
+					{
+						items.RemoveRange(0, pos);
+					}
+					break;
+				default: break;
+			}
+		}
+	}
+
+	private static void DoRemoveAction(List<Item> items, bool separateClassifications, string controlId, string controlClassification)
+	{
+		items.RemoveAll(item => item.getID() == controlId && (!separateClassifications || controlClassification == item.getProperty("item_classification")));
+	}
+
+	private static void SetSectionDataToItem(Item item, Item section, string sortOrder)
+	{
+		if (!string.IsNullOrEmpty(sortOrder))
+		{
+			item.setProperty("sort_order", sortOrder);
+		}
+		item.setProperty("section", section.getID());
+		item.setPropertyAttribute("section", "keyed_name", section.getProperty("keyed_name"));
+		item.setProperty("item_classification", section.getProperty("item_classification"));
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>cui_GetStructure</name>
+ </Item>
+</AML>

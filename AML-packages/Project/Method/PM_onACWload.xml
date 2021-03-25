@@ -1,0 +1,127 @@
+﻿<AML>
+ <Item type="Method" id="F549D24446CE4FE487C7DF4A23E1014C" action="add">
+  <comments>Specifies visible tabs in ACW on the form load.</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[document.applyChanges2All = false;//to update activity on this form only
+var rtNames = new Array("Activity2 Assignment", "Activity2 Task", "Activity2 Deliverable", "Activity2 Comments", "Time Record");
+var rtsWithConfigurableGrids = new Object();//key is relship name, value is conf grid name
+rtsWithConfigurableGrids["Activity2 Assignment"] = "PM_ACW_Activity2Assmnt";
+rtsWithConfigurableGrids["Activity2 Task"] = "PM_ACW_Tasks";
+
+var itm = document.item;
+
+var actItemTypeNd = top.aras.getItemTypeForClient("Activity2", "name").node;
+if (!actItemTypeNd) return;
+
+//+++ Get Configurable Grids ids, Activity2 Assignments, Activity2 Task ids
+var aml2send;
+var tmpDom = top.aras.createXMLDocument();
+var r;
+
+aml2send = "<Item type='Activity2' action='get' select='id' id='"+itm.getAttribute("id")+"'><Relationships>";
+aml2send += "<Item type='Activity2 Assignment' action='get' select='id'/>";
+aml2send += "<Item type='Activity2 Task' action='get' select='id'/>";
+aml2send += "</Relationships></Item>";
+  
+r = top.aras.applyItem(aml2send);
+if (r && r.indexOf("Item")>-1)
+{
+  tmpDom.loadXML(r);
+  //do not display Activity2 Task tab
+  if (!tmpDom.documentElement.selectSingleNode("Relationships/Item[@type='"+rtNames[1]+"']")) rtNames.splice(1, 1);
+  //do not display Activity2 Assignment tab
+  if (!tmpDom.documentElement.selectSingleNode("Relationships/Item[@type='"+rtNames[0]+"']")) rtNames.splice(0, 1);
+}
+
+var namesOfCfgGrids = new Array();
+for (var i=0; i<rtNames.length; i++)
+{
+  var nm = rtsWithConfigurableGrids[rtNames[i]];
+  if (nm) namesOfCfgGrids.push(nm);
+}
+
+var cfgGridsIds = new Object();
+if (namesOfCfgGrids.length>0)
+{
+  var aml2send = "";
+  var tmpDom = top.aras.createXMLDocument();
+  
+  var nms = "'"+namesOfCfgGrids.join("','")+"'";
+  aml2send = getQueryXml("Grid", "id,name", "name", nms, "in");//query to get Grid ids
+  r = top.aras.applyItem(aml2send);
+  if (r && r.indexOf("Item")>-1)
+  {
+    if (r.indexOf("<Result>")!==0) r = "<Result>"+r+"</Result>";
+    tmpDom.loadXML(r);
+    var nds = tmpDom.documentElement.selectNodes("Item[@type='Grid']");
+    for (var j=0; j<nds.length; j++)
+    {
+      var nd = nds[j];
+      cfgGridsIds[top.aras.getItemProperty(nd, "name")] = nd.getAttribute("id");
+    }
+  }
+}
+//--- Get Configurable Grids ids, Activity2 Assignments, Activity2 Task
+
+var rts2display = new Array();
+var itmID = itm.getAttribute("id");
+var db = top.aras.getDatabase();
+for (var i=0; i<rtNames.length; i++)
+{
+  var curRt = actItemTypeNd.selectSingleNode("Relationships/Item[@type='RelationshipType' and name='"+rtNames[i]+"']");
+  if (curRt)
+  {
+    var src = "relationshipsGrid.html";
+    var srcParams;
+    var rtId = curRt.getAttribute("id");
+    var rtNm = rtNames[i];
+    var isDeliv = (rtNm=="Activity2 Deliverable");
+    var customToolbar = ((rtNm == "Activity2 Assignment" || rtNm == "Activity2 Task") ? "" : "&custom_toolbar_src=../Solutions/Project/Scripts/ActivityCompletionWorksheet/toolbar.html"+(isDeliv ? "?mode=deliv" : ""));
+    srcParams = "?db="+db+"&ITName=Activity2&itemID="+itmID+"&relTypeID="+rtId+"&editMode=1&popupDisabled=1&toolbar=0"+customToolbar;
+    var doDisplayCfgGrid = (rtNames)
+    var cfgGridNm = rtsWithConfigurableGrids[rtNm];
+    if (cfgGridNm && cfgGridsIds[cfgGridNm])
+    {
+      src = "configurableGrid.html";
+      srcParams = "?grid="+cfgGridsIds[cfgGridNm]+customToolbar;
+    }
+    rts2display.push({name:rtNm, src:src, srcParams:srcParams});
+  }
+}
+
+for (var i=0; i<rts2display.length; i++)
+{
+  var ob = rts2display[i];
+  parent.MarkTabToDisplay(ob.name, ob.src, ob.srcParams);
+}
+
+//+++++++ display fields for rollup properties if need
+var methNm = "PM_DisplayRollupFieldsIfNeed";
+var methNd = top.aras.getItem("Method", "name='"+methNm+"'", "<name>"+methNm+"</name>", 0);
+if (methNd)
+{
+  var c = top.aras.getItemProperty(methNd, "method_code");
+  var f = new Function(c);
+  f();
+}
+else
+{
+  top.aras.AlertError(top.aras.getResource("project", "pr_methods.method_for_rollup_fields_not_found", methNm));
+}
+//------- display fields for rollup properties if need
+
+function getQueryXml(itName, select, conditionPropNm, conditionPropVal, conditionAttrVal)
+{
+  var q = itm.ownerDocument.createElement("Item");
+  q.setAttribute("type", itName);
+  q.setAttribute("action", "get");
+  q.setAttribute("select", select);
+  var nm = q.appendChild(q.ownerDocument.createElement(conditionPropNm));
+  nm.text = conditionPropVal;
+  if (conditionAttrVal) nm.setAttribute("condition", conditionAttrVal);
+  return q.xml;
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PM_onACWload</name>
+ </Item>
+</AML>

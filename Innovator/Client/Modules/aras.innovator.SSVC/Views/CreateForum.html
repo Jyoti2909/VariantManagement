@@ -1,0 +1,130 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+	<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" type="text/css" href="../../../styles/default.css" />
+		<script type="text/javascript" src="../../../javascript/dialog.js"></script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=IOM"></script>
+	<style type="text/css">
+		@import "../../../javascript/dojo/resources/dojo.css";
+		@import "../../../javascript/dijit/themes/claro/claro.css";
+		@import "../../../javascript/include.aspx?classes=common.css";
+		@import "../styles/Forum.css";
+
+		body 
+		{
+			height: 100%;
+		}
+	</style>
+	<script type="text/javascript">
+	var argsWindow = window.frameElement.dialogArguments;
+	var onCancelClick = argsWindow.dialog.close.bind(argsWindow.dialog);
+	var aras = argsWindow.aras;
+	var shareResult = {};
+	var worldIdentityId = "A73B655731924CD0B027E4F4D5FCC0A9";
+	var dialogHelper;
+	var forum = aras.newIOMItem("Forum", "add");
+
+	function onOkClick() {
+		var name = document.getElementById("forumNameBox").value;
+		if (name === "" || name === null) {
+			aras.AlertError(aras.getResource("", "item_methods_ex.field_required_provide_value", "Name"), null, null, {isHtml: true});
+			return;
+		}
+		var owner = aras.getIsAliasIdentityIDForLoggedUser();
+
+		forum.setProperty("owned_by_id", owner);
+		forum.setProperty("name", name);
+		forum.setProperty("label", name);
+
+		forum.setProperty("forum_type", "Regular");
+
+		if (shareResult.shareType) {
+			switch (shareResult.shareType) {
+				case "world":
+					addRelship(forum, "ForumSharedWith", "shared_with_id", worldIdentityId);
+					break;
+				case "myself":
+					addRelship(forum, "ForumSharedWith", "shared_with_id", aras.getIsAliasIdentityIDForLoggedUser());
+					break;
+				case "identities":
+					var ids = shareResult.identityIds;
+					for (var i = 0, count = ids.length; i < count; i++) {
+						addRelship(forum, "ForumSharedWith", "shared_with_id", ids[i]);
+					}
+					break;
+			}
+			addRelship(forum, "ForumWantViewBy", "want_view_id", aras.getIsAliasIdentityIDForLoggedUser());
+		}
+		else {
+			addRelship(forum, "ForumSharedWith", "shared_with_id", worldIdentityId);
+			addRelship(forum, "ForumWantViewBy", "want_view_id", owner);
+		}
+
+		var addResult = forum.apply();
+		if (addResult.isError()) {
+			aras.AlertError(addResult.getErrorString(), null, null, window);
+			return;
+		}
+		argsWindow.dialog.close({ id: addResult.getID(), label: addResult.getProperty("label") } );
+
+		function addRelship(forum, name, propertyName, identityId) {
+			var item = forum.newItem(name, "add");
+			item.setProperty(propertyName, identityId);
+			forum.addRelationship(item);
+			return forum;
+		}
+	}
+
+	function onShareClick() {
+		var shareDialog = window.parent.ArasModules.Dialog.show("iframe", {
+			aras: aras,
+			title: aras.getResource("", "ssvc.forum.dialog.share_forum"),
+			prevResult: {
+				shareType: shareResult.shareType || "world",
+				identityIds: shareResult.identityIds || []
+			},
+			content: "../Modules/aras.innovator.SSVC/Views/SelectShare.html",
+			dialogWidth: 330, dialogHeight: 150, resizable: false });
+		shareDialog.promise.then(function (result) {
+			shareResult = result || shareResult;
+		});
+	}
+
+	window.onload = function () {
+		document.getElementById("okBtn").value = aras.getResource("", "common.ok");
+		document.getElementById("shareBtn").value = aras.getResource("", "ssvc.forum.share");
+		document.getElementById("cancelBtn").value = aras.getResource("", "common.cancel");
+		document.getElementById("forumNameLabel").textContent = aras.getResource("", "ssvc.forum.new_forum_name") + " ";
+
+		if (aras.getLanguageDirection() === "rtl") {
+			document.getElementById("container").classList.add("text_rtl_container");
+		}
+	}
+	</script>
+	</head>
+	<body>
+		<div id="create_forum_container">
+			<div id="main_forum_container">
+				<table class="forum_table">
+					<tr>
+						<td>
+							<label class="sys_f_label forum_label" id="forumNameLabel" for="forumNameBox"></label>
+						</td>
+						<td>
+							<div class="inputRow sys_ft_text sys_p_is_required forum_field">
+								<input type="text"  name="forumName" id="forumNameBox"/>
+							</div>
+						</td>
+					</tr>
+				</table>
+				<div id="buttonsRow">
+					<input class="btn" type="submit" name="ok" id="okBtn" onclick=" onOkClick() "/>
+					<input class="btn btn_share_forum" type="submit" name="share" id="shareBtn" onclick=" onShareClick() "/>
+					<input class="btn cancel_button" type="submit" name="cancel" id="cancelBtn" onclick=" onCancelClick() "/>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>

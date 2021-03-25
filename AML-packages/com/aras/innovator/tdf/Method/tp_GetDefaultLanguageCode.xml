@@ -1,0 +1,33 @@
+﻿<AML>
+ <Item type="Method" id="5552DD6A4B7743B0B44D1BFCE6D21EC9" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Innovator inn = this.getInnovator();
+	I18NSessionContext mlContext = inn.getI18NSessionContext();
+	String foundLanguageCode = "";
+
+	Item variableItem = inn.newItem("Variable", "get");
+	variableItem.setProperty("name", "tp_DefaultLanguage");
+	variableItem = variableItem.apply();
+
+	if (!variableItem.isError())
+	{
+		Item languageItem = inn.newItem("Language", "get");
+		languageItem.setProperty("name", variableItem.getProperty("value"));
+		languageItem = languageItem.apply();
+
+		if (!languageItem.isError())
+		{
+			foundLanguageCode = languageItem.getProperty("code");
+		}
+	}
+
+	if (String.IsNullOrEmpty(foundLanguageCode))
+	{
+			foundLanguageCode = mlContext.GetDefaultLanguageCode();
+	}
+
+	return inn.newResult(foundLanguageCode);]]></method_code>
+  <method_type>C#</method_type>
+  <name>tp_GetDefaultLanguageCode</name>
+ </Item>
+</AML>

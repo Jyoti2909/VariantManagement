@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = ".";
+  gCommonRootRelPath = ".";
+  gTopicId = "3.6.0_5";
+
+//]]></script>
+
+<script type="text/javascript" src="./template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="./template/scripts/common.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="./template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="assets/css/JAI_styles.css"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta name="generator" content="Adobe RoboHelp 2019"/>
+<title>Modifying the relationship ItemType</title>
+
+</head>
+<body>
+  <div>
+<h1>Modifying the Relationship ItemType</h1>
+<p class="Content_body">As mentioned earlier, when the source item is saved, one of the items created automatically, is the relationship ItemType. This is a regular ItemType, except that its property is_Relationship is set to true. Just like a regular ItemType it can have properties, events, and even other relationships created from it. These are all in the area of complex data modeling, though, and are outside of the scope of this manual.</p>
+<p class="Content_body">In our example, when we created a relationship from the source ItemType HousePlanner to the related ItemType Contractor, we called it ContractorRel.  So, let&#39;s examine ContractorRel.</p>
+<p class="Procedure_Title">To edit the properties of the relationship ItemType:</p>
+<?rh-list_start class="Numbered_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="margin-left: 50px;">From <span style="font-weight: bold;">TOC --&gt;</span><span class="MenuChoice" style="font-weight: bold;">Administration</span>, select <span class="MenuChoice" style="font-weight: bold;">ItemTypes</span>, and search for ContractorRel. When you open it for edit, your form should look like this:</p>
+<?rh-list_end ?>
+<p class="Content_body_indented"><img src="assets/images/image856.gif" alt="" style="border: none; width: 100%; max-width: 849px;" border="0"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body_indented">Notice that in the header properties the following are set by default:</p>
+<?rh-list_start class="Numbered_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="text-indent: -30px; margin-left: 80px;"><span class="MenuChoice">Use Src Access</span> - this means that the relationship itself, not the related items, inherit the parent&#39;s or the source item&#39;s permissions and Can Add behavior.</p>
+<?rh-list_end ?><?rh-list_start class="Numbered_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="text-indent: -30px; margin-left: 80px;"><span class="MenuChoice">Is Relationship</span> - this item is actually a part of the Relationship structure, and Is Relationship is set to true to indicate this fact.</p>
+<?rh-list_end ?><?rh-list_start class="Numbered_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="text-indent: -30px; margin-left: 80px;"><span class="MenuChoice">Allow Private Permissions</span> -</p>
+<?rh-list_end ?><?rh-list_start class="Numbered_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="margin-left: 50px;">Usually, for every relationship we will want to add some properties that are specific to the relationship itself.  For example, for a Part, in the BOM relationship we have a property called quantity.  This property is placed on the relationship because it only makes sense in the context of both the source and the related parts.  In our example of the ContractorRel, we will also add some relationship specific quantities as follows:</p>
+<?rh-list_end ?><?rh-list_start class="Numbered_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="text-indent: -30px; margin-left: 80px;">Add a property called ManHours Per Week.  The value of this property will indicate how many hours of a particular contractor will be required for a particular property.</p>
+<?rh-list_end ?><?rh-list_start class="Numbered_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="text-indent: -30px; margin-left: 80px;">Add a property called Pay Rate.  The value of this property will vary with each contractor and property.  In other words, the same contractor may charge a different rate in two different properties because of the difficulty level.</p>
+<?rh-list_end ?><?rh-list_start class="Numbered_list" level="2" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="text-indent: -30px; margin-left: 80px;">Make sure that Hidden2 for both of the added properties is not checked.  We do want these properties to show in the relationship grid.  Also, uncheck Hidden2 for any system properties that you might wish to be displayed in the relationship grid.</p>
+<?rh-list_end ?>
+<p class="Content_body_indented"><img src="assets/images/image857.gif" alt="" style="border: none; width: 100%; max-width: 839px;" border="0"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?><?rh-list_start class="Numbered_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="margin-left: 50px;"><span class="MenuChoice" style="font-weight: bold;">Save, Unlock, and Close</span> <img src="assets/images/image859.gif" alt="" style="border: none; width: 100%; max-width: 36px;" border="0"/>the relationship ItemType.</p>
+<?rh-list_end ?><?rh-list_start class="Numbered_list" level="1" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Numbered" style="margin-left: 50px;">Create an instance of the HouseKeeper Item and add some contractors. You should see a form similar to the following:</p>
+<?rh-list_end ?>
+<p class="Content_body_indented"><img src="assets/images/image860.gif" alt="" style="border: none; width: 100%; max-width: 721px;" border="0"/></p>
+<?rh-list_start level="1" an="1" class="rl-p-Figure_indented" style="list-style: rh-list; 
+                                 list-style: rh-list;" ?>
+<p class="Figure_indented"> </p>
+<?rh-list_end ?>
+<p class="Content_body_indented">Notice that the related item properties are all displayed on the left which is the default we set back in the RelationshipType configuration, followed by the relationship properties.</p>
+
+
+</div>
+  <div>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold; 
+		 margin-left: 0px; text-indent: 0px;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

@@ -1,0 +1,29 @@
+﻿<AML>
+ <Item type="Method" id="7C526049C077470BB9A2AC0F846B3689" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[return {
+	constructor: function(args) {},
+
+	RenderInnerContent: function(/*WrappedObject*/ renderObject) {
+		var propertyName = renderObject.Attribute('propertyName') || 'id';
+		var xmlNameRegExp = /^(?!XML)[a-z][\w0-9-]*$/i;
+		var propertyValue = xmlNameRegExp.test(propertyName) ? renderObject.GetProperty(propertyName, '$null$') : '$null$';
+
+		return '<span>' + dojox.html.entities.encode(propertyValue) + '</span>';
+	},
+
+	GetTreeName: function(/*WrappedObject*/ renderObject) {
+		var treeName = this.inherited(arguments);
+		var keyedName  = renderObject.GetProperty('keyed_name', '$null$');
+		var propertyName = renderObject.Attribute('propertyName') || 'id';
+
+		treeName += ' - <i>' + dojox.html.entities.encode(keyedName) + '(' + propertyName + ')</i>' ;
+
+		return treeName;
+	}
+};
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>tp_arasPartRenderer</name>
+ </Item>
+</AML>

@@ -1,0 +1,70 @@
+﻿<AML>
+ <Item type="Method" id="5DA69370408C4BDD978B3EFFF228DFCE" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[  myCCO = CCO;
+  
+  return main();
+}
+
+private Aras.Server.Core.CallContext myCCO;
+
+private string getLanguageCriteria(string propName, string propValue)
+{
+  string res = myCCO.Variables.InnDatabase.QuoteName(propName);
+  if (propValue == null || propValue.Length == 0)
+  {
+    res += " IS NULL";
+  }
+  else
+  {
+    res += "='" + myCCO.Variables.InnDatabase.QuoteValue(propValue) + "'";
+  }
+
+  return res;
+}
+
+private Item main()
+{
+  if (this.isEmpty())
+  {
+    return this;
+  }
+
+  Aras.Server.Core.InnovatorDatabase conn = myCCO.Variables.InnDatabase;
+
+  string code   = this.getProperty("code");
+  string suffix = this.getProperty("suffix");
+
+  string codeCriteria   = getLanguageCriteria("code", code);
+  string suffixCriteria = getLanguageCriteria("suffix", suffix);
+
+  string sql = String.Format(
+    "SELECT [CODE], [SUFFIX] " +
+    "FROM " + conn.GetTableName("Language") +
+    " WHERE [ID]<>'{0}' AND ({1} OR {2}) /*(IR-012352) Core_CheckLanguageUniqueness marker*/",
+    conn.QuoteValue(this.getID()),
+    codeCriteria, suffixCriteria);
+
+  string errorDescription = "";
+  Aras.Server.Core.InnovatorDataSet rs = conn.ExecuteSelect(sql);
+  if (!rs.Eof)
+  {
+  	string codeInDB   = (string)rs["code", null];
+  	string suffixInDB = (string)rs["suffix", null];
+  	
+    if (codeInDB == code && suffixInDB == suffix)
+      errorDescription = String.Format("Language with Code ({0}) and Suffix ({1}) already exists.", code, suffix);
+    else if (codeInDB == code)
+      errorDescription = String.Format("Language with Code ({0}) already exists.", code);
+    else
+      errorDescription = String.Format("Language with Suffix ({0}) already exists.", suffix);
+  }
+
+  if (errorDescription.Length > 0)
+    return this.getInnovator().newError(errorDescription);
+  else
+    return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>Core_CheckLanguageUniqueness</name>
+ </Item>
+</AML>

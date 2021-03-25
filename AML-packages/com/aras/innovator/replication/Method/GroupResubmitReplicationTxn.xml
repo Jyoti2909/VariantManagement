@@ -1,0 +1,87 @@
+﻿<AML>
+ <Item type="Method" id="4451BEC71A5D40388EE5C0051D46FF20" action="add">
+  <comments>Resubmit failed replication txns based on the embedded criteria</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharpInOut;
+
+  if (InnovatorServerASP == null) 
+    throw new ArgumentNullException("InnovatorServerASP");
+  
+  Innovator inn = new Innovator( InnovatorServerASP );
+
+  GroupResubmitManager grm = new GroupResubmitManager(inn, InnovatorServerASP);
+  grm.doIt();
+}
+
+private class GroupResubmitManager
+{
+	private Innovator m_inn;
+	private IServerConnection m_conn;
+	
+	public GroupResubmitManager(Innovator a_inn, IServerConnection a_isconn)
+	{
+		m_inn = a_inn;
+		m_conn = a_isconn;
+	}
+
+    public void doIt()
+    {
+    	// Find all failed replication txn logs based on the criteria
+    	Item logs = findFailedLogs();
+    	if( logs == null )
+    	  return;
+    	
+    	// Call 'ResubmitReplicationTxn' method for each found ReplicationTxnLog item
+    	int lcount = logs.getItemCount();
+    	for(int i = 0; i < lcount; i++ )
+    	{
+    		Item litem = logs.getItemByIndex(i);
+    		litem.setAction("ResubmitReplicationTxn");
+    		Item resp = litem.apply();
+    		if( resp.isError() )
+    		  throw new ApplicationException(resp.getErrorString());
+    	}
+    }
+    
+    private Item findFailedLogs()
+    {
+    	// Search for all failed transactions for the last day (i.e. 24 hours).
+    	DateTime from_dt = DateTime.UtcNow;
+    	from_dt = from_dt.AddDays(-1);
+    	
+    	// Please modify the AML if a different search condition is required.
+    	string aml = string.Format("<Item type='ReplicationTxnLog' action='get'>" +
+    	  "<replication_status>Failed</replication_status>" + 
+    	  "<modified_on condition='ge'>{0}</modified_on>" +
+    	  "</Item>", getDateTimeForAML(from_dt));
+ 
+    	Item req = m_inn.newItem();
+    	req.loadAML(aml);
+    	Item resp = req.apply();
+    	if( resp.isError() )
+    	{
+            if( resp.isEmpty() )
+              return null;
+            else
+    		  throw new ApplicationException("Failed to execute the following AML - " + aml);
+    	}
+    	
+    	return resp;
+    }
+    
+	private string getDateTimeForAML(DateTime dtutc)
+	{
+		string result = string.Format("{0:D4}-{1:D2}-{2:D2}T{3:D2}:{4:D2}:{5:D2}",
+		  dtutc.Year, dtutc.Month, dtutc.Day, dtutc.Hour, dtutc.Minute, dtutc.Second);
+
+      // No time zone on I18nSessionContext means that the TIMEZONE_NAME header
+      // was NOT set on the request that is currently processed.
+      if( m_inn.getI18NSessionContext().GetTimeZone() != null )
+        result = m_inn.getI18NSessionContext().ConvertUtcDateTimeToNeutral(result, Aras.I18NUtils.DateTimeConverter.DATETIME_NEUTRAL_FORMAT);
+      
+      return result;
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GroupResubmitReplicationTxn</name>
+ </Item>
+</AML>

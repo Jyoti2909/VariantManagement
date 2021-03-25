@@ -1,0 +1,281 @@
+﻿<AML>
+ <Item type="Form" id="289463AC13554A3D82113DC26B02732B" action="add">
+  <category_form>0</category_form>
+  <height>500</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>699</width>
+  <name>vm_createUsageConditions</name>
+  <Relationships>
+   <Item type="Body" id="45AB151D88EC4DFEA370907F0A5E76DF" action="add">
+    <css>
+@import  '../Modules/aras.innovator.VariantManagementSample/styles/cfgTree.css';
+@import  '../Modules/aras.innovator.VariantManagementSample/styles/vmGridFormatters.css';
+@import '../Modules/aras.innovator.VariantManagementSample/styles/vmUsageConditionTableEditorGrid.css';
+
+
+#UsageGrid{
+	width: 707px;
+	height: 435px;
+     
+}
+
+#groupsGrid {
+	width: 320px;
+	height: 400px;
+	overflow: hidden;
+	border: 1px solid #606060;
+	padding-top: 5px;
+	transition: padding-top 0.1s ease, height 0.1s ease;
+}
+
+#groupsGrid:before {
+	content: '';
+	display: none;
+	background-image: url('../images/checkbox-checked.svg'), url('../images/checkbox-disabled.svg');
+}
+
+.lineSeparator {
+	border-left: 1px solid #A0A0A0; 
+            height: 480px; 
+            position:absolute; 
+            left: 50%; 
+}
+.arasCFGTree.dojoxGrid .ActionButton.checkboxActionButton {
+	width: 16px;
+	height: 16px;
+	background-image: url('../images/checkbox-checked.svg');
+	background-size: 16px 16px;
+	background-position: 0px 0px;
+	background-repeat: no-repeat;
+	border: none;
+}
+
+.arasCFGTree.dojoxGrid .ActionButton.checkboxActionButton.Unchecked {
+	visibility: visible;
+	background-image: url('../images/checkbox-disabled.svg');
+}
+.searchInput {
+	height: 20px;
+	border: 1px solid #606060;
+	font-size: 12px;
+        background-image: url('../images/Search.svg');
+        background-size: 18px 18px;
+       background-repeat: no-repeat;
+       background-position: right;
+       padding-right: 20px;
+}
+
+.LimitText {
+     height:20px;
+    font-size: 12px;
+   padding-left: 5px;
+   input-type: number;
+}
+
+.NameElementMatch {
+	background-color: #F7EAAD;
+}
+.LimitMaximumValue{
+    height:20px;
+    font-size: 12px;
+    font-style: italic !important;
+}
+</css>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="vm_createUsageConditions" type="Form">289463AC13554A3D82113DC26B02732B</source_id>
+    <Relationships>
+     <Item type="Field" id="C0C6115FA8AC4476BC8DC9A9426DE564" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>button</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Apply</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="45AB151D88EC4DFEA370907F0A5E76DF" type="Body">45AB151D88EC4DFEA370907F0A5E76DF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>255</x>
+      <y>456</y>
+      <name>ApplyButton</name>
+     </Item>
+     <Item type="Field" id="6829070AF52847BE87D4578A7E126D71" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>button</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Cancel</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>256</sort_order>
+      <source_id keyed_name="45AB151D88EC4DFEA370907F0A5E76DF" type="Body">45AB151D88EC4DFEA370907F0A5E76DF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>988</x>
+      <y>456</y>
+      <name>CancelButton</name>
+     </Item>
+     <Item type="Field" id="363F50F0B49541FAB0A2A7CDF4B491AA" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<div id="groupsGrid"> </div>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>512</sort_order>
+      <source_id keyed_name="45AB151D88EC4DFEA370907F0A5E76DF" type="Body">45AB151D88EC4DFEA370907F0A5E76DF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>14</x>
+      <y>28</y>
+      <name>Grups Field</name>
+     </Item>
+     <Item type="Field" id="AF1F099CC73847539AACA523D6718B9C" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>label</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>10pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>left</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>640</sort_order>
+      <source_id keyed_name="45AB151D88EC4DFEA370907F0A5E76DF" type="Body">45AB151D88EC4DFEA370907F0A5E76DF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>147</x>
+      <y>459</y>
+      <name>LimitMaximumValue</name>
+     </Item>
+     <Item type="Field" id="7CB279DE1AF24C3B972E030418C2353E" action="add">
+      <border_width>0</border_width>
+      <display_length>80</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>text</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>10pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Limit</label>
+      <label_position>left</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>768</sort_order>
+      <source_id keyed_name="45AB151D88EC4DFEA370907F0A5E76DF" type="Body">45AB151D88EC4DFEA370907F0A5E76DF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>14</x>
+      <y>456</y>
+      <name>LimitText</name>
+     </Item>
+     <Item type="Field" id="93CD0F8B4BE642CBA5BD3AE9D26C1074" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<div class="lineSeparator"></div>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>896</sort_order>
+      <source_id keyed_name="45AB151D88EC4DFEA370907F0A5E76DF" type="Body">45AB151D88EC4DFEA370907F0A5E76DF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>349</x>
+      <y>0</y>
+      <name>Line separator</name>
+     </Item>
+     <Item type="Field" id="D45F36A67D8F4F0DB8F0E94CBA0FD0C7" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>button</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label xml:lang="en">Ok</label>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>384</sort_order>
+      <source_id keyed_name="45AB151D88EC4DFEA370907F0A5E76DF" type="Body">45AB151D88EC4DFEA370907F0A5E76DF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>888</x>
+      <y>456</y>
+      <name>OkButton</name>
+     </Item>
+     <Item type="Field" id="A434DF96D80140A8B01DAF165402E217" action="add">
+      <border_width>0</border_width>
+      <display_length>300</display_length>
+      <display_length_unit>px</display_length_unit>
+      <field_type>text</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>9pt</font_size>
+      <font_weight>bold</font_weight>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>1024</sort_order>
+      <source_id keyed_name="45AB151D88EC4DFEA370907F0A5E76DF" type="Body">45AB151D88EC4DFEA370907F0A5E76DF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>14</x>
+      <y>0</y>
+      <name>searchInput</name>
+     </Item>
+     <Item type="Field" id="E174F56044AE4693995FFB5753CB65C0" action="add">
+      <border_width>0</border_width>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<div id="UsageGrid"></div>]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <sort_order>1152</sort_order>
+      <source_id keyed_name="45AB151D88EC4DFEA370907F0A5E76DF" type="Body">45AB151D88EC4DFEA370907F0A5E76DF</source_id>
+      <tab_stop>1</tab_stop>
+      <x>360</x>
+      <y>0</y>
+      <name>UsageGrid</name>
+     </Item>
+    </Relationships>
+   </Item>
+   <Item type="Form Event" id="974F609C9D4643B894368173F088E427" action="add">
+    <form_event>onload</form_event>
+    <related_id keyed_name="vm_loadUsageConditionsDialog" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>vm_loadUsageConditionsDialog</name>
+     </Item>
+    </related_id>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="vm_createUsageConditions" type="Form">289463AC13554A3D82113DC26B02732B</source_id>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

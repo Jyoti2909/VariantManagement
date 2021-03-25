@@ -1,0 +1,89 @@
+﻿<AML>
+ <Item type="Method" id="7401C18DFDB34E9788996EFD6E69A25C" action="add">
+  <classification>/*</classification>
+  <comments>xPLM Copy CAD Method</comments>
+  <method_code><![CDATA[/**
+ this method is provided by XPLM
+ it is called during the copy/clone process from the CAD integration
+ the name "copyCAD" is configured in xml setup of the integration
+ basically we provide a new number.
+ 
+*/
+
+//if (System.Diagnostics.Debugger.Launch()) {
+//System.Diagnostics.Debugger.Break();
+//}
+
+
+//Grant administrative priviledge for ApplySQL
+Aras.Server.Security.Identity adminIdentity = Aras.Server.Security.Identity.GetByName("Administrators");
+bool PermissionWasSet  = Aras.Server.Security.Permissions.GrantIdentity(adminIdentity);
+
+Innovator inn = this.getInnovator();
+string docID = this.getID();
+string docType = this.getType();
+
+//Perform the copyAsNew on the document creating the new Document and 
+//Document relationships (i.e. Document File)
+Item copyDoc = inn.newItem(docType,"copyAsNew");
+
+copyDoc.setID(docID);
+Item newDoc = copyDoc.apply();
+
+if (newDoc.isError())
+{
+	return newDoc;
+}
+
+// get extension of copied CAD file to set new "external_id" with extension
+int tempLastIndexOf = 0;
+string extension = "";
+string temp_cax_fil_old_name = newDoc.getProperty("cax_fil_old_name");
+// get index of last dot (".") of CAD filename
+tempLastIndexOf = temp_cax_fil_old_name.LastIndexOf(".");
+// get complete extension from last dot (".") to end of CAD filename 
+extension = temp_cax_fil_old_name.Substring(tempLastIndexOf + 1);
+
+// this is hard coded. It should be in sync with the sequence that you
+// are using for the CAD item type.
+// if you change the default numbering for the CAD Item type, then this should be change also.
+// Start getting number.
+
+// 2020-10-12, FIH, BEGIN  
+// String docNumber = inn.getNextSequence("CAD Document") ;
+String docNumber = inn.getNextSequence("GAG_DocumentSequence") ;
+// 2020-10-12, FIH, END
+
+
+
+
+
+StringBuilder sqlBuilder = new StringBuilder();
+sqlBuilder = sqlBuilder.Append("UPDATE [" + docType + "] ");
+sqlBuilder = sqlBuilder.Append("SET ");
+sqlBuilder = sqlBuilder.Append("is_current = '1'");
+sqlBuilder = sqlBuilder.Append(", item_number = '" + docNumber + "' ");
+sqlBuilder = sqlBuilder.Append(", keyed_name = '" + docNumber + "' ");
+sqlBuilder = sqlBuilder.Append(", external_id = '" + docNumber + "." + extension + "' ");
+sqlBuilder = sqlBuilder.Append(", native_file = NULL ");
+sqlBuilder = sqlBuilder.Append("WHERE ");
+sqlBuilder = sqlBuilder.Append("[id]='" + newDoc.getID() + "'");
+
+//set is_current=1 (handles older generations of File) and apply the document number
+Item res = inn.applySQL(sqlBuilder.ToString());
+
+//Unlock the file
+Item fixNewDoc = inn.newItem(docType, "unlock");
+fixNewDoc.setID(newDoc.getID());
+fixNewDoc.setAttribute("version","0");
+newDoc=fixNewDoc.apply();
+
+// remove administrative privledge for ApplySQL
+if (PermissionWasSet) Aras.Server.Security.Permissions.RevokeIdentity(adminIdentity);
+
+return newDoc;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>copyCAD</name>
+ </Item>
+</AML>

@@ -1,0 +1,18 @@
+﻿<AML>
+ <Item type="Method" id="4C1E95A5A2BF48BB9C14476F1A44DED3" action="add">
+  <comments>computes the keyed name for a preference item</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[' name: PreferenceKeyedName
+Dim identity_id As String = Me.getproperty("identity_id")
+Dim identityreq As Item = Me.newitem("Identity","get")
+identityreq.setid(identity_id)
+Dim identityres As Item = identityreq.apply()
+If identityres.iserror() Then
+ Return(identityres)
+End If
+Me.setproperty("keyed_name",identityres.getproperty("keyed_name"))
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>PreferenceKeyedName</name>
+ </Item>
+</AML>

@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="B3F003BE80584D9987402A1C67D2D32C" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var PROPERTY_LABEL = 'property_label';
+var PROPERTY_NAME = 'property_name';
+
+var topFacetItems = parent.thisItem.getItemsByXPath('//Item[@id=\'' + relationshipID + '\']');
+
+if (topFacetItems.getItemCount() === 1) {
+	var topFacetItem = topFacetItems.getItemByIndex(0);
+	var indexedPropertyRelItems = topFacetItem.getItemsByXPath('./related_id/Item');
+
+	if (indexedPropertyRelItems.getItemCount() === 1) {
+		var indexedPropertyRelItem = indexedPropertyRelItems.getItemByIndex(0);
+
+		var propertyLabelValue = indexedPropertyRelItem.getProperty(PROPERTY_LABEL, '');
+		var propertyNameValue = indexedPropertyRelItem.getProperty(PROPERTY_NAME, '');
+
+		topFacetItem.removeProperty('related_id');
+
+		topFacetItem.setProperty(PROPERTY_LABEL, propertyLabelValue);
+		topFacetItem.setProperty(PROPERTY_NAME, propertyNameValue);
+
+		grid.items_Experimental.set(relationshipID, 'value', PROPERTY_LABEL + '_D', propertyLabelValue);
+		grid.items_Experimental.set(relationshipID, 'value', PROPERTY_NAME + '_D', propertyNameValue);
+	}
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_OnInsertTopFacetRow</name>
+ </Item>
+</AML>

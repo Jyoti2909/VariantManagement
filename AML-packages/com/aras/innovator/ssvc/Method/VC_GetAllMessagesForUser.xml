@@ -1,0 +1,70 @@
+﻿<AML>
+ <Item type="Method" id="E753B47EB60040C0995B7F54F024A7DF" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string userId = this.getID();
+if (String.IsNullOrEmpty(userId))
+{
+	throw new Exception(String.Format(CCO.ErrorLookup.Lookup("SSVC_GetMessagesIdNotSet")));
+}
+this.filter = this.getPropertyItem("filter");
+Item forums = GetForumsForUser(userId);
+List<Item> messages = new List<Item>();
+for (int i=0, count = forums.getItemCount(); i < count; i++)
+{
+	List<Item> forumMessages = GetForumMessages(forums.getItemByIndex(i).getID());
+	messages.AddRange(forumMessages);
+}
+return CreateResult(messages);
+}
+
+Item filter = null;
+
+private Item CreateResult(List<Item> items)
+{
+	Hashtable added = new Hashtable();
+	Item result = this.getInnovator().newResult("");
+	XmlNode resultNode = result.dom.SelectSingleNode("/*/*/Result");
+	for (int i = 0, count = items.Count; i < count; i++)
+	{
+		Item message = items[i];
+		string id = message.getID();
+		if (!added.ContainsKey(id))
+		{
+			XmlNode newNode = result.dom.ImportNode(items[i].node, true);
+			resultNode.AppendChild(newNode);
+			added.Add(id, true);
+		}
+	}
+	return result;
+}
+
+private List<Item> GetMessagesList(Item messages)
+{
+	List<Item> result = new List<Item>();
+	for (int i = 0, count = messages.getItemCount(); i < count; i ++)
+	{
+		result.Add(messages.getItemByIndex(i));
+	}
+	return result;
+}
+
+private List<Item> GetForumMessages(string forumId)
+{
+	Item messages = this.newItem("Forum", "VC_GetForumMessages");
+	if (this.filter != null)
+	{
+		messages.setPropertyItem("filter", this.filter);
+	}
+	messages.setID(forumId);
+	return GetMessagesList(messages.apply());
+}
+
+private Item GetForumsForUser(string userId)
+{
+	Item item = this.newItem("User", "VC_GetForumsForUser");
+	item.setID(userId);
+	return item.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_GetAllMessagesForUser</name>
+ </Item>
+</AML>

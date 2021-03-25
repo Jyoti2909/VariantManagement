@@ -1,0 +1,70 @@
+﻿<AML>
+ <Item type="Method" id="C370EADD278542B28138F793A1F7A71C" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+
+			return businessLogic.Run(this);
+		}
+
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+			private Dictionary<string,string> keywordListsForFlagChecks = new Dictionary<string, string>
+			{
+				{ "gag_c_part_flag", "GAG_CPartKeywords" },
+				{ "gag_tech_flag", "GAG_TechnologyKeywords" }
+			};
+
+			public BusinessLogic(IDataAccessLayer dal)
+			{
+				_dal = dal;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string name = contextItem.getProperty("name");
+
+				if (name == null && contextItem.getPropertyAttribute("name", "is_null") == null)
+				{
+					return contextItem;
+				}
+
+				foreach (KeyValuePair<string, string> check in keywordListsForFlagChecks)
+				{
+					if (!string.IsNullOrEmpty(name))
+					{
+						Item list = GetKeywordList(check.Value);
+						Contract.ThrowIfError(list);
+						contextItem.setProperty(check.Key, DoesNameContainKeyword(name, list) ? "1" : "0");
+					}
+					else
+					{
+						contextItem.setProperty(check.Key, "0");
+					}
+				}
+
+				return contextItem;
+			}
+
+			private Item GetKeywordList(string listName)
+			{
+				Item list = _dal.NewItem("List", "get");
+				list.setAttribute("select", "id");
+				list.setProperty("name", listName);
+				Item values = list.createRelationship("Value", "get");
+				values.setAttribute("select", "value");
+
+				return _dal.ApplyItem(list);
+			}
+
+			private bool DoesNameContainKeyword(string name, Item list)
+			{
+				Item values = list.getRelationships();
+
+				return values.Enumerate().Any(value => name.IndexOf(value.getProperty("value"), StringComparison.OrdinalIgnoreCase) >= 0);
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_CheckNameForKeyWords</name>
+ </Item>
+</AML>

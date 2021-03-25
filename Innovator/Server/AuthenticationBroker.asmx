@@ -1,0 +1,1 @@
+﻿<%@ WebService Language="VB" Debug="true" Class="Aras.Server.Core.BrokerService.AuthenticationBroker"%>

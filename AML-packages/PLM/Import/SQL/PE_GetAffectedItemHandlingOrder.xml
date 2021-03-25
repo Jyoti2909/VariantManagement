@@ -1,0 +1,160 @@
+﻿<AML>
+ <Item type="SQL" id="C027C40B5FCB4CC38DD289D303AF169E" action="add">
+  <execution_flag>immediate</execution_flag>
+  <old_name>PE_GetAffectedItemHandlingOrder</old_name>
+  <sqlserver_body><![CDATA[/*
+  Purpose:
+    Finds affected items for object with id=@objId in appropriate order.
+  Arguments:
+    @objId - ID of ECN or Simple ECO object
+  */
+CREATE PROCEDURE PE_GetAffectedItemHandlingOrder(@objId char(32))
+AS
+BEGIN
+		DECLARE @PART_LEVEL INT;
+
+		SET @PART_LEVEL = 0;
+
+		/* Create temporary table to store affected_id(part_id) and obj_affected_item_id */
+		CREATE TABLE #OBJ_AFFECTED_ITEMS
+			(
+					affected_id          CHAR(32) COLLATE database_default,
+					obj_affected_item_id CHAR(32) COLLATE database_default,
+					cci_type_name        NVARCHAR(128)
+			)
+
+		INSERT INTO #OBJ_AFFECTED_ITEMS
+								(affected_id,
+									obj_affected_item_id,
+									cci_type_name)
+		SELECT ai.affected_id,
+						ai.id,
+						it.name
+		FROM   (SELECT id,
+										source_id,
+										related_id
+						FROM   ecn_affected_item
+						UNION ALL
+						SELECT id,
+										source_id,
+										related_id
+						FROM   simple_eco_affected_item) obj_ai
+						INNER JOIN affected_item ai
+							ON obj_ai.source_id = @objId
+								AND ai.id = obj_ai.related_id
+						INNER JOIN change_controlled_item cci
+							ON ai.affected_id = cci.id
+						INNER JOIN itemtype it
+							ON cci.itemtype = it.id
+
+		/* If OBJECT has only one OBJECT Affected Item relationship - return, because no need to calculate order */
+		IF ( @@ROWCOUNT = 1 )
+			BEGIN
+					SELECT obj_affected_item_id
+					FROM   #OBJ_AFFECTED_ITEMS;
+
+					RETURN;
+			END
+
+		CREATE TABLE #TMP_BOMS_TO_USE
+			(
+					id                   CHAR(32) COLLATE database_default PRIMARY KEY,
+					source_id            CHAR(32) COLLATE database_default,
+					related_id           CHAR(32) COLLATE database_default,
+					obj_affected_item_id CHAR(32) COLLATE database_default
+			);
+
+		INSERT INTO #TMP_BOMS_TO_USE
+								(id,
+									source_id,
+									related_id,
+									obj_affected_item_id)
+		SELECT id,
+						source_id,
+						related_id,
+						obj_ai.obj_affected_item_id
+		FROM   PART_BOM pb,
+						#OBJ_AFFECTED_ITEMS obj_ai
+		WHERE  pb.source_id = obj_ai.affected_id
+						AND pb.related_id IS NOT NULL
+
+		/* There are Part BOMs in DB */
+		IF ( @@ROWCOUNT > 0 )
+			BEGIN
+					CREATE INDEX ind_tmp_BOMS_TO_USE_source_id
+						ON #TMP_BOMS_TO_USE(source_id);
+
+					CREATE INDEX ind_tmp_BOMS_TO_USE_related_id
+						ON #TMP_BOMS_TO_USE(related_id);
+			END
+
+		/* Iterate over leaf Parts. */
+		DECLARE @LEAF_PARTS TABLE(
+			id                   CHAR(32) COLLATE database_default,
+			partLevel            INT,
+			obj_affected_item_id CHAR(32) COLLATE database_default);
+
+		INSERT INTO @LEAF_PARTS
+								(id,
+									partLevel,
+									obj_affected_item_id)
+		SELECT affected_id,
+						@PART_LEVEL,
+						obj_affected_item_id
+		FROM   #OBJ_AFFECTED_ITEMS
+		WHERE  cci_type_name = N'Part'
+
+		WHILE ( EXISTS(SELECT TOP 1 id
+										FROM   #TMP_BOMS_TO_USE) )
+			BEGIN
+					SET @PART_LEVEL = @PART_LEVEL + 1;
+
+					INSERT INTO @LEAF_PARTS
+											(id,
+												partLevel,
+												obj_affected_item_id)
+					SELECT related_id,
+									@PART_LEVEL,
+									obj_affected_item_id
+					FROM   #TMP_BOMS_TO_USE
+
+					/* delete BOMs pointing to leaf Parts */
+					DELETE FROM #TMP_BOMS_TO_USE
+
+					INSERT INTO #TMP_BOMS_TO_USE
+											(id,
+												source_id,
+												related_id,
+												obj_affected_item_id)
+					SELECT pb.id,
+									pb.source_id,
+									pb.related_id,
+									lf.obj_affected_item_id
+					FROM   PART_BOM pb,
+									@LEAF_PARTS lf
+					WHERE  pb.source_id = lf.id
+									AND lf.partLevel = @PART_LEVEL
+									AND pb.related_id IS NOT NULL
+									AND NOT EXISTS (SELECT TOP 1 id
+																	FROM   @LEAF_PARTS
+																	WHERE  id = pb.related_id
+																				AND obj_affected_item_id = lf.obj_affected_item_id)
+			END
+
+		SELECT obj_ai.obj_affected_item_id obj_affected_item_id
+		FROM   #OBJ_AFFECTED_ITEMS obj_ai
+						LEFT OUTER JOIN @LEAF_PARTS lp
+							ON obj_ai.affected_id = lp.id
+		WHERE  obj_ai.cci_type_name != N'Part'
+						OR ( lp.id IS NOT NULL
+									AND lp.partLevel = (SELECT Max(partLevel)
+																			FROM   @LEAF_PARTS
+																			WHERE  id = lp.id) )
+		ORDER  BY partLevel DESC
+END]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>PE_GetAffectedItemHandlingOrder</name>
+ </Item>
+</AML>

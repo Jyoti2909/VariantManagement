@@ -1,0 +1,38 @@
+﻿<AML>
+ <Item type="Method" id="2B6897D50D184314A92333E252D34D91" action="add">
+  <comments>Removes SPDocument item type that was generated when the type was created</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharpInOut;
+
+  if (InnovatorServerASP == null)
+    throw new ArgumentNullException("InnovatorServerASP");
+
+  //System.Diagnostics.Debugger.Break();
+  Innovator inn = new Innovator( InnovatorServerASP );
+  Aras.Server.Core.CallContext CCO = ((Aras.Server.Core.IOMConnection)InnovatorServerASP).CCO;
+
+  string aml = string.Format( "<Item type='SPDocumentLibraryDefinition' action='get'><id>{0}</id></Item>",
+    System.Security.SecurityElement.Escape(inDom.DocumentElement.Attributes["id"].Value));
+  Item req_get_props = inn.newItem();
+  req_get_props.loadAML( aml );
+  Item full_docdef = req_get_props.apply();
+  if( full_docdef.isError() )
+  {
+  	outDom.LoadXml( full_docdef.dom.OuterXml );
+  	return;
+  }
+  
+  string tname = full_docdef.getProperty( "doc_type_name" );
+  
+  Item tdel_req = inn.newItem();
+  aml = string.Format( "<Item type=\"ItemType\" action=\"delete\" where=\"name like '{0}'\"/>",
+    CCO.DB.InnDatabase.QuoteValue(System.Security.SecurityElement.Escape(tname)));
+  tdel_req.loadAML( aml );
+  
+  Item del_result = tdel_req.apply();
+  if( del_result.isError() )
+    outDom.LoadXml( del_result.dom.OuterXml );]]></method_code>
+  <method_type>C#</method_type>
+  <name>SPDocLibDef_onBeforeDelete</name>
+ </Item>
+</AML>

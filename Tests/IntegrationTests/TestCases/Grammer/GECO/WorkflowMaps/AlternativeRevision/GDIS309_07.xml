@@ -1,0 +1,544 @@
+﻿<TestCase author="apetrovsky@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../TestCase.xsd">
+	<Description>
+		<![CDATA[
+		Revision for Parts in 30 and 50 states that have Revise Action in Release GECO (State = 30/50, Action = Revise, WFT = Part Release)
+		]]>
+	</Description>
+	<Request runAs="root:innovator">
+		<Comments>
+			<![CDATA[
+			Given:
+				root
+			When:
+				Create Part
+			Then:
+				Should create Part
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part'][1]/@id" />
+			<Variable id="Part2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Part'][2]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="add" doGetItem="0">
+					<name>PartRev-Rel04-30</name>
+					<classification>Mechanical Part/Assembly</classification>
+				</Item>
+				<Item type="Part" action="add" doGetItem="0">
+					<name>PartRev-Rel04-50</name>
+					<classification>Mechanical Part/Assembly</classification>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="" />
+						<Item type="Part" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="superMPCheckUser4:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser4
+			When:
+				promote Part to 30 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="apply" xpath="Query/AML/Item[@type='Part']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="promoteItem" id="{Part1.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+
+				<Item type="Part" action="promoteItem" id="{Part1.Id}" doGetItem="0">
+					<state>30</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="superMPCheckUser4:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superMPCheckUser4
+			When:
+				promote Part to 50 state
+			Then:
+				Should be promoted
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part2.Id" action="apply" xpath="Query/AML/Item[@type='Part']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="promoteItem" id="{Part2.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+
+				<Item type="Part" action="promoteItem" id="{Part2.Id}" doGetItem="0">
+					<state>35</state>
+				</Item>
+
+				<Item type="Part" action="promoteItem" id="{Part2.Id}" doGetItem="0">
+					<state>45</state>
+				</Item>
+
+				<Item type="Part" action="promoteItem" id="{Part2.Id}" doGetItem="0">
+					<state>50</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="partCheckUser2:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				partCheckUser2
+			When:
+				add new GECO as partCheckUser2
+			Then:
+				Should create GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/related_id" />
+			<Variable id="Part2.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/Relationships/Item[@type='GAG_GECO ChangeControlled'][2]/related_id" />
+			<Variable id="GECO.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="add" doGetItem="0">
+					<classification>Release &amp; Change/Mechanical Part</classification>
+					<gag_sap_change_number>AAAA00000001</gag_sap_change_number>
+					<gag_master_data_review_team>
+						<Item type="Identity" action="get" select="id">
+							<name>partCheckUser2</name>
+						</Item>
+					</gag_master_data_review_team>
+					<Relationships>
+						<Item action="add" type="GAG_GECO ExtReviewApprover">
+							<related_id>
+								<Item type="Identity" action="get">
+									<name>partCheckUser2</name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item action="add" type="GAG_GECO IntReviewApprover">
+							<related_id>
+								<Item type="Identity" action="get">
+									<name>partCheckUser2</name>
+								</Item>
+							</related_id>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled"  action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Revise</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{Part1.Id}</related_id>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled"  action="add">
+							<gag_related_item_generation>1</gag_related_item_generation>
+							<gag_action>Revise</gag_action>
+							<related_id type="GAG_GrammerChangeControlled">{Part2.Id}</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="{GECO1.Id}" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="partCheckUser2:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="partCheckUser2:1"
+		srcName="Common.Promotion.StartMechanicalPartTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="partCheckUser2:1"
+		srcName="Common.EvaluateActivityWithTwoTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request runAs="partCheckUser2:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				partCheckUser2
+			When:
+				Get geco with the gag_new_item property of the relationship
+			Then:
+				Should return GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='GAG_EngineeringChangeObject'][1]/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/gag_new_item" />
+			<Variable id="Part2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='GAG_EngineeringChangeObject'][1]/Relationships/Item[@type='GAG_GECO ChangeControlled'][2]/gag_new_item" />
+			<Variable id="GECO.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="get" id="{GECO.Id}" select="id">
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" action="get" select="gag_new_item" />
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" typeId="5DCFF174F8144371B57B563263F31D42" id="C766B71EB28F47CA8B49A36FF2187AC3">
+							<id keyed_name="GECO-00000195" type="GAG_EngineeringChangeObject">C766B71EB28F47CA8B49A36FF2187AC3</id>
+							<Relationships>
+								<Item type="GAG_GECO ChangeControlled" typeId="13A0DE1C25F74B5CBCDBED63208639B8" id="D8E5EF7024C741EA808F212FF65CC8FF">
+									<gag_new_item keyed_name="GP00335" type="GAG_GrammerChangeControlled">29681687C2F44F3DBDBD9C088199302F</gag_new_item>
+									<id keyed_name="D8E5EF7024C741EA808F212FF65CC8FF" type="GAG_GECO ChangeControlled">D8E5EF7024C741EA808F212FF65CC8FF</id>
+									<source_id keyed_name="GECO-00000195" type="GAG_EngineeringChangeObject">C766B71EB28F47CA8B49A36FF2187AC3</source_id>
+								</Item>
+								<Item type="GAG_GECO ChangeControlled" typeId="13A0DE1C25F74B5CBCDBED63208639B8" id="D8E5EF7024C741EA808F212FF65CC8FF">
+									<gag_new_item keyed_name="GP00335" type="GAG_GrammerChangeControlled">29681687C2F44F3DBDBD9C088199302F</gag_new_item>
+									<id keyed_name="D8E5EF7024C741EA808F212FF65CC8FF" type="GAG_GECO ChangeControlled">D8E5EF7024C741EA808F212FF65CC8FF</id>
+									<source_id keyed_name="GECO-00000195" type="GAG_EngineeringChangeObject">C766B71EB28F47CA8B49A36FF2187AC3</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/gag_new_item" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="partCheckUser2:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				partCheckUser2
+			When:
+				get a revision of a part
+			Then:
+				Should return Part with 02 revision
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="apply" xpath="Query/AML/Item[@type='Part']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="get" id="{Part1.Id}" select="major_rev">
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="5974D29597604CB0BA6960155E6405AE">
+							<id keyed_name="GP00339" type="Part">5974D29597604CB0BA6960155E6405AE</id>
+							<major_rev>02</major_rev>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="partCheckUser2:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				partCheckUser2
+			When:
+				get a revision of a part
+			Then:
+				Should return Part with 02 revision
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part2.Id" action="apply" xpath="Query/AML/Item[@type='Part']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="get" id="{Part1.Id}" select="major_rev">
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="5974D29597604CB0BA6960155E6405AE">
+							<id keyed_name="GP00339" type="Part">5974D29597604CB0BA6960155E6405AE</id>
+							<major_rev>02</major_rev>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+		</Comparison>
+	</Request>
+
+	<Request
+		runAs="partCheckUser2:1"
+		srcName="Common.GetInBasketTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request
+		runAs="partCheckUser2:1"
+		srcName="Common.Promotion.StartReview"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+		/>
+
+	<Request
+		runAs="partCheckUser2:1"
+		srcName="Common.EvaluateActivityWithSingleTask"
+		srcFile="TestCases\Grammer\GECO\WorkflowMaps\_Common.xml"
+	/>
+
+	<Request runAs="partCheckUser2:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				partCheckUser2
+			When:
+				Get geco with the gag_new_item property of the relationship
+			Then:
+				Should return GECO
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='GAG_EngineeringChangeObject'][1]/Relationships/Item[@type='GAG_GECO ChangeControlled'][1]/gag_new_item" />
+			<Variable id="Part2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='GAG_EngineeringChangeObject'][1]/Relationships/Item[@type='GAG_GECO ChangeControlled'][2]/gag_new_item" />
+			<Variable id="GECO.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" action="get" id="{GECO.Id}" select="id">
+					<Relationships>
+						<Item type="GAG_GECO ChangeControlled" action="get" select="gag_new_item" />
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" typeId="5DCFF174F8144371B57B563263F31D42" id="C766B71EB28F47CA8B49A36FF2187AC3">
+							<id keyed_name="GECO-00000195" type="GAG_EngineeringChangeObject">C766B71EB28F47CA8B49A36FF2187AC3</id>
+							<Relationships>
+								<Item type="GAG_GECO ChangeControlled" typeId="13A0DE1C25F74B5CBCDBED63208639B8" id="D8E5EF7024C741EA808F212FF65CC8FF">
+									<gag_new_item keyed_name="GP00335" type="GAG_GrammerChangeControlled">29681687C2F44F3DBDBD9C088199302F</gag_new_item>
+									<id keyed_name="D8E5EF7024C741EA808F212FF65CC8FF" type="GAG_GECO ChangeControlled">D8E5EF7024C741EA808F212FF65CC8FF</id>
+									<source_id keyed_name="GECO-00000195" type="GAG_EngineeringChangeObject">C766B71EB28F47CA8B49A36FF2187AC3</source_id>
+								</Item>
+								<Item type="GAG_GECO ChangeControlled" typeId="13A0DE1C25F74B5CBCDBED63208639B8" id="D8E5EF7024C741EA808F212FF65CC8FF">
+									<gag_new_item keyed_name="GP00335" type="GAG_GrammerChangeControlled">29681687C2F44F3DBDBD9C088199302F</gag_new_item>
+									<id keyed_name="D8E5EF7024C741EA808F212FF65CC8FF" type="GAG_GECO ChangeControlled">D8E5EF7024C741EA808F212FF65CC8FF</id>
+									<source_id keyed_name="GECO-00000195" type="GAG_EngineeringChangeObject">C766B71EB28F47CA8B49A36FF2187AC3</source_id>
+								</Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/gag_new_item" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="partCheckUser2:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				partCheckUser2
+			When:
+				get a revision of a part
+			Then:
+				Should return Part with A revision
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part1.Id" action="apply" xpath="Query/AML/Item[@type='Part']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="get" id="{Part1.Id}" select="major_rev">
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="5974D29597604CB0BA6960155E6405AE">
+							<id keyed_name="GP00339" type="Part">5974D29597604CB0BA6960155E6405AE</id>
+							<major_rev>A</major_rev>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+		</Comparison>
+	</Request>
+
+	<Request runAs="partCheckUser2:1">
+		<Comments>
+			<![CDATA[
+			Given:
+				partCheckUser2
+			When:
+				get a revision of a part
+			Then:
+				Should return Part with A revision
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Part2.Id" action="apply" xpath="Query/AML/Item[@type='Part']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" action="get" id="{Part1.Id}" select="major_rev">
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id="5974D29597604CB0BA6960155E6405AE">
+							<id keyed_name="GP00339" type="Part">5974D29597604CB0BA6960155E6405AE</id>
+							<major_rev>A</major_rev>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+		</Comparison>
+	</Request>
+
+	<TestCaseCleanUp runAs="root:innovator">
+		<Variables>
+			<Variable id="GECO.Id" action="apply" xpath="Query/AML/Item[@type='GAG_EngineeringChangeObject'][1]/@id" />
+			<Variable id="Part1.Id" action="apply" xpath="Query/AML/Item[@type='Part'][1]/@id" />
+			<Variable id="Part2.Id" action="apply" xpath="Query/AML/Item[@type='Part'][2]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_SAPTransferLog" action="delete" where="[GAG_SAPTransferLog].created_by_id = 'FA6281643C3547E18330B1B2E1CAF35F'" />
+				<Item type="GAG_EngineeringChangeObject" action="delete" id="{GECO.Id}" />
+				<Item type="Workflow Process" action="delete" where="[WORKFLOW_PROCESS].created_by_id = 'D10F34DAD95F4C35AB825CCCDBB99D08'" />
+				<Item type="Part" action="delete" id="{Part1.Id}" />
+				<Item type="Part" action="delete" id="{Part2.Id}" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

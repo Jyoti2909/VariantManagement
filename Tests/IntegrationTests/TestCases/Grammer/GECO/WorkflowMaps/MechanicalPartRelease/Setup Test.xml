@@ -1,0 +1,141 @@
+﻿<TestCase author="apetrovsky@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>Setup for GECO dynamic assignments tests</Description>
+	<Request runAs="root:innovator">
+		<Variables>
+			<Variable id="Password.Hash.Of.1" action="apply" xpath="Query/AML/Item[@type='User']/password | Query/AML/Item[@type='User']/confirm_password" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Part" id="BDD13D16F6154AA99D18FF3DE1C92B75" action="add" doGetItem="0">
+					<classification>Mechanical Part/Assembly</classification>
+					<name>TestName</name>
+				</Item>
+				<Item type="User" id="AC7A409355B447FFA1C10C70F0F4719C" action="add" doGetItem="0">
+					<login_name>creatorUser</login_name>
+					<password></password>
+					<confirm_password></confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type="User" id="956E0715E07441DB9E03C29F6817A681" action="add" doGetItem="0">
+					<login_name>masterDataReviewTeamUser</login_name>
+					<password></password>
+					<confirm_password></confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type="User" id="05607C46CA404FC4BBCD8436DC87FFB6" action="add" doGetItem="0">
+					<login_name>prodUser</login_name>
+					<password></password>
+					<confirm_password></confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type="User" id="03AC9359E29A4A608598924259909F07" action="add" doGetItem="0">
+					<login_name>internalReviewer</login_name>
+					<password></password>
+					<confirm_password></confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type="User" id="DB893DABEC754469A36FDF1F309FDFD1" action="add" doGetItem="0">
+					<login_name>externalReviewer</login_name>
+					<password></password>
+					<confirm_password></confirm_password>
+					<logon_enabled>1</logon_enabled>
+				</Item>
+				<Item type="Identity" id="8347837867A443529D90C63A8AEE1EA7" action="add" doGetItem="0">
+					<name>MasterDataReviewTeam</name>
+					<Relationships>
+						<Item type="Member" action="add">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<name>masterDataReviewTeamUser</name>
+								</Item>
+							</related_id>
+						</Item>
+					</Relationships>
+				</Item>
+				<Item type="Member" id="018E024C3C75486A9CC30C3C00E727BD" action="add" doGetItem="0">
+					<related_id>
+						<Item type="Identity" action="get" select="id">
+							<keyed_name>prodUser</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>D8190B09A2604895AB3F6F35AC7DAF4D</source_id>
+				</Item>
+				<Item type="Member" id="5E99E38630BA4234B100C5E2438777FA" action="add" doGetItem="0">
+					<related_id>
+						<Item type="Identity" action="get" select="id">
+							<keyed_name>internalReviewer</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>D8190B09A2604895AB3F6F35AC7DAF4D</source_id>
+				</Item>
+				<Item type="Member" id="0BD311EE35B04FC6B63518BE1D4D144F" action="add" doGetItem="0">
+					<related_id>
+						<Item type="Identity" action="get" select="id">
+							<keyed_name>externalReviewer</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>D8190B09A2604895AB3F6F35AC7DAF4D</source_id>
+				</Item>
+				<Item type='Member' id='94CE8DC4A6344035A859DD1245E9B7C5' action='add' doGetItem='0'>
+					<related_id>
+						<Item type='Identity' action='get' select='id'>
+							<keyed_name>creatorUser</keyed_name>
+						</Item>
+					</related_id>
+					<source_id>D8190B09A2604895AB3F6F35AC7DAF4D</source_id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" id="BDD13D16F6154AA99D18FF3DE1C92B75" />
+						<Item type="User" id="AC7A409355B447FFA1C10C70F0F4719C" />
+						<Item type="User" id="956E0715E07441DB9E03C29F6817A681" />
+						<Item type="User" id="05607C46CA404FC4BBCD8436DC87FFB6" />
+						<Item type="User" id="03AC9359E29A4A608598924259909F07" />
+						<Item type="User" id="DB893DABEC754469A36FDF1F309FDFD1" />
+						<Item type="Identity" id="8347837867A443529D90C63A8AEE1EA7" />
+						<Item type="Member" id="018E024C3C75486A9CC30C3C00E727BD">
+							<related_id>
+							</related_id>
+						</Item>
+						<Item type="Member" id="5E99E38630BA4234B100C5E2438777FA">
+							<related_id>
+							</related_id>
+						</Item>
+						<Item type="Member" id="0BD311EE35B04FC6B63518BE1D4D144F">
+							<related_id>
+							</related_id>
+						</Item>
+						<Item type="Member" id="94CE8DC4A6344035A859DD1245E9B7C5">
+							<related_id>
+							</related_id>
+						</Item>
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='Member']/related_id/Item" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs="root:innovator">
+		<Query>
+			<AML>
+				<Item type="GAG_SAPTransferLog" action="delete" where="[GAG_SAPTransferLog].created_by_id IN ('AC7A409355B447FFA1C10C70F0F4719C','956E0715E07441DB9E03C29F6817A681', '05607C46CA404FC4BBCD8436DC87FFB6')" />
+				<Item type="Part" id="BDD13D16F6154AA99D18FF3DE1C92B75" action="delete" />
+				<Item type="Member" idlist="018E024C3C75486A9CC30C3C00E727BD, 5E99E38630BA4234B100C5E2438777FA, 0BD311EE35B04FC6B63518BE1D4D144F, 94CE8DC4A6344035A859DD1245E9B7C5" action="delete" />
+				<Item type="Identity" id="8347837867A443529D90C63A8AEE1EA7" action="delete" />
+				<Item type="History" action="delete" where="[History].created_by_id IN ('AC7A409355B447FFA1C10C70F0F4719C','956E0715E07441DB9E03C29F6817A681','05607C46CA404FC4BBCD8436DC87FFB6','03AC9359E29A4A608598924259909F07','DB893DABEC754469A36FDF1F309FDFD1','AC7A409355B447FFA1C10C70F0F4719C','956E0715E07441DB9E03C29F6817A681','05607C46CA404FC4BBCD8436DC87FFB6','03AC9359E29A4A608598924259909F07','DB893DABEC754469A36FDF1F309FDFD1')" />
+				<Item type="History Container" action="delete" where="[History_Container].created_by_id IN ('AC7A409355B447FFA1C10C70F0F4719C','956E0715E07441DB9E03C29F6817A681','05607C46CA404FC4BBCD8436DC87FFB6','03AC9359E29A4A608598924259909F07','DB893DABEC754469A36FDF1F309FDFD1','AC7A409355B447FFA1C10C70F0F4719C','956E0715E07441DB9E03C29F6817A681','05607C46CA404FC4BBCD8436DC87FFB6','03AC9359E29A4A608598924259909F07','DB893DABEC754469A36FDF1F309FDFD1')" />
+				<Item type="User" action="delete" idlist="AC7A409355B447FFA1C10C70F0F4719C,956E0715E07441DB9E03C29F6817A681,05607C46CA404FC4BBCD8436DC87FFB6,03AC9359E29A4A608598924259909F07,DB893DABEC754469A36FDF1F309FDFD1" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

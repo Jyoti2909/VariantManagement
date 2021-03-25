@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="6141DD5FF65A4CA1A534D20715F4585C" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[const ruleEditorField = getFieldByName('rule_editor');
+const ruleEditorFrame = ruleEditorField.querySelector('iframe');
+const ruleEditorController = ruleEditorFrame.contentWindow.ruleEditorController;
+
+const dispatchEffectivityExpressionInputChangeEvent = function() {
+	window.parent.document.dispatchEvent(new CustomEvent(
+		'effectivityExpressionInputChange',
+		{
+			detail: {
+				isInputExpressionValid: ruleEditorController.editorControl.isInputValid()
+			}
+		}
+	));
+};
+
+ruleEditorController.editorControl.addEventListener(
+	ruleEditorController,
+	null,
+	'onStateChanged',
+	dispatchEffectivityExpressionInputChangeEvent);
+
+dispatchEffectivityExpressionInputChangeEvent();]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>effs_exprEditorInputChgEvntPubls</name>
+ </Item>
+</AML>

@@ -1,0 +1,108 @@
+﻿<AML>
+ <Item type="Method" id="A147F1652A47459BBD14CB6CF0C7F786" action="add">
+  <comments>Upgrade legacy saved search for new approch for current_state</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+List<XmlNode> nodeList = new List<XmlNode>();
+
+if (this.nodeList != null)
+{
+    foreach (XmlNode node in this.nodeList)
+    {
+        nodeList.Add(node);
+    }
+}
+else if (this.node != null)
+{
+    nodeList.Add(this.node);
+}
+
+if (nodeList.Count == 0)
+{
+    return this;
+}
+
+string currentStateXPath = "//current_state/Item[@type = \"Life Cycle State\" and @action = \"get\"]";
+foreach (XmlNode node in nodeList)
+{
+    XmlNode searchMode = node.SelectSingleNode("./search_mode[@keyed_name = \"Simple\" or @keyed_name = \"Advanced\"]");
+    if (searchMode == null)
+    {
+        continue;
+    }
+    XmlNode savedSearchCriteriaNode = node.SelectSingleNode("./criteria");
+    if (savedSearchCriteriaNode == null)
+    {
+        continue;
+    }
+
+    XmlDocument newSavedSearchCriteriaDocument = this.newXMLDocument();
+    newSavedSearchCriteriaDocument.LoadXml(savedSearchCriteriaNode.InnerText);
+    XmlNodeList currentStateList = newSavedSearchCriteriaDocument.SelectNodes(currentStateXPath);
+
+    foreach (XmlNode currentStateItem in currentStateList)
+    {
+        XmlNode currentStateNode = currentStateItem.ParentNode;
+        XmlNode currentStateContainerNode = currentStateNode.ParentNode;
+
+        XmlNodeList keyedNodesInOldFormat = currentStateItem.SelectNodes("*[self::keyed_name]");
+        foreach (XmlNode keyedName in keyedNodesInOldFormat)
+        {
+            string criteriaValue = keyedName.InnerText;
+            string conditionValue = keyedName.Attributes.GetNamedItem("condition").Value;
+            XmlElement newCurrentState = currentStateNode.OwnerDocument.CreateElement("current_state");
+            newCurrentState.InnerXml = $@"<Item type='Life Cycle State'><OR><label condition='{conditionValue}'>{criteriaValue}</label><AND><label condition='is null' /><name condition='{conditionValue}'>{criteriaValue}</name></AND></OR></Item>";
+            currentStateContainerNode.AppendChild(newCurrentState);
+        }
+
+        XmlNodeList ORNodesInOldFormat = currentStateItem.SelectNodes("*[self::OR]");
+        foreach (XmlNode ORNode in ORNodesInOldFormat)
+        {
+            XmlElement newCurrentState = currentStateNode.OwnerDocument.CreateElement("current_state");
+            newCurrentState.InnerXml = $@"<Item type='Life Cycle State'><OR></OR></Item>";
+
+            XmlNode mainContainer = newCurrentState.SelectSingleNode("//OR");
+
+            XmlElement labelContainer = currentStateNode.OwnerDocument.CreateElement("OR");
+            XmlElement nameContainer = currentStateNode.OwnerDocument.CreateElement("OR");
+            XmlElement nameGlobalContainer = currentStateNode.OwnerDocument.CreateElement("AND");
+
+            XmlElement nullLabel = currentStateNode.OwnerDocument.CreateElement("label");
+            nullLabel.SetAttribute("condition", "is null");
+
+            nameGlobalContainer.AppendChild(nullLabel);
+            nameGlobalContainer.AppendChild(nameContainer);
+
+            mainContainer.AppendChild(labelContainer);
+            mainContainer.AppendChild(nameGlobalContainer);
+
+            XmlNodeList ORKeyedNodesInOldFormat = ORNode.SelectNodes("*[self::keyed_name]");
+            foreach (XmlNode keyedName in ORKeyedNodesInOldFormat)
+            {
+                string criteriaValue = keyedName.InnerText;
+                string conditionValue = keyedName.Attributes.GetNamedItem("condition").Value;
+
+                XmlElement label = currentStateNode.OwnerDocument.CreateElement("label");
+                label.SetAttribute("condition", conditionValue);
+                label.InnerText = criteriaValue;
+                labelContainer.AppendChild(label);
+
+                XmlElement name = currentStateNode.OwnerDocument.CreateElement("name");
+                name.SetAttribute("condition", conditionValue);
+                name.InnerText = criteriaValue;
+                nameContainer.AppendChild(name);
+            }
+            currentStateContainerNode.AppendChild(newCurrentState);
+
+        }
+        currentStateContainerNode.RemoveChild(currentStateNode);
+    }
+    savedSearchCriteriaNode.InnerText = newSavedSearchCriteriaDocument.InnerXml;
+}
+
+return this;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>upgradeLCSavedSearch_onAfterGet</name>
+ </Item>
+</AML>

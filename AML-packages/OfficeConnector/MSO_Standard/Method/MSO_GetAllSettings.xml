@@ -1,0 +1,701 @@
+<AML>
+ <Item type="Method" id="1BD5469996D44BB59C1E9DE51369B74F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+            //0) check variable OC
+            //1) consumeLicense
+            //2) Retreives userInfo
+            //3) Get User IdentityList
+            //4) Get MSO_Common_Settings
+            //5) Get All Master Item types with relationships(Properties, CanAdd, XProperties) also valid linkItems types
+            //6) Get XClassTree info for eachType
+            //7) Get MSO_References 
+            //8) Get All Lists 
+
+            var innovatorInst = this.getInnovator();
+
+            string ocVariable = GetOCVariable();
+
+            Item userInformation = GetUserInformation();
+            string userIdentityList = GetUserIdentityList(userInformation);
+            string userIdentityId = GetUserIdentityId(userInformation);
+
+            var adminIdentity = Aras.Server.Security.Identity.GetByName("Super User");
+            bool isPermitionSet = Aras.Server.Security.Permissions.GrantIdentity(adminIdentity);
+            try
+            {
+                ExtendCommonSettingsByAdditionalSettings();
+            }
+            catch(Exception ex)
+            {
+                throw new Exception(CCO.ErrorLookup.Lookup("MSO_CanNotExtendCommonSettings", ex.Message));
+            }
+            finally
+            {
+                if (isPermitionSet)
+                {
+                    Aras.Server.Security.Permissions.RevokeIdentity(adminIdentity);
+                }
+            }
+
+            var msoUserCommonSettings = GetMSOCommonSettings(userIdentityId);
+            var msoWorldCommonSettings = GetMSOCommonSettings("A73B655731924CD0B027E4F4D5FCC0A9");  // World identity id
+
+            List<string> itemTypeDefinitionIds = GetMasterTypeIdsFromSettings(msoWorldCommonSettings);
+            List<string> validLinkItemDefinitions = GetValidLinkItemIdsFromMSOCommonSettings(msoWorldCommonSettings);
+            itemTypeDefinitionIds.AddRange(validLinkItemDefinitions);
+            var resultItemTypeDefinitionIds = itemTypeDefinitionIds.Distinct();
+
+            List<Item> itemTypeDefinitions = GetItemsDefinition(resultItemTypeDefinitionIds, userInformation);
+            List<Item> itemTypesFromProperties = GetPropertiesItemTypeIdsFromItemType(itemTypeDefinitions, userInformation);
+            foreach (var itemType in itemTypesFromProperties)
+            {
+                if (!itemTypeDefinitions.Exists(itd => itd.getID() == itemType.getID()))
+                {
+                    itemTypeDefinitions.Add(itemType);
+                }
+            }
+            List<Item> lists = GetListsItemsFromItemTypeDefinition(itemTypeDefinitions);
+            
+           
+            var resultItem = innovatorInst.newItem();
+            resultItem.setProperty("oc_variable", ocVariable);
+            resultItem.setPropertyItem("user_information", userInformation);
+            resultItem.setProperty("user_identity_list", userIdentityList);
+            resultItem.setPropertyItem("common_settings", msoWorldCommonSettings);
+            resultItem.setPropertyItem("user_common_settings", msoUserCommonSettings);
+
+            var itemDefinitions = innovatorInst.newItem("ItemDefinitions");
+            resultItem.setPropertyItem("item_definitions", itemDefinitions);
+            foreach (var itemTypeDefinition in itemTypeDefinitions)
+            {
+                itemDefinitions.addRelationship(itemTypeDefinition);
+            }
+
+            var listDefinitions = innovatorInst.newItem("ListDefinitions");
+            resultItem.setPropertyItem("list_definitions", listDefinitions);
+            foreach (var listDefinition in lists)
+            {
+                listDefinitions.addRelationship(listDefinition);
+            }
+
+            return resultItem;
+}
+
+//[PartialPath("Partials/ExtendCommonSettingsByAdditionalSettings")]
+        private void ExtendCommonSettingsByAdditionalSettings()
+        {
+            var innovatorInst = this.getInnovator();
+            Item refreshSettingsButtonItem = innovatorInst.newItem("MSO_RibbonItem","get");
+            refreshSettingsButtonItem.setProperty("mso_name", "refreshSettingsButton");
+            refreshSettingsButtonItem.setProperty("classification", "Button");
+            Item refreshSettingsButtonResults = refreshSettingsButtonItem.apply();
+        if (refreshSettingsButtonResults.isError())
+        {
+                Item refreshButtonItem = innovatorInst.newItem("MSO_RibbonItem", "get");
+                refreshButtonItem.setProperty("mso_name", "refresh");
+                
+                refreshSettingsButtonItem = innovatorInst.newItem("MSO_RibbonItem", "add");
+                refreshSettingsButtonItem.setID("D4017DB9FA7D4EB592AEE8F2983A0C19");
+                refreshSettingsButtonItem.setProperty("classification", "Button");
+                refreshSettingsButtonItem.setProperty("mso_name", "refreshSettingsButton");
+                refreshSettingsButtonItem.setProperty("mso_visible", "1");
+                refreshSettingsButtonItem.setProperty("mso_label", "Refresh Settings", "en");
+                refreshSettingsButtonItem.setProperty("mso_label", "Einstellungen aktualisieren", "de");
+                refreshSettingsButtonItem.setProperty("mso_label", "Mettre à jour les configurations", "fr");
+                refreshSettingsButtonItem.setProperty("mso_label", "設定を更新する。", "ja");
+                
+                Item childrefreshSettingsItem = innovatorInst.newItem("MSO_ChildRibbonItem", "add");
+                childrefreshSettingsItem.setPropertyItem("source_id", refreshButtonItem);
+                childrefreshSettingsItem.setRelatedItem(refreshSettingsButtonItem);
+                
+                childrefreshSettingsItem = childrefreshSettingsItem.apply();
+            }
+
+            var commonSettings = innovatorInst.newItem("MSO_CommonSettings", "get");
+            commonSettings.setAttribute("id", "4BF26B53A815455DB1FBC8BAF0D9DFBB");
+            commonSettings.createRelationship("MSO_DefaultFileTypes", "get");
+            var commonSettingsResult = commonSettings.apply();
+            if (commonSettingsResult.getItemCount() > 0)
+            {
+                Item visioDefaultFiletypeItem = commonSettingsResult.getItemsByXPath("//Item[@type='MSO_DefaultFileTypes' and office_application='Visio']");
+                if (visioDefaultFiletypeItem.getItemCount() == 0)
+                { 
+                    visioDefaultFiletypeItem = innovatorInst.newItem("MSO_DefaultFileTypes", "add");
+                    visioDefaultFiletypeItem.setID("471673E41A6B470D89575C2315C081B1");
+                    visioDefaultFiletypeItem.setProperty("default_file_type", "200001");
+                    visioDefaultFiletypeItem.setProperty("office_application", "Visio");
+                    visioDefaultFiletypeItem.setProperty("viewable_file", "1");
+                    visioDefaultFiletypeItem.setProperty("source_id", commonSettingsResult.getID());
+                    visioDefaultFiletypeItem.setProperty("viewable_file_type", "16001");
+                    visioDefaultFiletypeItem = visioDefaultFiletypeItem.apply();
+                }
+            }
+        }
+
+//[PartialPath("Partials/GetLicenseInfo")]
+        private string GetOCVariable()
+        {
+            var innovatorInst = this.getInnovator();
+            string clientVersionOnServer = "undefined";
+            Item variable = innovatorInst.getItemByKeyedName("Variable", "Office Connector");
+            if (variable != null)
+            {
+                clientVersionOnServer = variable.getProperty("value", clientVersionOnServer);
+            }
+
+            return clientVersionOnServer;
+        }
+
+//[PartialPath("Partials/CommonSettings")]
+        private Item GetMSOCommonSettings(string aliasIdentityId)
+        {
+            var innovatorInst = this.getInnovator();
+
+            Item defaultDocumentType = CreateDefaultFileTypesGetItem();
+            Item documentType = CreateDocumentTypeGetItem();
+            Item emailDocumentType = CreateEmailDocumentTypeGetItem();
+            Item ribbonItemSettings = CreateRibbonItemSettingsGetItem();
+            Item serverEvent = CreateServerEventGetItemSetting();
+
+            Item msoCommonSettings = innovatorInst.newItem("MSO_CommonSettings", "get");
+            msoCommonSettings.addRelationship(defaultDocumentType);
+            msoCommonSettings.addRelationship(documentType);
+            msoCommonSettings.addRelationship(emailDocumentType);
+            msoCommonSettings.addRelationship(ribbonItemSettings);
+            msoCommonSettings.addRelationship(serverEvent);
+
+            Item preferenceItem = innovatorInst.newItem("Preference");
+            preferenceItem.setProperty("identity_id", aliasIdentityId);
+
+            Item msoPreferencesItem = innovatorInst.newItem("MSO_Preferences", "get");
+            msoPreferencesItem.setAttribute("select", "related_id");
+            msoPreferencesItem.setRelatedItem(msoCommonSettings);
+            msoPreferencesItem.setPropertyItem("source_id", preferenceItem);
+            msoPreferencesItem = msoPreferencesItem.apply();
+            if (msoPreferencesItem.isError())
+            {
+                return innovatorInst.newItem();
+            }
+
+            msoCommonSettings = msoPreferencesItem.getRelatedItem();
+            return msoCommonSettings;
+        }
+
+        //[PartialPath("Partials/CommonSettings")]
+        private List<string> GetMasterTypeIdsFromSettings(Item msoCommonSettingItem)
+        {
+            List<string> resulItemTypeList = new List<string>();
+            var itemTypesDefinition = msoCommonSettingItem.getItemsByXPath("//Item/Relationships/Item[@type='MSO_DocumentType' or @type='MSO_EmailDocumentType']");
+            int itemCount = itemTypesDefinition.getItemCount();
+            for (int i = 0; i < itemCount; i++)
+            {
+                var item = itemTypesDefinition.getItemByIndex(i);
+                var masterItemTypeId = item.getProperty("master_item_type", string.Empty);
+                if (!string.IsNullOrEmpty(masterItemTypeId))
+                {
+                    resulItemTypeList.Add(masterItemTypeId);
+                }
+            }
+
+            return resulItemTypeList;
+        }
+//[PartialPath("Partials/CommonSettings")]
+        private List<string> GetValidLinkItemIdsFromMSOCommonSettings(Item msoCommonSettingItem)
+        {
+            List<string> resultList = new List<string>();
+            var xPath = "//Item/Relationships/Item[@type='MSO_DocumentType' or @type='MSO_EmailDocumentType']/Relationships/Item[@type='MSO_DocumentType Reference' or @type='MSO_EmailDocType Reference']/related_id/Item/reference_item_type/Item[is_relationship='1']/Relationships/Item[@type='Property']";
+            
+            var properties = msoCommonSettingItem.getItemsByXPath(xPath);
+            for (int i = 0; i < properties.getItemCount(); i++)
+            {
+                var property = properties.getItemByIndex(i);
+                var itemTypeId = property.getProperty("data_source");
+                if (itemTypeId != null)
+                {
+                    resultList.Add(itemTypeId);
+                }
+            }
+
+            xPath = "//Item/Relationships/Item[@type='MSO_DocumentType' or @type='MSO_EmailDocumentType']/Relationships/Item[@type='MSO_DocumentType Reference' or @type='MSO_EmailDocType Reference']/related_id/Item/reference_item_type/Item";
+            var itemTypes = msoCommonSettingItem.getItemsByXPath(xPath);
+            for (int i = 0; i < itemTypes.getItemCount(); i++)
+            {
+                var itemType = itemTypes.getItemByIndex(i);
+                var itemTypeId = itemType.getID();
+                if (!string.IsNullOrEmpty(itemTypeId))
+                {
+                    resultList.Add(itemTypeId);
+                }
+            }
+            
+            return resultList;
+        }
+
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateDefaultFileTypesGetItem()
+        {
+            Innovator innovatorInst = this.getInnovator();
+            Item defaultFileType = innovatorInst.newItem("MSO_DefaultFileTypes", "get");
+            defaultFileType.setAttribute("select", "viewable_file,viewable_file_type,office_application,default_file_type");
+            return defaultFileType;
+        }
+
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateDocumentTypeGetItem()
+        {
+            Innovator innovatorInst = this.getInnovator();
+
+            Item referenceItem = CreateMsoReferenceGetItem();
+            Item methodItem = CreateMethodGetItem();
+            Item sequenceItem = CreateSequenceGetItem();
+
+            Item documentTypeItem = innovatorInst.newItem("MSO_DocumentType", "get");
+            documentTypeItem.setAttribute("serverEvents", "0");
+
+            documentTypeItem.setPropertyItem("native_file_link", referenceItem);
+            documentTypeItem.setPropertyItem("thumbnail_file_link", referenceItem);
+            documentTypeItem.setPropertyItem("viewable_file_link", referenceItem);
+            documentTypeItem.setPropertyItem("document_numbering_method", methodItem);
+            documentTypeItem.setPropertyItem("file_naming_method", methodItem);
+            documentTypeItem.setPropertyItem("document_numbering_sequence", sequenceItem);
+
+            Item documentTypeReference = CreateDocumentTypeReferenceGetItem("MSO_DocumentType Reference");
+            Item propertyMap = CreateDocumentTypePropertyMapGetItem("MSO_DocumentType PropertyMap");
+
+            documentTypeItem.addRelationship(documentTypeReference);
+            documentTypeItem.addRelationship(propertyMap);
+
+            return documentTypeItem;
+        }
+
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateEmailDocumentTypeGetItem()
+        {
+            Innovator innovatorInst = this.getInnovator();
+
+            Item referenceItem = CreateMsoReferenceGetItem();
+            Item methodItem = CreateMethodGetItem();
+            Item sequenceItem = CreateSequenceGetItem();
+
+            Item documentTypeItem = innovatorInst.newItem("MSO_EmailDocumentType", "get");
+            documentTypeItem.setAttribute("serverEvents", "0");
+            documentTypeItem.setPropertyItem("native_file_link", referenceItem);
+            documentTypeItem.setPropertyItem("viewable_file_link", referenceItem);
+            documentTypeItem.setPropertyItem("viewable_message_file_link", referenceItem);
+            documentTypeItem.setPropertyItem("thumbnail_file_link", referenceItem);
+            documentTypeItem.setPropertyItem("document_numbering_method", methodItem);
+            documentTypeItem.setPropertyItem("file_naming_method", methodItem);
+            documentTypeItem.setPropertyItem("document_numbering_sequence", sequenceItem);
+
+            Item documentTypeReference = CreateDocumentTypeReferenceGetItem("MSO_EmailDocType Reference");
+            Item propertyMap = CreateDocumentTypePropertyMapGetItem("MSO_EmailDocType PropertyMap");
+
+            documentTypeItem.addRelationship(documentTypeReference);
+            documentTypeItem.addRelationship(propertyMap);
+
+            return documentTypeItem;
+        }
+
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateRibbonItemSettingsGetItem()
+        {
+            Innovator innovatorInst = this.getInnovator();
+            Item ribbonItemSettings = innovatorInst.newItem("MSO_RibbonItemSettings", "get");
+            ribbonItemSettings.setAttribute("select", "related_id");
+            ribbonItemSettings.setAttribute("levels", "2");
+            return ribbonItemSettings;
+        }
+
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateServerEventGetItemSetting()
+        {
+            Innovator innovatorInst = this.getInnovator();
+            Item methodItem = CreateMethodGetItem();
+            Item serverEvent = innovatorInst.newItem("MSO_ServerEvent", "get");
+            serverEvent.setAttribute("select", "mso_server_event,mso_event_version,master_item_type,related_id");
+            serverEvent.setRelatedItem(methodItem);
+            return serverEvent;
+        }
+
+//[PartialPath("Partials/UserInformation")]
+        private Item GetUserInformation()
+        {
+            var innovatorInst = this.getInnovator();
+            string userId = innovatorInst.getUserID();
+            Item user = innovatorInst.newItem("User", "get");
+            user.setAttribute("id", userId);
+            user.setAttribute("levels", "1");
+            user = user.apply();
+            return user;
+        }
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateMethodGetItem()
+        {
+            Innovator innovatorInst = this.getInnovator();
+            Item methodItem = innovatorInst.newItem("Method", "get");
+            methodItem.setAttribute("select", "name,keyed_name");
+            return methodItem;
+        }
+//[PartialPath("Partials/UserInformation")]
+        private string GetUserIdentityList(Item userInfo)
+        {
+            var innovatorInst = this.getInnovator();
+
+            var inDom = new XmlDocument();
+            inDom.LoadXml("<Item/>");
+            var outDom = new XmlDocument();
+            innovatorInst.getConnection().CallAction("getIdentityList", inDom, outDom);
+            Item result = innovatorInst.newItem();
+            result.loadAML(outDom.OuterXml);
+            if (!result.isError())
+            {
+                var text = result.dom.SelectSingleNode(Item.XPathResult).InnerText;
+                return text;
+            }
+
+            return string.Empty;
+        }
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateSequenceGetItem()
+        {
+            Innovator innovatorInst = this.getInnovator();
+            Item sequenceItem = innovatorInst.newItem("Sequence", "get");
+            return sequenceItem;
+        }
+//[PartialPath("Partials/UserInformation")]       
+        private string GetUserIdentityId(Item userInfo)
+        {
+            string userId = userInfo.getID();
+            string selector = "Relationships/Item[@type=\'Alias\']/related_id/Item[@type=\'Identity\']/id";
+            string identityId = userInfo.node.SelectSingleNode(selector).InnerText;
+            if (string.IsNullOrEmpty(identityId))
+            {
+                identityId = userId;
+            }
+            
+            return identityId;
+        }
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateMsoReferenceGetItem()
+        {
+            Innovator innovatorInst = this.getInnovator();
+            Item referencePropertyItem = innovatorInst.newItem("Property", "get");
+            referencePropertyItem.setAttribute("select", "data_source,data_type,name");
+            
+
+            Item itemTypeProperties = innovatorInst.newItem("Property", "get");
+            itemTypeProperties.setAttribute("where", "[Property].name in ('source_id','external_id')");
+            Item itemType = innovatorInst.newItem("ItemType", "get");
+            itemType.addRelationship(itemTypeProperties);
+
+            Item reference = innovatorInst.newItem("MSO_Reference", "get");
+            reference.setPropertyItem("reference_item_type", itemType);
+            reference.setPropertyItem("reference_property", referencePropertyItem);
+            return reference;
+        }
+
+//[PartialPath("Partials/ItemTypeInfo")]
+        private List<Item> GetItemsDefinition(IEnumerable<string> itemIds, Item userInfo)
+        {
+            var innovatorInst = this.getInnovator();
+            var resultList = new List<Item>();
+
+            string selector = "Relationships/Item[@type=\'Alias\']/related_id/Item[@type=\'Identity\']/id";
+            string identityId = userInfo.node.SelectSingleNode(selector).InnerText;
+            string aliasIdentityId = string.Empty;
+            if (!string.IsNullOrEmpty(identityId))
+            {
+                aliasIdentityId = identityId;
+            }
+            else
+            {
+                aliasIdentityId = userInfo.getID();
+            }
+            foreach (var itemId in itemIds)
+            {
+
+                Item docType = innovatorInst.newItem("ItemType", "get");
+                docType.setID(itemId);
+                Item docProperty = innovatorInst.newItem("Property", "get");
+                docProperty.setAttribute("orderBy", "sort_order");
+                docType.addRelationship(docProperty);
+                Item canAdd = innovatorInst.newItem("Can Add", "get");
+                canAdd.setProperty("can_add", "1");
+                docType.addRelationship(canAdd);
+                Item discussionTemplate = innovatorInst.newItem("DiscussionTemplate", "get");
+                docType.addRelationship(discussionTemplate);
+                var resultItem = docType.apply();
+
+                var savedSearches = GetSavedSearches(resultItem.getProperty("keyed_name"));
+                var itemGridLayout = GetItemGridLayout(itemId, aliasIdentityId);
+                var xclassTree = GetXClassificationTree(itemId);
+                if (!itemGridLayout.isError())
+                {
+                    resultItem.addRelationship(itemGridLayout);
+                }
+                if (!xclassTree.isError())
+                {
+                    int count = xclassTree.getItemCount();
+                    for (int i = 0; i < count; i++)
+                    {
+                        Item treeItem = xclassTree.getItemByIndex(i);
+                        resultItem.addRelationship(treeItem);
+                    }
+                }
+
+                foreach (var savedSearch in savedSearches)
+                {
+                    resultItem.addRelationship(savedSearch);
+                }
+
+                resultList.Add(resultItem);
+            }
+
+            return resultList;
+        }
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateDocumentTypeReferenceGetItem(string documentReference)
+        {
+            Innovator innovatorInst = this.getInnovator();
+            Item reference = CreateMsoReferenceGetItem();
+            Item docTypeReferenceItem = innovatorInst.newItem(documentReference, "get");
+            docTypeReferenceItem.setRelatedItem(reference);
+            return docTypeReferenceItem;
+        }
+//[PartialPath("Partials/ItemTypeInfo")]
+        private Item GetItemGridLayout(string itemTypeId, string userAliasIdentity)
+        {
+            var innovatorInst = this.getInnovator();
+            Item layout;
+            Item preference = innovatorInst.newItem("Preference", "get");
+            preference.setProperty("identity_id", userAliasIdentity);
+            preference = preference.apply();
+            if (!preference.isError())
+            {
+                string preferenceId = preference.getID();
+
+                Item item = innovatorInst.newItem("Core_ItemGridLayout", "get");
+                item.setProperty("item_type_id", itemTypeId);
+                item.setProperty("source_id", preferenceId);
+                layout = item.apply();
+            }
+            else
+            {
+                layout = innovatorInst.newItem();
+                layout.setProperty("item_type_id", itemTypeId);
+            }
+
+            return layout;
+        }
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateDocumentTypePropertyMapGetItem(string type)
+        {
+            Innovator innovatorInst = this.getInnovator();
+            Item propertyMap = innovatorInst.newItem(type, "get");
+            propertyMap.setAttribute("select", "on_create,on_update,office_property,aras_property,use_template,direction,sort_order");
+            return propertyMap;
+        }
+//[PartialPath("Partials/ItemTypeInfo")]
+        private Item GetXClassificationTree(string itemTypeId)
+        {
+            var innovatorInst = this.getInnovator();
+            var requestItem = innovatorInst.newItem("xClassificationTree", "get");
+            requestItem.setAttribute("select", "classification_hierarchy");
+
+            var xClassTreeItemType = innovatorInst.newItem("xClassificationTree_ItemType", "get");
+            xClassTreeItemType.setAttribute("select", "related_id");
+            xClassTreeItemType.setProperty("related_id", itemTypeId);
+            requestItem.addRelationship(xClassTreeItemType);
+
+            var xClassItem = innovatorInst.newItem("xClass", "get");
+            xClassItem.setAttribute("select", "ref_id,config_id");
+
+            var xClassXPropertyDefinition = innovatorInst.newItem("xClass_xPropertyDefinition", "get");
+            xClassXPropertyDefinition.setAttribute("select", "related_id");
+            xClassItem.addRelationship(xClassXPropertyDefinition);
+
+            requestItem.addRelationship(xClassItem);
+            try
+            {
+                requestItem = requestItem.apply();
+            }
+            catch (Exception ex)
+            {
+                requestItem = innovatorInst.newError(ex.Message);
+            }
+
+            return requestItem;
+        }
+        //[PartialPath("Partials/CommonSettings")]
+        private Item CreateItemTypeGetItem()
+        {
+            Innovator innovatorInst = this.getInnovator();
+            Item itemType = innovatorInst.newItem("ItemType", "get");
+            Item propertyItem = innovatorInst.newItem("Property", "get");
+            itemType.addRelationship(propertyItem);
+            return itemType;
+        }
+//[PartialPath("Partials/ItemTypeInfo")]
+        private List<Item> GetSavedSearches(string itemTypeName)
+        {
+            List<Item> resultSavedSearches = new List<Item>();
+            var innovatorInst = this.getInnovator();
+            var requestItem = innovatorInst.newItem();
+            requestItem.loadAML(string.Format(@"
+                <AML>
+                    <Item type=""SavedSearch"" action=""get"">
+                        <itname>{0}</itname>
+                        <auto_saved>0</auto_saved>
+                    </Item>
+                </AML>", itemTypeName));
+            var response = requestItem.apply();
+
+            for (int i = 0; i < response.getItemCount(); i++)
+            {
+                var savedSearch = response.getItemByIndex(i);
+                resultSavedSearches.Add(savedSearch);
+            }
+
+            return resultSavedSearches;
+        }
+//[PartialPath("Partials/ItemTypeInfo")]
+        private List<Item> GetPropertiesItemTypeIdsFromItemType(List<Item> parentItemTypeDefinitions, Item userInfo)
+        {
+            var innovatorInst = this.getInnovator();
+            var resultList = new List<string>(parentItemTypeDefinitions.Select(it => it.getID()));
+            foreach (var item in parentItemTypeDefinitions)
+            {
+                var propertiesDefinitions = item.getItemsByXPath("//Item/Relationships/Item[@type='Property']");
+                for (int i = 0; i < propertiesDefinitions.getItemCount(); i++)
+                {
+                    var propertiesDefinition = propertiesDefinitions.getItemByIndex(i);
+                    var propDataType = propertiesDefinition.getProperty("data_type");
+                    if (propDataType == "item")
+                    {
+                        var listId = propertiesDefinition.getProperty("data_source");
+
+                        if (string.IsNullOrEmpty(listId) || resultList.Contains(listId))
+                        {
+                            continue;
+                        }
+
+                        resultList.Add(listId);
+                    }
+                }
+
+                var xClassificationTrees = item.getRelationships("xClassificationTree");
+                for (int i = 0; i < xClassificationTrees.getItemCount(); i++)
+                {
+                    var xClassificationTree = xClassificationTrees.getItemByIndex(i);
+                    var xClasses = xClassificationTree.getRelationships("xClass");
+                    for (int j = 0; j < xClasses.getItemCount(); j++)
+                    {
+                        var xClass = xClasses.getItemByIndex(j);
+                        var xPropertiesDefinitions = xClass.getRelationships("xClass_xPropertyDefinition");
+                        for (int k = 0; k < xPropertiesDefinitions.getItemCount(); k++)
+                        {
+                            var xPropertiesDefinition = xPropertiesDefinitions.getItemByIndex(k);
+                            var xPropertyItem = xPropertiesDefinition.getPropertyItem("related_id");
+                            var propDataType = xPropertyItem.getProperty("data_type");
+                            if (propDataType == "item")
+                            {
+                                var listId = xPropertyItem.getProperty("data_source");
+                                if (resultList.Contains(listId))
+                                {
+                                    continue;
+                                }
+
+                                resultList.Add(listId);
+                            }
+                        }
+                    }
+                }
+            }
+            resultList = resultList.Where(itd => !parentItemTypeDefinitions.Exists(it => it.getID() == itd)).ToList();
+            var itemTypeIdList = resultList.Distinct();
+
+            return GetItemsDefinition(itemTypeIdList, userInfo);
+        }
+        //[PartialPath("Partials/ListsInfo")]
+        List<Item> GetListsItems(List<string> listIds)
+        {
+            var resultList = new List<Item>();
+            var innovatorInst = this.getInnovator();
+            var uniqIds = listIds.Distinct();
+
+            var listRequest = innovatorInst.newItem("List", "get");
+            listRequest.setAttribute("levels", "2");
+            listRequest.setProperty("id", string.Join(",", uniqIds));
+            listRequest.setPropertyCondition("id", "in");
+            listRequest = listRequest.apply();
+
+            int listCount = listRequest.getItemCount();
+            for (int i = 0; i < listCount; i++)
+            {
+                Item listItem = listRequest.getItemByIndex(i);
+                resultList.Add(listItem);
+            }
+
+            return resultList;
+        }
+//[PartialPath("Partials/ListsInfo")]
+        List<Item> GetListsItemsFromItemTypeDefinition(List<Item> items)
+        {
+            var resultList = new List<string>
+            {
+                "AE75F1D23E784FB0B57FC93713C8131A" // MSO_DefaultFileFormat
+            };
+
+            var innovatorInst = this.getInnovator();
+            foreach (var item in items)
+            {
+                var propertiesDefinitions = item.getItemsByXPath("//Item/Relationships/Item[@type='Property']");
+                for (int i = 0; i < propertiesDefinitions.getItemCount(); i++)
+                {
+                    var propertiesDefinition = propertiesDefinitions.getItemByIndex(i);
+                    var propDataType = propertiesDefinition.getProperty("data_type");
+                    if (propDataType == "list" || propDataType == "color list" || propDataType == "filter list")
+                    {
+                        var listId = propertiesDefinition.getProperty("data_source");
+                        if (!resultList.Contains(listId))
+                        {
+                            resultList.Add(listId);
+                        }
+                    }
+                }
+                
+                var xClassificationTrees = item.getRelationships("xClassificationTree");
+                for (int i = 0; i < xClassificationTrees.getItemCount(); i++)
+                {
+                    var xClassificationTree = xClassificationTrees.getItemByIndex(i);
+                    var xClasses = xClassificationTree.getRelationships("xClass");
+                    for (int j = 0; j < xClasses.getItemCount(); j++)
+                    {
+                        var xClass = xClasses.getItemByIndex(j);
+                        var xPropertiesDefinitions = xClass.getRelationships("xClass_xPropertyDefinition");
+                        for (int k = 0; k < xPropertiesDefinitions.getItemCount(); k++)
+                        {
+                             var xPropertiesDefinition = xPropertiesDefinitions.getItemByIndex(k);
+                             var xPropertyItem = xPropertiesDefinition.getPropertyItem("related_id");
+                             var propDataType = xPropertyItem.getProperty("data_type");
+                             if (propDataType == "list")
+                             {
+                                var listId = xPropertyItem.getProperty("data_source");
+                                if (resultList.Contains(listId))
+                                {
+                                    continue;
+                                }
+                              
+                                resultList.Add(listId);
+                             }
+                        }
+                    }
+                }
+            }
+
+            return GetListsItems(resultList);]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_GetAllSettings</name>
+ </Item>
+</AML>

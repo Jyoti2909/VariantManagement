@@ -1,0 +1,124 @@
+﻿<AML>
+ <Item type="Method" id="CB5C6A83C6F244B8B021C78A8721B23C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[// XPLM_Load_CAD_Exchange  - Version 2 
+//
+// This method is used to support the XPLM Load-to-CAD functionality.
+// It is executed as an ACTION from either the CAD or Part item. 
+// If the Action is executed from a CAD item, the CAD item info is added into the "CAD Exchange" table
+// If the ACtion is executed from a Part item, the related CAD item is obtained and added into the "CAD Exchange" table
+//
+// Once table is loaded, the user can use the "Load from client" function on the XPLM connector to retrieve the file.
+//
+var inn = this.getInnovator();
+
+var parentID = this.getProperty("id");
+var parentType = this.getType();
+var loadAction = "Load to CAD";
+
+// If Action is executed from the CAD item then we are ready to load the "CAD Exchange" table
+if (parentType == "CAD") {
+
+	// We will check for duplicate id's in the table
+	if (checkDuplicateForUser(parentID) === false) {		
+		var newExchange = inn.newItem("CAD Exchange","add");
+		newExchange.setProperty("xplm_authoring_tool", this.getProperty("authoring_tool"));
+		newExchange.setProperty("xplm_id", parentID);
+		newExchange.setProperty("xplm_itemtype", this.getType());
+		newExchange.setProperty("xplm_load_action", loadAction);
+		newExchange.apply();
+		// Alert if any errors
+		if (newExchange.isError()) {
+		  return aras.AlertError(newExchange.getErrorString());
+		}
+		// Alert success
+		else top.aras.AlertSuccess("CAD Item successfully added to load queue. Please go to your CAD System and press, Load from Client");
+	}
+	else
+	// Alert item was already in the table
+	top.aras.AlertSuccess("CAD Item already exists in load queue");
+}
+
+// If Action is executed from the Part item then we need to find the related CAD item(s)
+if (parentType == "Part") {
+	
+	// Get the Part item
+	var partItem = inn.newItem("Part","get");
+	partItem.setID(parentID);
+	var result = partItem.apply();
+	
+	// Add "Part CAD" relationships and count - there could be many...
+	result.fetchRelationships("Part CAD");	
+	var relationships = result.getRelationships("Part CAD");
+	var count = relationships.getItemCount();
+	
+	// Iterate through relationships
+	var founditems = false;
+	for (var i=0; i<count; i++) {
+		
+		// Get relationships
+		var relationshipIndex = relationships.getItemByIndex(i);
+		var rExternalOwner = relationshipIndex.getProperty("external_owner");
+		
+		// The relationship must be owned by the connector
+		if (rExternalOwner=="1") {
+			founditems=true;
+			var RelatedCAD = relationshipIndex.getRelatedItem();
+			
+			// Get CAD info
+			var parentID = RelatedCAD.getProperty("id");
+			var parentType = RelatedCAD.getType();
+
+			// We will check for duplicate id's in the table
+			if (checkDuplicateForUser(parentID) === false) {			
+				var newExchange = inn.newItem("CAD Exchange","add");
+				newExchange.setProperty("xplm_authoring_tool", RelatedCAD.getProperty("authoring_tool"));
+				newExchange.setProperty("xplm_id", parentID);
+				newExchange.setProperty("xplm_itemtype", RelatedCAD.getType());
+				newExchange.setProperty("xplm_load_action", loadAction);
+				newExchange.apply();
+
+				// Alert if any errors
+				if (newExchange.isError()) {
+				  return aras.AlertError(newExchange.getErrorString());
+				}
+				// Alert success		
+				else top.aras.AlertSuccess("Related CAD Item successfully added to load queue. Please go to your CAD System and press, Load from Client");
+			}
+			else
+			top.aras.AlertSuccess("Related CAD Item already exists in load queue");	
+		}	
+	}
+	// if no related items were found, Alert user with an Error
+	if (founditems===false) {
+		top.aras.AlertError("Related CAD Item does not exist or was not originally created by the XPLM connector");
+	}
+}
+
+return inn.newResult("This method was <b>successful</b>.");
+
+//-----------------------------------------------------------------------------
+// IN: id of Item
+// OUT: true or false
+function checkDuplicateForUser(item_id) {
+// check if a CAD Exchange Item with this: item_id property and this user exists
+// if such CAD Exchange Item already exists, return true
+var myItem = inn.newItem("CAD Exchange","get");
+myItem.setAttribute("select","xplm_id,created_by_id");
+myItem.setProperty("xplm_id",item_id);
+myItem.setProperty("created_by_id",inn.getUserID());
+myItem.setProperty("xplm_load_action",loadAction);
+myItem = myItem.apply();
+
+
+
+if (myItem.getItemCount()>0)
+{
+    return true;
+}
+else return false;
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>XPLM_Load_CAD_Exchange</name>
+ </Item>
+</AML>

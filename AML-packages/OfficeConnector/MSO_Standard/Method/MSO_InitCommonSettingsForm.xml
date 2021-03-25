@@ -1,0 +1,111 @@
+﻿<AML>
+ <Item type="Method" id="609F3B91557F4398A3099FE57B052BC3" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+  if(!parent.RelationshipsOverriddenFunctions)
+    {parent.RelationshipsOverriddenFunctions = new Object();}
+  parent.RelationshipsOverriddenFunctions['onTab'] = parent.mso_onTab = function (tabID, async)
+  {
+    if(tabID != "2D5A857C54C34B70AE7ABBF8502CF945" && // MSO_DocumentType
+       tabID != "8F18D5CC50D7400AA7BA6C9C08065F7C" )  // MSO_EmailDocumentType
+          {return;}
+    if(parent.aras &&
+       parent.relationships &&
+       parent.relationships.iframesCollection)
+       {
+         var frm = parent.relationships.iframesCollection[tabID];
+         if(!frm || !frm.contentWindow.grid || !frm.contentWindow.xml_ready_flag)
+         {
+           if(! (async && tabID != parent.relationships.currTabID))
+             {setTimeout("parent.mso_onTab('"+tabID+"', true)", 100);}
+           return;
+         }
+        //debugger;
+        if(!frm.contentWindow.orig_onLink)
+        {
+          frm.contentWindow.mso_onLink = function(itemTypeName, itemID)
+          {
+            //debugger;
+            if(parent.aras &&
+               parent.relationships &&
+               parent.relationships.iframesCollection)
+             {
+               var frm = parent.relationships.iframesCollection[tabID];
+               if(frm && frm.contentWindow.grid)
+               {
+                 var gridApplet = frm.contentWindow.grid;
+                 if(itemTypeName == frm.contentWindow.relationshipTypeName)
+                   {frm.contentWindow.showRelationshipById(itemID);}
+                 else if(frm.contentWindow.orig_onLink)
+                   {frm.contentWindow.orig_onLink(itemTypeName, itemID);}
+               }
+             }
+          };
+          
+          frm.contentWindow.mso_onXmlLoaded = function()
+          {
+            //debugger;
+            if(parent.aras &&
+               parent.relationships &&
+               parent.relationships.iframesCollection)
+             {
+               var frm = parent.relationships.iframesCollection[tabID];
+               if(frm && frm.contentWindow.grid)
+               {
+                 if(frm.contentWindow.orig_onXmlLoaded)
+                   {frm.contentWindow.orig_onXmlLoaded();}
+                 var gridApplet = frm.contentWindow.grid;
+                var colIND = gridApplet.GetColumnIndex("property_mapping_D");
+                var allRows = gridApplet.getAllItemIds(",");
+                if (allRows === "") {return;}
+                allRows = allRows.split(',');
+                for (var i = 0; i < allRows.length; i++)
+                {
+                  var rowID = allRows[i];
+                  if(rowID === "") {continue;}
+                  gridApplet.SetCellLink(rowID, colIND, "'" + frm.contentWindow.relationshipTypeName+"','"+rowID+"'");
+                  gridApplet.SetCellTextColor(rowID, colIND, "#0000FF");
+                }
+              }
+            }
+          };
+          frm.contentWindow.orig_onLink = frm.contentWindow.onLink;
+          frm.contentWindow.onLink = frm.contentWindow.mso_onLink;
+          frm.contentWindow.orig_onXmlLoaded = frm.contentWindow.onXmlLoaded;
+          frm.contentWindow.onXmlLoaded = frm.contentWindow.mso_onXmlLoaded;
+        }
+      }
+  };
+ 
+  parent.reinitRelationshipOverriddenFunctions = function()
+  {
+    if(parent.item.getAttribute('type')=='Form'){return; }
+    if(parent.tearoff_menu && 
+       parent.tearoff_menu.document)
+    { 
+       var toolbar = parent.tearoff_menu.document.getElementById('toolbar');
+       if(toolbar)
+       {
+          var activeToolbar= toolbar.GetActiveToolbar();
+          if(activeToolbar)
+          { 
+              var no_tabs_button = activeToolbar.getElement('no_tabs');
+              if( no_tabs_button && no_tabs_button.GetState()=='true')
+                 {return;}
+           }
+        }
+    }
+    if(parent.relationships &&
+       parent.relationships.initOverriddenFunctions)
+    {
+        parent.relationships.initOverriddenFunctions();
+        return;
+     }
+     setTimeout("parent.reinitRelationshipOverriddenFunctions()", 10);
+  };
+  parent.reinitRelationshipOverriddenFunctions();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>MSO_InitCommonSettingsForm</name>
+ </Item>
+</AML>

@@ -1,0 +1,170 @@
+﻿<AML>
+ <Item type="Life Cycle Map" id="9DD15121F2064DE3A797DD3FD35D81A5" action="add">
+  <description>Lifecycle for Simple MCOs</description>
+  <start_state keyed_name="New" type="Life Cycle State">A68A46536EA2475495386C1A7D803D35</start_state>
+  <name>Simple MCO</name>
+  <Relationships>
+   <Item type="Life Cycle State" id="352FA87157B44F15830C79B37C567462" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>640</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <state_permission_id keyed_name="Completed Change" type="Permission">3C4E91485BA04190ADBE7895209DA75C</state_permission_id>
+    <x>172</x>
+    <y>148</y>
+    <name>Cancelled</name>
+   </Item>
+   <Item type="Life Cycle State" id="567034AEEF38423D8CDDDBEA8C72818F" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>384</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <state_permission_id keyed_name="In Review Change" type="Permission">F741D0B823F442F1947787A8F742F516</state_permission_id>
+    <x>294</x>
+    <y>52</y>
+    <name>In Review</name>
+   </Item>
+   <Item type="Life Cycle State" id="50178D20219D4F319A9B4EFAC6511F01" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <state_permission_id keyed_name="In Work Change" type="Permission">AEBC0BC7518F4CF58936EACDAAD2AB8E</state_permission_id>
+    <x>172</x>
+    <y>52</y>
+    <name>In Work</name>
+   </Item>
+   <Item type="Life Cycle State" id="A68A46536EA2475495386C1A7D803D35" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <x>46</x>
+    <y>52</y>
+    <name>New</name>
+   </Item>
+   <Item type="Life Cycle State" id="EEA332AD8EAA4320B9A1FA4B630153EA" action="add">
+    <image>../images/LifeCycleState.svg</image>
+    <set_is_released>0</set_is_released>
+    <set_not_lockable>0</set_not_lockable>
+    <sort_order>512</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <state_permission_id keyed_name="Completed Change" type="Permission">3C4E91485BA04190ADBE7895209DA75C</state_permission_id>
+    <x>420</x>
+    <y>52</y>
+    <name>Released</name>
+   </Item>
+   <Item type="Life Cycle Transition" id="105809366F964C2589F9D588285C448C" action="add">
+    <from_state keyed_name="In Work" type="Life Cycle State">50178D20219D4F319A9B4EFAC6511F01</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_MCO_PostCancelledHandler" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_MCO_PostCancelledHandler</name>
+     </Item>
+    </post_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>768</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <to_state keyed_name="Cancelled" type="Life Cycle State">352FA87157B44F15830C79B37C567462</to_state>
+    <x>-56</x>
+    <y>47</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="5B6A461639964B54A4A9C23DF4C910A4" action="add">
+    <from_state keyed_name="In Work" type="Life Cycle State">50178D20219D4F319A9B4EFAC6511F01</from_state>
+    <get_comment>0</get_comment>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>384</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <to_state keyed_name="In Review" type="Life Cycle State">567034AEEF38423D8CDDDBEA8C72818F</to_state>
+    <x>29</x>
+    <y>15</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="E765E2A2F568417680EFE80E247B3202" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">567034AEEF38423D8CDDDBEA8C72818F</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_MCO_PostReleasedHandler" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_MCO_PostReleasedHandler</name>
+     </Item>
+    </post_action>
+    <pre_action keyed_name="PE_MCOAffectedPartPromotion" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_MCOAffectedPartPromotion</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>512</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <to_state keyed_name="Released" type="Life Cycle State">EEA332AD8EAA4320B9A1FA4B630153EA</to_state>
+    <x>34</x>
+    <y>16</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="E8FC970061734C439CFBDF49F99C67AF" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">567034AEEF38423D8CDDDBEA8C72818F</from_state>
+    <get_comment>0</get_comment>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments>306,29|183,29</segments>
+    <sort_order>256</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <to_state keyed_name="In Work" type="Life Cycle State">50178D20219D4F319A9B4EFAC6511F01</to_state>
+    <x>-89</x>
+    <y>-39</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="E967C010BFE14E5B8C14F7C9ACC6CEC1" action="add">
+    <from_state keyed_name="In Review" type="Life Cycle State">567034AEEF38423D8CDDDBEA8C72818F</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_MCO_PostCancelledHandler" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_MCO_PostCancelledHandler</name>
+     </Item>
+    </post_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>896</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <to_state keyed_name="Cancelled" type="Life Cycle State">352FA87157B44F15830C79B37C567462</to_state>
+    <x>-64</x>
+    <y>63</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="8A50DB38E85D4CD0BEECFAA90EE7BD8B" action="add">
+    <from_state keyed_name="New" type="Life Cycle State">A68A46536EA2475495386C1A7D803D35</from_state>
+    <get_comment>0</get_comment>
+    <post_action keyed_name="PE_MCO_PostCancelledHandler" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_MCO_PostCancelledHandler</name>
+     </Item>
+    </post_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>128</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <to_state keyed_name="Cancelled" type="Life Cycle State">352FA87157B44F15830C79B37C567462</to_state>
+    <x>20</x>
+    <y>71</y>
+   </Item>
+   <Item type="Life Cycle Transition" id="DC2E4608DDA94C2DA47324BF1DEF0E7C" action="add">
+    <from_state keyed_name="New" type="Life Cycle State">A68A46536EA2475495386C1A7D803D35</from_state>
+    <get_comment>0</get_comment>
+    <pre_action keyed_name="PE_MCOAffectedPartPromotion" type="Method">
+     <Item type="Method" action="get" select="id">
+      <name>PE_MCOAffectedPartPromotion</name>
+     </Item>
+    </pre_action>
+    <role keyed_name="Aras PLM" type="Identity">56A96DA9E981481688563E2D14D5D878</role>
+    <segments />
+    <sort_order>640</sort_order>
+    <source_id keyed_name="Simple MCO" type="Life Cycle Map">9DD15121F2064DE3A797DD3FD35D81A5</source_id>
+    <to_state keyed_name="In Work" type="Life Cycle State">50178D20219D4F319A9B4EFAC6511F01</to_state>
+    <x>38</x>
+    <y>15</y>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

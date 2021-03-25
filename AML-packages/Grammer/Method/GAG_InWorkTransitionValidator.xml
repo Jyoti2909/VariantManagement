@@ -1,0 +1,419 @@
+﻿<AML>
+ <Item type="Method" id="1282BF2C9DA34136981E6707B0C6FA01" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			var dal = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dal);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly DataAccessLayer _dal;
+
+			public BusinessLogic(DataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string classification = contextItem.getProperty("classification");
+				Validator validator;
+				switch (classification)
+				{
+					case "Pre-Release & Change/CAD Document":
+						validator = new CADPreReleaseValidator(_dal);
+						break;
+					case "Release & Change/CAD Document":
+						validator = new CADReleaseValidator(_dal);
+						break;
+					case "Release & Change/Mechanical Part":
+						validator = new MechanicalPartReleaseValidator(_dal);
+						break;
+					case "Pre-Release & Change/Mechanical Part":
+						validator = new MechanicalPartPreReleaseValidator(_dal);
+						break;
+					default:
+						return _dal.NewError($"Unknown {classification} classification.");
+				}
+
+				Item result = validator.Validate(contextItem);
+				return result.isError()
+					? result
+					: _dal.NewResult(contextItem.getResult());
+			}
+		}
+		//[PartialPath("Validators/CADPreReleaseValidator")]
+		internal class CADPreReleaseValidator : Validator
+		{
+
+			public CADPreReleaseValidator(DataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+			}
+
+			protected override string[] GetApproversTypes()
+			{
+				return new[]
+				{
+					"GAG_GECO CADDesigner",
+					"GAG_GECO DevReleaseApprover"
+				};
+			}
+
+			protected override string GetItemTypeName()
+			{
+				return "CAD";
+			}
+		}
+		//[PartialPath("Validators/CADReleaseValidator")]
+		internal class CADReleaseValidator : Validator
+		{
+
+			public CADReleaseValidator(DataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+			}
+
+			protected override string[] GetApproversTypes()
+			{
+				return new[]
+				{
+					"GAG_GECO CADDesigner",
+					"GAG_GECO DevReleaseApprover",
+					"GAG_GECO TechReviewApprover"
+				};
+			}
+
+			protected override string GetItemTypeName()
+			{
+				return "CAD";
+			}
+		}
+		//[PartialPath("Validators/MechanicalPartPreReleaseValidator")]
+		internal class MechanicalPartPreReleaseValidator : MechanicalPartValidator
+		{
+
+			public MechanicalPartPreReleaseValidator(DataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+			}
+
+			protected override string[] GetApproversTypes()
+			{
+				////NOTE: Disable validation approvers;
+				return Array.Empty<string>();
+			}
+		}
+		//[PartialPath("Validators/MechanicalPartPreReleaseValidator")]
+		internal class MechanicalPartReleaseValidator : MechanicalPartValidator
+		{
+
+			public MechanicalPartReleaseValidator(DataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+			}
+
+			protected override string[] GetApproversTypes()
+			{
+				return new[]
+				{
+					"GAG_GECO IntReviewApprover",
+					"GAG_GECO ExtReviewApprover"
+				};
+			}
+		}
+		//[PartialPath("Validators/MechanicalPartPreReleaseValidator")]
+		internal abstract class MechanicalPartValidator : Validator
+		{
+			private const string PLMChangeObjectNumberPattern = @"[A-Z]{4}[0-9]{8}";
+
+			public MechanicalPartValidator(DataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+			}
+
+			public override Item Validate(Item contextItem)
+			{
+				Item result = ValidateProperties(contextItem);
+				if (result.isError())
+				{
+					return result;
+				}
+
+				return base.Validate(contextItem);
+			}
+
+			protected override string GetItemTypeName()
+			{
+				return "Part";
+			}
+
+			private Item ValidateProperties(Item contextItem)
+			{
+				string masterDataReviewTeam = contextItem.getProperty(Properties.MasterDataReviewTeamProperty);
+				if (string.IsNullOrWhiteSpace(masterDataReviewTeam))
+				{
+					return DAL.NewError("Master Data Review Team must be filled.");
+				}
+
+				string sapChangeNumber = contextItem.getProperty(Properties.SAPChangeNumberProperty);
+				if (string.IsNullOrWhiteSpace(sapChangeNumber))
+				{
+					return DAL.NewError("SAP Change Number must be filled.");
+				}
+
+				if (!System.Text.RegularExpressions.Regex.IsMatch(sapChangeNumber, PLMChangeObjectNumberPattern))
+				{
+					return DAL.NewError($"SAP Change Number does not match the pattern {PLMChangeObjectNumberPattern}");
+				}
+
+				return contextItem;
+			}
+		}
+
+		//[PartialPath("Validators/Validator")]
+		internal abstract class Validator
+		{
+			protected DataAccessLayer DAL { get; }
+
+			public Validator(DataAccessLayer dataAccessLayer)
+			{
+				DAL = dataAccessLayer;
+			}
+
+			public virtual Item Validate(Item contextItem)
+			{
+				Item result;
+				string[] approversTypes = GetApproversTypes();
+				foreach (string approversType in approversTypes)
+				{
+					result = ValidateApprovers(contextItem, approversType);
+
+					if (result.isError())
+					{
+						return result;
+					}
+				}
+
+				Item gecoChangeControlledItems = GetGecoChangeControlledItems(contextItem);
+				if (gecoChangeControlledItems.isError())
+				{
+					if (gecoChangeControlledItems.isEmpty())
+					{
+						string plmChangeNumber = GetGECONumber(contextItem);
+						return DAL.NewError($"Affected items tab for {plmChangeNumber} is empty.");
+					}
+
+					return gecoChangeControlledItems;
+				}
+
+				IEnumerable<Item> notNoneItems = gecoChangeControlledItems
+					.Enumerate()
+					.Where(gecoChangeControlledItem =>
+					{
+						string action = gecoChangeControlledItem.getProperty(Properties.ActionProperty);
+						return action != "None";
+					});
+
+				return ValidateOtherGECOActions(contextItem, notNoneItems);
+			}
+
+			protected virtual Item GetGecoChangeControlledItems(Item contextItem)
+			{
+				Item gecoChangeControlledItems = DAL.NewItem("GAG_GECO ChangeControlled", "get");
+				gecoChangeControlledItems.setAttribute("select", $"{Properties.ActionProperty}, related_id");
+				gecoChangeControlledItems.setProperty("source_id", contextItem.getID());
+				return DAL.ApplyItem(gecoChangeControlledItems);
+			}
+
+			protected virtual Item ValidateApprovers(Item contextItem, string relationshipItemTypeName)
+			{
+				Item approvers = DAL.NewItem(relationshipItemTypeName, "get");
+				approvers.setProperty("source_id", contextItem.getID());
+				approvers = DAL.ApplyItem(approvers);
+				if (approvers.isError())
+				{
+					if (approvers.isEmpty())
+					{
+						Item relationship = DAL.NewItem("RelationshipType", "get");
+						relationship.setProperty("name", relationshipItemTypeName);
+						relationship.setAttribute("select", "label");
+						relationship = DAL.ApplyItem(relationship);
+						if (relationship.isError())
+						{
+							return relationship;
+						}
+
+						string relationshipLabel = relationship.getProperty("label");
+						string gecoNumber = GetGECONumber(contextItem);
+						return DAL.NewError($"{gecoNumber} must have {relationshipLabel} for this classification.");
+					}
+
+					return approvers;
+				}
+
+				return DAL.NewResult(contextItem.getResult());
+			}
+
+			protected virtual Item ValidateOtherGECOActions(Item contextItem, IEnumerable<Item> gecoChangeControlledItems)
+			{
+				string itemTypeNameForCurrentClassification = GetItemTypeName();
+				IEnumerable<Item> currentRelated = gecoChangeControlledItems.Where(x =>
+				{
+					Item related = x.getRelatedItem();
+					return related.getType() == itemTypeNameForCurrentClassification;
+				});
+
+				if (!currentRelated.Any())
+				{
+					string gecoNumber = GetGECONumber(contextItem);
+					return DAL.NewError($"At least one action of {itemTypeNameForCurrentClassification} should not be 'None'.");
+				}
+
+				foreach (Item gecoChangeControlledItem in gecoChangeControlledItems)
+				{
+					Item related = gecoChangeControlledItem.getRelatedItem();
+					Item result = ActionIsNotEmpty(contextItem, gecoChangeControlledItem);
+					if (result.isError())
+					{
+						return result;
+					}
+
+					result = related.getType() == itemTypeNameForCurrentClassification
+						? ValidateCurrentClassificationGECO(contextItem, gecoChangeControlledItem)
+						: ValidateOtherClassificationGECO(contextItem, gecoChangeControlledItem);
+					if (result.isError())
+					{
+						return result;
+					}
+				}
+
+				return DAL.NewResult(contextItem.getResult());
+			}
+
+			protected abstract string GetItemTypeName();
+			protected abstract string[] GetApproversTypes();
+
+			private Item ValidateCurrentClassificationGECO(Item contextItem, Item gecoChangeControlledItem)
+			{
+				Item related = gecoChangeControlledItem.getRelatedItem();
+				Item result = ValidateRelatedGECO(related, contextItem.getID());
+				if (result.isError())
+				{
+					return result;
+				}
+
+				return DAL.NewResult(contextItem.getResult());
+			}
+
+			private Item ValidateOtherClassificationGECO(Item contextItem, Item gecoChangeControlledItem)
+			{
+				string action = gecoChangeControlledItem.getProperty(Properties.ActionProperty);
+				if (action != "None")
+				{
+					Item related = gecoChangeControlledItem.getRelatedItem();
+					string gecoNumber = GetGECONumber(contextItem);
+					string itemNumber = GetItemNumber(related);
+					string itemTypeName = GetItemTypeName(related);
+					return DAL.NewError($"Action for {itemTypeName} ({itemNumber}) in {gecoNumber} must be None.");
+				}
+
+				return DAL.NewResult(contextItem.getResult());
+			}
+
+			private Item ValidateRelatedGECO(Item item, string currentGECOId)
+			{
+				Item gecoChangeControlledItems = DAL.NewItem("GAG_GECO ChangeControlled", "get");
+				gecoChangeControlledItems.setProperty("related_id", item.getID());
+				gecoChangeControlledItems.setAttribute("select", $"{Properties.ActionProperty}, source_id");
+				gecoChangeControlledItems.setProperty("source_id", currentGECOId);
+				gecoChangeControlledItems.setPropertyCondition("source_id", "not like");
+				gecoChangeControlledItems = DAL.ApplyItem(gecoChangeControlledItems);
+				if (gecoChangeControlledItems.isError() && !gecoChangeControlledItems.isEmpty())
+				{
+					return gecoChangeControlledItems;
+				}
+
+				foreach (Item gecoChangeControlledItem in gecoChangeControlledItems.Enumerate())
+				{
+					string action = gecoChangeControlledItem.getProperty(Properties.ActionProperty, "Empty");
+					string state = GetGECOState(gecoChangeControlledItem);
+					if (state != "Canceled" && state != "Released" && action != "None")
+					{
+						Item geco = GetGECO(gecoChangeControlledItem);
+						geco.setAttribute("select", Properties.PLMChangeObjectNumberProperty);
+						geco = DAL.ApplyItem(geco);
+						if (geco.isError())
+						{
+							return geco;
+						}
+
+						string gecoNumber = GetGECONumber(geco);
+						string itemNumber = GetItemNumber(item);
+						string itemTypeName = GetItemTypeName(item);
+						return DAL.NewError($"{action} action for {itemTypeName} ({itemNumber}) in ({gecoNumber}) which state is {state}. Please change action to None or promote {gecoNumber} to Released or Canceled state.");
+					}
+				}
+
+				return DAL.NewResult(string.Empty);
+			}
+
+			private Item ActionIsNotEmpty(Item contextItem, Item gecoChangeControlledItem)
+			{
+				string action = gecoChangeControlledItem.getProperty(Properties.ActionProperty);
+				if (string.IsNullOrWhiteSpace(action))
+				{
+					Item related = gecoChangeControlledItem.getRelatedItem();
+					string gecoNumber = GetGECONumber(contextItem);
+					string itemNumber = GetItemNumber(related);
+					string itemTypeName = GetItemTypeName(related);
+					return DAL.NewError($"Action for {itemTypeName} ({itemNumber}) in {gecoNumber} must be not empty.");
+				}
+
+				return DAL.NewResult(contextItem.getResult());
+			}
+
+			private string GetGECOState(Item gecoChangeControlledItem)
+			{
+				Item geco = GetGECO(gecoChangeControlledItem);
+				geco.setAttribute("select", "state");
+				geco = DAL.ApplyItem(geco);
+				if (geco.isError())
+				{
+					throw new ItemException(geco);
+				}
+
+				return geco.getProperty("state");
+			}
+
+			private Item GetGECO(Item gecoChangeControlledItem)
+			{
+				Item geco = DAL.NewItem("GAG_EngineeringChangeObject", "get");
+				geco.setID(gecoChangeControlledItem.getProperty("source_id"));
+				return geco;
+			}
+
+			private static string GetGECONumber(Item geco)
+			{
+				return geco.getProperty(Properties.PLMChangeObjectNumberProperty);
+			}
+
+			private static string GetItemNumber(Item item)
+			{
+				return item.getProperty(Properties.ItemNumberProperty);
+			}
+
+			private static string GetItemTypeName(Item item)
+			{
+				return item.getType();
+			}
+		}
+		//[PartialPath("Defaults/Properties")]
+		internal static class Properties
+		{
+			public const string MasterDataReviewTeamProperty = "gag_master_data_review_team";
+			public const string ActionProperty = "gag_action";
+			public const string SAPChangeNumberProperty = "gag_sap_change_number";
+			public const string PLMChangeObjectNumberProperty = "gag_plm_change_object_number";
+			public const string ItemNumberProperty = "item_number";]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_InWorkTransitionValidator</name>
+ </Item>
+</AML>

@@ -1,0 +1,120 @@
+﻿<AML>
+ <Item type="Method" id="847E68C8102240398789CBC1538607E6" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[' name: getPMGridLayoutReport
+' purpose: return convenient xml for PM Grid Layout Report
+' created: 1-DEC-2005 Yuri Delyamba
+' (c) Copyright by Aras Corporation, 2005-2007.
+' MethodTemplateName=VBScriptMainUpgrade;
+
+Sub MethodMainSubroutine()
+  Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+  Dim rs As Aras.Server.Core.InnovatorDataSet
+
+  Dim prefItem As XmlElement = CCO.XML.GetResponseItem(inDom)
+  Dim id As String = CCO.XML.GetItemProperty(prefItem, "id")
+
+  Dim qryXml As String = "" & _
+  "<Item type='PM_ProjectGridLayout' action='get' select='is_system,label,name,position'>" & _
+    "<source_id>" & _
+      "<Item type='Preference' id='" & System.Security.SecurityElement.Escape(id) & "' select='id' />" & _
+    "</source_id>" & _
+    "<Relationships>" & _
+      "<Item type='PM_ProjectColumnDescription' action='get' select='row_type,data_source'/>" & _
+    "</Relationships>" & _
+  "</Item>"
+
+  inDom.LoadXML(qryXml)
+
+  CCO.GetItem.GetItem(inDom, outDom)
+
+  If CCO.XML.HasFault(outDom, False) Then
+    outDom.LoadXML("<Result/>")
+    Exit Sub
+  End If
+
+  Dim tmpOutDom As XmlDocument = CType(outDom.CloneNode(True), XmlDocument)
+
+  outDom.LoadXML("<Result/>")
+  Dim root As XmlElement = outDom.DocumentElement
+  Dim glNodes As XmlNodeList = tmpOutDom.SelectNodes("//Item[@type='PM_ProjectGridLayout']")
+  Dim i As Integer
+
+  For i = 0 To glNodes.Count - 1
+    Dim actRes As String = ""
+    Dim wbsRes As String = ""
+    Dim glNode As XmlElement = CType(glNodes(i), XmlElement)
+    Dim position As String = CCO.XML.GetItemProperty(glNode, "position")
+    Dim isSystem As Boolean = CCO.XML.GetItemProperty(glNode, "is_system") = "1"
+    Dim label As String = CCO.XML.GetItemProperty(glNode, "label")
+
+    If isSystem Then
+      Dim name As String = CCO.XML.GetItemProperty(glNode, "name")
+      If System.Text.RegularExpressions.RegEx.IsMatch(name, "predecessor|hours|assigned|role") Then
+        wbsRes = "Empty"
+      Else
+        wbsRes = "Valid"
+      End If
+
+      actRes = "Valid"
+    Else
+      Dim actNode As XmlElement = CType(glNode.SelectSingleNode("Relationships/Item[@type='PM_ProjectColumnDescription'][row_type='act']"), XmlElement)
+      If Not IsNothing(actNode) Then
+        actRes = "Invalid"
+
+        Dim ds As String = CCO.XML.GetItemProperty(actNode, "data_source")
+        Dim n As String() = ds.Split("/"c)
+
+        If n.Length = 2 Then
+          Dim itName As String = n(0)
+
+          Dim pName As String = n(1)
+          itName = If(string.IsNullOrEmpty(itName), itName, itName.Replace("'", "''"))
+          pName = If(string.IsNullOrEmpty(pName), pName, pName.Replace("'", "''"))
+          Dim sql As String = "SELECT 1 FROM [PROPERTY] WHERE SOURCE_ID=(SELECT ID FROM [ITEMTYPE] WHERE NAME='" & itName & "') AND NAME='" & pName & "'"
+          rs = conn.ExecuteSelect(sql)
+          If Not rs.Eof() Then
+            actRes = "Valid"
+          End If
+        End If
+      Else
+        actRes = "Empty"
+      End If
+
+      Dim wbsNode As XmlElement = CType(glNode.SelectSingleNode("Relationships/Item[@type='PM_ProjectColumnDescription'][row_type='wbs']"), XmlElement)
+      If Not IsNothing(wbsNode) Then
+        wbsRes = "Invalid"
+
+        Dim ds As String = CCO.XML.GetItemProperty(wbsNode, "data_source")
+        Dim n As String() = ds.Split("/"c)
+
+        If n.Length = 2 Then
+          Dim itName As String = n(0)
+
+          Dim pName As String = n(1)
+          itName = If(string.IsNullOrEmpty(itName), itName, itName.Replace("'", "''"))
+          pName = If(string.IsNullOrEmpty(pName), pName, pName.Replace("'", "''"))
+          Dim sql As String = "SELECT 1 FROM [PROPERTY] WHERE SOURCE_ID=(SELECT ID FROM [ITEMTYPE] WHERE NAME='" & itName & "') AND NAME='" & pName & "'"
+          rs = conn.ExecuteSelect(sql)
+          If Not rs.Eof() Then
+            wbsRes = "Valid"
+          End If
+        End If
+      Else
+        wbsRes = "Empty"
+      End If
+    End If
+
+    Dim newItem As XmlElement = outDom.CreateElement("Item")
+    CCO.XML.SetItemProperty(newItem, "position", position)
+    CCO.XML.SetItemProperty(newItem, "act", actRes)
+    CCO.XML.SetItemProperty(newItem, "wbs", wbsRes)
+    CCO.XML.SetItemProperty(newItem, "label", label)
+
+    root.AppendChild(newItem)
+  Next
+End Sub]]></method_code>
+  <method_type>VB</method_type>
+  <name>getPMGridLayoutReport</name>
+ </Item>
+</AML>

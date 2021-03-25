@@ -1,0 +1,162 @@
+﻿<AML>
+ <Item type="Method" id="E45CFA3319834DC282740C7EFD5B1856" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[			var dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			var businessLogic = new BusinessLogic(dataAccessLayer, this.getInnovator());
+			var result = businessLogic.ProcessRequest(this);
+			return result;
+		}
+
+		private const string DefaultItemTypeIcon = "../images/DefaultItemType.svg";
+
+		internal class BusinessLogic
+		{
+			private IDataAccessLayer dataAccessLayer;
+			private Innovator innovator;
+
+			internal BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator)
+			{
+				this.dataAccessLayer = dataAccessLayer;
+				this.innovator = innovator;
+			}
+
+			internal Item ProcessRequest(Item requestItem)
+			{
+				Item commandBarButtons = dataAccessLayer.GetCuiButtonsForItemType(requestItem.getID());
+
+				if (commandBarButtons != null)
+				{
+					Item itemType = dataAccessLayer.GetItemType(requestItem.getID());
+					IList<string> languageCodes = dataAccessLayer.GetLanguageCodes();
+
+					for (int i = 0; i < commandBarButtons.getItemCount(); i++)
+					{
+						Item commandBarButton = commandBarButtons.getItemByIndex(i);
+
+						commandBarButton.setAction("edit");
+						commandBarButton.setProperty("image", itemType.getProperty("open_icon") ?? DefaultItemTypeIcon);
+
+						foreach (string languageCode in languageCodes)
+						{
+							commandBarButton.setProperty("label", itemType.getProperty("label_plural", null, languageCode), languageCode);
+						}
+
+						Item applyResult = commandBarButton.apply();
+
+						if (applyResult.isError())
+						{
+							return applyResult;
+						}
+					}
+				}
+
+				return innovator.newResult("OK");
+			}
+		}
+
+		internal interface IDataAccessLayer
+		{
+			Item GetCuiButtonsForItemType(string itemTypeId);
+			Item GetItemType(string itemTypeId);
+			IList<string> GetLanguageCodes();
+		}
+
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this.innovator = innovator;
+			}
+
+			public Item GetCuiButtonsForItemType(string itemTypeId)
+			{
+				string aml = @"<AML>
+	<Item type=""CommandBarSectionItem"" action=""get"" language=""*"" select=""related_id"">
+		<source_id>
+			<Item action=""skip"">
+				<location>
+					<Item type=""Location"" action=""get"" select=""name"">
+						<name>TOC</name>
+					</Item>
+				</location>
+			</Item>
+		</source_id>
+		<related_id>
+			<Item action=""get"" select=""name,label,image,additional_data"">
+				<itemtype condition=""in"" by=""id"">
+					<Item type=""ItemType"" action=""get"" select=""id"">
+						<OR>
+							<name>CommandBarMenuButton</name>
+							<name>CommandBarButton</name>
+						</OR>
+					</Item>
+				</itemtype>
+			</Item>
+		</related_id>
+	</Item>
+</AML>";
+
+				Item commandBarSectionItems = innovator.applyAML(aml);
+
+				if (commandBarSectionItems.isError())
+				{
+					return null;
+				}
+
+				Item result = innovator.newItem();
+
+				for (int i = 0; i < commandBarSectionItems.getItemCount(); i++)
+				{
+					Item commandBarItem = commandBarSectionItems.getItemByIndex(i).getRelatedItem();
+					if (commandBarItem != null) {
+                        string additionalDataContent = commandBarItem.getProperty("additional_data");
+    					Newtonsoft.Json.Linq.JObject additionalData = Newtonsoft.Json.Linq.JObject.Parse(additionalDataContent);
+    					if (string.Equals(itemTypeId, additionalData.Value<string>("itemTypeId"), StringComparison.OrdinalIgnoreCase))
+    					{
+    						result.appendItem(commandBarItem);
+    					}   
+					}
+				}
+
+				if (result.getItemCount() <= 1)
+				{
+					return null;
+				}
+				else
+				{
+					result.removeItem(result.getItemByIndex(0));
+					return result;
+				}
+			}
+
+			public Item GetItemType(string itemTypeId)
+			{
+				Item itemType = innovator.newItem("ItemType", "get");
+				itemType.setID(itemTypeId);
+				itemType.setAttribute("language", "*");
+				itemType.setAttribute("select", "name,label_plural,open_icon");
+
+				return itemType.apply();
+			}
+
+			public IList<string> GetLanguageCodes()
+			{
+				// cache languages
+				List<string> languageCodes = new List<string>();
+				Item languageItems = innovator.newItem("Language", "get");
+				languageItems.setAttribute("select", "code");
+				languageItems = languageItems.apply();
+				for (int languageIndex = 0; languageIndex < languageItems.getItemCount(); languageIndex++)
+				{
+					Item languageItem = languageItems.getItemByIndex(languageIndex);
+					languageCodes.Add(languageItem.getProperty("code", string.Empty));
+				}
+
+				return languageCodes;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>ti_AfterItemTypeUpdate</name>
+ </Item>
+</AML>

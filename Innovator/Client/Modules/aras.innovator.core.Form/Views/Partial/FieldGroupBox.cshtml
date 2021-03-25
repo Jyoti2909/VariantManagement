@@ -1,0 +1,22 @@
+﻿@using Models.AML.Enums
+@model Models.Helpers.FieldToDraw
+@{
+	if (Model.FieldType != FieldType.GroupBox)
+	{
+		return;
+	}
+	
+	var orientation = Model.FieldNode.Orientation.IsNull ? "horizontal" : Model.FieldNode.Orientation.Value; 
+}
+<div class="sys_groupbox_content_@(orientation)" role="group">
+	@{
+		if (Model.Fields != null)
+		{
+			foreach (var fieldToDraw in Model.Fields)
+			{
+				fieldToDraw.GroupBoxOrientation = orientation;
+				@Html.Partial("Partial/FieldMain", fieldToDraw)	
+			}   
+		}  
+	}
+</div>

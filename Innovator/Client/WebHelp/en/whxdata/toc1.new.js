@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Copyright Information","type":"item","url":"Copyright_Information.htm"},{"name":"Who Needs to Read This Help","type":"item","url":"Who_Needs_to_Read_This_Guide.htm"},{"name":"Help Conventions","type":"item","url":"Help_Conventions.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

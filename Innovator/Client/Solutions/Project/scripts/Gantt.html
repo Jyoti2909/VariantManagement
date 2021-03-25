@@ -1,0 +1,135 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2014. -->
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<link rel="stylesheet" type="text/css" media="print" href="../styles/gantt_print.css" />
+	<style type="text/css">
+		@import "../../../styles/default.css";
+		@import "../../../public/styles/controls.css";
+		@import "../../../javascript/Aras/Client/Controls/Experimental/_gantt/resources/gantt.css";
+
+		html, body {
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+		#tb1 {
+			border-width: 0px !important;
+		}
+		td {
+			font-family: Arial;
+			font-size: 10pt;
+		}
+	</style>
+	<script type="text/javascript" src="../../../javascript/include.aspx?files=TopWindowHelper"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,ScriptSet1"></script>
+	<script type="text/javascript">
+		document.write("<title>Gantt Chart - " + document.location.hash + "</title>");
+		
+		var arasObj = opener.a || TopWindowHelper.getMostTopWindowWithAras(window).aras;
+		var aras = new Aras(arasObj);
+	</script>
+	<script type="text/javascript" src="../../../javascript/PopulateDocByLabels.js"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+	<script type="text/javascript">
+		window.addEventListener("DOMContentLoaded", function () {
+			populateTimeline();
+			PopulateDocByLabels(document, aras, "project");
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", { id: "gantt_toolbar", connectId: "toolbar_container" }, function (control) {
+				window.toolbar = control;
+				clientControlsFactory.on(window.toolbar, {
+					"onClick": onClickItem
+				});
+				onToolbarLoad();
+			});
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Experimental.GanttChartContainer", document.getElementById("gantt"), function (control) {
+				window.gantt = control;
+				window.gantt.arasObj = aras;
+				if (opener && opener.GanttXml) {
+					var timeLine = opener.GanttXml.selectSingleNode("/project/delta").text;
+					for (var i = 0; i < timelineSelect.options.length; i++) {
+						if (timelineSelect.options[i].value == timeLine) {
+							timelineSelect.selectedIndex = i;
+						}
+					}
+					gantt.load(opener.GanttXml.xml);
+					clientControlsFactory.on(gantt.treeGrid, {
+						"gridXmlLoaded": refreshGanttTreeGrid
+					});
+					opener.GanttXml.loadXML("<cleanup_memory/>");
+					opener.GanttXml = null;
+				}
+			});
+		});
+
+		function onToolbarLoad() {
+			toolbar.loadXml(aras.getI18NXMLResource("gantt_toolbar.xml", opener.xmlFileBase + "../"));
+			toolbar.show();
+			toolbar.showLabels(aras.getPreferenceItemProperty("Core_GlobalLayout", null, "core_show_labels") == 'true');
+		}
+
+		function onClickItem(tbItem) {
+			var tbId = tbItem.getId();
+			switch (tbId) {
+			case "print":
+				window.gantt.ganttChart.renderPDf();
+				break;
+			case "expand_all":
+				gantt.expandAll();
+				break;
+			case "collapse_all":
+				gantt.collapseAll();
+				break;
+			}
+		}
+
+		function onChangeTimeline(newTimeline) {
+			gantt.setDelta(newTimeline);
+			gantt.focus();
+		}
+
+		function populateTimeline() {
+			for (var i = 0; i < timelineSelect.options.length; i++) {
+				var option = timelineSelect.options[i];
+				if (arasObj) {
+					option.text = arasObj.getResource("Project", "gantt.timeline_" + option.value);
+				}
+				else {
+					option.text = option.value;
+				}
+			}
+		}
+
+		onload = function onload_handler() {
+		}
+
+		function refreshGanttTreeGrid() {
+			if (gantt) {
+				gantt.container.layout();
+			}
+		}
+	</script>
+</head>
+<body class="claro">
+	<div id="toolbarContainer" style="background-color: ButtonFace; height: 100px;">
+		<div id ="toolbar_container"  style="position: absolute; width: 100%; height: 30px; left: 0px;"/>
+		<div style="position: absolute; right: 0px; text-align: right; white-space: nowrap;">
+			<span aras_ui_resource_key="gantt.timeline"></span>
+			<select id="timelineSelect" onchange="onChangeTimeline(this.value)" style="margin-right: 5px;">
+				<option value="day" selected />
+				<option value="week" />
+				<option value="month" />
+				<option value="quarter" />
+				<option value="year" />
+			</select>
+		</div>
+	</div>
+	<div id = "gantt" style="position: absolute; top: 30px; bottom: 0px; left: 0px; right: 0px; background-color:buttonface;">
+	</div>
+</body>
+</html>

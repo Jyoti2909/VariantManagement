@@ -1,0 +1,17 @@
+﻿<AML>
+ <Item type="Method" id="815AC8386ED54688A318BFF9D73944F9" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const itemTypeId = options.currentTarget.itemTypeId;
+const targetTab = options.getItemTypeByItemTypeId(itemTypeId);
+if (!itemTypeId || !targetTab) {
+	return Promise.resolve();
+}
+
+const id = targetTab.id;
+const removedTab = options.unpinItemType(id);
+
+return options.favorites.delete(id).catch(function() {options.pinItemType(id, removedTab);});]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>pmtoc_unpin_from_sidebar_click</name>
+ </Item>
+</AML>

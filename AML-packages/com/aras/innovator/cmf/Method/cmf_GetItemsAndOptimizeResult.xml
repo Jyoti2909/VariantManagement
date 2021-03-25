@@ -1,0 +1,175 @@
+﻿<AML>
+ <Item type="Method" id="1A642E17CD0E4632AF0F1797F05EE15E" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			var dataAccessLayer = new DataAccessLayer();
+			var businessLogic = new BusinessLogic(dataAccessLayer, this.getInnovator());
+			var result = businessLogic.GetItemsAndOptimizeResult(this.getProperty("amlGetQuery"));
+			return result;
+		}
+
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")]
+		public class BusinessLogic
+		{
+			private IDataAccessLayer dataAccessLayer;
+			private Innovator innovator;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer, Innovator innovator)
+			{
+				if (dataAccessLayer == null)
+				{
+					throw new ArgumentNullException("dataAccessLayer");
+				}
+				if (innovator == null)
+				{
+					throw new ArgumentNullException("innovator");
+				}
+				this.dataAccessLayer = dataAccessLayer;
+				this.innovator = innovator;
+			}
+
+			public Item GetItemsAndOptimizeResult(string amlGetQuery)
+			{
+				Item tmp = innovator.newItem();
+				tmp.loadAML(amlGetQuery);
+				//this is for security reasons, it seems CMF js code always contains only "get", but some hacker can write any actions. And here ApplyAML has more rigths than AML from Client.
+				XmlNodeList badNodes = tmp.dom.SelectNodes("//Item[@action and not(@action='get' or @action='skip')]");
+				if (badNodes.Count > 0)
+				{
+					var sb = new StringBuilder();
+					sb.Append("Any Item node of the aml query should contain either action='get' or action='skip' or no action attributes at all. You have Item nodes below containing incorrect action attribute.");
+					sb.AppendLine();
+					for (int i = 0; i < badNodes.Count; i++)
+					{
+						sb.AppendLine(badNodes[i].OuterXml);
+					}
+					throw new InvalidOperationException(sb.ToString());
+				}
+
+				Item result = dataAccessLayer.ApplyAML(innovator, amlGetQuery);
+
+				var propertiesMappingForElement = new Dictionary<string, string>()
+				{
+					{"reference_id", "a"}, {"sort_order", "b"}, {"parent_reference_id", "c"}, {"bound_item_id", "f"}, {"bound_item_config_id", "g"}, {"tracking_mode", "h"}, 
+					{"resolution_mode", "i"}
+				};
+
+				var propertiesMappingForProperty = new Dictionary<string, string>()
+				{
+					{"cmf_style", "j"}, {"element_reference_id", "k"}, {"value", "l"}, {"permission_id", "m"}
+				};
+
+				var attributesMappingForElement = new Dictionary<string, string>()
+				{
+					{"id", "d"}
+				};
+
+				var attributesMappingForProperty = new Dictionary<string, string>()
+				{
+					{"id", "d"}, {"discover_only", "n"}
+				};
+
+				XmlNodeList resultItems = result.dom.SelectNodes(Item.XPathResult + "/Item");
+				string[] nodeNamesToRemove = new []{"id", "source_id", "itemtype"};
+				XmlNode tmpNode;
+				foreach (XmlNode tmpItem in resultItems)
+				{
+					((XmlElement)tmpItem).RemoveAttribute("typeId");
+					foreach (string nodeName in nodeNamesToRemove)
+					{
+						tmpNode = tmpItem.SelectSingleNode(nodeName);
+						if (tmpNode != null)
+						{
+							tmpNode.ParentNode.RemoveChild(tmpNode);
+						}
+					}
+				}
+
+				String prevType = "";
+				//we use SelectNodes instead of IOM's methods, because using IOM hurts perfomance, e.g.,
+				//39 seconds to prepare and get Data from Server instead of 29 seconds for 55.000 doc. Elements
+				//for DQD if to use IOM.
+				XmlNodeList relatItems = result.dom.SelectNodes(Item.XPathResult + "/Item/Relationships/Item");
+				int relatItemsCount = relatItems.Count;
+
+				if (relatItemsCount == 0)
+				{
+					return result;
+				}
+
+				XmlElement relsResult = null;
+				var relatElement = (XmlElement) relatItems[0].ParentNode;
+				//Rels_someSaltGFJHpiwy3 - not to have the same property
+				relsResult = (XmlElement) relatElement.ParentNode.AppendChild(result.dom.CreateElement("Rels_someSaltGFJHpiwy3")); 
+
+				XmlElement group = null;
+				bool isElement = false;
+				for (int i = 0; i < relatItemsCount; i++)
+				{
+					XmlElement relatItem = (XmlElement) relatItems[i];
+					string type = relatItem.GetAttribute("type");
+					if (prevType != type)
+					{
+						prevType = type;
+						XmlNode refIdNode = relatItem.SelectSingleNode("reference_id");
+						isElement = refIdNode != null && !string.IsNullOrEmpty(refIdNode.InnerText);
+						group = (XmlElement) relsResult.AppendChild(result.dom.CreateElement("G")); //"G" means Group of Elements and PropertyItems of the same type
+						group.SetAttribute("e", type); // "e" means type
+					}
+
+					var itemInGroup = (XmlElement) group.AppendChild(result.dom.CreateElement("I")); //"I" means Item in group, Element or PropertyItem
+
+					Dictionary<string, string> mapping = isElement ? attributesMappingForElement : attributesMappingForProperty;
+					foreach (string attributeName in mapping.Keys)
+					{
+						string value = relatItem.GetAttribute(attributeName);
+						if (!String.IsNullOrEmpty(value))
+						{
+							itemInGroup.SetAttribute(mapping[attributeName], value);
+						}
+					}
+
+					mapping = isElement ? propertiesMappingForElement : propertiesMappingForProperty;
+					foreach (string propertyName in mapping.Keys)
+					{
+						XmlNode node = relatItem.SelectSingleNode(propertyName);
+						if (node == null)
+						{
+							continue;
+						}
+						string value = node.InnerText;
+						if (!String.IsNullOrEmpty(value))
+						{
+							itemInGroup.SetAttribute(mapping[propertyName], value);
+						}
+					}
+				}
+				relatElement.ParentNode.RemoveChild(relatElement);
+				return result;
+			}
+		}
+
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")]
+		public interface IDataAccessLayer
+		{
+			Item ApplyAML(Innovator innovator, string aml);
+		}
+
+		[System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Design", "CA1034:NestedTypesShouldNotBeVisible")]
+		public class DataAccessLayer : IDataAccessLayer
+		{
+			public Item ApplyAML(Innovator innovator, string aml)
+			{
+				if (innovator == null)
+				{
+					throw new ArgumentNullException("innovator");
+				}
+				if (string.IsNullOrEmpty(aml))
+				{
+					throw new ArgumentNullException("aml");
+				}
+				return innovator.applyAML(aml);
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>cmf_GetItemsAndOptimizeResult</name>
+ </Item>
+</AML>

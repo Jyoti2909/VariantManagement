@@ -1,0 +1,67 @@
+﻿<AML>
+ <Item type="Method" id="E4A0380B51F04D4BA97E3B122E05C3E9" action="add">
+  <classification>/*</classification>
+  <method_code><![CDATA['System.Diagnostics.Debugger.Break()
+' server-side Method (VB): xPLM Generate Part Number
+'
+' called OnBeforeAdd and OnBeforeUpdate 
+' Generating a Part number based on "Defult Part" Sequence from Aras
+'
+Dim thisType As String = Me.getAttribute("type","")
+Dim thisAction As String = Me.getAttribute("action","")
+Dim partNumber As String = Me.getProperty("item_number","")
+Dim classPath As String = Me.getProperty("classification","")
+Dim typeCode As String
+
+Dim thisErr As Aras.IOM.Item
+Dim innovator As Aras.IOM.Innovator = Me.getInnovator()
+
+If (thisAction = "add") Then
+  '  generate  new Numbers - if action is "add"
+  If partNumber = "" Or partNumber = "Server Assigned" Or Left(partNumber,4) = "TMP-"  Then
+    ' Strip the item type component from path
+    Dim caseStr = classPath.Replace("/" & thisType & "/", "/")
+
+    Select Case caseStr
+        Case "/Text Position" 
+           typeCode="TXT" 
+        Case Else
+           typeCode="" 
+    End Select
+
+    If (typeCode = "TXT") Then
+      partNumber=innovator.getNextSequence("Part TextPos numbers") ' get new number count
+    Else
+      partNumber = innovator.getNextSequence("Default Part")
+	  'partNumber = "P-" & partNumber
+	  'partNumber = Left(partNumber, Len(partNumber) - 4)
+      If (typeCode <>"") Then  partNumber = Replace(partNumber, "P-", typeCode & "-")
+    End If
+   
+    Me.setProperty("item_number",partNumber) 
+  End If
+  
+' this is to cover the "Save As.." action   and new versions of the item
+Else
+  If (partNumber.IndexOf("Copy") >=0) Then
+    typeCode=""
+     ' preserve the old prefix type code (separator must be "-") - if not found, keep it a temp number
+    Dim pos1 As Integer = partNumber.IndexOf("of ")
+    partNumber = partNumber.SubString(pos1+3)
+    pos1 = partNumber.IndexOf("-")
+    If (pos1 >=0) Then typeCode = partNumber.SubString(0,pos1)
+     ' generate a new number
+    partNumber = innovator.getNextSequence("Default Part")
+	'partNumber = "P-" & partNumber
+	'partNumber = Left(partNumber, Len(partNumber) - 4)
+    If (typeCode <>"") Then  partNumber = Replace(partNumber, "P-", typeCode & "-")
+    Me.setProperty("item_number",partNumber) 
+    Return Me
+  End If
+End If
+
+Return Me]]></method_code>
+  <method_type>VB</method_type>
+  <name>xPLM Generate Part Number</name>
+ </Item>
+</AML>

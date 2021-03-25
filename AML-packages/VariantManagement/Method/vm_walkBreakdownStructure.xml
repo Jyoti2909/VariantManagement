@@ -1,0 +1,163 @@
+﻿<AML>
+ <Item type="Method" id="ABCCDA9546934170B21F3B6B439327A2" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[debugger;
+const inn = this.getInnovator();
+
+let rootBreakdownItemNode = null;
+
+let rootBreakdownItemId = parent.itemID;
+let grid = inArgs.contextItem.contextParams.tgvContext.grid.get();
+const rows = grid._rows;
+const visibleRows = grid._grid.rows._store;
+
+let parentNode = null;
+
+class BreakdownTreeNode {
+  constructor(id, name, keyedName, type, configId, instantiationType, parentId) {
+    this.id = id;
+	this.name = name;
+    this.keyedName = keyedName;
+	this.type = type;
+	this.itemType = '';
+	this.configId = configId;
+	this.instantiation = instantiationType;
+	this.cumulativeId = '';
+	this.partId = '';
+	this.parentId = parentId;
+    this.children = [];
+    this.duplicatePartItems = [];
+    this.noPartItems = [];
+    this.relationshipErrors = [];
+  }
+}
+
+function traverseBreakdownTree(rowId, parentNode){
+    if(!parentNode ) {
+        parentNode = createBreakdownItemNode(rootBreakdownItemId, null, 'vm_BreakdownItem');
+        rootBreakdownItemNode = parentNode;
+    }
+    
+    let children = rows[rowId].childRows;
+    for(let i = 0; i < children.length; i++) {
+        if(!isVisible(children[i])) {
+            continue;
+        }
+        
+        let gridRowId = children[i].gridRowId;
+        let data = JSON.parse(rows[gridRowId].cells[0].data);
+        
+        if(data.type === 'vm_BreakdownItem') {
+            let newNode  = createBreakdownItemNode(data.id, parentNode, 'vm_BreakdownItem')
+            
+            traverseBreakdownTree(gridRowId, newNode);
+            setCumulativeId(newNode);
+        }
+        else if(data.type === 'vm_Component' || data.type === 'Document') {
+            let newNode = createBreakdownItemNode(data.id, parentNode, 'vm_Component');
+            setCumulativeId(newNode);
+        }
+    }
+}
+
+function isVisible(row) {
+    for (const [key, value] of visibleRows.entries()) {
+      if(row.cells[0].value === value.col0 && row.cells[1].value === value.col1 && row.cells[2].value === value.col2) {
+          return true;
+      }
+    }
+    return false;
+}
+
+function setCumulativeId(node){
+    if(node) {
+        node.cumulativeId = node.configId;
+        
+        let cumulativeIds = [];
+        let compCount = 0;
+        let isRootOrIntermediate = true;
+        let leafComps = [];
+        node.children.forEach((child) => {
+            cumulativeIds.push(child.cumulativeId);
+            
+            if(child.type === 'vm_Component') {
+                leafComps.push(child);
+                isRootOrIntermediate = false;
+            }
+            
+            if(node.instantiation !== 'No' && node.instantiation.indexOf('Part/') === -1) {
+                
+                let errorMessage = 'Cannot create a relationship between "' + node.keyedName + '" and "' + child.keyedName + '" because no relationship between "' + node.instantiation + '" and "' + child.instantiation + '" is defined. Aborting Instantiation.';
+                rootBreakdownItemNode.relationshipErrors.push(errorMessage);
+            }
+        });
+        
+        cumulativeIds.sort();
+        cumulativeIds.forEach((id) => {
+            node.cumulativeId += id;
+        });
+        
+        if(node.type === 'vm_BreakdownItem' && isRootOrIntermediate !== true) {
+            if(leafComps.length > 1) {
+                // Check if the leaf components are of same type
+                const itemTypeSet = new Set();
+                leafComps.forEach((comp) => {
+                    itemTypeSet.add(comp.itemType);
+                });
+                if(leafComps.length !== itemTypeSet.size){
+                    rootBreakdownItemNode.duplicatePartItems.push(node.keyedName);
+                }
+            }
+            else if(leafComps.length == 0) {
+                rootBreakdownItemNode.noPartItems.push(node.keyedName);
+            }
+        }
+    }
+}
+
+function createBreakdownItemNode(id, parentNode, itemType){
+    const itm = inn.newItem(itemType,'get');
+    itm.setProperty("id", id);
+    
+    const item = itm.apply();
+	if(!item){
+	    return;
+	}
+	
+	const itemName = item.getProperty('name');
+	const itemKeyedName = item.getProperty('keyed_name');
+	const configId = item.getProperty('config_id');
+	let instantiationType = item.getProperty('instantiation');
+	if(!instantiationType) {
+	    if(itemType == 'vm_Component') {
+	        instantiationType = item.getProperty('classification');
+	    }
+	    else {
+	        instantiationType = 'Part/Mechanical Part/Assembly';
+	    }
+	}
+	
+	const breakdownItemNode = new BreakdownTreeNode(id, itemName, itemKeyedName, itemType, configId, instantiationType, parentNode ? parentNode.id : null, itemType);
+	
+	if(itemType !== 'vm_BreakdownItem') {
+	    breakdownItemNode.partId = item.getProperty('id');
+	    breakdownItemNode.itemType = item.getProperty('itemtype');
+	}
+	
+	if(parentNode){
+		parentNode.children.push(breakdownItemNode);
+	}
+	
+	return breakdownItemNode;
+}
+
+traverseBreakdownTree(2);
+setCumulativeId(rootBreakdownItemNode);
+return rootBreakdownItemNode;
+
+
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>vm_walkBreakdownStructure</name>
+ </Item>
+</AML>

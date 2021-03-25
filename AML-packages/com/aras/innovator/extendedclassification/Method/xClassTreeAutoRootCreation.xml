@@ -1,0 +1,21 @@
+﻿<AML>
+ <Item type="Method" id="6DD6876B7C094D64B2B4B3DC14AB104E" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[string xClassTreeName = this.getProperty("name");
+var xClasses = this.getItemsByXPath("Relationships/Item[@type='xClass' and name='" + xClassTreeName + "']");
+
+Item rootxClass;
+if (xClasses.getItemCount() == 0)
+{
+    rootxClass = this.newItem("xClass", "add");
+    rootxClass.setProperty("name", xClassTreeName);
+    rootxClass.setProperty("label", xClassTreeName);    
+    rootxClass.setProperty("ref_id", this.getID());
+    this.addRelationship(rootxClass);
+    this.setProperty("classification_hierarchy", "[{\"toRefId\":\"" + this.getID() + "\"}]");
+}
+return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>xClassTreeAutoRootCreation</name>
+ </Item>
+</AML>

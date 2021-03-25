@@ -1,0 +1,216 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2014. -->
+<html>
+	<head>
+		<title>Toolbar</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<style type="text/css">
+			html, body
+			{
+				height: 100%;
+				margin: 0px;
+			}
+		</style>
+		<style type="text/css">
+			@import "../../../../javascript/include.aspx?classes=arasClaro.css";
+			@import "../../../../styles/default.css";
+			@import "../../../../javascript/include.aspx?classes=common.css";
+		</style>
+		<script type="text/javascript" src="../../../../javascript/include.aspx?files=TopWindowHelper"></script>
+		<script>
+			var aras = a = parent.aras || TopWindowHelper.getMostTopWindowWithAras(window).aras;
+		</script>
+		<script type="text/javascript" src="../../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../../../../javascript/dojo'"></script>
+		<script type="text/javascript" src="../../../../javascript/cookie.js"></script>
+		<script type="text/javascript" src="../../../../javascript/include.aspx?classes=XmlDocument"></script>
+		<script type="text/javascript" src="../../../../javascript/QueryString.js"></script>
+		<script type="text/javascript">
+			var activeToolbar = null;
+
+			var MODE_ACW_DEFUALT = "default"; //default toolbar in ACW tabs
+			var MODE_DELIV = "deliv"; //toolbar for deliverable
+			var MODE_ADD_PROJECT = "add_project";
+			var MODE_MAIN = "main"; //main toolbar
+			var mode = QueryString("mode").toString();
+			if (mode) mode = mode.toLowerCase();
+			if (mode !== MODE_DELIV && mode !== MODE_MAIN && mode !== MODE_ADD_PROJECT) mode = MODE_ACW_DEFUALT;
+
+			var toolbarReady = false;
+			var xmlFileBase = a.getScriptsURL() + "../Solutions/Project/";
+			var tbLoaded = false;
+			var toolbar = null;
+			
+			function loadToolbar()
+			{
+				if (tbLoaded)
+				{
+					toolbar = document.toolbar;
+					toolbar.loadXml(getXmlFileURL());
+					toolbar.show();
+					onToolbarLoad();
+				}
+				function getXmlFileURL()
+				{
+					var res;
+					if (mode === MODE_MAIN)
+						res = aras.getI18NXMLResource("mainToolbar.xml", xmlFileBase);
+					else if (mode === MODE_ADD_PROJECT)
+						res = aras.getI18NXMLResource("addProj_toolbar.xml", xmlFileBase);
+					else
+						res = aras.getI18NXMLResource("ACWgrid_toolbar" + ((mode === MODE_DELIV) ? "Deliv" : "") + ".xml", xmlFileBase);
+
+					return res;
+				}
+			}
+
+			function onToolbarButtonClick(btn)
+			{
+				var btnID = new String(btn.getId());
+				setTimeout('processCommand("' + btnID + '")', 10);
+			}
+
+			function onToolbarLoad()
+			{
+				activeToolbar = toolbar.getActiveToolbar();
+				toolbarReady = true;
+			}
+
+			function processCommand(cmdId)
+			{
+				if (mode === MODE_ACW_DEFUALT || mode === MODE_DELIV)
+				{
+					var cmd2parent;
+					var doPickRelated;
+					switch (cmdId)
+					{
+					case "view":
+						cmd2parent = "show_item";
+						break;
+					case "addEx":
+						cmd2parent = "new";
+						doPickRelated = true;
+						break;
+					case "addNew":
+						cmd2parent = "new";
+						break;
+					case "add":
+						cmd2parent = "new";
+						break;
+					case "del":
+						cmd2parent = "delete";
+						break;
+					}
+
+					if (cmd2parent === "new")
+					{
+						if (doPickRelated)
+							setTimeout("parent.newRelationship(true)", 1);
+						else
+							parent.newRelationship(false);
+					}
+					else
+					{
+						parent.processCommand(cmd2parent);
+						if (cmd2parent === "delete")
+						{
+							setControlEnabled(cmdId, false);
+							setControlEnabled("view", false);
+						}
+					}
+				}
+				else {
+					var topWnd = window.parent;
+					if (topWnd.processCommand) topWnd.processCommand(cmdId);
+				}
+			}
+
+			function setControlEnabled(ctrlName, b)
+			{
+				if (b == undefined) b = true;
+				else b = Boolean(b);
+
+				try
+				{
+					var tbi = activeToolbar.getItem(ctrlName);
+					if (tbi) tbi.setEnabled(b);
+				} catch (excep) { }
+			}
+
+			function setControlVisible(id, show_it)
+			{
+				if (show_it) activeToolbar.showItem(id);
+				else activeToolbar.hideItem(id);
+			}
+
+			function fakeOnMenuCreate()
+			{
+				var parentHref = (parent && parent.document && parent.document.location) ? parent.document.location.href : "";
+				parentHref = parentHref.toLowerCase();
+				if (parentHref && parentHref.indexOf("relationshipsgrid.html") < 0) return;
+				if (!parentHref) setTimeout("fakeOnMenuCreate()", 100);
+				var wasFakedFlagNm = "onMenuCreateWasFaked_F698214A515F476EA97FF44E654B79BE";
+				if (parentHref && !parent[wasFakedFlagNm])
+				{
+					parent.onMenuCreate = onMenuCreate_faked;
+					parent.onRelationshipPopupMenuClicked = onPPMClick;
+					parent[wasFakedFlagNm] = true;
+				}
+			}
+
+			function onMenuCreate_faked(rowID, col, p)
+			{
+				if (mode !== MODE_ACW_DEFUALT && mode !== MODE_DELIV)
+					return false;
+
+				if (rowID === "input_row" || rowID === "header_row")
+					return false;
+
+				var ppm = parent.grid.getMenu_Experimental();
+
+				ppm.removeAll();
+
+				if (parent && parent.item)
+					var item = parent.item.selectSingleNode("//Item[@id='" + rowID + "' and not(@action = 'delete')]");
+
+				if (mode === MODE_ACW_DEFUALT)
+				{
+					ppm.add("add", aras.getResource("project", "acw_dialog.new"));
+					ppm.add("del", aras.getResource("project", "acw_dialog.delete"));
+				}
+				else
+				{
+					if (item)
+						ppm.add("view", aras.getResource("project", "acw_dialog.view_deliverable"));
+
+					ppm.add("addEx", aras.getResource("project", "acw_dialog.add_existing_deliverable"));
+					if (item)
+						ppm.add("del", aras.getResource("project", "acw_dialog.delete"));
+				}
+
+				parent.onSelectItem(rowID, null, false);
+				return true;
+			}
+
+			function onPPMClick(b)
+			{
+				setTimeout('processCommand("' + b + '")', 10);
+			}
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", {id: "task_toolbar", connectId: "toolbarContainer" }, function(control) {
+				document.toolbar = control;
+
+				clientControlsFactory.on(document.toolbar, {
+					"onClick": function(tbItem){
+						onToolbarButtonClick(tbItem);
+					},
+				});
+				tbLoaded = true;
+				loadToolbar();
+				fakeOnMenuCreate();
+			});
+		</script>
+	</head>
+	<body class="claro" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" style="overflow: hidden;">
+		<div id="toolbarContainer"></div>
+	</body>
+</html>

@@ -1,0 +1,15 @@
+﻿<AML>
+ <Item type="EMail Message" id="8A6D912194C647F6AA5C7AA408F540AC" action="add">
+  <body_html>&lt;BODY&gt;&lt;font size="+1"&gt;
+&lt;p&gt;${Item[2]/item_number}, "${Item[2]/title}" is closed.&lt;/p&gt;
+&lt;/font&gt;
+&lt;/BODY&gt;</body_html>
+  <body_plain />
+  <from_user keyed_name="Innovator Admin" type="User">30B991F927274FA3829655F50C99472E</from_user>
+  <query_string>&lt;Item type="Activity" id="${Item/ActivityId}" action="get" select="name,message"/&gt;
+&lt;Item type="${Item/@type}" id="${Item/@id}" action="get" select="item_number,title"/&gt;
+&lt;Item type="ItemType" id="${Item/@typeId}" action="get" select="label"/&gt;</query_string>
+  <subject>${Item[2]/item_number}, "${Item[2]/title}" is closed</subject>
+  <name>Express EDR Closed Notification</name>
+ </Item>
+</AML>

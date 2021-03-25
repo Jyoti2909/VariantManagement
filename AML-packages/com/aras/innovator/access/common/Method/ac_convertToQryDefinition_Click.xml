@@ -1,0 +1,54 @@
+﻿<AML>
+ <Item type="Method" id="612728398EA142BF98AC7751F310B9FF" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[
+const aras = window.aras;
+const itemNode = window.item;
+
+const selectedItemId = options.selectedRow;
+const attributeDefinitionItem = itemNode.selectSingleNode(
+	'Relationships/Item[@id="' + selectedItemId + '"]'
+);
+const derivedRelationshipId = aras.getItemProperty(
+	attributeDefinitionItem,
+	'dr_relationship_id'
+);
+const derivedRelationshipItem = aras.getItemById(
+	'dr_Relationship',
+	derivedRelationshipId,
+	0,
+	null,
+	'implementation_query'
+);
+const implementationQuery = aras.getItemProperty(
+	derivedRelationshipItem,
+	'implementation_query'
+);
+
+if (!implementationQuery) {
+	return Promise.reject(
+		new Error(
+			'Query Definition can not be created. Ensure that Derived Relationship is set and has Implementation Query property.'
+		)
+	);
+}
+
+const queryDefinitionDocument = new XmlDocument();
+queryDefinitionDocument.loadXML(implementationQuery);
+const implementationQueryItem = queryDefinitionDocument.firstChild;
+const nodes = implementationQueryItem.selectNodes('//Item');
+for (let i = 0; i < nodes.length; i++) {
+	const item = nodes[i];
+	item.setAttribute('id', aras.generateNewGUID());
+	item.setAttribute('action', 'add');
+	item.setAttribute('loaded', '1');
+	item.setAttribute('levels', '1');
+	item.setAttribute('isTemp', '1');
+}
+
+return aras.uiShowItemEx(implementationQueryItem, 'new');
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ac_convertToQryDefinition_Click</name>
+ </Item>
+</AML>

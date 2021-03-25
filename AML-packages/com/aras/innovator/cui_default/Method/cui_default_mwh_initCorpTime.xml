@@ -1,0 +1,33 @@
+﻿<AML>
+ <Item type="Method" id="7844B8090D87445EA64D29DEDD48260C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const timeOffset = document.corporateToLocalOffset;
+if (!timeOffset) {
+	return {
+		hidden: true
+	};
+}
+
+function updateDateTime() {
+	const key = target.id;
+	const data = control.data.get(key);
+	const currentTime = ArasModules.intl.date.toIS0Format(new Date(Date.now() + timeOffset * 60000));
+	const secs = new Date().getSeconds();
+
+	const updatedDataObject = Object.assign({}, data, {
+		value: currentTime,
+		timeoutId: setTimeout(updateDateTime, (60 - secs) * 1000)
+	});
+	control.data.set(key, updatedDataObject);
+	control.render();
+}
+const secs = new Date().getSeconds();
+
+return {
+	value: ArasModules.intl.date.toIS0Format(new Date(Date.now() + timeOffset * 60000)),
+	timeoutId: setTimeout(updateDateTime, (60 - secs) * 1000)
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_mwh_initCorpTime</name>
+ </Item>
+</AML>

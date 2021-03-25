@@ -1,0 +1,93 @@
+﻿<AML>
+ <Item type="Method" id="00BDF7E6C4114C05AFFB5DE083B82976" action="add">
+  <execution_allowed_to keyed_name="EID_External Identity Configurator" type="Identity">5400BE2B4462465F820166CED8DA03CB</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator());
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				Item qryUser = dal.NewItem("User", "get");
+				string userId = contextItem.getProperty("eid_user_id") ?? contextItem.getID();
+				qryUser.setID(userId);
+				qryUser.setAttribute("select", "eid_definition_id,eid_ext_unique_id");
+				Item user = qryUser.apply();
+				if (user.isError())
+					return user;
+				string eidDefinitionId = user.getProperty("eid_definition_id");
+				string extUniqueId = user.getProperty("eid_ext_unique_id");
+				if (string.IsNullOrEmpty(eidDefinitionId))
+				{
+					return dal.NewResult("ok");
+				}
+				Item method = dal.NewItem("Method", "EID_Sync_External_Users");
+				method.setProperty("eid_unique_id", extUniqueId);
+				method.setProperty("eid_definition_id", eidDefinitionId);
+
+				System.Web.Script.Serialization.JavaScriptSerializer serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+				var id = new string[] { userId };
+				method.setProperty("gag_selected_users_id", serializer.Serialize(id));
+				return dal.ApplyItem(method);
+			}
+		}
+
+		//[PartialPath("DataAccessLayer/IDataAccessLayer")]
+		internal interface IDataAccessLayer
+		{
+			Item ApplyItem(Item item);
+			Item NewItem(string type = null, string action = null);
+			Item NewResult(string textMessage);
+			Item NewError(string errorMessage);
+		}
+
+		//[PartialPath("DataAccessLayer/DataAccessLayer")]
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovator;
+			internal DataAccessLayer(Innovator innovator)
+			{
+				this.innovator = innovator;
+			}
+
+			public Item ApplyItem(Item item)
+			{
+				return item.apply();
+			}
+
+			public Item NewItem(string type = null, string action = null)
+			{
+				if (string.IsNullOrEmpty(type))
+				{
+					return innovator.newItem();
+				}
+				if (string.IsNullOrEmpty(action))
+				{
+					return innovator.newItem(type);
+				}
+				return innovator.newItem(type, action);
+			}
+
+			public Item NewResult(string textMessage)
+			{
+				return innovator.newResult(textMessage);
+			}
+
+			public Item NewError(string errorMessage)
+			{
+				return innovator.newError(errorMessage);
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>EID_Sync_Individual_User</name>
+ </Item>
+</AML>

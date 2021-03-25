@@ -1,0 +1,34 @@
+﻿<AML>
+ <Item type="Method" id="A5B7A2C35DB94B1CA1AC622FE07EE03D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[let urlVariableId;
+
+switch(event.target.name) {
+	case 'gag_create_name':
+		urlVariableId = 'BDBFDCFA010843C4918BFAD469C381DE';
+		break;
+	case 'gag_select_material':
+		urlVariableId = '64AF5ED74D3747CDAAE53813B4AEED8B';
+		break;
+	case 'gag_select_tolerance':
+		urlVariableId = '6205DDEC78B14E21B7EA18AD79CE7B96';
+		break;
+}
+
+const urlVariable = aras.IomInnovator.getItemById('Variable', urlVariableId);
+
+if (urlVariable.isError()) {
+	aras.AlertError(urlVariable.getErrorString());
+}
+
+const url = urlVariable.getProperty('value', '');
+
+if (url === '') {
+	aras.AlertError(urlVariable.getProperty('name') + ' Variable value is not set.');
+}
+
+window.open(url, '_blank', 'fullscreen=yes,menubar=yes,location=yes,resizable=yes,scrollbars=yes,status=yes');]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>GAG_OpenPropsExportWindow</name>
+ </Item>
+</AML>

@@ -1,0 +1,234 @@
+﻿<TestCase author='vsmirnov@aras.com' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xsi:noNamespaceSchemaLocation='../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd'>
+	<Description></Description>
+	<Request runAs='petestuser:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer identity
+			When:
+				The user tries to create a part with name TestName.
+			Then:
+				The user should create the part.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='add' id='1E6B999B3FA842BAB6D23D5E6C1B490A' doGetItem='0'>
+					<classification>Mechanical Part/Assembly</classification>
+					<name>TestName</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='1E6B999B3FA842BAB6D23D5E6C1B490A' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+		</Comparison>
+	</Request>
+	<Request runAs='petestuser:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				Previously created part.
+			When:
+				The user tries to get this part.
+			Then:
+				Part with gag_c_part_flag 0 is received, because TestName doesn't contain any keywords from GAG_CPartKeywords list.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type='Part' action='get' id='1E6B999B3FA842BAB6D23D5E6C1B490A' select='gag_c_part_flag' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id ="1E6B999B3FA842BAB6D23D5E6C1B490A" >
+							<gag_c_part_flag>0</gag_c_part_flag>
+							<id keyed_name="" type="Part">1E6B999B3FA842BAB6D23D5E6C1B490A</id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/@keyed_name" />
+		</Comparison>
+	</Request>
+	<Request runAs='petestuser:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				Previously created part.
+			When:
+				The user sets name 'some nut'.
+			Then:
+				The part is updated.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="NewGenPartId" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Part' action='edit' id='1E6B999B3FA842BAB6D23D5E6C1B490A' doGetItem='0'>
+					<name>some nut</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='NewGenPartId' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs='petestuser:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				Previously created part.
+			When:
+				The user tries to get this part.
+			Then:
+				Part with gag_c_part_flag 1 is received, because 'some nut' contains 'NUT' keyword from GAG_CPartKeywords list.
+				Since comparison is case insensitive gag_c_part_flag is set to 1.
+				gag_tech_flag is set to 0 because 'some nut' doesn't contain any keywords from GAG_TechnologyKeywords list.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="NewGenPartId" action="apply" xpath="Query/AML/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Part' action='get' id='NewGenPartId' select='gag_c_part_flag, gag_tech_flag' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id ="" >
+							<gag_c_part_flag>1</gag_c_part_flag>
+							<gag_tech_flag>0</gag_tech_flag>
+							<id keyed_name="" type="Part"></id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<Request runAs='petestuser:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				Previously created part.
+			When:
+				The user sets name 'some nut WELD.'.
+			Then:
+				The part is updated.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="NewGenPartId" action="apply" xpath="Query/AML/Item/@id" />
+			<Variable id="NewGenPartId" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Part' action='edit' id='' doGetItem='0'>
+					<name>some nut WELD.</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type='Part' id='NewGenPartId' />
+					</Result>
+					<Message>
+						<event name='ids_modified' value='' />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath='Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value' />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs='petestuser:1'>
+		<Comments>
+			<![CDATA[
+			Given:
+				Previously created part.
+			When:
+				The user tries to get this part.
+			Then:
+				Part with gag_tech_flag 1 is received, because 'some nut WELD.' contains 'WELD.' keyword from GAG_TechnologyKeywords list.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="NewGenPartId" action="apply" xpath="Query/AML/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type='Part' action='get' id='NewGenPartId' select='gag_tech_flag' />
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV='http://schemas.xmlsoap.org/soap/envelope/'>
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Part" typeId="4F1AC04A2B484F3ABA4E20DB63808A88" id ="" >
+							<gag_tech_flag>1</gag_tech_flag>
+							<id keyed_name="" type="Part"></id>
+							<itemtype>4F1AC04A2B484F3ABA4E20DB63808A88</itemtype>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id/@keyed_name" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs='petestuser:1'>
+		<Query>
+			<AML>
+				<Item type='Part' action='delete' where="Part.config_id = '1E6B999B3FA842BAB6D23D5E6C1B490A'"/>
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

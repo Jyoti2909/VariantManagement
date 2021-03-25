@@ -1,0 +1,178 @@
+﻿<AML>
+ <Item type="Method" id="6C3CE8961A20440DB89AF6EA44859663" action="add">
+  <execution_allowed_to keyed_name="Authentication Administrators" type="Identity">5C36664D72304E16991B56C007FE1772</execution_allowed_to>
+  <method_code><![CDATA[			LookupError = (name) => CCO.ErrorLookup.Lookup(name);
+			LookupError1 = (name, param1) => CCO.ErrorLookup.Lookup(name, param1);
+			return Invoke();
+		}
+
+		internal Func<string, string> LookupError;
+		internal Func<string, string, string> LookupError1;
+
+		internal Item Invoke()
+		{
+			string claimsPrincipalJson = getProperty("user_claims_principal");
+			System.Security.Claims.ClaimsPrincipal claimsPrincipal = ClaimsPrincipalFromJson(claimsPrincipalJson);
+			Item user = ValidateAndMapExternalUser(claimsPrincipal);
+			return user;
+		}
+
+		internal Item ValidateAndMapExternalUser(System.Security.Claims.ClaimsPrincipal claimsPrincipal)
+		{
+			string authenticationType = claimsPrincipal.Identity.AuthenticationType;
+			if (authenticationType == "WindowsRemote")
+			{
+				return ValidateAndMapWindowsUser(claimsPrincipal);
+			}
+			else
+			{
+				throw new NotSupportedException(
+					LookupError1("af_AuthenticationTypeIsNotSupported", authenticationType));
+			}
+		}
+
+		/// <summary>
+		/// Creates Item based on name claim from ClaimsPrincipal.
+		/// </summary>
+		/// <remarks>
+		/// Method expects external username in the following format: "DomainName\UserName".
+		/// Username parsing from Windows format "UserName@DomainName" is not supported, because IIS
+		/// Windows authentication is configured to return username in "DomainName\UserName" format.
+		///</remarks>
+		/// <param name="claimsPrincipal">External user credentials.</param>
+		/// <returns>User Item.</returns>
+		internal Item ValidateAndMapWindowsUser(System.Security.Claims.ClaimsPrincipal claimsPrincipal)
+		{
+			System.Security.Claims.Claim nameClaim = claimsPrincipal.Claims.FirstOrDefault(claim => claim.Type == System.Security.Claims.ClaimTypes.Name);
+			if (nameClaim == null)
+			{
+				throw new InvalidOperationException(
+					LookupError("af_CannotFindNameClaim"));
+			}
+			string accountName = nameClaim.Value;
+			NetworkCredential credentials = ParseWindowsAccountName(accountName);
+			string userName = credentials.UserName;
+			string domainName = credentials.Domain;
+
+			ValidateDomainAndUser(domainName, userName);
+
+			Item user = MapExternalUserByName(userName);
+			return user;
+		}
+
+		internal NetworkCredential ParseWindowsAccountName(string accountName)
+		{
+			string[] accountNameParts = accountName.Split('\\');
+			string domainName = null;
+			string userName = null;
+			if (accountNameParts.Length != 2)
+			{
+				throw new InvalidOperationException(
+					LookupError1("af_InvalidFormatOfAccountName", accountName));
+			}
+			else
+			{
+				domainName = accountNameParts[0];
+				userName = accountNameParts[1];
+			}
+			if (string.IsNullOrEmpty(domainName))
+			{
+				throw new InvalidOperationException(LookupError("af_DomainNameIsEmpty"));
+			}
+			if (string.IsNullOrEmpty(userName))
+			{
+				throw new InvalidOperationException(LookupError("af_UserNameIsEmpty"));
+			}
+
+			NetworkCredential credentials = new NetworkCredential(userName, string.Empty, domainName);
+			return credentials;
+		}
+
+		internal Item MapExternalUserByName(string userName)
+		{
+			Innovator innovator = getInnovator();
+			Item user = innovator.newItem("user", "get");
+			user.setProperty("login_name", userName);
+			user.setProperty("logon_enabled", "1");
+			user.setAttribute("select", "login_name");
+			user = user.apply();
+			if (user.isError())
+			{
+				throw new Aras.Server.Core.InnovatorServerException(
+					LookupError1("af_LoginFailed", userName));
+			}
+			return user;
+		}
+
+		internal static System.Security.Claims.ClaimsPrincipal ClaimsPrincipalFromJson(string claimsPrincipalJson)
+		{
+			Dictionary<string, object> claimsPrincipalDictionary =
+				new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<Dictionary<string, object>>(claimsPrincipalJson);
+
+			string authenticationType = (string)claimsPrincipalDictionary["authentication_type"];
+
+			var claimsData = ((ArrayList)claimsPrincipalDictionary["claims"]).Cast<Dictionary<string, object>>();
+			var claims = claimsData.Select(
+				claimData => new System.Security.Claims.Claim(
+					claimData["type"].ToString(),
+					claimData["value"].ToString()));
+
+			var claimsIdentity = new System.Security.Claims.ClaimsIdentity(claims, authenticationType);
+			var claimsPrincipal = new System.Security.Claims.ClaimsPrincipal(claimsIdentity);
+			return claimsPrincipal;
+		}
+
+		internal Item GetClientLogOnPolicy()
+		{
+			Innovator innovator = getInnovator();
+			Item clientLogOnPolicy = innovator.applyMethod("af_GetClientLogOnPolicy", string.Empty);
+			return clientLogOnPolicy;
+		}
+
+		internal void ValidateDomainAndUser(string domainName, string userName)
+		{
+			Item clientLogOnPolicy = GetClientLogOnPolicy();
+
+			string allowedDomainNamesPattern = clientLogOnPolicy.getProperty("allowed_domain_names");
+			if (!string.IsNullOrEmpty(allowedDomainNamesPattern))
+			{
+				bool isDomainAllowed = new System.Text.RegularExpressions.Regex(
+					allowedDomainNamesPattern,
+					System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+					.IsMatch(domainName);
+				if (!isDomainAllowed)
+				{
+					throw new Aras.Server.Core.InnovatorServerException(
+						LookupError1("af_AccessDeniedByDomainName", domainName));
+				}
+			}
+			string allowedDomainUsersPattern = clientLogOnPolicy.getProperty("allowed_domain_users");
+			if (!string.IsNullOrEmpty(allowedDomainUsersPattern))
+			{
+				bool isUserAllowed = new System.Text.RegularExpressions.Regex(
+					allowedDomainUsersPattern,
+					System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+					.IsMatch(userName);
+				if (!isUserAllowed)
+				{
+					throw new Aras.Server.Core.InnovatorServerException(
+						LookupError1("af_AccessDeniedByUserName", userName));
+				}
+			}
+			string deniedDomainUsersPattern = clientLogOnPolicy.getProperty("denied_domain_users");
+			if (!string.IsNullOrEmpty(deniedDomainUsersPattern))
+			{
+				bool isUserDenied = new System.Text.RegularExpressions.Regex(
+					deniedDomainUsersPattern,
+					System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+					.IsMatch(userName);
+				if (isUserDenied)
+				{
+					throw new Aras.Server.Core.InnovatorServerException(
+						LookupError1("af_AccessDeniedByUserName", userName));
+				}
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>af_ValidateAndMapExternalUser</name>
+ </Item>
+</AML>

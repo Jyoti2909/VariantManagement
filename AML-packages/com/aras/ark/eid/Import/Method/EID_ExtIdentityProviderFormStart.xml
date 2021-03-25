@@ -1,0 +1,81 @@
+﻿<AML>
+ <Item type="Method" id="28053BCB1E2945BCBF012EE57CD22F86" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[
+const InputManager = (function(){
+	return {
+		setInputStyle:
+		function fSetInputStyle(){
+			const wrapperAndInp = getWrapperAndInput();
+			if (!wrapperAndInp || !wrapperAndInp.wrapper || !wrapperAndInp.input){
+				return;
+			}
+
+			let widthToSet = getWidthToSet();
+			if (!widthToSet){
+				widthToSet = "215px";
+			}
+
+			let predecessor = wrapperAndInp.input.parentElement, predStyle, predWidth;
+			while (predecessor && predecessor !== wrapperAndInp.wrapper){
+				predStyle = predecessor.style;
+				if (predStyle){
+					predWidth = predStyle.width;
+					if (predWidth){
+						predecessor.style.width = widthToSet;
+					}
+				}
+				predecessor = predecessor.parentElement;
+			}
+
+			if (!wrapperAndInp.input.style){
+				wrapperAndInp.input.style = "width:" + widthToSet;
+			} else {
+				wrapperAndInp.input.style += "; width:" + widthToSet;
+			}
+		}
+	}
+
+	function getWrapperAndInput(){
+		let wrapperAndInp;
+		const selector = "div[class$='sys_fn_classification sys_pn_classification']";
+		const foundWrappers = document.querySelectorAll(selector);
+		if (foundWrappers.length === 1){
+			const wrapper = foundWrappers[0];
+			const foundInputs = wrapper.querySelectorAll("input");
+			if (foundInputs.length === 1){
+				inp = foundInputs[0];
+				wrapperAndInp = {wrapper : wrapper, input : inp};
+			}
+		}
+		return wrapperAndInp;
+	}
+	
+	function getWidthToSet(){
+		const sourceCandidSel = "[class$='sys_pn_eid_getallusers'][name='eid_getallusers']";
+		const widthInfoSourceCandidates = document.querySelectorAll(sourceCandidSel);
+		if (!widthInfoSourceCandidates.length){
+			return undefined;
+		}
+
+		let cN, widthInfoSources, sN, foundWidth;
+		const sourceSel = "[style*='width']";
+		for (cN = 0; !foundWidth && cN < widthInfoSourceCandidates.length; cN++){
+			widthInfoSources = widthInfoSourceCandidates[cN].querySelectorAll(sourceSel);
+			for (sN = 0; sN < widthInfoSources.length; sN++){
+				if (widthInfoSources[sN].style && widthInfoSources[sN].style.width){
+					foundWidth = widthInfoSources[sN].style.width;
+					break;
+				}
+			}
+		}
+		return foundWidth;
+	}
+}());
+
+InputManager.setInputStyle();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>EID_ExtIdentityProviderFormStart</name>
+ </Item>
+</AML>

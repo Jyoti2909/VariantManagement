@@ -1,0 +1,46 @@
+﻿<AML>
+ <Item type="Method" id="CF8B7A7F5BB241DC9BBF6E4BC5F36F13" action="add">
+  <comments>Show custom property selection dialog</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[var iomItem = getIOMItem(item);
+var options = {
+	aras: aras,
+	dialogWidth: 896,
+	dialogHeight: 596,
+	content: '../Modules/aras.innovator.ES/Views/AddPropertiesDialog.html',
+	item: iomItem
+};
+var topWindow = aras.getMostTopWindowWithAras(window);
+
+topWindow.ArasModules.Dialog.show('iframe', options).promise.then(function(result) {
+	if (!result || !Array.isArray(result)) {
+		return;
+	}
+	for (var i = 0; i < result.length; i++) {
+		var data = result[i];
+		window.newRelationship(false, null, getRelationshipCallback(data), 'norelated');
+	}
+});
+
+function getIOMItem(itemNode) {
+	var iomItem = aras.newIOMItem();
+
+	iomItem.dom = itemNode.ownerDocument;
+	iomItem.node = itemNode;
+
+	return iomItem;
+}
+
+function getRelationshipCallback(data) {
+	return function(relationshipNode) {
+		var iomRelItem = getIOMItem(relationshipNode);
+		Object.keys(data).forEach(function(prop) {
+			iomRelItem.setProperty(prop, data[prop]);
+		});
+	};
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_OnIndexedPropertySelectClick</name>
+ </Item>
+</AML>

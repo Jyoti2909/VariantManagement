@@ -1,0 +1,66 @@
+﻿<AML>
+ <Item type="Method" id="687602B512A34D58B86946ECC1A4E8CB" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[			BusinessLogic.Execute(node, () => getInnovator().newXMLDocument());
+			return this;
+		}
+		internal static class BusinessLogic
+		{
+			internal static void Execute(XmlNode itemNode, Func<XmlDocument> xmlDocFactory)
+			{
+				XmlDocument tmpDoc = xmlDocFactory();
+				tmpDoc.XmlResolver = null;
+				foreach (XmlElement filterXmlNode in itemNode.SelectNodes("Relationships/Item/filter_xml"))
+				{
+					string filterXml = filterXmlNode.InnerText;
+					if (string.IsNullOrEmpty(filterXml))
+					{
+						continue;
+					}
+					XmlDocument parsedDoc = null;
+					try
+					{
+						// the XmlWriterSettings pf GetFormattedXmlString are not applied
+						// when "doc.PreserveWhitespace == true" what is setup in Innovator.newXMLDocument.
+						// the root cause of this behavior is not investigated. So, just reset the setting.
+						tmpDoc.PreserveWhitespace = false;
+
+						tmpDoc.LoadXml(filterXml);
+						parsedDoc = tmpDoc;
+					}
+					catch (XmlException)
+					{
+						// do nothing if xml loading fails
+						parsedDoc = null;
+					}
+
+					if (parsedDoc != null)
+					{
+						string formatterXmlString = GetFormattedXmlString(parsedDoc);
+						filterXmlNode.InnerText = formatterXmlString;
+					}
+				}
+
+			}
+			private static string GetFormattedXmlString(XmlDocument doc)
+			{
+				StringBuilder sb = new StringBuilder();
+				XmlWriterSettings settings = new XmlWriterSettings
+				{
+					Indent = true,
+					IndentChars = "\t",
+					NewLineChars = "\r\n",
+					NewLineHandling = NewLineHandling.Replace,
+					OmitXmlDeclaration = true
+				};
+				using (XmlWriter writer = XmlWriter.Create(sb, settings))
+				{
+					doc.Save(writer);
+				}
+
+				return sb.ToString();
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>qry_QueryDefinitionBeforeSave</name>
+ </Item>
+</AML>

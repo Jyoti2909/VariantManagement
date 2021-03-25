@@ -1,0 +1,1188 @@
+﻿<TestCase author="pponkrashov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../TestCase.xsd">
+	<Description>Tests for Affected Items promotion on Return from CPart check to CAD Task in GECO</Description>
+	<Request runAs="superTrUser3:1" position="1">
+		<Comments>
+			<![CDATA[
+			Given:
+				superTrUser3
+			When:
+				As superTrUser3
+				Create new CAD Document
+			Then:
+				CAD Document is returned
+				Which means that document has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan3.Id" action="set" xpath="Query/AML/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="add" id="373D1CE6A87F4005BD78E36BC335CBEF" doGetItem="0">
+					<classification>Mechanical/Assembly</classification>
+					<name>CAD-Plan3</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="373D1CE6A87F4005BD78E36BC335CBEF" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superTrUser3:1" position="2">
+		<Comments>
+			<![CDATA[
+			Given:
+				superTrUser3 and CAD Document
+			When:
+				As superTrUser3
+				Create new version of CAD Document
+			Then:
+				CAD Document is returned
+				Which means that new version of document has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan3.NewVersion1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="version" id="373D1CE6A87F4005BD78E36BC335CBEF" doGetItem="0"></Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="{CADPlan3.NewVersion1.Id}" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs="superTrUser3:1" position="3">
+		<Comments>
+			<![CDATA[
+			Given:
+				superTrUser3 and CAD Document
+			When:
+				As superTrUser3
+				Unlock new version of CAD Document
+			Then:
+				CAD Document is returned
+				Which means that new version of document has been unlocked
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan3.NewVersion1.Id" action="apply" xpath="Query/AML/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="unlock" id="{CADPlan3.NewVersion1.Id}" doGetItem="0"></Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superTrUser3:1" position="4">
+		<Comments>
+			<![CDATA[
+			Given:
+				superTrUser3
+			When:
+				As superTrUser3
+				Create new CAD Document
+			Then:
+				CAD Document is returned
+				Which means that document has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan4.Id" action="set" xpath="Query/AML/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="add" id="FE4DDDF2F3CE49D29F465B004C2FDA4D" doGetItem="0">
+					<classification>Mechanical/Assembly</classification>
+					<name>CAD-Plan4</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="FE4DDDF2F3CE49D29F465B004C2FDA4D" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="superTrUser3:1" position="5">
+		<Comments>
+			<![CDATA[
+			Given:
+				superTrUser3 and CAD Document
+			When:
+				As superTrUser3
+				Create new version of CAD Document
+			Then:
+				CAD Document is returned
+				Which means that new version of document has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan4.NewVersion1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="version" id="FE4DDDF2F3CE49D29F465B004C2FDA4D" doGetItem="0"></Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="{CADPlan3.NewVersion1.Id}" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs="superTrUser3:1" position="6">
+		<Comments>
+			<![CDATA[
+			Given:
+				superTrUser3 and CAD Document
+			When:
+				As superTrUser3
+				Unlock new version of CAD Document and promote to 30 state
+			Then:
+				CAD Document is returned
+				Which means that new version of document has been unlocked and promoted to 30 state
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan4.NewVersion1.Id" action="apply" xpath="Query/AML/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="unlock" id="{CADPlan4.NewVersion1.Id}" doGetItem="0"></Item>
+				<Item type="CAD" action="promoteItem" id="{CADPlan4.NewVersion1.Id}" doGetItem="0">
+					<state>25</state>
+				</Item>
+				<Item type="CAD" action="promoteItem" id="{CADPlan4.NewVersion1.Id}" doGetItem="0">
+					<state>30</state>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="7">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadTrUser1
+			When:
+				add new GECO as cadTrUser1
+			Then:
+				Should create GECO with two CAD documents
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan3.NewVersion1.Id" action="apply" xpath="Query/AML/Item/Relationships/Item[3]/related_id" />
+			<Variable id="CADPlan4.NewVersion1.Id" action="apply" xpath="Query/AML/Item/Relationships/Item[4]/related_id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" id="B6FBB449A73C447BA780118EEAD61A0E" action="add" doGetItem="0">
+					<classification>Pre-Release &amp; Change/CAD Document</classification>
+					<Relationships>
+						<Item type="GAG_GECO CADDesigner" id="CFFD58919E2A4B04A82F248CBCA8325E" action="add" doGetItem="0">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>cadTrUser1</keyed_name>
+								</Item>
+							</related_id>
+							<source_id>B6FBB449A73C447BA780118EEAD61A0E</source_id>
+						</Item>
+						<Item type="GAG_GECO DevReleaseApprover" id="D367513020CB403AA80FD0BB080599E6" action="add" doGetItem="0">
+							<related_id>
+								<Item type="Identity" action="get" select="id">
+									<keyed_name>appTrUser2</keyed_name>
+								</Item>
+							</related_id>
+							<source_id>B6FBB449A73C447BA780118EEAD61A0E</source_id>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled" id="2F14DCECF2D74159AAE0FF44F2CFAD5C" action="add" doGetItem="0">
+							<related_id>{CADPlan3.NewVersion1.Id}</related_id>
+							<source_id>B6FBB449A73C447BA780118EEAD61A0E</source_id>
+							<gag_action>Release</gag_action>
+						</Item>
+						<Item type="GAG_GECO ChangeControlled" id="E17A40EDB4F64A41938A2C2A4E645886" action="add" doGetItem="0">
+							<related_id>{CADPlan4.NewVersion1.Id}</related_id>
+							<source_id>B6FBB449A73C447BA780118EEAD61A0E</source_id>
+							<gag_action>Revise</gag_action>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="GAG_EngineeringChangeObject" id="B6FBB449A73C447BA780118EEAD61A0E" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event[@name='ids_modified']/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="8">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadTrUser1 and new GECO
+			When:
+				As cadTrUser1
+				Get active InBasket Task
+			Then:
+				InBasket Task is returned
+				Which means that workflow has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" id="{Activity.Assigment.Id}">
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="9">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Start CAD Task' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Task2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[3]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Start CAD Task</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="Planning" type="Activity">C4F89AA90A7746E5AFB1B9A78A93922C</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Activity Task" id="{Task2.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="10">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated by 'Start CAD Task' path
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Task2.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[2]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>{Activity.Id}</Activity>
+					<ActivityAssignment>{Activity.Assigment.Id}</ActivityAssignment>
+					<Paths>
+						<Path id="{Process.Path.Id}">
+							<![CDATA[Start CAD Task]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="{Task1.Id}" completed="1"></Task>
+						<Task id="{Task2.Id}" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="11">
+		<Comments>
+			<![CDATA[
+			Given:
+				CAD Document
+			When:
+				Get all version
+			Then:
+				All versions should be in 10 state
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan3.Id" action="apply" xpath="Query/AML/Item/config_id" />
+			<Variable id="CADPlan3.LastVersion" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[last()]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="get" select="state,generation" orderBy="generation">
+					<config_id>{CADPlan3.Id}</config_id>
+					<id condition="is not">null</id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD">
+							<generation>1</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>2</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="12">
+		<Comments>
+			<![CDATA[
+			Given:
+				CAD Document
+			When:
+				Get all version
+			Then:
+				All versions should be
+				generation 1 state 10
+				generation 2 state 28
+				generation 3 state 10
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan4.Id" action="apply" xpath="Query/AML/Item/config_id" />
+			<Variable id="CADPlan4.LastVersion" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[last()]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="get" select="state,generation" orderBy="generation">
+					<config_id>{CADPlan4.Id}</config_id>
+					<id condition="is not">null</id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD">
+							<generation>1</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>2</generation>
+							<state>28</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>3</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="13">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadTrUser1 and two CAD Document
+			When:
+				As cadTrUser1
+				Create new version of CAD Documents
+			Then:
+				Two CAD Documents is returned
+				Which means that new version of document has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan3.LastVersion" action="apply" xpath="Query/AML/Item[1]/@id" />
+			<Variable id="CADPlan3.NewVersion2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[1]/@id" />
+			<Variable id="CADPlan4.LastVersion" action="apply" xpath="Query/AML/Item[2]/@id" />
+			<Variable id="CADPlan4.NewVersion2.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[2]/@id" />
+			
+			<Variable id="CADPlan3.LastVersion" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[1]/@id" />
+			<Variable id="CADPlan4.LastVersion" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[2]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="version" id="{CADPlan3.LastVersion}" doGetItem="0"></Item>
+				<Item type="CAD" action="version" id="{CADPlan4.LastVersion}" doGetItem="0"></Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="{CADPlan3.NewVersion2.Id}" />
+						<Item type="CAD" id="{CADPlan4.NewVersion2.Id}" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="14">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadTrUser1 and two CAD Documents
+			When:
+				As cadTrUser1
+				Unlock new version of CAD Documents
+			Then:
+				CAD Document is returned
+				Which means that new versions of documents have been unlocked
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan3.LastVersion" action="apply" xpath="Query/AML/Item[1]/@id" />
+			<Variable id="CADPlan4.LastVersion" action="apply" xpath="Query/AML/Item[2]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="unlock" id="{CADPlan3.LastVersion}" doGetItem="0"></Item>
+				<Item type="CAD" action="unlock" id="{CADPlan4.LastVersion}" doGetItem="0"></Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="15">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadTrUser1 and new GECO
+			When:
+				As cadTrUser1
+				Get active InBasket Task
+			Then:
+				InBasket Task is returned
+				Which means that workflow has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" id="{Activity.Assigment.Id}">
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="16">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Start Review' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Start Review</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="CAD Task" type="Activity">32270B0F101C4C64A417AE00D1265B88</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="17">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated by 'Start Review' path
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>{Activity.Id}</Activity>
+					<ActivityAssignment>{Activity.Assigment.Id}</ActivityAssignment>
+					<Paths>
+						<Path id="{Process.Path.Id}">
+							<![CDATA[Start Review]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="{Task1.Id}" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="18">
+		<Comments>
+			<![CDATA[
+			Given:
+				CAD Document
+			When:
+				Get all version
+			Then:
+				All versions should be in 10 state but last in 25 state
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan3.Id" action="apply" xpath="Query/AML/Item/config_id" />
+			<Variable id="CADPlan3.LastVersion" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[last()]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="get" select="state,generation" orderBy="generation">
+					<config_id>{CADPlan3.Id}</config_id>
+					<id condition="is not">null</id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD">
+							<generation>1</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>2</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>3</generation>
+							<state>25</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="19">
+		<Comments>
+			<![CDATA[
+			Given:
+				CAD Document
+			When:
+				Get all version
+			Then:
+				All versions should be
+				generation 1 state 10
+				generation 2 state 28
+				generation 3 state 10
+				generation 4 state 25
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan4.Id" action="apply" xpath="Query/AML/Item/config_id" />
+			<Variable id="CADPlan4.LastVersion" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[last()]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="get" select="state,generation" orderBy="generation">
+					<config_id>{CADPlan4.Id}</config_id>
+					<id condition="is not">null</id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD">
+							<generation>1</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>2</generation>
+							<state>28</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>3</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>4</generation>
+							<state>25</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<Request runAs="appTrUser2:1" position="20">
+		<Comments>
+			<![CDATA[
+			Given:
+				cadTrUser1 and new GECO
+			When:
+				As cadTrUser1
+				Get active InBasket Task
+			Then:
+				InBasket Task is returned
+				Which means that workflow has been instantiated
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="InBasket Task" action="get" select="id">
+					<status condition="eq">active</status>
+					<my_assignment condition="eq">1</my_assignment>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="InBasket Task" id="{Activity.Assigment.Id}">
+							<classification>My</classification>
+							<my_assignment>1</my_assignment>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/assigned_to" />
+		</Comparison>
+	</Request>
+	<Request runAs="appTrUser2:1" position="21">
+		<Comments>
+			<![CDATA[
+			Given:
+				InBasket Task Id
+			When:
+				Get Activity with Tasks and 'Rework required' path assigned to the given InBasket Task Id
+			Then:
+				Activity Is Returned
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/Relationships/Item/id" />
+			<Variable id="Activity.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Variable id="Task1.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[2]/@id" />
+			<Variable id="Process.Path.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item[@type='Workflow Process Path']/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="get" select="id">
+					<Relationships>
+						<Item type="Activity Assignment" action="get" select="id">
+							<id>{Activity.Assigment.Id}</id>
+						</Item>
+						<Item type="Activity Task" action="get" select="id" />
+						<Item type="Workflow Process Path" action="get" select="id" >
+							<name condition="eq">Rework required</name>
+						</Item>
+					</Relationships>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Activity" id="{Activity.Id}">
+							<id keyed_name="C-Part Check" type="Activity">726C15E871F04726A81A93BE5E894418</id>
+							<Relationships>
+								<Item type="Activity Assignment" id="{Activity.Assigment.Id}"></Item>
+								<Item type="Activity Task" id="{Task1.Id}"></Item>
+								<Item type="Workflow Process Path" id="{Process.Path.Id}"></Item>
+							</Relationships>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/Relationships/Item/source_id" />
+		</Comparison>
+	</Request>
+	<Request runAs="appTrUser2:1" position="22">
+		<Comments>
+			<![CDATA[
+			Given:
+				Activity from previous request
+			When:
+				Evaluate this Activity
+			Then:
+				Activity has been evaluated by 'Rework required' path
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Activity.Assigment.Id" action="apply" xpath="Query/AML/Item/ActivityAssignment" />
+			<Variable id="Activity.Id" action="apply" xpath="Query/AML/Item/Activity" />
+			<Variable id="Task1.Id" action="apply" xpath="Query/AML/Item/Tasks/Task[1]/@id" />
+			<Variable id="Process.Path.Id" action="apply" xpath="Query/AML/Item/Paths/Path/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Activity" action="EvaluateActivity">
+					<Activity>{Activity.Id}</Activity>
+					<ActivityAssignment>{Activity.Assigment.Id}</ActivityAssignment>
+					<Paths>
+						<Path id="{Process.Path.Id}">
+							<![CDATA[Rework required]]>
+						</Path>
+					</Paths>
+					<DelegateTo>0</DelegateTo>
+					<Tasks>
+						<Task id="{Task1.Id}" completed="1"></Task>
+					</Tasks>
+					<Variables></Variables>
+					<Authentication mode=""></Authentication>
+					<Comments></Comments>
+					<Complete>1</Complete>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result />
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="23">
+		<Comments>
+			<![CDATA[
+			Given:
+				CAD Document
+			When:
+				Get all version
+			Then:
+				All versions should be in 10 state
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan3.Id" action="apply" xpath="Query/AML/Item/config_id" />
+			<Variable id="CADPlan3.LastVersion" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[last()]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="get" select="state,generation" orderBy="generation">
+					<config_id>{CADPlan3.Id}</config_id>
+					<id condition="is not">null</id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD">
+							<generation>1</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>2</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>3</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadTrUser1:1" position="24">
+		<Comments>
+			<![CDATA[
+			Given:
+				CAD Document
+			When:
+				Get all version
+			Then:
+				All versions should be in 10 state but second in 28 state
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="CADPlan4.Id" action="apply" xpath="Query/AML/Item/config_id" />
+			<Variable id="CADPlan4.LastVersion" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[last()]/@id" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" action="get" select="state,generation" orderBy="generation">
+					<config_id>{CADPlan4.Id}</config_id>
+					<id condition="is not">null</id>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD">
+							<generation>1</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>2</generation>
+							<state>28</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>3</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+						<Item type="CAD">
+							<generation>4</generation>
+							<state>10</state>
+							<streaming_enabled>0</streaming_enabled>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/itemtype" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@typeId" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/id" />
+		</Comparison>
+	</Request>
+
+	<TestCaseCleanUp runAs="root:innovator">
+		<Query>
+			<AML>
+				<Item type="GAG_EngineeringChangeObject" id="B6FBB449A73C447BA780118EEAD61A0E" action="delete" />
+
+				<Item type="Workflow Process" action="delete" where="[WORKFLOW_PROCESS].created_by_id = 'EC29C6308EF246A0B6B9C16713F36DDC'" />
+
+				<Item type="CAD" action="delete" id="373D1CE6A87F4005BD78E36BC335CBEF"></Item>
+				<Item type="CAD" action="delete" id="FE4DDDF2F3CE49D29F465B004C2FDA4D"></Item>
+
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

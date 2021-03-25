@@ -1,0 +1,25 @@
+﻿<AML>
+ <Item type="Method" id="219EFC72C91E4C15B53F2511A9CD7BDE" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[If Not IsNothing(Me.node) Then
+  Dim inn As Innovator = Me.getInnovator()
+  Dim idenList As String = inn.getUserAliases()
+  Dim m As String = Me.getProperty("managed_by_id")
+  If Not IsNothing(m) AndAlso Not IsNothing(idenList) AndAlso idenList.indexOf(m)>-1 Then
+    Dim propColor As String = "#FFCCCC"
+    Dim cssPropNm As String = "fed_css"
+    Dim props() As String = {"percent_compl", "date_start_act"}
+    Dim b As New StringBuilder
+    Dim i As Integer
+    For i=0 To props.Length-1
+      b.Append(String.Format(".{0}{{background-color:{1}}}{2}", props(i), propColor, vbNewLine))
+    Next i
+    Me.setProperty(cssPropNm, b.toString())
+  End If
+End If
+
+return Me]]></method_code>
+  <method_type>VB</method_type>
+  <name>PM_setFedCss_For_ACW</name>
+ </Item>
+</AML>

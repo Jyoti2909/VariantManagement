@@ -1,0 +1,65 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2016. -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<style type="text/css">
+			html, body
+			{
+				height: 100%;
+				margin: 0px;
+			}
+		</style>
+		<style type="text/css">
+			@import "../../../javascript/include.aspx?classes=arasClaro.css";
+			@import "../../../styles/default.css";
+			@import "../../../javascript/include.aspx?classes=common.css";
+		</style>
+		<script>
+			var aras = parent.aras;
+		</script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../../../../javascript/dojo'"></script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=XmlDocument"></script>
+		<script type="text/javascript">
+
+			var toolbar;
+			function loadToolbar() {
+				var toolbarStr =
+					'<toolbarapplet buttonsize="26,25">' +
+					'	<toolbar id="toolbar1" />' +
+					'</toolbarapplet>';
+				toolbar.loadToolbarFromStr(toolbarStr);
+				toolbar.show();
+				var tooltip = aras.getResource('../Modules/aras.innovator.TDF', 'action.makeexternal_toolbarbutton_tooltip');
+				toolbar.addButton_Experimental('convert_to_external', { image: '../images/SaveUnlockClose.svg', tooltip: tooltip });
+			}
+
+			function onToolbarButtonClick(btn)
+			{
+				processCommand(btn.getId());
+			}
+
+			function processCommand(cmdId)
+			{
+				var parentWnd = window.parent;
+				if (parentWnd.processCommand) {
+					parentWnd.processCommand(cmdId);
+				}
+			}
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", {id: "makeExternal_toolbar", connectId: "toolbarContainer" }, function(control) {
+				toolbar = control;
+
+				clientControlsFactory.on(toolbar, {
+					"onClick": function(tbItem){
+						onToolbarButtonClick(tbItem);
+					}
+				});
+				loadToolbar();
+			});
+		</script>
+	</head>
+	<body class="claro" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" style="overflow: hidden;">
+		<div id="toolbarContainer"></div>
+	</body>
+</html>

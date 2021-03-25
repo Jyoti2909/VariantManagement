@@ -1,0 +1,581 @@
+﻿<AML>
+ <Item type="Form" id="B19B78ECECBB4B41876938B1F4D54508" action="add">
+  <category_form>0</category_form>
+  <description>Add files to the package</description>
+  <height>700</height>
+  <stylesheet><![CDATA[../styles/default.css]]></stylesheet>
+  <width>900</width>
+  <name>FE_AddFilesToPackage</name>
+  <Relationships>
+   <Item type="Body" id="A8FAF91377FC408B955D7F89B4E8444F" action="add">
+    <css />
+    <sort_order>128</sort_order>
+    <source_id keyed_name="FE_AddFilesToPackage" type="Form">B19B78ECECBB4B41876938B1F4D54508</source_id>
+    <Relationships>
+     <Item type="Field" id="6060E1BCEF564D90B7888DDCC2C411DB" action="add">
+      <border_width>0</border_width>
+      <css>width: 100%</css>
+      <display_length_unit>px</display_length_unit>
+      <field_type>html</field_type>
+      <font_color>#000000</font_color>
+      <font_family>arial, helvetica, sans-serif</font_family>
+      <font_size>8pt</font_size>
+      <font_weight>bold</font_weight>
+      <html_code><![CDATA[<style type="text/css">
+	@import "../javascript/include.aspx?classes=arasClaro.css,common.css";
+</style>
+<script type="text/javascript">
+	var system_progressbar1_gif = "../images/Progress.gif",
+		dlgArgs = aras.getMostTopWindowWithAras(window).window.dialogArguments;
+
+	if (dlgArgs) {
+		aras = dlgArgs.aras;
+		var requestedPropertiesLabels = dlgArgs.requestedPropertiesLabels,
+			requestedPropertiesColumnsWidth = dlgArgs.requestedPropertiesColumnsWidth,
+			requestedPropertiesColumnsWidth = dlgArgs.requestedPropertiesColumnsWidth,
+			requestedPropertiesColumnsAligns = dlgArgs.requestedPropertiesColumnsAligns;
+	}
+
+	function getFilesIdsForReturn() {
+		var returnArray = [];
+		for (var i = 0; i < rowsIds.length; i++) {
+			if (rowsIds[i] == undefined) {
+				continue;
+			}
+			var temp = filesIds[rowsIds[i]];
+			for (var j = 0; j < filesIds[rowsIds[i]].length; j++) {
+				if (!isExist(temp[j].fileId)) {
+					var cell = grid.cells(rowsIds[i], 1);
+					if (aras.getItemById("File", temp[j].fileId, 0)) {
+						returnArray.push({ parental_id: temp[j].parentalId, parental_type: temp[j].parentalType, parental_property: temp[j].propName, id: temp[j].fileId });
+					}
+				}
+			}
+		}
+		return returnArray;
+
+		function isExist(id) {
+			for (var j = 0; j < returnArray.length; j++) {
+				if (returnArray[j].id == id) {
+					return true;
+				}
+			}
+			return false;
+		}
+	}
+
+	var rowsIds = [],
+		propNames = ["keyed_name", "type", "files", "changed_file_list", "checkbox"],
+		requestSelect = [],
+		filesIds = [],
+		instanceIds = [],
+		selectConf = [],
+		allFileProperties = [];
+
+	function addRowsToGrid(idlist) {
+		var statusId = window.statusbar.setStatus("status", aras.getResource("", "item_methods_ex.adding", "Files"), system_progressbar1_gif);
+		var tb = toolbar.getItem("item_type");
+		var itemTypeName = tb.getItem(tb.getSelectedIndex());
+
+		if (selectConf[itemTypeName].configuration == undefined) {
+			var methodArgs = {};
+			methodArgs.itemtype = itemTypeName;
+			var res = aras.evalItemMethod("FE_GetTreeItemType", "", methodArgs);
+			if (!res) {
+				return;
+			}
+			selectConf[itemTypeName].configuration = res.configuration;
+
+			var paths = [];
+			for (var index = 0; index < selectConf[itemTypeName].configuration.length; index++) {
+				var rec = selectConf[itemTypeName].configuration[index];
+				for (var t = 0; t < rec.fileProps.length; t++) {
+					paths.push({ path: rec.index + "/" + rec.fileProps[t].name, id: rec.fileProps[t].id });
+				}
+			}
+			selectConf[itemTypeName].paths = paths;
+		}
+
+		var doc = aras.createXMLDocument();
+		var element = doc.createElement("body");
+		doc.appendChild(element);
+		element = doc.createElement("idlist");
+		element.setAttribute("ids", getArray(idlist).join());
+		doc.selectSingleNode("//body").appendChild(element);
+		element = doc.createElement("item");
+		element.setAttribute("itemtype", itemTypeName);
+		doc.selectSingleNode("//body").appendChild(element);
+		for (var i = 0; i < selectConf[itemTypeName].paths.length; i++) {
+			element = doc.createElement("configuration");
+			element.setAttribute("path", selectConf[itemTypeName].paths[i].path);
+			doc.selectSingleNode("//body").appendChild(element);
+		}
+
+		var response = aras.applyMethod("FE_GetFilesFromItemtype", doc.xml);
+		var result = new Item();
+		result.loadAML(response);
+
+		for (var i = 0; i < idlist.length; i++) {
+			var itemId = idlist[i];
+			if (rowsIds.join().indexOf(itemId) != -1) {
+				continue;
+			}
+			instanceIds[itemTypeName].push(itemId);
+			rowsIds.push(itemId);
+			var rowValue = {};
+			grid.addRow(itemId, "", true);
+			for (var j = 0; j < propNames.length; j++) {
+				var cell = grid.cells(itemId, j);
+				if (cell) {
+					switch (propNames[j]) {
+						case "files":
+							filesIds[itemId] = getFilesIdsByPaths(result, selectConf[itemTypeName].paths, itemId);
+							var fileArray = new Array();
+							for (var index = 0; index < filesIds[itemId].length; index++) {
+								fileArray.push(filesIds[itemId][index].fileId);
+							}
+							if (filesIds[itemId].length != 0) {
+								cell.setValue(getFilesName(fileArray.join()));
+							}
+							break;
+						case "changed_file_list":
+							cell.setValue("Changed Files");
+							cell.setTextColor("#3668b1");
+							cell.setLink(itemId);
+							break;
+						case "checkbox":
+							if (filesIds[itemId].allFileCount == undefined) {
+								filesIds[itemId].allFileCount = getFullFileConf(itemId, itemTypeName).length;
+							}
+							cell.setValue("<checkbox state='" + ((filesIds[itemId].allFileCount == filesIds[itemId].length && filesIds[itemId].allFileCount != 0) ? "1" : "0") + "' />");
+							break;
+						case "type":
+							cell.setValue(itemTypeName);
+							break;
+						default:
+							cell.setValue(result.dom.selectNodes("//Item[@id='" + itemId + "']/id/@keyed_name")[0].text);
+							break;
+					}
+				}
+			}
+		}
+		window.statusbar.clearStatus(statusId);
+	}
+
+	function getAllFilesProperties(idlist, itemTypeName) {
+		if (idlist == undefined) {
+			var methodArgs = {};
+			methodArgs.itemtype = itemTypeName;
+			var res = aras.evalItemMethod("FE_GetTreeItemType", "", methodArgs);
+			if (!res) {
+				return;
+			}
+			selectConf[itemTypeName].configuration = res.configuration;
+			idlist = selectConf[itemTypeName].configuration;
+		}
+		for (var i = 0; i < idlist.length; i++) {
+			var nodesName = idlist[i].index.split("/");
+			var nodeName = nodesName[nodesName.length - 1];
+			if (allFileProperties[itemTypeName] == undefined)
+				allFileProperties[itemTypeName] = [];
+
+			var isExist = false;
+			for (var j = 0; j < allFileProperties[itemTypeName].length; j++) {
+				if (allFileProperties[itemTypeName][j].name == nodeName) {
+					isExist = true;
+					allFileProperties[itemTypeName].push({ name: nodeName, path: idlist[i].index, props: allFileProperties[itemTypeName][j].props });
+					break;
+				}
+			}
+
+			if (!isExist) {
+				var itemType = aras.getItemTypeDictionary(nodeName, "name");
+				if (!itemType || !itemType.node) {
+					return false;
+				}
+				var propNodes = itemType.node.selectNodes('Relationships/Item[@type="Property" and (name!="id")]');
+				var propertiesName = [];
+				for (var j = 0; j < propNodes.length; j++) {
+					var prop = propNodes[j];
+					var propName = aras.getItemProperty(prop, "name");
+					var propDataSource = aras.getItemPropertyAttribute(prop, "data_source", "keyed_name");
+					if (propDataSource == "File") {
+						propertiesName.push(propName);
+					}
+				}
+				allFileProperties[itemTypeName].push({ name: nodeName, path: idlist[i].index, props: propertiesName });
+			}
+		}
+		return;
+	}
+
+	function getFilesIdsByPaths(result, xPaths, itemId) {
+		var idlist = [];
+		if (xPaths == undefined) {
+			return idlist;
+		}
+		for (var j = 0; j < xPaths.length; j++) {
+			var nodeName = xPaths[j].path.split("/");
+			var propName = nodeName[nodeName.length - 1];
+			nodeName.splice(nodeName.length - 1, 1);
+
+			var stringPath = getStringPath(nodeName, itemId);
+			var nodesProperty = (propName == "related_id") ? result.dom.selectNodes(stringPath + propName + "/Item[@type='File']/id") : result.dom.selectNodes(stringPath + propName);
+			var relNodes = result.dom.selectNodes(stringPath.substring(0, stringPath.length - 1));
+
+			for (var i = 0; i < nodesProperty.length; i++) {
+				var node = nodesProperty[i];
+				if (node.text) {
+					idlist.push({ fileId: node.text, propName: propName, parentalType: nodeName[nodeName.length - 1], parentalId: relNodes[i].getAttribute("id") });
+				}
+			}
+		}
+		return idlist;
+	}
+
+	function getFilesName(idlist) {
+		if (idlist.length == 0) {
+			return "";
+		}
+		var query = new Item("File", "get");
+		query.setAttribute("idlist", idlist);
+		query.setAttribute("select", "filename")
+		var res = query.apply();
+
+		var files = [];
+		for (var t = 0; t < res.getItemCount(); t++) {
+			files.push(res.getItemByIndex(t).getProperty("filename"));
+		}
+		return files.join(",  ");
+	}
+
+	function onClickItem(tbItem) {
+		parent.returnValue = false;
+		tbItem.setEnabled(false);
+		switch (tbItem.getId()) {
+			case "delete":
+				var itemIds = grid.GetSelectedItemIDs(",").split(",");
+				if (itemIds[0] == "") {
+					aras.AlertError(aras.getResource("", "searchdlg.select_item"));
+					tbItem.setEnabled(true);
+					return;
+				}
+				deleteRowsFromGrid(itemIds);
+				tbItem.setEnabled(true);
+				break;
+			case "select":
+				parent.returnValue = getFilesIdsForReturn();
+				if (parent.returnValue.length == 0) {
+					var msg = grid.getRowCount() > 0 ? aras.getResource("", "fe.configuration_empty") : aras.getResource("", "searchdlg.select_item");
+					aras.AlertError(msg);
+					tbItem.setEnabled(true);
+					return;
+				}
+				aras.getMostTopWindowWithAras(window).window.close();
+				break;
+			case "select_config":
+				selectConfigurations();
+				break;
+			case "select_instances":
+				selectInstancies();
+				break;
+		}
+		tbItem.setEnabled(true);
+	}
+
+	function deleteRowsFromGrid(itemIds) {
+		for (var i = 0; i < itemIds.length; i++) {
+			var cellType = grid.cells(itemIds[i], 1).getValue();
+			if (!cellType) {
+				break;
+			}
+			for (var j = 0; j < instanceIds[cellType].length; j++) {
+				if (itemIds[i] == instanceIds[cellType][j]) {
+					delete instanceIds[cellType][j];
+					for (var t = 0; t < rowsIds.length; t++) {
+						if (itemIds[i] == rowsIds[t]) {
+							delete rowsIds[t];
+							break;
+						}
+					}
+					grid.deleteRow(itemIds[i]);
+					break;
+				}
+			}
+		}
+	}
+
+	function onClick(row, col) {
+		var rowId = grid.getSelectedId();
+		if (rowId) {
+			var cell = grid.cells(rowId, col);
+			if (cell && cell.isCheckbox()) {
+				var cellFiles = grid.cells(rowId, 2);
+				if (cell.isChecked()) {
+					var tCount = filesIds[rowId].allFileCount;
+					filesIds[rowId] = [];
+					filesIds[rowId].allFileCount = tCount;
+					cellFiles.setValue("");
+				}
+				else {
+					cellFiles.setValue(getAllFilesName(rowId, grid.cells(rowId, 1).getValue()));
+				}
+				cell.setValue(!cell.isChecked());
+			}
+		}
+	}
+
+	function getAllFilesName(itemId, itemTypeName) {
+		filesIds[itemId] = getFullFileConf(itemId, itemTypeName);
+		filesIds[itemId].allFileCount = filesIds[itemId].length;
+		var fileArray = [];
+		for (var index = 0; index < filesIds[itemId].length; index++) {
+			fileArray.push(filesIds[itemId][index].fileId);
+		}
+		return getFilesName(fileArray.join());
+	}
+
+	function getFullFileConf(itemId, itemTypeName) {
+		var idlist = [];
+		if (!itemTypeName) {
+			return;
+		}
+		if (allFileProperties[itemTypeName] == undefined || allFileProperties[itemTypeName].length == 0) {
+			getAllFilesProperties(selectConf[itemTypeName].configuration, itemTypeName)
+		}
+		for (var i = 0; i < allFileProperties[itemTypeName].length; i++) {
+			var nodeName = allFileProperties[itemTypeName][i].path.split("/");
+			var propsName = allFileProperties[itemTypeName][i].props;
+
+			var res = createAML(nodeName, propsName, itemId);
+			var query = new Item();
+			query.loadAML(res.aml);
+			var result = query.apply();
+
+			for (var j = 0; j < propsName.length; j++) {
+				var nodes = (propsName[j] == "related_id") ? result.dom.selectNodes(res.string_path + propsName[j] + "/Item[@type='File']/id") : result.dom.selectNodes(res.string_path + propsName[j]);
+				var relNodes = result.dom.selectNodes(res.string_path.substring(0, res.string_path.length - 1));
+				for (var t = 0; t < nodes.length; t++) {
+					var node = nodes[t];
+					if (node.getAttribute("keyed_name")) {
+						idlist.push({ fileId: node.text, propName: propsName[j], parentalType: nodeName[nodeName.length - 1], parentalId: relNodes[t].getAttribute("id") });
+					}
+				}
+			}
+		}
+		return idlist;
+	}
+
+	function getStringPath(nodeName, itemId) {
+		var stringPath = "//";
+		for (var j = 0; j < nodeName.length; j++) {
+			var node = nodeName[j];
+			if (node == "Relationships" || node == "related_id") {
+				stringPath += node + "/";
+			}
+			else {
+				stringPath += (j == 0) ? "Item[@id='" + itemId + "']/" : "Item/";
+			}
+		}
+		return stringPath;
+	}
+
+	function createAML(nodeName, propsName, itemId) {
+		var aml = "";
+		var string_path = "//";
+		for (var j = 0; j < nodeName.length; j++) {
+			var node = nodeName[j];
+			if (node == "Relationships" || node == "related_id") {
+				string_path += node + "/";
+				aml += "<" + node + ">";
+			}
+			else {
+				string_path += "Item/";
+				aml += "<Item type='" + node + "' action='get'";
+				if (j == 0)
+					aml += " id='" + itemId + "'";
+				if (j == nodeName.length - 1)
+					aml += " select='id, " + propsName.join() + "' ";
+				if (nodeName[j + 1] == "related_id")
+					aml += " select='id, related_id'";
+				aml += ">";
+			}
+		}
+		for (var j = nodeName.length - 1; j >= 0; j--) {
+			var node = nodeName[j];
+			if (node == "Relationships" || node == "related_id")
+				aml += "</" + node + ">";
+			else
+				aml += "</Item>";
+		}
+		return ({ aml: aml, string_path: string_path });
+	}
+
+	function getArray(array) {
+		var newArray = [];
+		for (var i = 0; i < array.length; i++) {
+			newArray.push(array[i]);
+		}
+		return newArray;
+	}
+
+	function initGrid() {
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", undefined, function(control) {
+			grid = control;
+			clientControlsFactory.on(grid, {
+				"gridClick": onClick,
+				"gridLinkClick": onLink
+			});
+			var countColumn = requestedPropertiesLabels.length;
+			if (requestedPropertiesColumnsWidth.length != countColumn || requestedPropertiesColumnsAligns.length != countColumn) {
+				aras.AlertError(aras.getResource("", "fe.wrong_input_error"));
+				return;
+			}
+			var gridXml = "<table multiselect='true'><thead>";
+			var col = ""
+			for (var i = 0; i < countColumn; i++) {
+				gridXml += "<th align='c'>" + requestedPropertiesLabels[i] + "</th>";
+				col += "<column width='" + requestedPropertiesColumnsWidth[i] + "%' order='" + i + "' align='" + requestedPropertiesColumnsAligns[i].substr(0, 1) + "' />'";
+			}
+			gridXml += "</thead><columns>" + col + "</columns></table>";
+			grid.InitXML(gridXml);
+		});
+	}
+
+	function selectConfigurations() {
+		var tb = toolbar.getItem("item_type");
+		var itemTypeName = tb.getItem(tb.getSelectedIndex());
+		var methodArgs = {};
+		methodArgs.aras = aras;
+		methodArgs.mainItemTypeName = itemTypeName;
+		methodArgs.title = aras.getResource("", "fe.select_configurations_title");
+		methodArgs.selectNode = selectConf[itemTypeName].paths ? selectConf[itemTypeName] : undefined;
+
+		var res = aras.evalItemMethod("FE_SelectConfiguration", "", methodArgs);
+		if (!res || res.length == 0) {
+			return;
+		}
+		selectConf[itemTypeName] = res;
+	}
+
+	function selectInstancies() {
+		var tb = toolbar.getItem("item_type");
+		var params = {};
+		params.aras = aras;
+		params.itemtypeName = tb.getItem(tb.getSelectedIndex());
+		params.multiselect = true;
+
+		params.type = "SearchDialog";
+		window.ArasModules.MaximazableDialog.show("iframe", params).promise.then(function (dlgRes) {
+			if (!dlgRes || dlgRes.length == 0) {
+				return;
+			}
+			addRowsToGrid(dlgRes);
+		});
+	}
+
+	function onLink(linkVal) {
+		var itemTypeName = grid.cells(linkVal, 1).getValue();
+
+		var methodArgs = {};
+		methodArgs.aras = aras;
+		methodArgs.itemtypeId = linkVal;
+		methodArgs.mainItemTypeName = itemTypeName;
+		methodArgs.selectNode = selectConf[itemTypeName];
+		methodArgs.configurationList = selectConf[itemTypeName].configuration;
+		methodArgs.filesIds = filesIds[linkVal];
+		methodArgs.title = aras.getResource("", "fe.select_files_title");
+		aras.evalItemMethod("FE_SelectFilesFromInstance", "", methodArgs).then(function(res) {
+			if (!res || res.length == 0) {
+				return;
+			}
+			changeFileList(res.fileIds, linkVal);
+		});
+	}
+
+	function changeFileList(array, itemId) {
+		array.allFileCount = filesIds[itemId].allFileCount;
+		filesIds[itemId] = array;
+
+		array = [];
+		for (var i = 0; i < filesIds[itemId].length; i++) {
+			array.push(filesIds[itemId][i].fileId);
+		}
+
+		//change file list
+		var cell = grid.cells(itemId, 2);
+		if (cell) {
+			cell.setValue(getFilesName(getArray(array).join()));
+		}
+		//change checkbox 'select all'
+		cell = grid.cells(itemId, 4);
+		if (cell) {
+			cell.setValue(filesIds[itemId].allFileCount == filesIds[itemId].length && filesIds[itemId].allFileCount != 0);
+		}
+	}
+
+	var toolbar, grid;
+	function onload_handler() {
+		if (!dlgArgs) {
+			return;
+		}
+		clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", { connectId: "top" }, function(control) {
+			toolbar = control;
+			toolbar.loadXml(aras.getI18NXMLResource("fileExchange_toolbar.xml", aras.getBaseURL()));
+			toolbar.show();
+			clientControlsFactory.on(toolbar, {
+				"onClick": onClickItem
+			});
+		});
+
+		clientControlsFactory.createControl("Aras.Client.Controls.Experimental.StatusBar", { aras: aras, resourceUrl: aras.getI18NXMLResource("defaultstatusbar2.xml", aras.getBaseURL())}, function(control){
+			statusbar = control;
+			document.getElementById("bottom").appendChild(statusbar.domNode);
+		});
+
+		initGrid();
+		getAllItemType();
+	}
+	window.addEventListener("load", onload_handler, false);
+
+	function getAllItemType() {
+		var itemTypeChoice = toolbar.getItem("item_type");
+		if (!itemTypeChoice) {
+			return;
+		}
+
+		itemTypeChoice.removeAll();
+		var query = aras.newIOMInnovator();
+		query = query.applyMethod("FE_GetItemTypeForDilaogAddFile", "");
+		for (var i = 0; i < query.getItemCount(); i++) {
+			var node = query.getItemByIndex(i);
+			var name = node.getPropertyAttribute("id", "keyed_name");
+			itemTypeChoice.Add(node.getID(), name);
+			selectConf[name] = [];
+			instanceIds[name] = [];
+		}
+	}
+</script>
+<div style="width: 100%; height: 100%; position: fixed; top: 0px; left: 0px; margin: 0px; padding: 0px;" id="BorderContainer">
+	<div id="top" style="height: 30px; width: 100%"></div>
+	<div id="gridTD" style="padding: 0px; top: 30px; bottom: 20px; width: 100%; position: fixed;"></div>
+	<div id="bottom" style="height: 20px; position: fixed; bottom: 0px; width: 100%"></div>
+</div>
+]]></html_code>
+      <is_disabled>0</is_disabled>
+      <is_visible>1</is_visible>
+      <label_position>top</label_position>
+      <list_no_blank>0</list_no_blank>
+      <positioning>static</positioning>
+      <sort_order>128</sort_order>
+      <source_id keyed_name="A8FAF91377FC408B955D7F89B4E8444F" type="Body">A8FAF91377FC408B955D7F89B4E8444F</source_id>
+      <tab_stop>1</tab_stop>
+      <x>2</x>
+      <y>1</y>
+      <name>html0</name>
+     </Item>
+    </Relationships>
+   </Item>
+  </Relationships>
+ </Item>
+</AML>

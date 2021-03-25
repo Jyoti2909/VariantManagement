@@ -1,0 +1,163 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		body {
+			margin: 0px;
+			padding: 0px;
+			width: 100%;
+			height: 100%;
+			overflow: auto;
+		}
+		#foreignTree {
+			width: 100%;
+			height: auto;
+			overflow: hidden;
+		}
+	</style>
+	<script>
+		window.dialogArguments = window.frameElement.dialogArguments;
+		var aras = dialogArguments.aras;
+		document.title = aras.getResource("", "foreignpropselecttree.foreign_prop_selec_tree");
+	</script>
+	<script type="text/javascript" src="../javascript/dialog.js"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../javascript/dojo'"></script>
+</head>
+<script type="text/javascript">
+	var item = dialogArguments.item,
+		mainTreeApplet,
+		xpath = "Relationships/Item[@type='Property' and data_type='item']";
+
+	onload = function() {
+		clientControlsFactory.createControl("Aras.Client.Controls.Experimental.Tree", {persist: true}, function(control) {
+			mainTreeApplet = control;
+			document.getElementById("foreignTree").appendChild(mainTreeApplet._tree.domNode);
+
+			clientControlsFactory.on(mainTreeApplet, {
+				"itemClick": clickHandler,
+				"itemDoubleClick": dblClickHandler
+			});
+			updateTree();
+		});
+	}
+
+	function updateTree() {
+		var props = item.selectNodes(xpath);
+		var initXML = aras.createXMLDocument();
+		var xml;
+		xml = "" +
+			"<table delim='|' ondoubleclick='dblClickHandler' onclick='clickHandler'>" +
+			"	<thead>" +
+			"		<th align='center'>" + aras.getResource("", "foreignpropselecttree.foreign_props") + "</th>" +
+			"	</thead>" +
+			"</table>";
+
+		initXML.loadXML(xml);
+
+		if (initXML.parseError.errorCode != 0) {
+			var myErr = initXML.parseError
+			aras.AlertError(aras.getResource("", "common.an_internal_error_has_occured"), aras.getResource("", "foreignpropselecttree.error", myErr.reason), aras.getResource("", "common.client_side_err"));
+		}
+
+		var idsList = "";
+		for (var j = 0; j < props.length; j++) {
+			var prop_0 = props[j];
+			var IT_id = aras.getItemProperty(prop_0, "data_source", "", "", "name, source_id");
+			idsList += "'" + IT_id + "',";
+		}
+
+		if (idsList.length > 0) {
+			var _dom = aras.createXMLDocument();
+			_dom.loadXML("<Item type='Property' action='get' />");
+			var _item = _dom.documentElement;
+			_item.setAttribute("select", "name, source_id");
+			var criteria = _dom.createElement("source_id");
+			_item.appendChild(criteria);
+			criteria.text = idsList.substring(0, idsList.length - 1);
+			criteria.setAttribute("condition", "in");
+			var res = aras.soapSend("ApplyItem", _dom.xml);
+
+			if (res.getFaultCode() != 0) {
+				aras.AlertError(res);
+				return;
+			}
+			var props_1 = res.getResult();
+		}
+
+        var uniqueId = 0;
+		for (var i = 0; i < props.length; i++) {
+			var prop_0 = props[i];
+			var prop_0_id = prop_0.getAttribute("id");
+			var IT_id = aras.getItemProperty(prop_0, "data_source");
+			var tr_0 = initXML.createElement("tr");
+
+			tr_0.setAttribute("id", "fp_id_" + (uniqueId++));
+			tr_0.setAttribute("level", "0");
+			tr_0.setAttribute("icon0", "../images/Component.svg");
+			tr_0.setAttribute("icon1", "../images/Component.svg");
+			var td_0 = initXML.createElement("td");
+			td_0.text = prop_0.selectSingleNode("name").text;
+			tr_0.appendChild(td_0);
+
+			var prp = props_1.selectNodes("Item[source_id = '" + IT_id + "']");
+			for (var j = 0; j < prp.length; j++) {
+				prop_1 = prp[j];
+				var tr_1 = initXML.createElement("tr");
+				tr_1.setAttribute("id", "fp_id_" + (uniqueId++));
+				tr_1.setAttribute("level", "1");
+				tr_1.setAttribute("icon0", "../images/Component.svg");
+				tr_1.setAttribute("icon1", "../images/Component.svg");
+				tr_1.setAttribute("action", "'" + prop_0_id + "','" + prop_1.selectSingleNode("id").text + "'");
+				var td_1 = initXML.createElement("td");
+				td_1.text = prop_1.selectSingleNode("name").text;
+				tr_1.appendChild(td_1);
+				tr_0.appendChild(tr_1);
+			}
+
+			initXML.documentElement.appendChild(tr_0);
+		}
+
+		mainTreeApplet.initXML(initXML.xml);
+	}
+
+	var data_src = null;
+	var foreign_prop = null;
+
+	function clickHandler(ds, fp) {
+		data_src = ds;
+		foreign_prop = fp;
+	}
+
+	function dblClickHandler() {
+		if (!foreign_prop) {
+			return;
+		}
+		var propNd = item.selectSingleNode(xpath + "[@id='" + data_src + "']");
+		if (!propNd) {
+			return;
+		}
+		var keyed_name = aras.getKeyedNameEx(propNd);
+		propNd = propNd.cloneNode(false);
+		propNd.setAttribute("action", "skip");
+		propNd.setAttribute("keyed_name", keyed_name);
+		aras.setItemProperty(propNd, "keyed_name", keyed_name);
+
+		var res = aras.newObject();
+		res.data_source = propNd;
+		res.foreign_property = foreign_prop;
+
+		//wait dojo doubleMouseClick processing
+		setTimeout(function() {
+			dialogArguments.dialog.close(res);
+		}, 0);
+	}
+</script>
+<body class="claro">
+	<div style="width: 100%; height: 100%; overflow: auto;">
+		<div id="foreignTree"></div>
+	</div>
+</body>
+</html>

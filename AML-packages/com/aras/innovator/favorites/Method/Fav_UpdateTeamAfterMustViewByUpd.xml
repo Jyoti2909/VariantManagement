@@ -1,0 +1,103 @@
+﻿<AML>
+ <Item type="Method" id="958D0A2DC0D4499CB8C738DE7881DFA9" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	return ProcessMethodLogic(new UserPermissionManager());
+}
+
+internal Item ProcessMethodLogic(IUserPermissionManager permissionManager)
+{
+	const string FavoriteMustViewByReaderID = "32FC798A2D3B4D30B58B378BE112C1C3";
+	bool permsWasSet = false;
+	try
+	{
+		if (string.IsNullOrEmpty(this.getRelatedItemID()) && this.getRelatedItem() == null)
+		{
+			return this;
+		}
+
+		permsWasSet = permissionManager.GrantCurrentIdentityByAdminPermissions();
+		Item favoriteMustViewBy = this.newItem("FavoriteMustViewBy", "get");
+		favoriteMustViewBy.setID(this.getID());
+		favoriteMustViewBy.setAttribute("select", "related_id,source_id(team_id)");
+
+		favoriteMustViewBy = favoriteMustViewBy.apply();
+		if (favoriteMustViewBy.isError())
+		{
+			return favoriteMustViewBy;
+		}
+
+		if (string.Equals(this.getRelatedItemID(), favoriteMustViewBy.getRelatedItemID(),
+			StringComparison.OrdinalIgnoreCase))
+		{
+			return this;
+		}
+
+		Item favoriteItem = favoriteMustViewBy.getPropertyItem("source_id");
+		string sharedWithId = favoriteMustViewBy.getRelatedItemID();
+		string teamId = favoriteItem.getProperty("team_id");
+		Item teamIdentity = this.newItem("Team Identity", "get");
+		teamIdentity.setProperty("source_id", teamId);
+		teamIdentity.setProperty("team_role", FavoriteMustViewByReaderID);
+		teamIdentity.setProperty("related_id", sharedWithId);
+		teamIdentity.setAttribute("select", "id");
+		teamIdentity = teamIdentity.apply();
+
+		if (!teamIdentity.isError())
+		{
+			string teamIdentityId = teamIdentity.getID();
+			Item updatedTeam = this.newItem("Team Identity", "edit");
+			updatedTeam.setID(teamIdentityId);
+
+			string newSharedWithId = this.getRelatedItemID();
+			if (!string.IsNullOrEmpty(newSharedWithId))
+			{
+				updatedTeam.setProperty("related_id", newSharedWithId);
+			}
+			else
+			{
+				Item sharedIden = this.getRelatedItem();
+				updatedTeam.setPropertyItem("related_id", sharedIden);
+			}
+
+			updatedTeam = updatedTeam.apply();
+			if (updatedTeam.isError())
+			{
+				return updatedTeam;
+			}
+		}
+
+		return this;
+
+	}
+	finally
+	{
+		if (permsWasSet)
+		{
+			permissionManager.RevokeAdminPermissionsFromCurrentUser();
+		}
+	}
+}
+
+internal interface IUserPermissionManager
+{
+	bool GrantCurrentIdentityByAdminPermissions();
+	bool RevokeAdminPermissionsFromCurrentUser();
+}
+
+internal class UserPermissionManager : IUserPermissionManager
+{
+	public bool GrantCurrentIdentityByAdminPermissions()
+	{
+		Aras.Server.Security.Identity superUser = Aras.Server.Security.Identity.GetByName("Super User");
+		return Aras.Server.Security.Permissions.GrantIdentity(superUser);
+	}
+
+	public bool RevokeAdminPermissionsFromCurrentUser()
+	{
+		Aras.Server.Security.Identity superUser = Aras.Server.Security.Identity.GetByName("Super User");
+		return Aras.Server.Security.Permissions.RevokeIdentity(superUser);
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>Fav_UpdateTeamAfterMustViewByUpd</name>
+ </Item>
+</AML>

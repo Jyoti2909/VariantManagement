@@ -1,0 +1,21 @@
+﻿<AML>
+ <Item type="SQL" id="01847EC48B24444094047B4F018362FC" action="add">
+  <execution_count>3</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>GetActivitiesNumbers_select_wbs</old_name>
+  <sqlserver_body><![CDATA[CREATE PROCEDURE GetActivitiesNumbers_select_wbs(@wbsId char(32))
+as
+begin
+SELECT id1, prev_item, wbs_idx FROM 
+(SELECT wbs.id id1, wbs.prev_item, sub.id id2, wbs.wbs_index wbs_idx FROM sub_wbs sub LEFT JOIN (SELECT id, prev_item, wbs_index  FROM wbs_element WHERE 
+ EXISTS(SELECT 1 FROM wbs_activity2 WHERE source_id=wbs_element.id) OR 
+ EXISTS(SELECT 1 FROM sub_wbs WHERE source_id=wbs_element.id)) wbs ON (wbs.id=sub.related_id)
+WHERE sub.source_id = @wbsId) res WHERE id1 IS NOT NULL ORDER BY CAST(REPLACE(wbs_idx, '.', '') AS INT)
+end
+]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>GetActivitiesNumbers_select_wbs</name>
+ </Item>
+</AML>

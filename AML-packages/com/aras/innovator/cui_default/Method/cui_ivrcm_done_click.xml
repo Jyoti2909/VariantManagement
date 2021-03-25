@@ -1,0 +1,25 @@
+﻿<AML>
+ <Item type="Method" id="C856C6C0683D4623867CA2B907D796BC" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[if (window.grid) {
+	const selectedIds = window.grid.getSelectedItemIds();
+	const idsArray = selectedIds.map(function(id) {
+		return '@id="' + id + '"';
+	});
+	const relatedItems = window.item.selectNodes('Relationships/Item[' + idsArray.join(' or ') + ']/related_id/Item');
+	for (let i = 0; i < relatedItems.length; i++) {
+		let item = relatedItems[i];
+		const isNew = window.aras.isNew(item);
+		const isDirty = window.aras.isDirtyEx(item);
+		if (isNew || isDirty) {
+			item = window.aras.saveItemEx(item);
+		}
+		if (item) {
+			window.aras.unlockItemEx(item);
+		}
+	}
+}]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_ivrcm_done_click</name>
+ </Item>
+</AML>

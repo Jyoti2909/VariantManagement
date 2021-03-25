@@ -1,0 +1,410 @@
+﻿<AML>
+ <Item type="SQL" id="508613A2E4744916B8F15F61DD76BB51" action="add">
+  <execution_count>2</execution_count>
+  <execution_flag>immediate</execution_flag>
+  <old_name>activity_status_rollup</old_name>
+  <sqlserver_body><![CDATA[/*Purpose: Computes each [Activity2] status FROM its state, 
+            date_due_sched with formuli FROM joining 
+            [Preference],[PM_ProjectColorMap],[PM_ProjectColorPeriod].
+            Then rolls up status and duration info up to the
+            [Wbs Element] and [Project] levels.
+   Input:   the ID of a project.
+   Output:  SUCCESS or FAILURE status.*/
+CREATE PROCEDURE [Activity_status_rollup](@PROJECT_ID CHAR(32),
+                                          @TZ_NAME    NVARCHAR(50) = NULL)
+AS
+  BEGIN
+      EXEC [innovator].[Business_calendar_compile_check]
+        @TZ_NAME
+
+      DECLARE @WBS_ID CHAR(32)
+      DECLARE @ACTIVITIES TABLE
+        (
+           [ID] CHAR(32) COLLATE database_default PRIMARY KEY
+        )
+      DECLARE @WBS_ELEMENTS TABLE
+        (
+           [ID]    CHAR(32) COLLATE database_default PRIMARY KEY,
+           [LEVEL] INT,
+           [ORD]   INT
+        )
+      DECLARE @ROLLUP_STATUS VARCHAR(64)
+      DECLARE @rollup_percent_compl INT
+
+      SET @WBS_ID = (SELECT WBS_ID
+                     FROM   [PROJECT]
+                     WHERE  ID = @PROJECT_ID)
+
+      INSERT @WBS_ELEMENTS
+      SELECT ID,
+             LEVEL,
+             ORD
+      FROM   [Select_wbs_elements](@WBS_ID)
+
+      INSERT @ACTIVITIES
+      SELECT ID
+      FROM   [Select_activities](@WBS_ID)
+
+      DECLARE @NOW DATETIME
+
+      SET @NOW = Getutcdate()
+
+      DECLARE @error_msg VARCHAR(4000)
+      DECLARE @error_severity INT
+      DECLARE @error_state INT
+      DECLARE @work_day_duration INT
+
+      SET @work_day_duration = 8
+
+      BEGIN TRY
+          UPDATE activity2
+          SET    status = [innovator].[Select_activity_status] (activity2.state, (SELECT value
+                                                                                  FROM   [innovator].[Business_datediff] ((SELECT value
+                                                                                                                           FROM   [innovator].[Select_activity_value] (activity2.id, (SELECT target_date
+                                                                                                                                                                                      FROM   PM_ProjectColormap
+                                                                                                                                                                                      WHERE  id = (SELECT value
+                                                                                                                                                                                                   FROM   [innovator].[Select_pm_projectcolormap_id](activity2.state))), @NOW)), (SELECT value
+                                                                                                                                                                                                                                                                                  FROM   [innovator].[Select_activity_value] (activity2.id, (SELECT comparison_date
+                                                                                                                                                                                                                                                                                                                                             FROM   PM_ProjectColormap
+                                                                                                                                                                                                                                                                                                                                             WHERE  id = (SELECT value
+                                                                                                                                                                                                                                                                                                                                                          FROM   [innovator].[Select_pm_projectcolormap_id](activity2.state))), @NOW)), @TZ_NAME))),
+                 rollup_work_est = (SELECT Sum([innovator].[Select_work_est_for_rollup](aa.work_est, a.expected_duration, @work_day_duration))
+                                    FROM   activity2 a
+                                           INNER JOIN activity2_assignment aa
+                                                   ON aa.source_id = a.id
+                                    WHERE  a.id = activity2.id),
+                 rollup_actual_work = (SELECT Sum(work_hours)
+                                       FROM   Time_Record
+                                       WHERE  source_id = activity2.id),
+                 rollup_date_start_act = (SELECT Min(date_start_act)
+                                          FROM   Activity2_Assignment
+                                          WHERE  source_id = activity2.id)
+          WHERE  activity2.id IN (SELECT id
+                                  FROM   @activities)
+      END TRY
+
+      BEGIN CATCH
+          IF Error_number() = 8115 /* Arithmetic overflow error number */
+            BEGIN
+                DECLARE @activity_name NVARCHAR(128)
+
+                -- get activity_id of activity with overflowed Rollup Actual Work property
+                SET @activity_name = (SELECT name
+                                      FROM   innovator.ACTIVITY2 AS a
+                                             RIGHT JOIN (SELECT c.source_id
+                                                         FROM   (SELECT source_id,
+                                                                        Sum(work_hours) AS sum_hours
+                                                                 FROM   innovator.Time_Record
+                                                                 WHERE  source_id IN (SELECT id
+                                                                                      FROM   @activities)
+                                                                 GROUP  BY source_id) AS c
+                                                         WHERE  c.sum_hours = (SELECT Max(c.sum_hours) AS max_SUM
+                                                                               FROM   (SELECT Sum(work_hours) AS sum_hours
+                                                                                       FROM   [innovator].Time_Record
+                                                                                       WHERE  source_id IN (SELECT id
+                                                                                                            FROM   @activities)
+                                                                                       GROUP  BY source_id) AS c)) AS b
+                                                     ON a.id = b.source_id)
+
+                IF @activity_name IS NOT NULL
+                  BEGIN
+                      SET @error_msg = 'Overflow error in the SUM of the hours in the Time Records relationship of "'
+                                       + @activity_name
+                                       + '". The rollup_work_est property does not allow this SUM to be greater than it''s precision.'
+                      SET @error_severity = 16 /* Severity Levels 11 through 16: These messages indicate errors that can be corrected by the user. */
+                      SET @error_state = 1
+
+                      RAISERROR(@error_msg,@error_severity,@error_state)
+
+                      RETURN @@ERROR;
+                  END
+            END
+          ELSE
+            BEGIN
+                SELECT @error_msg = Error_message(),
+                       @error_severity = Error_severity(),
+                       @error_state = Error_state()
+
+                RAISERROR (@error_msg,@error_severity,@error_state)
+            END
+      END CATCH
+
+      UPDATE activity2
+      SET    rollup_percent_compl = (SELECT Sum (aa.percent_compl * [innovator].[Select_work_est_for_rollup] (aa.work_est, a.expected_duration, @work_day_duration)) / Cast (( CASE
+                                                                                                                                                                                 WHEN activity2.rollup_work_est = 0 THEN NULL
+                                                                                                                                                                                 ELSE activity2.rollup_work_est
+                                                                                                                                                                               END ) AS FLOAT)
+                                     FROM   activity2 a
+                                            INNER JOIN Activity2_Assignment aa
+                                                    ON aa.source_id = a.id
+                                     WHERE  a.id = activity2.id)
+      WHERE  activity2.id IN (SELECT id
+                              FROM   @activities)
+
+      UPDATE activity2
+      SET    earned_value = ( CASE
+                                WHEN (SELECT Count(id)
+                                      FROM   Activity2_Assignment
+                                      WHERE  source_id = activity2.id) > 0 THEN rollup_work_est * rollup_percent_compl
+                                ELSE [innovator].[Select_work_est_for_rollup] (work_est, expected_duration, @work_day_duration) * percent_compl
+                              END ) / Cast(100 AS FLOAT),
+             planned_value = Cast ((SELECT value
+                                    FROM   [innovator].[Business_datediff](activity2.date_start_sched, @NOW, @TZ_NAME)) AS FLOAT) / ( CASE
+                                                                                                                                        WHEN activity2.expected_duration = 0 THEN 1
+                                                                                                                                        ELSE activity2.expected_duration
+                                                                                                                                      END ) * ( CASE
+                                                                                                                                                  WHEN (SELECT Count(id)
+                                                                                                                                                        FROM   Activity2_Assignment
+                                                                                                                                                        WHERE  source_id = activity2.id) > 0 THEN rollup_work_est
+                                                                                                                                                  ELSE [innovator].[Select_work_est_for_rollup](work_est, expected_duration, @work_day_duration)
+                                                                                                                                                END )
+      WHERE  activity2.id IN (SELECT id
+                              FROM   @activities)
+
+      --DATA_TYPE_3085F38DFB9749B0A1C1F907DC304D1 and DATA_TYPE_BFFAEA10212C413F80F2C6DF0FB67622 is alias data type for properties cpi and spi 
+      DECLARE @CPI_SPI_DEC TABLE
+        (
+           ID  CHAR(32) COLLATE database_default PRIMARY KEY,
+           cpi DATA_TYPE_3085F38DFB9749B0A1C1F907DC304D10,
+           spi DATA_TYPE_BFFAEA10212C413F80F2C6DF0FB67622
+        )
+
+      INSERT @CPI_SPI_DEC
+      SELECT ID,
+             Cast(earned_value AS FLOAT) / ( CASE
+                                               WHEN (SELECT Count(id)
+                                                     FROM   Time_Record
+                                                     WHERE  source_id = activity2.id) > 0 THEN ( CASE
+                                                                                                   WHEN activity2.rollup_actual_work = 0 THEN NULL
+                                                                                                   ELSE activity2.rollup_actual_work
+                                                                                                 END )
+                                               ELSE ( CASE
+                                                        WHEN activity2.actual_work = 0 THEN NULL
+                                                        ELSE activity2.actual_work
+                                                      END )
+                                             END ),
+             Cast(earned_value AS FLOAT) / ( CASE
+                                               WHEN planned_value = 0 THEN NULL
+                                               ELSE planned_value
+                                             END )
+      FROM   ACTIVITY2
+      WHERE  ID IN (SELECT id
+                    FROM   @activities)
+
+      UPDATE activity2
+      SET    cpi = CASE
+                     WHEN Abs(t.cpi) < 100
+                           OR t.cpi IS NULL THEN t.cpi
+                     ELSE 99.9999
+                   END,
+             spi = CASE
+                     WHEN Abs(t.spi) < 100
+                           OR t.spi IS NULL THEN t.spi
+                     ELSE 99.9999
+                   END
+      FROM   activity2
+             INNER JOIN @CPI_SPI_DEC AS t
+                     ON activity2.id = t.id
+
+      DELETE FROM @CPI_SPI_DEC
+
+      DECLARE @J INT
+
+      SET @J = (SELECT Max(LEVEL)
+                FROM   @WBS_ELEMENTS)
+
+      DECLARE @WBS_ELEMENT_TMP TABLE
+        (
+           ID                    CHAR(32) COLLATE database_default PRIMARY KEY,
+           ROLLUP_DURATION_COMPL INT
+        )
+      DECLARE @R TABLE
+        (
+           ID                        CHAR(32) COLLATE database_default PRIMARY KEY,
+           ROLLUP_DURATION_SUM       INT,
+           ROLLUP_DURATION_COMPL_SUM FLOAT,
+           ROLLUP_DATE_SCHED_START   DATETIME,
+           ROLLUP_DATE_SCHED_DUE     DATETIME,
+           rollup_work_est           INT,
+           -- Using alias data type for ACTIVITY2. ROLLUP_ACTUAL_WORK WHERE 44B7A53F168D414ABC98371A1912D166 is ID of this property
+           rollup_actual_work        DATA_TYPE_44B7A53F168D414ABC98371A1912D166,
+           deliv_required            CHAR(1) COLLATE database_default,
+           rollup_date_start_act     DATETIME,
+           rollup_percent_compl      INT,
+           rollup_planned_value      INT
+        )
+      DECLARE @CursorVar CURSOR
+      DECLARE @tmpWBS_ID CHAR(32)
+
+      WHILE @J > -1
+        BEGIN
+            SET @CursorVar = CURSOR FAST_FORWARD
+            FOR SELECT ID
+                FROM   @WBS_ELEMENTS
+                WHERE  LEVEL = @J
+
+            OPEN @CursorVar
+
+            FETCH NEXT FROM @CursorVar INTO @tmpWBS_ID
+
+            WHILE @@FETCH_STATUS = 0
+              BEGIN
+                  BEGIN TRY
+                      INSERT @R
+                      SELECT @tmpWBS_ID,
+                             t.*
+                      FROM   [innovator].[Select_wbs_element_pure_rollup_values](@tmpWBS_ID) t
+                  END TRY
+
+                  BEGIN CATCH
+                      IF Error_number() = 8115
+                        BEGIN
+                            DECLARE @wbs_name NVARCHAR(64);
+
+                            SET @wbs_name = (SELECT name
+                                             FROM   WBS_ELEMENT
+                                             WHERE  id = @tmpWBS_ID);
+                            SET @error_msg = 'Overflow error in the SUM of the total hours in the "'
+                                             + @wbs_name
+                                             + '" Work Breakdown Structure.  The rollup_actual_work property does not allow the SUM of all Activity Time Records to be greater than it''s precision.';
+                            SET @error_severity = 16; /* Severity Levels 11 through 16: These messages indicate errors that can be corrected by the user. */
+                            SET @error_state = 1;
+
+                            RAISERROR(@error_msg,@error_severity,@error_state);
+
+                            RETURN @@ERROR;
+                        END
+                      ELSE
+                        BEGIN
+                            SELECT @error_msg = Error_message(),
+                                   @error_severity = Error_severity(),
+                                   @error_state = Error_state();
+
+                            RAISERROR (@error_msg,@error_severity,@error_state);
+                        END
+                  END CATCH
+
+                  FETCH NEXT FROM @CursorVar INTO @tmpWBS_ID
+              END
+
+            CLOSE @CursorVar
+
+            UPDATE WBS_ELEMENT
+            SET    ROLLUP_STATUS = [innovator].[Select_wbs_element_rollup_status](WBS_ELEMENT.ID),
+                   ROLLUP_DURATION_SUM = R.ROLLUP_DURATION_SUM,
+                   ROLLUP_DURATION_COMPL_SUM = R.ROLLUP_DURATION_COMPL_SUM,
+                   ROLLUP_DATE_SCHED_START = R.ROLLUP_DATE_SCHED_START,
+                   ROLLUP_DATE_SCHED_DUE = R.ROLLUP_DATE_SCHED_DUE,
+                   rollup_work_est = R.rollup_work_est,
+                   rollup_actual_work = R.rollup_actual_work,
+                   deliv_required = R.deliv_required,
+                   rollup_date_start_act = R.rollup_date_start_act,
+                   rollup_percent_compl = R.rollup_percent_compl,
+                   rollup_planned_value = R.rollup_planned_value
+            FROM   WBS_ELEMENT
+                   INNER JOIN @R AS R
+                           ON WBS_ELEMENT.ID = R.ID
+
+            DELETE FROM @R
+
+            SET @J = @J - 1
+        END
+
+      DEALLOCATE @CursorVar
+
+      UPDATE WBS_ELEMENT
+      SET    ROLLUP_DURATION = (SELECT value
+                                FROM   [innovator].[Business_datediff] (ROLLUP_DATE_SCHED_START, ROLLUP_DATE_SCHED_DUE, @TZ_NAME))
+                               + 1
+      WHERE  ID IN (SELECT ID
+                    FROM   @WBS_ELEMENTS)
+
+      UPDATE WBS_ELEMENT
+      SET    rollup_earned_value = ( rollup_percent_compl * rollup_work_est ) / Cast(100 AS FLOAT)
+      WHERE  ID IN (SELECT ID
+                    FROM   @WBS_ELEMENTS)
+
+      INSERT @CPI_SPI_DEC
+      SELECT ID,
+             Cast(WBS_ELEMENT.rollup_earned_value AS FLOAT) / ( CASE
+                                                                  WHEN WBS_ELEMENT.rollup_actual_work = 0 THEN NULL
+                                                                  ELSE WBS_ELEMENT.rollup_actual_work
+                                                                END ),
+             Cast(WBS_ELEMENT.rollup_earned_value AS FLOAT) / ( CASE
+                                                                  WHEN WBS_ELEMENT.rollup_planned_value = 0 THEN NULL
+                                                                  ELSE WBS_ELEMENT.rollup_planned_value
+                                                                END )
+      FROM   WBS_ELEMENT
+      WHERE  ID IN (SELECT id
+                    FROM   @WBS_ELEMENTS)
+
+      UPDATE WBS_ELEMENT
+      SET    cpi = CASE
+                     WHEN Abs(t.cpi) < 100
+                           OR t.cpi IS NULL THEN t.cpi
+                     ELSE 99.9999
+                   END,
+             spi = CASE
+                     WHEN Abs(t.spi) < 100
+                           OR t.spi IS NULL THEN t.spi
+                     ELSE 99.9999
+                   END
+      FROM   WBS_ELEMENT
+             INNER JOIN @CPI_SPI_DEC AS t
+                     ON WBS_ELEMENT.id = t.id
+
+      DELETE FROM @CPI_SPI_DEC
+
+      DECLARE @N INT
+      DECLARE @PHASE_ID CHAR(32)
+
+      SET @N = (SELECT Count(*)
+                FROM   @WBS_ELEMENTS
+                WHERE  LEVEL = 1)
+      SET @J = 0
+
+      WHILE @J < @N
+        BEGIN
+            SET @PHASE_ID = (SELECT ID
+                             FROM   @WBS_ELEMENTS
+                             WHERE  LEVEL = 1
+                                    AND ORD = @J)
+            SET @rollup_status = (SELECT ROLLUP_STATUS
+                                  FROM   WBS_ELEMENT
+                                  WHERE  ID = @PHASE_ID)
+            SET @rollup_percent_compl = (SELECT ROLLUP_PERCENT_COMPL
+                                         FROM   WBS_ELEMENT
+                                         WHERE  ID = @PHASE_ID)
+
+            EXEC [innovator].[Set_project_status]
+              @project_id,
+              @J,
+              @rollup_status,
+              @rollup_percent_compl
+
+            SET @J = @J + 1
+        END
+
+      WHILE @J < 12
+        BEGIN
+            EXEC [innovator].[Set_project_status]
+              @project_id,
+              @J,
+              NULL,
+              NULL
+
+            SET @J = @J + 1
+        END
+
+      UPDATE PROJECT
+      SET    CSS = NULL
+      WHERE  ID = @PROJECT_ID
+
+      SELECT 'SUCCESS' AS result_text
+  END ]]></sqlserver_body>
+  <stale>0</stale>
+  <transform_first>0</transform_first>
+  <type>procedure</type>
+  <name>activity_status_rollup</name>
+ </Item>
+</AML>

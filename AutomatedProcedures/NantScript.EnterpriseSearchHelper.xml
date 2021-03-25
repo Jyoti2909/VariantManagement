@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project name="EnterpriseSearchHelper">
+	<target name="Initialize.ES.Installation.Settings">
+		<fail if="${not property::exists('Path.To.ES.MSI.Root.Folder') or string::get-length(Path.To.ES.MSI.Root.Folder) == 0}"
+			  message="Specify property 'Path.To.ES.MSI.Root.Folder' to be able to setup Enterprise Search" />
+		<property name="Path.To.ES.Installation.Script" overwrite="false" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\Enterprise Search\ESInstall.ps1')}" />
+		<property name="Path.To.ES.Installation.Config" overwrite="false" value="${path::combine(Path.To.Automated.Procedures.Temp, 'ESInstall_configuration.xml')}" />
+		<call target="Create.ES.Installation.Config" if="${not file::exists(Path.To.ES.Installation.Config)}" />
+	</target>
+
+	<target name="Setup.ES" depends="Initialize.ES.Installation.Settings">
+		<exec program="powershell">
+			<arg value='-file "${Path.To.ES.Installation.Script}"' />
+			<arg value='install' />
+			<arg value='${Path.To.ES.Installation.Config}' />
+			<arg value='${Path.To.ES.MSI.Root.Folder}' />
+		</exec>
+	</target>
+
+	<target name="Remove.ES" depends="Initialize.ES.Installation.Settings">
+		<exec program="powershell">
+			<arg value='-file "${Path.To.ES.Installation.Script}"' />
+			<arg value='remove' />
+			<arg value='${Path.To.ES.Installation.Config}' />
+			<arg value='${Path.To.ES.MSI.Root.Folder}' />
+		</exec>
+	</target>
+
+	<target name="Create.ES.Installation.Config">
+		<property name="ES.Installation.Root.Folder" overwrite="false" value="${path::combine(Path.To.Installed.Innovator, 'ES')}" />
+		<regex pattern="(?&lt;=:\/\/)(?'DeploymentServerName'.*)" input="${Url.Of.Deployment.Server}" />
+		<property name="DeploymentServerName" if="${DeploymentServerName == 'localhost'}" value="127.0.0.1" />
+
+		<property name="ES.Index.SERVICE_NAME" overwrite="false" value="Aras ES Index - ${Name.Of.Innovator.Instance}" />
+		<property name="ES.Index.ZOO_SERVICE_NAME" overwrite="false" value="Aras ES ZooKeeper - ${Name.Of.Innovator.Instance}" />
+		<property name="ES.Index.ZOO_PORT" overwrite="false" value="2181" />
+		<property name="ES.Index.ZOO_QUORUM_PORTS" overwrite="false" value="2888:3888" />
+		<property name="ES.Index.SOLR_PORT" overwrite="false" value="8983" />
+		<property name="ES.Index.SERVICE_PORT" overwrite="false" value="8081" />
+
+		<property name="ES.Agent.PASSWORD" overwrite="false" value="innovator" />
+		<property name="ES.Agent.SERVICE_NAME" overwrite="false" value="Aras ES Agent - ${Name.Of.Innovator.Instance}" />
+
+		<property name="ES.FileProcessor.PASSWORD" overwrite="false" value="innovator" />
+		<property name="ES.FileProcessor.VAULT" overwrite="false" value="Default" />
+		<property name="ES.FileProcessor.SERVICE_NAME" overwrite="false" value="Aras ES FileProcessor - ${Name.Of.Innovator.Instance}" />
+		<property name="ES.FileProcessor.SERVICE_PORT" overwrite="false" value="8082" />
+		<property name="ES.FileProcessor.SERVICE_JAVA_PORT" overwrite="false" value="8083" />
+
+		<property name="Path.To.ES.Installation.Config.Template" value="${path::combine(Path.To.This.Git.Repository, 'AutomatedProcedures\EnterpriseSearch\ESInstall_local.xml')}" />
+		<copy file="${Path.To.ES.Installation.Config.Template}" tofile="${Path.To.ES.Installation.Config}" />
+
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/@Folder"
+				 value="${path::combine(ES.Installation.Root.Folder, 'Index')}" />
+
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/MSIParams/@INSTALLFOLDER_INDEX"
+				 value="${path::combine(ES.Installation.Root.Folder, 'Index\ArasES_Index')}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/MSIParams/@SERVICE_NAME"
+				 value="${ES.Index.SERVICE_NAME}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/MSIParams/@ZOO_SERVICE_NAME"
+				 value="${ES.Index.ZOO_SERVICE_NAME}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/MSIParams/@ZOO_PORT"
+				 value="${ES.Index.ZOO_PORT}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/MSIParams/@ZOO_HOSTPORT"
+				 value="${DeploymentServerName}:${ES.Index.ZOO_PORT}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/MSIParams/@ZOO_QUORUM_PORTS"
+				 value="${ES.Index.ZOO_QUORUM_PORTS}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/MSIParams/@IP_HOSTNAME"
+				 value="${DeploymentServerName}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/MSIParams/@SOLR_PORT"
+				 value="${ES.Index.SOLR_PORT}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="ESInstall/Indexes/Component/MSIParams/@SERVICE_PORT"
+				 value="${ES.Index.SERVICE_PORT}" />
+
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/@Folder"
+				 value="${path::combine(ES.Installation.Root.Folder, 'Agent')}" />
+
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/MSIParams/@INSTALLFOLDER_AGENT"
+				 value="${path::combine(ES.Installation.Root.Folder, 'Agent\ArasES_Agent')}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/MSIParams/@URL"
+				 value="${Url.Of.Installed.Innovator}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/MSIParams/@DB"
+				 value="${MSSQL.Database.Name}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/MSIParams/@ROOT_PASSWORD"
+				 value="${Password.Of.Root.Innovator.User}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/MSIParams/@CLUSTER_SERVER"
+				 value="${DeploymentServerName}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/MSIParams/@CLUSTER_PORT"
+				 value="${ES.Index.SERVICE_PORT}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/MSIParams/@PASSWORD"
+				 value="${ES.Agent.PASSWORD}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/MSIParams/@SERVICE_NAME"
+				 value="${ES.Agent.SERVICE_NAME}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/Agents/Component/MSIParams/@FIRST_PORT"
+				 value="${ES.Index.SOLR_PORT}" />
+
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/@Folder"
+				 value="${path::combine(ES.Installation.Root.Folder, 'FileProcessor')}" />
+
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@INSTALLFOLDER_INDEX"
+				 value="${path::combine(ES.Installation.Root.Folder, 'FileProcessor\ArasES_FileProcessor')}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@URL"
+				 value="${Url.Of.Installed.Innovator}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@DB"
+				 value="${MSSQL.Database.Name}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@PASSWORD"
+				 value="${ES.FileProcessor.PASSWORD}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@VAULT"
+				 value="${ES.FileProcessor.VAULT}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@SERVICE_NAME"
+				 value="${ES.FileProcessor.SERVICE_NAME}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@SERVICE_SERVER"
+				 value="${DeploymentServerName}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@ZOO_HOSTPORT"
+				 value="${DeploymentServerName}:${ES.Index.ZOO_PORT}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@SERVICE_PORT"
+				 value="${ES.FileProcessor.SERVICE_PORT}" />
+		<xmlpoke file="${Path.To.ES.Installation.Config}"
+				 xpath="/ESInstall/FileProcessors/Component/MSIParams/@SERVICE_JAVA_PORT"
+				 value="${ES.FileProcessor.SERVICE_JAVA_PORT}" />
+	</target>
+</project>	

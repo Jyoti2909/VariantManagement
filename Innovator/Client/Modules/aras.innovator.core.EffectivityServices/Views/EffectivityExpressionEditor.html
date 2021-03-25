@@ -1,0 +1,50 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<link rel="stylesheet" type="text/css" href="../../../javascript/include.aspx?classes=common.min.css"/>
+	<link rel="stylesheet" type="text/css" href="../Styles/EffectivityStyles.min.css"/>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,pageReturnBlocker"></script>
+	<script type="text/javascript" src="../Scripts/ItemPresenter.js"></script>
+	<script type="text/javascript" src="../Scripts/EffectivityExpressionEditorViewController.js"></script>
+	<script type="text/javascript">
+		window.addEventListener('DOMContentLoaded', function() {
+			const dialogArguments = window.frameElement.dialogArguments;
+
+			const itemPresenter = new ItemPresenter(dialogArguments.aras);
+
+			const parameters = {
+				aras: dialogArguments.aras,
+				itemPresenter: itemPresenter,
+				expressionItemNode: dialogArguments.expressionItemNode,
+				viewMode: dialogArguments.viewMode,
+				applyButtonConnectId: 'apply_button',
+				applyButtonOnClickHandler: dialogArguments.applyButtonOnClickHandler,
+				cancelButtonConnectId: 'cancel_button',
+				cancelButtonOnClickHandler: dialogArguments.cancelButtonOnClickHandler,
+				editButtonConnectId: 'edit_button',
+				editorIframeConnectId: 'expression_editor_container'
+			};
+			window.effectivityExpressionEditorViewController = new EffectivityExpressionEditorViewController(parameters);
+		});
+	</script>
+</head>
+<body class="effs-dialog effs-expression-editor aras-flex aras-flex_column">
+	<div class="effs-dialog__item effs-dialog__item_height_full">
+		<iframe id="expression_editor_container" class="effs-expression-editor__editor-frame aras-flex-grow effs-no-overflow"></iframe>
+	</div>
+	<div class="effs-dialog__item effs-dialog__item_flex-alignment_end effs-dialog__item_margin-top_large aras-flex">
+		<button id="edit_button" class="aras-button aras-button_secondary effs-dialog__button">
+			<img class="aras-button__icon" src="../../../images/EditWhite.svg">
+			<span class="aras-button__text"></span>
+		</button>
+		<button id="apply_button" class="aras-button aras-button_primary effs-dialog__button">
+			<span class="aras-button__text"></span>
+		</button>
+		<button id="cancel_button" class="aras-button aras-button_secondary-light effs-dialog__button">
+			<span class="aras-button__text"></span>
+		</button>
+	</div>
+	<iframe id="dimmer_spinner" class="aras-hide" src="../../../../scripts/spinner.html"></iframe>
+</body>
+</html>

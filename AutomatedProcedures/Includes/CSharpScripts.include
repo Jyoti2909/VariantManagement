@@ -1,0 +1,829 @@
+﻿<project name="CSharpScripts">
+	<script language="C#" prefix="regex">
+		<references>
+			<include name="System.dll" />
+		</references>
+		<imports>
+			<import namespace="System.Text.RegularExpressions" />
+		</imports>
+		<code>
+			<![CDATA[
+		[Function("regex-replace-string")]
+		public static string RegexReplaceString(string input, string pattern, string replacement)
+		{
+			return Regex.Replace(input, pattern, replacement);
+		}
+		]]>
+		</code>
+	</script>
+
+	<script language="C#" prefix="aras">
+		<references>
+			<include name="System.dll" />
+			<include name="System.Core.dll" />
+		</references>
+		<imports>
+			<import namespace="System" />
+			<import namespace="System.Collections.Generic" />
+			<import namespace="System.Linq" />
+			<import namespace="System.Net.NetworkInformation" />
+			<import namespace="System.Text" />
+			<import namespace="System.Security.Cryptography" />
+		</imports>
+		<code>
+			<![CDATA[
+		[Function("move-directory")]
+		public static bool MoveDirectory(string currentPath, string newPath)
+		{
+			Directory.Move(currentPath, newPath);
+			return true;
+		}
+
+		[Function("now-as-sortable-string")]
+		public static string NowAsSortableString()
+		{
+			string result = DateTime.Now.ToString("s");
+			return result;
+		}
+
+		[Function("get-file-short-creation-date")]
+		public static string GetFileShortCreationDate(string fileName)
+		{
+			string creationDate = File.GetCreationTimeUtc(fileName).ToShortDateString();
+
+			const char separator = '-';
+			foreach (char invalidChar in Path.GetInvalidFileNameChars())
+			{
+				creationDate = creationDate.Replace(invalidChar, separator);
+			}
+
+			return creationDate;
+		}
+
+		[Function("get-mac-address")]
+		public static string GetMACAddress()
+		{
+			List<NetworkInterfaceType> interfaceTypePriorities = new List<NetworkInterfaceType>()
+			{
+				NetworkInterfaceType.Wireless80211,
+				NetworkInterfaceType.Ethernet
+			};
+
+			PhysicalAddress macAddress = NetworkInterface.GetAllNetworkInterfaces()
+				.OrderByDescending(adapter => interfaceTypePriorities.IndexOf(adapter.NetworkInterfaceType))
+				.Select(adapter => adapter.GetPhysicalAddress())
+				.Where(address => address != PhysicalAddress.None)
+				.FirstOrDefault();
+
+			if (macAddress == null)
+			{
+				throw new BuildException("Couldn't retrieve any MAC address from the machine. Check your network settings.");
+			}
+
+			return BitConverter.ToString(macAddress.GetAddressBytes());
+		}
+		
+		[Function("compute-MD5")]
+		public static string MD5Hash(string input)
+		{
+			StringBuilder hash = new StringBuilder();
+			MD5CryptoServiceProvider md5provider = new MD5CryptoServiceProvider();
+			byte[] bytes = md5provider.ComputeHash(new UTF8Encoding().GetBytes(input));
+			for (int i = 0; i < bytes.Length; i++)
+			{
+				hash.Append(bytes[i].ToString("x2"));
+			}
+			return hash.ToString();
+		}
+		
+		[Function("get-host-from-url")]
+		public static string GetHostFromUrl(string url)
+		{
+			return new Uri(url).Host;
+		}
+		]]>
+		</code>
+	</script>
+
+	<script language="C#" prefix="aras">
+		<references>
+			<include name="System.Core.dll" />
+			<include name="System.Xml.dll" />
+			<include name="System.Xml.Linq.dll" />
+		</references>
+		<imports>
+			<import namespace="System.Collections.Generic" />
+			<import namespace="System.Linq" />
+			<import namespace="System.Xml" />
+			<import namespace="System.Xml.Linq" />
+		</imports>
+		<code>
+			<![CDATA[
+		[Function("remove-missing-aml-packages-from-manifest-file")]
+		public static bool RemoveMissingAmlPackagesFromManifestFile(string manifestFile)
+		{
+			FileInfo manifestFileInfo = new FileInfo(manifestFile);
+			ImportManifestFileProcessor mfFileProcessor = new ImportManifestFileProcessor(manifestFileInfo);
+
+			mfFileProcessor.RemoveMissingAmlPackages();
+			return true;
+		}
+
+		private class Package
+		{
+			private string _rootDirectoryName;
+			private string _importDirectoryName;
+
+			internal Package(string rootDirectoryName)
+			{
+				this.DependsOn = new List<DependsOn>();
+				this._rootDirectoryName = rootDirectoryName;
+			}
+
+			internal string Name
+			{
+				get;
+				private set;
+			}
+
+			internal string Path
+			{
+				get;
+				private set;
+			}
+
+			internal IList<DependsOn> DependsOn
+			{
+				get;
+				private set;
+			}
+
+			private DirectoryInfo GetDirectory()
+			{
+				DirectoryInfo packageDirectory = new DirectoryInfo(this._importDirectoryName);
+
+				return packageDirectory;
+			}
+
+			internal bool IsPackageExists()
+			{
+				DirectoryInfo packageDirectory = this.GetDirectory();
+
+				return packageDirectory.Exists;
+			}
+
+			private static bool IsCorePackage(string packageName)
+			{
+				return packageName.StartsWith("com.aras.innovator.") && !packageName.StartsWith("com.aras.innovator.solution.");
+			}
+
+			private static bool IsDefaultPackage(string packageName)
+			{
+				return packageName.StartsWith("com.aras.defaults.", StringComparison.OrdinalIgnoreCase);
+			}
+
+			private static bool IsStandardPackage(string packageName)
+			{
+				return IsDefaultPackage(packageName) || IsCorePackage(packageName);
+			}
+
+			private static string GetPackagePath(XmlElement packageNode, string manifestFolder)
+			{
+				string packageName = packageNode.GetAttribute("name");
+				string res = packageNode.GetAttribute("path");
+
+				#region build path to package
+				if (res.Trim().Length == 0) res = @".\";
+
+				if (!System.IO.Path.IsPathRooted(res))
+				{
+					res = System.IO.Path.Combine(manifestFolder, res);
+				}
+
+				if (IsStandardPackage(packageName))
+				{
+					res += @"\" + packageName.Replace(".", @"\");
+				}
+				#endregion
+
+				return res;
+			}
+
+			internal void LoadFromXml(XmlElement packageElement)
+			{
+				this.Name = packageElement.GetAttribute("name");
+				this.Path = packageElement.GetAttribute("path");
+
+				XmlNodeList dependsOnList = packageElement.SelectNodes("./dependson");
+				foreach (XmlElement dependsOnElement in dependsOnList)
+				{
+					DependsOn dependsOn = new DependsOn();
+					dependsOn.LoadFromXml(dependsOnElement);
+
+					this.DependsOn.Add(dependsOn);
+				}
+
+				this._importDirectoryName = GetPackagePath(packageElement, this._rootDirectoryName);
+			}
+		}
+
+		private class DependsOn
+		{
+			internal string Name
+			{
+				get;
+				set;
+			}
+
+			internal void LoadFromXml(XmlElement dependsOnElement)
+			{
+				this.Name = dependsOnElement.GetAttribute("name");
+			}
+		}
+
+		private class ImportManifestFileProcessor
+		{
+			private FileInfo _file;
+			private IList<Package> _packages;
+
+			internal ImportManifestFileProcessor(FileInfo file)
+			{
+				this._file = file;
+				this._packages = new List<Package>();
+
+				XmlDocument manifestDom = new XmlDocument();
+
+				using (FileStream fs = file.OpenRead())
+				{
+					manifestDom.Load(fs);
+				}
+
+				XmlNodeList packages = manifestDom.SelectNodes("./imports/package");
+				foreach (XmlElement packageElement in packages)
+				{
+					Package package = new Package(this._file.DirectoryName);
+					package.LoadFromXml(packageElement);
+
+					this._packages.Add(package);
+				}
+			}
+
+			internal void RemoveMissingAmlPackages()
+			{
+				IList<Package> missingPackages = new List<Package>();
+				IList<Package> existingPackages = new List<Package>();
+
+				IList<IGrouping<bool, Package>> groups = this._packages.GroupBy(package => package.IsPackageExists()).ToList();
+				foreach (IGrouping<bool, Package> group in groups)
+				{
+					if (group.Key)
+					{
+						existingPackages = group.ToList();
+					}
+					else
+					{
+						missingPackages = group.ToList();
+					}
+				}
+
+				foreach (Package missingPackage in missingPackages)
+				{
+					IList<Package> packagesForUpdateDependencies = this._packages.Where(package =>
+						{
+							return package.DependsOn.Any(dependsOn => dependsOn.Name == missingPackage.Name);
+						})
+						 .Select(package => package)
+						 .ToList();
+
+					foreach (Package packageForUpdateDependencies in packagesForUpdateDependencies)
+					{
+						IList<DependsOn> dependenciesForRemove = packageForUpdateDependencies.DependsOn
+						 .Where(dependson => dependson.Name == missingPackage.Name)
+						 .Select(dependsOn => dependsOn)
+						 .ToList();
+
+						foreach (DependsOn dependencyForRemove in dependenciesForRemove)
+						{
+							packageForUpdateDependencies.DependsOn.Remove(dependencyForRemove);
+						}
+
+						foreach (DependsOn dependencyFromMissingPackage in missingPackage.DependsOn)
+						{
+							if (!packageForUpdateDependencies.DependsOn.Any(dependson => dependson.Name == dependencyFromMissingPackage.Name))
+							{
+								packageForUpdateDependencies.DependsOn.Add(dependencyFromMissingPackage);
+							}
+						}
+					}
+				}
+
+				XDocument xManifestDom = new XDocument();
+				XElement xImports = new XElement("imports");
+				xManifestDom.Add(xImports);
+
+				foreach (Package existingPackage in existingPackages)
+				{
+					XElement xPackage = new XElement(
+						"package",
+													 new XAttribute("name", existingPackage.Name),
+													 new XAttribute("path", existingPackage.Path));
+
+					foreach (DependsOn dependsOnExistingPackage in existingPackage.DependsOn)
+					{
+						xPackage.Add(
+							new XElement(
+								"dependson",
+										 new XAttribute("name", dependsOnExistingPackage.Name)));
+					}
+
+					xImports.Add(xPackage);
+				}
+
+				xManifestDom.Save(this._file.FullName);
+			}
+		}
+		]]>
+		</code>
+	</script>
+
+	<script language="C#" prefix="validation">
+		<references>
+			<include name="System.dll" />
+			<include name="tools\IOM_SDK\.NET\IOM.dll" />
+		</references>
+		<imports>
+			<import namespace="System" />
+			<import namespace="Aras.IOM" />
+		</imports>
+		<code>
+			<![CDATA[
+			[TaskName("ValidateFeatureLicenses")]
+			public class ValidateFeatureLicenses : Task
+			{
+				[TaskAttribute("innovatorUrl", Required = true)]
+				public string InnovatorUrl { get; set; }
+				[TaskAttribute("databaseName", Required = true)]
+				public string DatabaseName { get; set; }
+				[TaskAttribute("loginName", Required = true)]
+				public string LoginName { get; set; }
+				[TaskAttribute("password", Required = true)]
+				public string Password { get; set; }
+
+				protected override void ExecuteTask()
+				{
+					HttpServerConnection serverConnection = IomFactory.CreateHttpServerConnection(InnovatorUrl, DatabaseName, LoginName, Password);
+					Innovator innovator = new Innovator(serverConnection);
+					Item allFeatureLicenses = innovator.newItem("Feature License", "get");
+					allFeatureLicenses = allFeatureLicenses.apply();
+
+					for (int i = 0; i < allFeatureLicenses.getItemCount(); i++)
+					{
+						Item featureLicense = allFeatureLicenses.getItemByIndex(i);
+						string licenseName = featureLicense.getProperty("feature");
+
+						Console.WriteLine("Validate '" + licenseName + "'");
+						innovator.ConsumeLicense(licenseName);
+					}
+				}
+			}
+			]]>
+		</code>
+	</script>
+
+	<script language="C#">
+		<references>
+			<include name="System.dll" />
+			<include name="System.Core.dll" />
+			<include name="System.Xml.dll" />
+			<include name="tools\IOM_SDK\.NET\IOM.dll" />
+		</references>
+		<imports>
+			<import namespace="System" />
+			<import namespace="System.Collections.Generic" />
+			<import namespace="System.Globalization" />
+			<import namespace="System.IO" />
+			<import namespace="System.Linq" />
+			<import namespace="System.Xml" />
+			<import namespace="Aras.IOM" />
+		</imports>
+		<code>
+			<![CDATA[
+		public abstract class InnovatorHttpServerConnection : Task
+		{
+			[TaskAttribute("innovatorServer", Required = true)]
+			public string InnServer { get; set; }
+			[TaskAttribute("innovatorUsername", Required = true)]
+			public string InnUsername { get; set; }
+			[TaskAttribute("innovatorPassword", Required = true)]
+			public string InnPassword { get; set; }
+			[TaskAttribute("innovatorDatabase", Required = true)]
+			public string InnDatabase { get; set; }
+			/// <summary>
+			///     Gets or sets the time-out value in milliseconds for getting response from 
+			///		Innovator Server.
+			/// </summary>
+			/// <value>
+			///     The number of milliseconds to wait before the request times out. The default
+			///     is 100,000 milliseconds (100 seconds).
+			/// </value>
+			/// <exception cref="System.ArgumentOutOfRangeException">
+			/// The value specified is less than zero and is not System.Threading.Timeout.Infinite.
+			/// </exception>
+			[TaskAttribute("timeout")]
+			public int Timeout { get; set; }
+
+			private HttpServerConnection CreateHttpServerConnection()
+			{
+				HttpServerConnection connection = IomFactory.CreateHttpServerConnection(InnServer, InnDatabase, InnUsername, InnPassword);
+				if (Timeout > 0)
+				{
+					connection.Timeout = Timeout;
+				}
+				return connection;
+			}
+
+			protected HttpServerConnection LoginToInnovator()
+			{
+				HttpServerConnection connection = CreateHttpServerConnection();
+				connection.Login();
+				return connection;
+			}
+		}
+
+		[TaskName("callSoapAction")]
+		public class CallSoapAction : InnovatorHttpServerConnection
+		{
+			[TaskAttribute("soapAction", Required = true), StringValidator(AllowEmpty = false)]
+			public string SoapAction { get; set; }
+			[TaskAttribute("amlRequest", Required = true), StringValidator(AllowEmpty = false)]
+			public string AmlRequest { get; set; }
+
+			protected override void ExecuteTask()
+			{
+				HttpServerConnection connection = LoginToInnovator();
+				try
+				{
+					CallAction(connection);
+				}
+				finally
+				{
+					connection.Logout();
+				}
+			}
+
+			private void CallAction(HttpServerConnection connection)
+			{
+				XmlDocument inDom = new XmlDocument();
+				XmlDocument outDom = new XmlDocument();
+				inDom.LoadXml(AmlRequest);
+				connection.CallAction(SoapAction, inDom, outDom);
+			}
+		}]]>
+		</code>
+	</script>
+
+	<script language="C#" prefix="xml">
+		<references>
+			<include name="System.dll" />
+			<include name="System.Xml.dll" />
+		</references>
+		<imports>
+			<import namespace="System" />
+			<import namespace="System.Xml" />
+		</imports>
+		<code>
+			<![CDATA[
+			[Function("GetNode")]
+			public static XmlNode GetNode(string pathToXmlDocument, string xPath)
+			{
+				XmlNode obtainedNode = OpenDocument(pathToXmlDocument).SelectSingleNode(xPath);
+				if (obtainedNode == null)
+				{
+					throw new BuildException(string.Format("The node '{0}' doesn't exist in the '{1}'.", xPath, pathToXmlDocument));
+				}
+				return obtainedNode;
+			}
+
+			[Function("CheckIfExists")]
+			public static bool CheckIfExists(string pathToXmlDocument, string xPath)
+			{
+				return OpenDocument(pathToXmlDocument).SelectSingleNode(xPath) != null;
+			}
+
+			[Function("AppendNode")]
+			public static void AppendNode(XmlNode nodeToAppend, XmlNode targetNode)
+			{
+				XmlDocument targetDocument = targetNode.OwnerDocument;
+				targetNode.AppendChild(targetDocument.ImportNode(nodeToAppend, true));
+				SaveXmlDocument(targetDocument);
+			}
+
+			[Function("AppendFragment")]
+			public static void AppendFragment(string fragmentInnerXml, XmlNode targetNode)
+			{
+				XmlDocumentFragment nodeToAppend = targetNode.OwnerDocument.CreateDocumentFragment();
+				nodeToAppend.InnerXml = System.Net.WebUtility.HtmlDecode(fragmentInnerXml);
+				AppendNode(nodeToAppend, targetNode);
+			}
+
+			[Function("ReplaceNode")]
+			public static void ReplaceNode(XmlNode newNode, XmlNode oldNode)
+			{
+				XmlDocument xmlDocument = oldNode.OwnerDocument;
+				oldNode.ParentNode.ReplaceChild(xmlDocument.ImportNode(newNode, true), oldNode);
+				SaveXmlDocument(xmlDocument);
+			}
+
+			[Function("RemoveNode")]
+			public static void RemoveNode(XmlNode nodeToRemove)
+			{
+				XmlDocument xmlDocument = nodeToRemove.OwnerDocument;
+				nodeToRemove.ParentNode.RemoveChild(nodeToRemove);
+				SaveXmlDocument(xmlDocument);
+			}
+
+			private static XmlDocument OpenDocument(string pathToXmlDocument)
+			{
+				XmlDocument xmlDocument = new XmlDocument();
+				xmlDocument.Load(pathToXmlDocument);
+				return xmlDocument;
+			}
+
+			private static void SaveXmlDocument(XmlDocument xmlDocument)
+			{
+				string pathToXmlDocument = new Uri(xmlDocument.BaseURI).LocalPath;
+				xmlDocument.Save(pathToXmlDocument);
+			}
+			]]>
+		</code>
+	</script>
+
+	<script language="C#">
+		<references>
+			<include name="System.dll" />
+			<include name="System.Core.dll" />
+		</references>
+		<imports>
+			<import namespace="System" />
+			<import namespace="System.Collections.Generic" />
+			<import namespace="System.IO" />
+			<import namespace="System.Linq" />
+			<import namespace="System.Text" />
+			<import namespace="System.Text.RegularExpressions" />
+		</imports>
+		<code>
+		<![CDATA[
+		// Reason: Git diff return filenames in UTF-8 or quoted octal notation like \nnn (depends on locale and git settings).
+		// In any case fileset with includesfile can not read utf8 or quoted octal file names from file.
+		[TaskName("decode_git_diff_file_to_utf8")]
+		public class DecodeGitDiffFileToUtf8 : Task
+		{
+			[TaskAttribute("inputFile", Required = true), StringValidator(AllowEmpty = false)]
+			public string InputFile { get; set; }
+			[TaskAttribute("outputFile", Required = true), StringValidator(AllowEmpty = false)]
+			public string OutputFile { get; set; }
+
+			protected override void ExecuteTask()
+			{
+				DecodeOctalSequenceFile(InputFile, OutputFile);
+			}
+
+			private static string DecodeOctalSequenceToString(string octalSequence)
+			{
+				Match match = Regex.Match(octalSequence, "\\\\[0-9]+");
+				List<byte> charCodes = new List<byte>();
+				while (match.Success)
+				{
+					string octSymbol = match.Value.Substring(1);
+					charCodes.Add(Convert.ToByte(octSymbol, 8));
+					match = match.NextMatch();
+				}
+
+				if (charCodes.Count > 0)
+				{
+					return Encoding.UTF8.GetString(charCodes.ToArray());
+				}
+
+				return string.Empty;
+			}
+
+			private static string GetFileNameFromOctalSeq(string fileNameOctal)
+			{
+				// Git returns non ascii symbols as octal sequence (like "\303").
+				fileNameOctal = fileNameOctal.Replace("\"", "");
+				string result = fileNameOctal;
+
+				Match match = Regex.Match(fileNameOctal, "(\\\\[0-9]+)+");
+				while (match.Success)
+				{
+					string octString = match.Value;
+					int octLength = octString.Length;
+					int pos = result.IndexOf(octString);
+
+					result = result.Remove(pos, octLength);
+					string convertedString = DecodeOctalSequenceToString(octString);
+					result = result.Insert(pos, convertedString);
+					match = match.NextMatch();
+				}
+
+				return result;
+			}
+
+			private static void DecodeOctalSequenceFile(string inputFile, string outputFile)
+			{
+				string[] lines = File.ReadAllLines(inputFile, Encoding.UTF8);
+
+				string[] decodedLines = lines.Select(line => GetFileNameFromOctalSeq(line)).ToArray();
+				File.WriteAllLines(outputFile, decodedLines, Encoding.UTF8);
+			}
+		}]]>
+		</code>
+	</script>
+
+	<script language="C#">
+		<references>
+			<include name="System.dll" />
+			<include name="tools\IOM_SDK\.NET\IOM.dll" />
+		</references>
+		<imports>
+			<import namespace="Aras.IOM" />
+			<import namespace="System" />
+			<import namespace="System.IO" />
+			<import namespace="System.Net" />
+			<import namespace="System.Collections.Specialized" />
+		</imports>
+		<code>
+			<![CDATA[
+			public class ExtendedHttpServerConnection : HttpServerConnection
+			{
+				public ExtendedHttpServerConnection(string innovatorServerUrl, string database, string userName, string password)
+					: base(innovatorServerUrl, database, userName, password, null, null)
+				{
+				}
+
+				public void ImportFeatureLicense(string encryptedFeatureLicense) 
+				{
+					base.GetLicenseManagerWebService().ImportFeatureLicense(encryptedFeatureLicense);
+				}
+			}
+
+			[TaskName("ImportFeatureLicense")]
+			public class ImportFeatureLicense : Task
+			{
+				[TaskAttribute("innovatorUrl", Required = true)]
+				public string InnovatorUrl { get; set; }
+				[TaskAttribute("featureLicense", Required = true)]
+				public string FeatureLicense { get; set; }
+				[TaskAttribute("loginName", Required = true)]
+				public string LoginName { get; set; }
+				[TaskAttribute("password", Required = true)]
+				public string Password { get; set; }
+				[TaskAttribute("databaseName", Required = true)]
+				public string DatabaseName { get; set; }
+		
+				protected override void ExecuteTask()
+				{
+					ExtendedHttpServerConnection connection = new ExtendedHttpServerConnection(InnovatorUrl, DatabaseName, LoginName, Password);
+					connection.Login();
+					try
+					{
+						connection.ImportFeatureLicense(FeatureLicense);
+					}
+					finally
+					{
+						connection.Logout();
+					}
+				}
+			}
+			]]>
+		</code>
+	</script>
+
+	<script language="C#">
+		<code>
+			<![CDATA[
+				[TaskName("silent_call")]
+				public class MuteCallTask : Task
+				{
+					[TaskAttribute("target", Required = true), StringValidator(AllowEmpty = false)]
+					public string Target { get; set; }
+
+					[TaskAttribute("output", Required = false)]
+					public string Output { get; set; }
+
+					protected override void ExecuteTask()
+					{
+						ExecuteTargetInSilentMode(Target, Output);
+					}
+
+					private void ExecuteTargetInSilentMode(string targetName, string output)
+					{
+						TextWriter originalConsoleOut = Console.Out;
+						if (!string.IsNullOrEmpty(output))
+						{
+							using (StreamWriter sw = new StreamWriter(output))
+							{
+								Console.SetOut(sw);
+
+								Project.Execute(targetName);
+							}
+						}
+						else
+						{
+							Console.SetOut(StreamWriter.Null);
+
+							Project.Execute(targetName);
+						}
+
+						Console.SetOut(originalConsoleOut);
+					}
+				}
+			]]>
+		</code>
+	</script>
+
+	<script language="C#">
+		<references>
+			<include name="System.Core.dll" />
+			<include name="System.Xml.dll" />
+		</references>
+		<imports>
+			<import namespace="System.Xml" />
+			<import namespace="System.Linq" />
+			<import namespace="System.Collections.Generic" />
+		</imports>
+		<code>
+			<![CDATA[
+				public class Property : Element
+				{
+					private bool _doLeave = true;
+					[TaskAttribute("name", Required = true), StringValidator(AllowEmpty = false)]
+					public string Name { get; set; }
+					[TaskAttribute("if"), BooleanValidator()]
+					public bool DoLeave {
+						get { return _doLeave; }
+						set { _doLeave = value; }
+					}
+				}
+
+				[TaskName("MoveNantProperties")]
+				public class MoveNantPropertiesTask : Task
+				{
+					private List<Property> _propertiesToLeave = new List<Property>();
+
+					[TaskAttribute("from", Required = true), StringValidator(AllowEmpty = false)]
+					public string PathToDefaultSettingsIncludeFile { get; set; }
+					[TaskAttribute("to", Required = true), StringValidator(AllowEmpty = false)]
+					public string PathToMachineSpecificIncludeFile { get; set; }
+					[BuildElementCollection("properties", "property")]
+					public List<Property> PropertiesToLeave
+					{
+						get
+						{
+							return _propertiesToLeave;
+						}
+					}
+
+					protected override void ExecuteTask()
+					{
+						XmlDocument xmlDocument = new XmlDocument();
+						xmlDocument.Load(PathToDefaultSettingsIncludeFile);
+
+						RemoveAllCommentsAboveXmlNode(xmlDocument.SelectSingleNode("/project"));
+
+						IEnumerable<string> allPropertiesNames = xmlDocument.SelectNodes("/project/property/@name").Cast<XmlAttribute>().Select(p => p.Value);
+						IEnumerable<string> propertiesNamesToRemove = allPropertiesNames.Except(PropertiesToLeave.Where(p => p.DoLeave).Select(p => p.Name));
+						foreach (string propertyName in propertiesNamesToRemove)
+						{
+							string propertyXPath = string.Format("/project/property[@name = '{0}']", propertyName);
+							RemoveNode(xmlDocument, propertyXPath, true);
+						}
+
+						xmlDocument.Save(PathToMachineSpecificIncludeFile);
+					}
+
+					private static void RemoveNode(XmlDocument xmlDocument, string xpath, bool doRemoveComments)
+					{
+						XmlNode nodeToRemove = xmlDocument.SelectSingleNode(xpath);
+						if (doRemoveComments)
+						{
+							RemoveAllCommentsAboveXmlNode(nodeToRemove);
+						}
+						nodeToRemove.ParentNode.RemoveChild(nodeToRemove);
+					}
+
+					private static void RemoveAllCommentsAboveXmlNode(XmlNode node)
+					{
+						XmlNode nodeToRemove = node.PreviousSibling;
+						while (nodeToRemove is XmlComment)
+						{
+							XmlNode nodeToRemovePreviousSibling = nodeToRemove.PreviousSibling;
+							nodeToRemove.ParentNode.RemoveChild(nodeToRemove);
+							nodeToRemove = nodeToRemovePreviousSibling;
+						}
+					}
+				}
+			]]>
+		</code>
+	</script>
+</project>

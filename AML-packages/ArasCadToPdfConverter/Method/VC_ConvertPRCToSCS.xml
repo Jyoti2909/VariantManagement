@@ -1,0 +1,54 @@
+﻿<AML>
+ <Item type="Method" id="DBB8245472BE4B029E449186A3A9BB04" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string ruleId = "EC950A18119245A981FD0EE26486AEC3"; //ConversionRule 'Aras 3D PRC to SCS Conversion'
+Innovator inn = this.getInnovator();
+Item query = inn.newItem("ConversionRule", "get");
+query.setID(ruleId);
+query = query.apply();
+if (query.isError())
+{
+	throw new Exception(CCO.ErrorLookup.Lookup("SSVC_ConversionRuleNotFound"));
+}
+
+string itemType = this.getProperty("item_type");
+string itemID = this.getProperty("item_id");
+
+Item item = this.newItem(itemType, "get");
+item.setID(itemID);
+item = item.apply();
+
+string fileId = item.getProperty("monolithic_model_file");
+
+if (String.IsNullOrEmpty(fileId))
+{
+	throw new Exception(CCO.ErrorLookup.Lookup("SSVC_CadNotContainFile"));
+}
+query = inn.newItem();
+query.loadAML(@"
+<AML>
+	<Item type='File' action='get' id='" + fileId + @"' select='file_type' />
+</AML>");
+query = query.apply();
+if (query.isError())
+{
+	throw new Exception(query.getErrorString());
+}
+string fileType = query.getProperty("file_type");
+
+//		<user_data><![CDATA[<Data><ConvertToTypes><type>PDF</type></ConvertToTypes></Data>]]]]><![CDATA[></user_data>
+query = inn.newItem();
+query.loadAML(@"
+<AML>
+	<Item type='ConversionTask' action='CreateConversionTask'>
+		<file_id>" + fileId + @"</file_id>
+		<file_type>" + fileType + @"</file_type>
+		<rule_id>" + ruleId + @"</rule_id>
+	</Item>
+</AML>");
+query = query.apply();
+return query;]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_ConvertPRCToSCS</name>
+ </Item>
+</AML>

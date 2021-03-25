@@ -1,0 +1,265 @@
+﻿<AML>
+ <Item type="Method" id="9D49246712DC4539A2B8A34E1EAEF14C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	Innovator innovator = this.getInnovator();
+	string classification = this.getProperty("classification");
+	string schemaId = this.getProperty("req_document_type");
+
+	string langCode = "en";
+	string content = this.getProperty("content", null, langCode);
+
+	// Resize "content" field in DB if it was not updated yet
+	Item documentItemType = GetItemTypeDescriptor();
+	String itemTypeTableName = documentItemType.getProperty("instance_data");
+	ResizeFieldsInDB(CCO, itemTypeTableName);
+
+	if (!String.IsNullOrEmpty(schemaId) && !String.IsNullOrEmpty(classification) && String.IsNullOrEmpty(content))
+	{
+		Item schemaElementItem = this.newItem("tp_XmlSchemaElement", "get");
+		schemaElementItem.setAttribute("select", "id, name");
+		schemaElementItem.setProperty("source_id", schemaId);
+		schemaElementItem.setProperty("default_classification", classification);
+		schemaElementItem = schemaElementItem.apply();
+
+		Aras.TDF.Base.SchemaElementFactory factory = CreateFactory(this, innovator, schemaId);
+		factory.CustomContentEnabled = true;
+		StringBuilder initialContent = new StringBuilder();
+		int count = schemaElementItem.getItemCount();
+
+		for (int i = 0; i < count; i++)
+		{
+			Item schemaElement = schemaElementItem.getItemByIndex(i);
+			String elementName = schemaElement.getProperty("name");
+			Aras.TDF.Base.DocumentSchemaNode newElement = factory.NewElement(elementName);
+			initialContent.Append(newElement.Origin.OuterXml);
+		}
+		this.setProperty("content", initialContent.ToString());
+
+		if (count == 1)
+		{
+			this.setProperty("root_element_type", "Single");
+			this.setProperty("root_element_name", schemaElementItem.getProperty("name"));
+		}
+		else if (count > 1)
+		{
+			this.setProperty("root_element_type", "Multiple");
+		}
+	}
+
+	if (!String.IsNullOrEmpty(content))
+	{
+		Aras.TDF.Base.SchemaElementFactory factory = CreateFactory(this, innovator, schemaId);
+		Aras.TDF.Base.DocumentSchemaNode node = factory.ParseElement("<root>" + content + "</root>");
+		List<string> nodeNameList = (from child in node.Childs select child.NodeName).ToList();
+		List<string> uniqueNodeNameList = nodeNameList.Distinct().ToList();
+
+		if (nodeNameList.Count == uniqueNodeNameList.Count)
+		{
+			Item schemaElementItem = this.newItem("tp_XmlSchemaElement", "get");
+			schemaElementItem.setAttribute("select", "name, default_classification");
+			schemaElementItem.setProperty("source_id", schemaId);
+			Item itemOr = schemaElementItem.newOR();
+			itemOr.setProperty("name", string.Join<string>(", ", uniqueNodeNameList));
+			schemaElementItem = schemaElementItem.apply();
+			int count = schemaElementItem.getItemCount();
+
+			if (count == uniqueNodeNameList.Count)
+			{
+				List<string> classificationList = new List<string>();
+				for (int i = 0; i < count; i++)
+				{
+					Item schemaElement = schemaElementItem.getItemByIndex(i);
+					string strClassification = schemaElement.getProperty("default_classification");
+					if (!String.IsNullOrEmpty(strClassification))
+					{
+						classificationList.Add(strClassification);
+					}
+					else
+					{
+						classificationList = null;
+						break;
+					}
+				}
+				if (classificationList != null && classificationList.Count > 0)
+				{
+					List<string> uniqueClassificationList = classificationList.Distinct().ToList();
+					if (uniqueClassificationList.Count == 1)
+					{
+						this.setProperty("classification", uniqueClassificationList.FirstOrDefault());
+					}
+				}
+			}
+		}
+	}
+
+	content = this.getProperty("content", null, langCode);
+	if (!string.IsNullOrEmpty(content))
+	{
+		string updatedContent = UpdateChapterElementInContent(content, langCode);
+		this.setProperty("content", updatedContent, langCode);
+	}
+
+	SaveReferences(CCO);
+
+	return this;
+}
+
+private string UpdateChapterElementInContent(string content, string langCode)
+{
+	XmlDocument contentXml = new XmlDocument { PreserveWhitespace = true };
+	contentXml.LoadXml(content);
+
+	XmlNode chapterNode = contentXml.DocumentElement.SelectSingleNode("*[local-name()=\"Requirement-Info\"]/*[local-name()=\"Requirement-Chapter\"]");
+	chapterNode.FirstChild.InnerText = "";
+
+	return contentXml.InnerXml;
+}
+
+
+private void SaveReferences(Aras.Server.Core.CallContext CCO)
+{
+	string referencesContent = this.getProperty("references");
+
+	if (!string.IsNullOrEmpty(referencesContent))
+	{
+		System.Web.Script.Serialization.JavaScriptSerializer jsSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+		XmlDocument referencesXml = new XmlDocument { PreserveWhitespace = true };
+		referencesXml.LoadXml(string.Format(CultureInfo.InvariantCulture, "<references>{0}</references>", referencesContent));
+		XmlNode referencesContainerNode = referencesXml.SelectSingleNode("references");
+		XmlNode referenceNode = referencesContainerNode.FirstChild;
+
+		while (referenceNode != null)
+		{
+			switch (referenceNode.Name) {
+				case "aras:image":
+					string referencedImageId = GetNodeAttributeValue(referenceNode, "imageId");
+					string referencedImageRefId = GetNodeAttributeValue(referenceNode, "ref-id");
+					string referencePropertiesString = GetNodeAttributeValue(referenceNode, "referenceProperties");
+					Dictionary<string, string> referenceProperties = jsSerializer.Deserialize<Dictionary<string, string>>(!string.IsNullOrEmpty(referencePropertiesString) ? referencePropertiesString : "{}");
+					Item referencedItem = getReferencedItem("tp_Image", referencedImageId);
+
+					Item tpImageReference = this.newItem("re_ImageReference", "add");
+					tpImageReference.setProperty("reference_id", referencedImageRefId);
+					applyReferenceProperties(tpImageReference, referenceProperties);
+
+					//before creation of new itemReference, we must check, that item still exists
+					if (referencedItem != null)
+					{
+						if (!referencedItem.isError())
+						{
+							tpImageReference.setProperty("related_id", referencedImageId);
+						}
+						else
+						{
+							throw new Exception(string.Format(CultureInfo.InvariantCulture, CCO.ErrorLookup.Lookup("RE_ReferencedItemNotExists"), "tp_Image", referencedImageId));
+						}
+					}
+
+					this.addRelationship(tpImageReference);
+					break;
+			}
+
+			referenceNode = referenceNode.NextSibling;
+		}
+	}
+}
+
+Dictionary<string, Item> referencedItemsHash = new Dictionary<string, Item>();
+private Item getReferencedItem(String itemType, String itemId)
+{
+	if (!String.IsNullOrEmpty(itemId) && !referencedItemsHash.ContainsKey(itemId))
+	{
+		Item referencedItem = this.newItem(itemType, "get");
+		referencedItem.setID(itemId);
+		referencedItemsHash.Add(itemId, referencedItem.apply());
+	}
+
+	return referencedItemsHash[itemId];
+}
+
+private static void applyReferenceProperties(Item referenceItem, Dictionary<String, String> referenceProperties)
+{
+	if (referenceItem != null && referenceProperties != null)
+	{
+		// check that new reference allready have changed properties
+		String propertyValue = referenceProperties.ContainsKey("ignoreAllVersions") ? referenceProperties["ignoreAllVersions"] : "";
+		if (!String.IsNullOrEmpty(propertyValue))
+		{
+			referenceItem.setProperty("ignore_all_versions", referenceProperties["ignoreAllVersions"]);
+		}
+
+		propertyValue = referenceProperties.ContainsKey("ignoredVersionId") ? referenceProperties["ignoredVersionId"] : "";
+		if (!String.IsNullOrEmpty(propertyValue))
+		{
+			referenceItem.setProperty("ignored_version_id", referenceProperties["ignoredVersionId"]);
+		}
+	}
+}
+
+private static string GetNodeAttributeValue(XmlNode node, string attributeName)
+{
+	return ((XmlElement)node).GetAttribute(attributeName);
+}
+
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Aras.Rules", "ArasRule16:DoNotUseCachePublicApiClass")]
+private static void ResizeFieldsInDB(Aras.Server.Core.CallContext context, String tableName)
+{
+	string key = String.Format(CultureInfo.InvariantCulture, "{0}:{1}_UpdatedLanguagesCount", context.DB.DatabaseName, tableName);
+	object objValue = context.Context.Application[key];
+
+	System.Reflection.MethodInfo dynMethod = context.Cache.GetType().GetMethod("GetLanguagesFromCache", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+	int currentNumberOfLanguages = ((ArrayList)dynMethod.Invoke(context.Cache, null)).Count;
+
+	bool needResize = false;
+	if (objValue != null && objValue is int)
+	{
+		int numberOfLanguages = (int)objValue;
+		needResize = numberOfLanguages != currentNumberOfLanguages;
+	}
+	else
+	{
+		needResize = true;
+	}
+
+	if (needResize)
+	{
+		Aras.Server.Core.InnovatorDatabase conn = context.DB.InnDatabase;
+		string sqlQueryFormat = "exec tp_SetNvarcharMaxToBlockMLProps '" + conn.QuoteValue(tableName) + "'";
+
+		conn.ExecuteSQL(sqlQueryFormat);
+		context.Context.Application.Lock();
+		context.Context.Application[key] = currentNumberOfLanguages;
+		context.Context.Application.UnLock();
+	}
+}
+
+private Item GetItemTypeDescriptor()
+{
+	Item requestItem = this.newItem("ItemType", "get");
+	requestItem.setAttribute("select", "instance_data");
+	requestItem.setProperty("name", this.getType());
+	requestItem = requestItem.apply();
+
+	if (requestItem.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(requestItem.getErrorString());
+	}
+
+	return requestItem;
+}
+
+public static Aras.TDF.Base.SchemaElementFactory CreateFactory(Item thisItem, Innovator innovatorInstance,
+	string schemaId)
+{
+	if (thisItem == null)
+	{
+		throw new ArgumentException("thisItem should be not null");
+	}
+
+	var executionContext = new Aras.TDF.Base.SchemaElementExecutionContext(thisItem.getID());
+	var factory = new Aras.TDF.Base.SchemaElementFactory(innovatorInstance, schemaId, executionContext);
+	return factory;]]></method_code>
+  <method_type>C#</method_type>
+  <name>re_RequirementBeforeAdd</name>
+ </Item>
+</AML>

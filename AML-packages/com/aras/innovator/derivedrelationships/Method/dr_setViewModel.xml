@@ -1,0 +1,69 @@
+﻿<AML>
+ <Item type="Method" id="CEFDCD6827C94916839397BD3CF6AF0D" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const initViewModel = function() {
+	aras.getItemRelationshipsEx(document.item, 'dr_FamilyElement', null, null, '<Relationships>' +
+	'<Item type=\'dr_FamilyElement qry_QueryItem\' action=\'get\'></Item>' +
+	'</Relationships>', false);
+	parent.viewModel.queryDefinitionModel = new parent.QueryDefinitionModel(aras.getItemProperty(document.item, 'query_definition_id'));
+	parent.viewModel.relationshipFamilyModel = new parent.RelationshipFamilyModel(document.item);
+};
+const loadDerivedRelationships = function() {
+	const item = document.item;
+
+	if (item.selectNodes('Relationships/Item[@type="dr_UI_RelationshipFamily"]').length) {
+		return Promise.resolve();
+	}
+	const drFamilyNodes = item.selectNodes('Relationships/Item[@type="dr_FamilyElement"]');
+	const idList = [].map.call(drFamilyNodes, function(drFamilyNode) {
+		return aras.getItemProperty(drFamilyNode, 'dr_relationship_id');
+	}).join(',');
+
+	if (!idList) {
+		return Promise.resolve();
+	}
+	return ArasModules.soap('<Item type="dr_Relationship" action="get" idlist="' + idList + '"></Item>', {
+		async: true
+	})
+	.then(function(result) {
+		const drRelationshipFamilyItem = aras.newIOMItem();
+
+		drRelationshipFamilyItem.node = item;
+		drRelationshipFamilyItem.dom = item.ownerDocument;
+
+		[].forEach.call(result.selectNodes('Item'), function(drRelationshipNode) {
+			const id = drRelationshipNode.getAttribute('id');
+			const name = aras.getItemProperty(drRelationshipNode, 'name');
+			const rootItemType = aras.getItemTypeForClient(aras.getItemProperty(drRelationshipNode, 'departure_itemtype_id'), 'id');
+			const destinationItemType = aras.getItemTypeForClient(aras.getItemProperty(drRelationshipNode, 'destination_itemtype_id'), 'id');
+			const drUIRelationshipFamilyItem = aras.newIOMItem('dr_UI_RelationshipFamily', 'add');
+
+			drRelationshipFamilyItem.addRelationship(drUIRelationshipFamilyItem);
+			drUIRelationshipFamilyItem.setID(id);
+			drUIRelationshipFamilyItem.setProperty('name', name);
+			drUIRelationshipFamilyItem.setPropertyItem('departure_itemtype_id', rootItemType);
+			drUIRelationshipFamilyItem.setPropertyItem('destination_itemtype_id', destinationItemType);
+			drUIRelationshipFamilyItem.setProperty('description', aras.getItemProperty(drRelationshipNode, 'description'));
+		});
+	})
+	.catch(function(err) {
+		ArasModules.Dialog.alert(err.responseText);
+	});
+};
+
+if (aras.isTempEx(document.item)) {
+	return;
+}
+
+if (!parent.viewModel) {
+	parent.viewModel = new parent.ViewModel();
+	initViewModel();
+	loadDerivedRelationships();
+	return;
+}
+initViewModel();
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>dr_setViewModel</name>
+ </Item>
+</AML>

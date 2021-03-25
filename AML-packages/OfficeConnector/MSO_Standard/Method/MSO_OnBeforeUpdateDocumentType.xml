@@ -1,0 +1,2658 @@
+﻿<AML>
+ <Item type="Method" id="E7BA8B995DBC44D0BBDC27D7FFED0722" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+            return businessLogic.Run(this);
+}
+
+//[PartialPath("Partials/DocumentTypes/BaseDocumentType")]
+	public abstract class BaseDocumentType
+	{
+		protected Item currentItem;
+		private Dictionary<string, Item> masterItemTypeAvailableXProperties;
+
+		public BaseDocumentType(Item currentItem)
+		{
+			this.currentItem = currentItem;
+		}
+
+		public abstract string NativeFileLabel { get; }
+
+		public abstract string ViewableFileKeyedName { get; }
+
+		public abstract Item MasterItemTypeItem { get; }
+
+		public abstract List<Item> PropertyMappingCollection { get; }
+
+		public abstract List<Item> ValidLinkedItemCollection { get; }
+
+		public abstract List<string> SupportedOfficeApplications { get; }
+
+		public abstract List<string> SupportedSpecialMSOProperties { get; }
+
+		public Dictionary<string, Item> MasterItemTypeAvailableXProperties
+		{
+			get
+			{
+				if (masterItemTypeAvailableXProperties == null)
+				{
+					masterItemTypeAvailableXProperties = LoadXProperties();
+				}
+
+				return masterItemTypeAvailableXProperties;
+			}
+		}
+
+		public string getType()
+		{
+			return this.currentItem.getType();
+		}
+
+		public string GetProperty(string propertyName)
+		{
+			return this.currentItem.getProperty(propertyName, string.Empty);
+		}
+
+		public string GetPropertyAttribute(string propertyName, string attributeName)
+		{
+			return this.currentItem.getPropertyAttribute(propertyName, attributeName);
+		}
+
+		public abstract Dictionary<string, List<Item>> GetPropertyMappingGroups();
+
+		private Dictionary<string, Item> LoadXProperties()
+		{
+			Dictionary<string, Item> xProperties = new Dictionary<string, Item>();
+			Item xClassificationTreeItem = this.currentItem.newItem("xClassificationTree", "get");
+
+			Item xClassItem = xClassificationTreeItem.createRelationship("xClass", "get");
+			Item xClassXPropertyDefinitionItem = xClassItem.createRelationship("xClass_xPropertyDefinition", "get");
+			xClassXPropertyDefinitionItem.setAttribute("select", "related_id");
+
+			Item xClassificationTreeItemTypeItem = xClassificationTreeItem.createRelationship("xClassificationTree_ItemType", "get");
+			xClassificationTreeItemTypeItem.setProperty("related_id", this.MasterItemTypeItem.getID());
+
+			xClassificationTreeItem = xClassificationTreeItem.apply();
+
+			Item xPropertyItems = xClassificationTreeItem.getItemsByXPath("//Item[@type=\"xPropertyDefinition\"]");
+			int xPropertyCount = xPropertyItems.getItemCount();
+			for (int i = 0; i < xPropertyCount; i++)
+			{
+				Item xProperty = xPropertyItems.getItemByIndex(i);
+				string xPropertyName = xProperty.getProperty("name");
+				if (!xProperties.ContainsKey(xPropertyName))
+				{
+					xProperties.Add(xPropertyName, xProperty);
+				}
+			}
+
+			return xProperties;
+		}
+	}
+
+//[PartialPath("Partials/DocumentTypes/MSO_DocumentType")]
+	public class MSO_DocumentType : BaseDocumentType
+	{
+		private Item masterItemTypeItem;
+		private List<Item> propertyMappingCollection;
+		private List<Item> validLinkedItemCollection;
+
+		public MSO_DocumentType(Item currentItem) : base(currentItem)
+		{
+
+		}
+
+		public override string NativeFileLabel { get { return "Native File"; } }
+
+		public override string ViewableFileKeyedName { get { return "viewable_file_link"; } }
+
+		public override Item MasterItemTypeItem
+		{
+			get
+			{
+				if (masterItemTypeItem == null)
+				{
+					string masterId = this.currentItem.getProperty("master_item_type");
+					if (!string.IsNullOrEmpty(masterId))
+					{
+						masterItemTypeItem = this.currentItem.newItem("ItemType", "get");
+						masterItemTypeItem.setID(masterId);
+						masterItemTypeItem.setAttribute("levels", "2");
+						masterItemTypeItem = masterItemTypeItem.apply();
+					}
+				}
+
+				return masterItemTypeItem;
+			}
+		}
+
+		public override List<Item> PropertyMappingCollection
+		{
+			get
+			{
+				if (propertyMappingCollection == null)
+				{
+						propertyMappingCollection = LoadPropertyMappingItems(this.currentItem);
+						string baseDocumentTypeId = this.currentItem.getProperty("base_document_type");
+						if (!string.IsNullOrEmpty(baseDocumentTypeId))
+						{
+							Item base_document_type = this.currentItem.getInnovator().getItemById("MSO_DocumentType", baseDocumentTypeId);
+							List<Item> baseDocTypePropMappings = LoadPropertyMappingItems(base_document_type);
+							foreach (Item item in baseDocTypePropMappings)
+							{
+								bool isPropMappingEqual = propertyMappingCollection.Exists(i =>
+								 i.getProperty("office_property") == item.getProperty("office_property")
+								 && i.getProperty("aras_property") == item.getProperty("aras_property")
+								 && i.getProperty("use_template") == item.getProperty("use_template")
+								 && i.getProperty("on_create") == item.getProperty("on_create")
+								 && i.getProperty("on_update") == item.getProperty("on_update")
+								 && i.getProperty("direction") == item.getProperty("direction"));
+								if (!isPropMappingEqual)
+								{
+									propertyMappingCollection.Add(item);
+				}
+							}
+						}
+					}
+
+				return propertyMappingCollection;
+			}
+		}
+
+		public override List<Item> ValidLinkedItemCollection
+		{
+			get
+			{
+				if (validLinkedItemCollection == null)
+				{
+					validLinkedItemCollection = LoadValidLinkedItems();
+				}
+
+				return validLinkedItemCollection;
+			}
+		}
+
+		public override List<string> SupportedOfficeApplications
+		{
+			get
+			{
+				var supportedOfficeApplications = new List<string>
+					{
+						"Word",
+						"Excel",
+						"PowerPoint"
+					};
+
+				return supportedOfficeApplications;
+			}
+		}
+
+			public override List<string> SupportedSpecialMSOProperties
+			{
+				get
+				{
+					var supportedSpecialMSOProperties = new List<string>
+					{
+						"$mso_filename",
+						"$mso_haschanges",
+						"$mso_hascomments",
+						"$mso_item",
+						"$mso_string",
+						"$mso_user",
+						"$mso_templateversion",
+						"$mso_versioncomment"
+					};
+
+					return supportedSpecialMSOProperties;
+				}
+			}
+
+		public override Dictionary<string, List<Item>> GetPropertyMappingGroups()
+		{
+			var propertyMapGroups = new Dictionary<string, List<Item>>();
+
+			foreach (Item propertyMappingItem in PropertyMappingCollection)
+			{
+				string arasPropertyKeyedName = propertyMappingItem.getProperty("aras_property", string.Empty);
+
+				List<Item> arasPropertyMappers;
+				if (propertyMapGroups.TryGetValue(arasPropertyKeyedName, out arasPropertyMappers))
+				{
+					arasPropertyMappers.Add(propertyMappingItem);
+				}
+				else
+				{
+					arasPropertyMappers = new List<Item>
+					{
+						propertyMappingItem
+					};
+
+					propertyMapGroups.Add(arasPropertyKeyedName, arasPropertyMappers);
+				}
+			}
+
+			return propertyMapGroups;
+		}
+
+			private List<Item> LoadPropertyMappingItems(Item documentType)
+		{
+			var propertyMapItemsCollection = new List<Item>();
+
+				Item serverPropertyMapItems = documentType.newItem("MSO_DocumentType PropertyMap", "get");
+				serverPropertyMapItems.setProperty("source_id", documentType.getID());
+			serverPropertyMapItems.setPropertyCondition("source_id", "eq");
+			serverPropertyMapItems = serverPropertyMapItems.apply();
+
+				Item newPropertyMapItems = documentType.getRelationships("MSO_DocumentType PropertyMap");
+
+			int serverPropertyMapItemsCount = serverPropertyMapItems.getItemCount();
+			for (int i = 0; i < serverPropertyMapItemsCount; i++)
+			{
+				Item serverPropertyMapItem = serverPropertyMapItems.getItemByIndex(i);
+				propertyMapItemsCollection.Add(serverPropertyMapItem);
+			}
+
+			int newPropertyMapItemsCount = newPropertyMapItems.getItemCount();
+			for (int i = 0; i < newPropertyMapItemsCount; i++)
+			{
+				Item newPropertyMapItem = newPropertyMapItems.getItemByIndex(i);
+				string action = newPropertyMapItem.getAction();
+
+				if (action == "add")
+				{
+					propertyMapItemsCollection.Add(newPropertyMapItem);
+				}
+				else if (action == "update" || action == "edit")
+				{
+					var index = propertyMapItemsCollection.FindIndex(map => map.getID() == newPropertyMapItem.getID());
+					if (index != -1)
+					{
+						propertyMapItemsCollection[index] = newPropertyMapItem;
+					}
+				}
+				else if (action == "delete")
+				{
+					propertyMapItemsCollection.RemoveAll(map => map.getID() == newPropertyMapItem.getID());
+				}
+			}
+
+			return propertyMapItemsCollection;
+		}
+
+		private List<Item> LoadValidLinkedItems()
+		{
+			var referenceItemsCollection = new List<Item>();
+
+			Item serverReferenceItems = this.currentItem.newItem("MSO_DocumentType Reference", "get");
+			serverReferenceItems.setProperty("source_id", this.currentItem.getID());
+			serverReferenceItems.setPropertyCondition("source_id", "eq");
+			serverReferenceItems = serverReferenceItems.apply();
+
+			Item newReferenceItems = this.currentItem.getRelationships("MSO_DocumentType Reference");
+
+			int serverReferenceItemsCount = serverReferenceItems.getItemCount();
+			for (int i = 0; i < serverReferenceItemsCount; i++)
+			{
+				Item serverReferenceItem = serverReferenceItems.getItemByIndex(i);
+				referenceItemsCollection.Add(serverReferenceItem);
+			}
+
+			int newReferenceItemsCount = newReferenceItems.getItemCount();
+			for (int i = 0; i < newReferenceItemsCount; i++)
+			{
+				Item newReferenceItem = newReferenceItems.getItemByIndex(i);
+				string action = newReferenceItem.getAction();
+
+				if (action == "add")
+				{
+					ExtendRelatedIdProperty(newReferenceItem);
+					referenceItemsCollection.Add(newReferenceItem);
+				}
+				else if (action == "update" || action == "edit")
+				{
+					var index = referenceItemsCollection.FindIndex(map => map.getID() == newReferenceItem.getID());
+					if (index != -1)
+					{
+						ExtendRelatedIdProperty(newReferenceItem);
+						referenceItemsCollection[index] = newReferenceItem;
+					}
+				}
+				else if (action == "delete")
+				{
+					referenceItemsCollection.RemoveAll(map => map.getID() == newReferenceItem.getID());
+				}
+			}
+
+			return referenceItemsCollection;
+		}
+
+		private void ExtendRelatedIdProperty(Item newReferenceItem)
+		{
+			string msoReferenceid;
+			Item msoReferenceItem = newReferenceItem.getPropertyItem("related_id");
+			if (msoReferenceItem == null)
+			{
+				msoReferenceid = newReferenceItem.getProperty("related_id");
+			}
+			else
+			{
+				string msoReferenceAction = msoReferenceItem.getAction();
+				if (msoReferenceAction == "update" || msoReferenceAction == "edit")
+				{
+					return;
+				}
+
+				msoReferenceid = msoReferenceItem.getID();
+			}
+
+			msoReferenceItem = this.currentItem.newItem("MSO_Reference", "get");
+			msoReferenceItem.setID(msoReferenceid);
+			msoReferenceItem = msoReferenceItem.apply();
+			newReferenceItem.setPropertyItem("related_id", msoReferenceItem);
+		}
+	}
+
+//[PartialPath("Partials/DocumentTypes/MSO_EmailDocumentType")]
+	public class MSO_EmailDocumentType : BaseDocumentType
+	{
+		private Item masterItemTypeItem;
+		private List<Item> propertyMappingCollection;
+		private List<Item> validLinkedItemCollection;
+
+		public MSO_EmailDocumentType(Item currentItem) : base(currentItem)
+		{
+
+		}
+
+		public override string NativeFileLabel { get { return "Message File"; } }
+
+		public override string ViewableFileKeyedName { get { return "viewable_message_file_link"; } }
+
+		public override Item MasterItemTypeItem
+		{
+			get
+			{
+				if (masterItemTypeItem == null)
+				{
+					string masterId = this.currentItem.getProperty("master_item_type");
+					if (!string.IsNullOrEmpty(masterId))
+					{
+						masterItemTypeItem = this.currentItem.newItem("ItemType", "get");
+						masterItemTypeItem.setID(masterId);
+						masterItemTypeItem.setAttribute("levels", "2");
+						masterItemTypeItem = masterItemTypeItem.apply();
+					}
+				}
+
+				return masterItemTypeItem;
+			}
+		}
+
+
+		public override List<Item> PropertyMappingCollection
+		{
+			get
+			{
+				if (propertyMappingCollection == null)
+				{
+					propertyMappingCollection = LoadPropertyMappingItems();
+				}
+
+				return propertyMappingCollection;
+			}
+		}
+
+		public override Dictionary<string, List<Item>> GetPropertyMappingGroups()
+		{
+			var propertyMapGroups = new Dictionary<string, List<Item>>();
+
+			foreach (Item propertyMappingItem in PropertyMappingCollection)
+			{
+				string arasPropertyKeyedName = propertyMappingItem.getProperty("aras_property", string.Empty);
+
+				List<Item> arasPropertyMappers;
+				if (propertyMapGroups.TryGetValue(arasPropertyKeyedName, out arasPropertyMappers))
+				{
+					arasPropertyMappers.Add(propertyMappingItem);
+				}
+				else
+				{
+					arasPropertyMappers = new List<Item>
+					{
+						propertyMappingItem
+					};
+
+					propertyMapGroups.Add(arasPropertyKeyedName, arasPropertyMappers);
+				}
+			}
+
+			return propertyMapGroups;
+		}
+
+		public override List<Item> ValidLinkedItemCollection
+		{
+			get
+			{
+				if (validLinkedItemCollection == null)
+				{
+					validLinkedItemCollection = LoadValidLinkedItems();
+				}
+
+				return validLinkedItemCollection;
+			}
+		}
+
+		public override List<string> SupportedOfficeApplications
+		{
+			get
+			{
+				var supportedOfficeApplications = new List<string>
+					{
+						"Outlook"
+					};
+
+				return supportedOfficeApplications;
+			}
+		}
+
+		public override List<string> SupportedSpecialMSOProperties
+		{
+			get
+			{
+				var supportedSpecialMSOProperties = new List<string>
+				{
+					"$mso_emaildescription",
+					"$mso_item",
+					"$mso_string",
+					"$mso_user"
+				};
+
+				return supportedSpecialMSOProperties;
+			}
+		}
+
+		private List<Item> LoadPropertyMappingItems()
+		{
+			var propertyMapItemsCollection = new List<Item>();
+
+			Item serverPropertyMapItems = this.currentItem.newItem("MSO_EmailDocType PropertyMap", "get");
+			serverPropertyMapItems.setProperty("source_id", this.currentItem.getID());
+			serverPropertyMapItems.setPropertyCondition("source_id", "eq");
+			serverPropertyMapItems = serverPropertyMapItems.apply();
+
+			Item newPropertyMapItems = this.currentItem.getRelationships("MSO_EmailDocType PropertyMap");
+
+			int serverPropertyMapItemsCount = serverPropertyMapItems.getItemCount();
+			for (int i = 0; i < serverPropertyMapItemsCount; i++)
+			{
+				Item serverPropertyMapItem = serverPropertyMapItems.getItemByIndex(i);
+				propertyMapItemsCollection.Add(serverPropertyMapItem);
+			}
+
+			int newPropertyMapItemsCount = newPropertyMapItems.getItemCount();
+			for (int i = 0; i < newPropertyMapItemsCount; i++)
+			{
+				Item newPropertyMapItem = newPropertyMapItems.getItemByIndex(i);
+				string action = newPropertyMapItem.getAction();
+
+				if (action == "add")
+				{
+					propertyMapItemsCollection.Add(newPropertyMapItem);
+				}
+				else if (action == "update" || action == "edit")
+				{
+					var index = propertyMapItemsCollection.FindIndex(map => map.getID() == newPropertyMapItem.getID());
+					if (index != -1)
+					{
+						propertyMapItemsCollection[index] = newPropertyMapItem;
+					}
+				}
+				else if (action == "delete")
+				{
+					propertyMapItemsCollection.RemoveAll(map => map.getID() == newPropertyMapItem.getID());
+				}
+			}
+
+			return propertyMapItemsCollection;
+		}
+
+		private List<Item> LoadValidLinkedItems()
+		{
+			var referenceItemsCollection = new List<Item>();
+
+			Item serverReferenceItems = this.currentItem.newItem("MSO_EmailDocType Reference", "get");
+			serverReferenceItems.setProperty("source_id", this.currentItem.getID());
+			serverReferenceItems.setPropertyCondition("source_id", "eq");
+			serverReferenceItems = serverReferenceItems.apply();
+
+			Item newReferenceItems = this.currentItem.getRelationships("MSO_EmailDocType Reference");
+
+			int serverReferenceItemsCount = serverReferenceItems.getItemCount();
+			for (int i = 0; i < serverReferenceItemsCount; i++)
+			{
+				Item serverReferenceItem = serverReferenceItems.getItemByIndex(i);
+				referenceItemsCollection.Add(serverReferenceItem);
+			}
+
+			int newReferenceItemsCount = newReferenceItems.getItemCount();
+			for (int i = 0; i < newReferenceItemsCount; i++)
+			{
+				Item newReferenceItem = newReferenceItems.getItemByIndex(i);
+				string action = newReferenceItem.getAction();
+
+				if (action == "add")
+				{
+					ExtendRelatedIdProperty(newReferenceItem);
+					referenceItemsCollection.Add(newReferenceItem);
+				}
+				else if (action == "update" || action == "edit")
+				{
+					var index = referenceItemsCollection.FindIndex(map => map.getID() == newReferenceItem.getID());
+					if (index != -1)
+					{
+						ExtendRelatedIdProperty(newReferenceItem);
+						referenceItemsCollection[index] = newReferenceItem;
+					}
+				}
+				else if (action == "delete")
+				{
+					referenceItemsCollection.RemoveAll(map => map.getID() == newReferenceItem.getID());
+				}
+			}
+
+			return referenceItemsCollection;
+		}
+
+		private void ExtendRelatedIdProperty(Item newReferenceItem)
+		{
+			string msoReferenceid;
+			Item msoReferenceItem = newReferenceItem.getPropertyItem("related_id");
+			if (msoReferenceItem == null)
+			{
+				msoReferenceid = newReferenceItem.getProperty("related_id");
+			}
+			else
+			{
+				string msoReferenceAction = msoReferenceItem.getAction();
+				if (msoReferenceAction == "update" || msoReferenceAction == "edit")
+				{
+					return;
+				}
+
+				msoReferenceid = msoReferenceItem.getID();
+			}
+
+			msoReferenceItem = this.currentItem.newItem("MSO_Reference", "get");
+			msoReferenceItem.setID(msoReferenceid);
+			msoReferenceItem = msoReferenceItem.apply();
+			newReferenceItem.setPropertyItem("related_id", msoReferenceItem);
+		}
+	}
+
+//[PartialPath("Partials/Validator/IValidator")]
+		internal interface IValidator
+		{
+			void Run();
+		}
+//[PartialPath("Partials/Validator/Validator")]
+		public class Validator<T> : IValidator
+		{
+			private T validateObj;
+			private List<Rule<T>> rules = new List<Rule<T>>();
+			private int maxErrors;
+
+			public Validator(T validateObj, int maxErrors)
+			{
+				this.validateObj = validateObj;
+				this.maxErrors = maxErrors;
+			}
+
+			public void AddRule(Rule<T> rule)
+			{
+				this.rules.Add(rule);
+			}
+
+			public void AddRules(List<Rule<T>> rules)
+			{
+				this.rules.AddRange(rules);
+			}
+
+			public void RemoveRule(Rule<T> rule)
+			{
+				this.rules.Remove(rule);
+			}
+
+			public void Run()
+			{
+				var errors = new List<string>();
+
+				foreach (Rule<T> rule in rules)
+				{
+					rule.Check(this.validateObj);
+					errors.AddRange(rule.Errors);
+					if (errors.Count >= this.maxErrors)
+					{
+						errors = errors.Take(this.maxErrors).ToList();
+						break;
+					}
+				}
+
+				if (errors.Count > 0)
+				{
+					string message = string.Join("\r\n", errors.ToArray());
+					throw new Exception(message);
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/Rule")]
+		public abstract class Rule<T>
+		{
+			protected IDataAccessLayer dataAccessLayer;
+
+			protected List<string> errors = new List<string>();
+
+			public Rule(IDataAccessLayer dataAccessLayer)
+			{
+				this.dataAccessLayer = dataAccessLayer;
+			}
+
+			public List<string> Errors
+			{
+				get { return errors; }
+			}
+
+			public abstract void Check(T validateObj);
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/BaseDocumentTypePropertyRule")]
+		public class BaseDocumentTypePropertyRule : Rule<BaseDocumentType>
+		{
+			public BaseDocumentTypePropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				string baseDocumentTypeId = documentType.GetProperty("base_document_type");
+				if (string.IsNullOrEmpty(baseDocumentTypeId))
+				{
+					return;
+				}
+
+				// Base document type should have same classification and Item type as current Office Document Type
+				if (documentType.MasterItemTypeItem != null)
+				{
+					string type = documentType.getType();
+
+					Item baseDocumentTypeItem = this.dataAccessLayer.CreateNewItem(type, "get");
+					baseDocumentTypeItem.setID(baseDocumentTypeId);
+					baseDocumentTypeItem = this.dataAccessLayer.ApplyItem(baseDocumentTypeItem);
+
+					string baseItemTypeId = baseDocumentTypeItem.getProperty("master_item_type");
+					string masterItemTypeId = documentType.MasterItemTypeItem.getID();
+
+					if (!string.Equals(masterItemTypeId, baseItemTypeId, StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_BaseDocumentTypeShouldHaveTheSameItemTypeAsCurrentOfficeDocumentType"));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/DocumentNumberingPropertyRule")]
+		public class DocumentNumberingPropertyRule : Rule<BaseDocumentType>
+		{
+			public DocumentNumberingPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// Document numbering field is required
+				string documentNumberingType = documentType.GetProperty("document_numbering");
+				if (string.IsNullOrEmpty(documentNumberingType))
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_DocumentNumberingIsNotSelected"));
+				}
+				else
+				{
+					if (string.Equals(documentNumberingType, "Method", StringComparison.InvariantCultureIgnoreCase))
+					{
+						// If Document Numbering = “Method” then “Document Numbering Method” should be selected
+						string methodId = documentType.GetProperty("document_numbering_method");
+						if (string.IsNullOrEmpty(methodId))
+						{
+							this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_DocumentNumberingMethodIsNotSelected"));
+						}
+						else
+						{
+							// Document Numbering Method should be “server” (C#, VB) method
+							Item methodItem = this.dataAccessLayer.CreateNewItem("Method", "get");
+							methodItem.setID(methodId);
+							methodItem = this.dataAccessLayer.ApplyItem(methodItem);
+
+							string methodType = methodItem.getProperty("method_type");
+							if (!string.Equals(methodType, "C#", StringComparison.InvariantCultureIgnoreCase) &&
+								!string.Equals(methodType, "VB", StringComparison.InvariantCultureIgnoreCase))
+							{
+								this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_DocumentNumberingMethodShouldBeServerMethod"));
+							}
+						}
+					}
+					else if (string.Equals(documentNumberingType, "Sequence", StringComparison.InvariantCultureIgnoreCase))
+					{
+						// If Document Numbering = “Sequence” then “Document Numbering Sequence” should be selected
+						string documentNumberingSequence = documentType.GetProperty("document_numbering_sequence");
+						if (string.IsNullOrEmpty(documentNumberingSequence))
+						{
+							this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_DocumentNumberingSequenceIsNotSelected"));
+						}
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/ForeignDataSourceRule")]
+		public class ForeignDataSourceRule : Rule<BaseDocumentType>
+		{
+			public ForeignDataSourceRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				// If foreign data source property exists, then property should exist in MSO_DocumentType ItemType
+				foreach (Item documentTypeReferenceItem in documentType.ValidLinkedItemCollection)
+				{
+					string foreignDataSource = documentTypeReferenceItem.getProperty("foreign_data_source", string.Empty);
+					if (string.IsNullOrEmpty(foreignDataSource))
+					{
+						continue;
+					}
+
+					Item referenceItem = documentTypeReferenceItem.getPropertyItem("related_id");
+					string referenceItemTypeId = referenceItem.getProperty("reference_item_type");
+
+					Item itemTypeItem = this.dataAccessLayer.CreateNewItem("itemType", "get");
+					itemTypeItem.setID(referenceItemTypeId);
+					itemTypeItem.setAttribute("levels", "2");
+					itemTypeItem = this.dataAccessLayer.ApplyItem(itemTypeItem);
+
+					string propertySourceId;
+					string referenseItemKeyedName;
+					string isRelationship = itemTypeItem.getProperty("is_relationship", "0");
+					if (isRelationship == "1")
+					{
+						Item sourceIdPropertyItem = itemTypeItem.getItemsByXPath("Relationships/Item[@type='Property' and keyed_name='source_id']");
+						propertySourceId = sourceIdPropertyItem.getProperty("data_source");
+						referenseItemKeyedName = sourceIdPropertyItem.getPropertyAttribute("data_source", "keyed_name");
+					}
+					else
+					{
+						propertySourceId = itemTypeItem.getID();
+						referenseItemKeyedName = itemTypeItem.getProperty("keyed_name");
+					}
+
+					Item masterPropertyItem = documentType.MasterItemTypeItem.getItemsByXPath(string.Format(
+						"Relationships/Item[@type='Property' and keyed_name='{0}' and data_source='{1}']",
+						foreignDataSource,
+						propertySourceId));
+
+					if (masterPropertyItem.getItemCount() != 1)
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_ForeignDataSourcePropertyWithDataSourceIsNotFoundInTheItemType", 
+							foreignDataSource, 
+							referenseItemKeyedName));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/LinkedItemRequiredPropertyRule")]
+		public class LinkedItemRequiredPropertyRule : Rule<BaseDocumentType>
+		{
+			public LinkedItemRequiredPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// If “Linked Item Required?” = 1 then at least one Valid link item should be added to “Valid Linked Items” relationship
+				string isLinkItemRequired = documentType.GetProperty("link_required");
+				if (isLinkItemRequired == "1" && documentType.ValidLinkedItemCollection.Count == 0)
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_AtLeastOneValidLinkItemShouldBeAddedToValidLinkedItemsRelationship"));
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/MasterItemTypePropertyRule")]
+		public class MasterItemTypePropertyRule : Rule<BaseDocumentType>
+		{
+			public MasterItemTypePropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// Item type field is required
+				if (documentType.MasterItemTypeItem == null)
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_ItemTypeIsNotSelected"));
+					return;
+				}
+
+				// (master) Item type item_number property must only have the Data Type = String
+				Item itemNumberProperty = documentType.MasterItemTypeItem.getItemsByXPath("Relationships/Item[@type='Property' and keyed_name='item_number']");
+				if (itemNumberProperty.getItemCount() != 1)
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_TheItemNumberPropertyIsNotFoundInTheSelectedItemType"));
+				}
+
+				string dataType = itemNumberProperty.getProperty("data_type");
+				if (!string.Equals(dataType, "string", StringComparison.InvariantCultureIgnoreCase))
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_TheItemNumberPropertyOfSelectedItemTypeHasAnIncorrectDataType"));
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/PropertyMappingArasPropertyDataTypeRule")]
+		public class PropertyMappingArasPropertyDataTypeRule : Rule<BaseDocumentType>
+		{
+			public PropertyMappingArasPropertyDataTypeRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem != null)
+				{
+					Dictionary<string, List<Item>> propertyMappingGroups = documentType.GetPropertyMappingGroups();
+
+					// Check the property has a supported type
+					// Unsupported types : Image, MD5, Sequence, Color, Color List, Federated, Formatted Text, Multi-lingual String, & Multi Value List
+					foreach (string arasPropertyKeyedName in propertyMappingGroups.Keys)
+					{
+						if (string.IsNullOrEmpty(arasPropertyKeyedName))
+						{
+							continue;
+						}
+
+						Item masterProperty;
+						if (arasPropertyKeyedName.StartsWith("xp-"))
+						{
+							documentType.MasterItemTypeAvailableXProperties.TryGetValue(arasPropertyKeyedName, out masterProperty);
+						}
+						else
+						{
+							masterProperty = documentType.MasterItemTypeItem.getItemsByXPath(string.Format("Relationships/Item[@type='Property' and keyed_name='{0}']", arasPropertyKeyedName));
+						}
+
+
+						// The Office Property and Aras Property entered actually exist
+						if (masterProperty == null || masterProperty.getItemCount() != 1)
+						{
+							this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMappingPropertyIsNotFoundInTheItemType", arasPropertyKeyedName));
+						}
+						else
+						{
+							string dataType = masterProperty.getProperty("data_type");
+							if (string.Equals(dataType, "image", StringComparison.InvariantCultureIgnoreCase) ||
+								string.Equals(dataType, "md5", StringComparison.InvariantCultureIgnoreCase) ||
+								string.Equals(dataType, "sequence", StringComparison.InvariantCultureIgnoreCase) ||
+								string.Equals(dataType, "color", StringComparison.InvariantCultureIgnoreCase) ||
+								string.Equals(dataType, "color list", StringComparison.InvariantCultureIgnoreCase) ||
+								string.Equals(dataType, "federated", StringComparison.InvariantCultureIgnoreCase) ||
+								string.Equals(dataType, "formatted text", StringComparison.InvariantCultureIgnoreCase) ||
+								string.Equals(dataType, "ml_string", StringComparison.InvariantCultureIgnoreCase) ||
+								string.Equals(dataType, "mv_list", StringComparison.InvariantCultureIgnoreCase))
+							{
+								this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMappingPropertyHasAnUnsupportedDataType", arasPropertyKeyedName));
+							}
+						}
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/PropertyMappingDuplicateRule")]
+		public class PropertyMappingDuplicateRule : Rule<BaseDocumentType>
+		{
+			public PropertyMappingDuplicateRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// User cannot enter a duplicate mapping
+				// All row items (except Order) match the first entry
+				CommonValidation commonValidation = new CommonValidation();
+				Dictionary<string, List<Item>> propertyMappingGroups = documentType.GetPropertyMappingGroups();
+				foreach (List<Item> propertyMapGroup in propertyMappingGroups.Values)
+				{
+					int propertyMapGroupCount = propertyMapGroup.Count;
+					for (int i = 0; i < propertyMapGroupCount - 1; i++)
+					{
+						string direction = propertyMapGroup[i].getProperty("direction", string.Empty);
+
+						List<string> similarDirections = GetSimilarDirections(direction);
+						string officeProperty = propertyMapGroup[i].getProperty("office_property", string.Empty);
+						string arasProperty = propertyMapGroup[i].getProperty("aras_property", string.Empty);
+
+						for (int j = i + 1; j < propertyMapGroupCount; j++)
+						{
+							string nextDirection = propertyMapGroup[j].getProperty("direction", string.Empty);
+							List<string> nextSimilarDirections = GetSimilarDirections(nextDirection);
+
+							bool isCorrectEventsForMapping = commonValidation.IsCorrectEventsForMapping(propertyMapGroup[i], propertyMapGroup[j]);
+							if (similarDirections.Intersect(nextSimilarDirections, StringComparer.InvariantCultureIgnoreCase).Any() &&
+								string.Equals(officeProperty, propertyMapGroup[j].getProperty("office_property", string.Empty), StringComparison.InvariantCultureIgnoreCase) &&
+								string.Equals(arasProperty, propertyMapGroup[j].getProperty("aras_property", string.Empty), StringComparison.InvariantCultureIgnoreCase) &&
+								!isCorrectEventsForMapping)
+							{
+								this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMappingForPropertyIsDuplicated", arasProperty));
+								// break
+								propertyMapGroupCount = -1;
+							}
+						}
+					}
+				}
+			}
+
+			public List<string> GetSimilarDirections(string direction)
+			{
+				var similarDirections = new Dictionary<string, List<string>>
+				{
+					{ "Office to Aras", new List<string> { "Office to Aras", "Email to Aras", "Word to Aras", "Excel to Aras", "Excel cell to Aras", "PowerPoint to Aras" } },
+					{ "Aras to Office", new List<string> { "Aras to Office", "Aras to Word", "Aras to Excel", "Aras to Excel cell", "Aras to PowerPoint" } },
+					{ "Email to Aras", new List<string> { "Email to Aras" } },
+					{ "Aras to Word", new List<string> { "Aras to Word" } },
+					{ "Word to Aras", new List<string> { "Word to Aras" } },
+					{ "Aras to Excel", new List<string> { "Aras to Excel", "Aras to Excel cell" } },
+					{ "Excel to Aras", new List<string> { "Excel to Aras" , "Excel cell to Aras" } },
+					{ "Aras to Excel cell", new List<string> { "Aras to Excel cell", "Aras to Excel" } },
+					{ "Excel cell to Aras", new List<string> { "Excel cell to Aras", "Excel to Aras" } },
+					{ "Aras to PowerPoint", new List<string> { "Aras to PowerPoint" } },
+					{ "PowerPoint to Aras", new List<string> { "PowerPoint to Aras" } }
+				};
+
+				List<string> directions;
+				if (!similarDirections.TryGetValue(direction, out directions))
+				{
+					directions = new List<string>();
+				}
+				return directions;
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/PropertyMappingOppositeDirectionRule")]
+		public class PropertyMappingOppositeDirectionRule : Rule<BaseDocumentType>
+		{
+			public PropertyMappingOppositeDirectionRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// User cannot enter a mapping that exists for the opposite direction
+				CommonValidation commonValidation = new CommonValidation();
+				Dictionary<string, List<Item>> propertyMappingGroups = documentType.GetPropertyMappingGroups();
+				foreach (List<Item> propertyMapGroup in propertyMappingGroups.Values)
+				{
+					int propertyMapGroupCount = propertyMapGroup.Count;
+					for (int i = 0; i < propertyMapGroupCount - 1; i++)
+					{
+						string direction = propertyMapGroup[i].getProperty("direction", string.Empty);
+
+						List<string> oppositeDirections = GetOppositeDirections(direction);
+						string officeProperty = propertyMapGroup[i].getProperty("office_property", string.Empty);
+						string arasProperty = propertyMapGroup[i].getProperty("aras_property", string.Empty);
+
+						for (int j = i + 1; j < propertyMapGroupCount; j++)
+						{
+							bool isCorrectEventsForMapping = commonValidation.IsCorrectEventsForMapping(propertyMapGroup[i], propertyMapGroup[j]);
+							if (oppositeDirections.Contains(propertyMapGroup[j].getProperty("direction", string.Empty), StringComparer.InvariantCultureIgnoreCase) &&
+								string.Equals(officeProperty, propertyMapGroup[j].getProperty("office_property", string.Empty), StringComparison.InvariantCultureIgnoreCase) &&
+								string.Equals(arasProperty, propertyMapGroup[j].getProperty("aras_property", string.Empty), StringComparison.InvariantCultureIgnoreCase) &&
+								!isCorrectEventsForMapping)
+							{
+								this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyCanNotBeAddedWithOppositeDirection", arasProperty));
+								// break
+								propertyMapGroupCount = -1;
+							}
+						}
+					}
+				}
+			}
+
+			private List<string> GetOppositeDirections(string direction)
+			{
+				var oppositeDirections = new Dictionary<string, List<string>>
+				{
+					{ "Office to Aras", new List<string> { "Aras to Office", "Aras to Word", "Aras to Excel", "Aras to Excel cell", "Aras to PowerPoint" } },
+					{ "Aras to Office", new List<string> { "Office to Aras", "Email to Aras", "Word to Aras", "Excel to Aras", "Excel cell to Aras", "PowerPoint to Aras" } },
+					{ "Email to Aras", new List<string> { "Aras to Office" } },
+					{ "Aras to Word", new List<string> { "Word to Aras", "Office to Aras" } },
+					{ "Word to Aras", new List<string> { "Aras to Word" , "Aras to Office" } },
+					{ "Aras to Excel", new List<string> { "Excel to Aras", "Excel cell to Aras", "Office to Aras" } },
+					{ "Excel to Aras", new List<string> { "Aras to Excel", "Aras to Excel cell", "Aras to Office" } },
+					{ "Aras to Excel cell", new List<string> { "Excel cell to Aras", "Excel to Aras", "Office to Aras" } },
+					{ "Excel cell to Aras", new List<string> { "Aras to Excel cell", "Aras to Excel", "Aras to Office" } },
+					{ "Aras to PowerPoint", new List<string> { "PowerPoint to Aras", "Office to Aras" } },
+					{ "PowerPoint to Aras", new List<string> { "Aras to PowerPoint", "Aras to Office" } }
+				};
+
+				List<string> directions;
+				if (!oppositeDirections.TryGetValue(direction, out directions))
+				{
+					directions = new List<string>();
+				}
+				return directions;
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/PropertyMappingRequiredPropertiesRule")]
+		public class PropertyMappingRequiredPropertiesRule : Rule<BaseDocumentType>
+		{
+			public PropertyMappingRequiredPropertiesRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// The following fields are required to create a new Property Mapping: Office Property, Aras Property, Direction, and either Create or Update = 1.
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officeProperty = propertyMappingItem.getProperty("office_property");
+					string arasProperty = propertyMappingItem.getProperty("aras_property");
+					string direction = propertyMappingItem.getProperty("direction");
+
+					if (string.IsNullOrEmpty(officeProperty) ||
+						string.IsNullOrEmpty(arasProperty) ||
+						string.IsNullOrEmpty(direction))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_OneOrMoreRequiredPropertiesIsNotAddedToPropertyMappings"));
+						break;
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/PropertyMappingMasterRequiredPropertyRule")]
+		public class PropertyMappingMasterRequiredPropertyRule : Rule<BaseDocumentType>
+		{
+			public PropertyMappingMasterRequiredPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem != null)
+				{
+					// Check required properties exist in Item Type but not in Mapper
+					/*
+					 * Except of:
+					 * item_number
+					 */
+					List<Item> propertyMappingCollection = documentType.PropertyMappingCollection;
+					var requiredNotMappedProperties = string.Empty;
+
+					Item requiredProperties = documentType.MasterItemTypeItem.getItemsByXPath("Relationships/Item[@type='Property' and is_required='1' and readonly='0' and keyed_name!='item_number']");
+					int requiredPropertiesCount = requiredProperties.getItemCount();
+					for (int i = 0; i < requiredPropertiesCount; i++)
+					{
+						Item propertyItem = requiredProperties.getItemByIndex(i);
+						string keyedName = propertyItem.getProperty("keyed_name");
+
+						int index = propertyMappingCollection.FindIndex(x =>
+							string.Equals(x.getProperty("aras_property"), keyedName, StringComparison.InvariantCultureIgnoreCase) &&
+							x.getProperty("on_create") == "1");
+
+						if (index == -1)
+						{
+							requiredNotMappedProperties += keyedName + ",";
+						}
+					}
+
+					if (!string.IsNullOrEmpty(requiredNotMappedProperties))
+					{
+						requiredNotMappedProperties = requiredNotMappedProperties.Remove(requiredNotMappedProperties.Length - 1);
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_TheNextItemTypeRequiresPropertiesAreNotMapped", requiredNotMappedProperties));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/RenameFilePropertyRule")]
+		public class RenameFilePropertyRule : Rule<BaseDocumentType>
+		{
+			public RenameFilePropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// Rename File field is required
+				string renameFile = documentType.GetProperty("rename_file");
+				if (string.IsNullOrEmpty(renameFile))
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_RenameFileIsNotSelected"));
+				}
+				else if (string.Equals(renameFile, "Method", StringComparison.InvariantCultureIgnoreCase))
+				{
+					// If “Rename file” = “Method” then File Naming Method should be selected.
+					string methodId = documentType.GetProperty("file_naming_method");
+					if (string.IsNullOrEmpty(methodId))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_FileNamingMethodIsNotSelected"));
+					}
+					else
+					{
+						// File Naming Method should be “server” method
+						Item methodItem = this.dataAccessLayer.CreateNewItem("Method", "get");
+						methodItem.setID(methodId);
+						methodItem = this.dataAccessLayer.ApplyItem(methodItem);
+
+						string methodType = methodItem.getProperty("method_type");
+						if (!string.Equals(methodType, "C#", StringComparison.InvariantCultureIgnoreCase) &&
+							!string.Equals(methodType, "VB", StringComparison.InvariantCultureIgnoreCase))
+						{
+							this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_FileNamingMethodShouldBeServerMethod"));
+						}
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/OfficeFileTypesRequiredViewableFilePropertyRule")]
+		public class OfficeFileTypesRequiredViewableFilePropertyRule : Rule<BaseDocumentType>
+		{
+			public OfficeFileTypesRequiredViewableFilePropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				string viewableMSOReferenceId = documentType.GetProperty(documentType.ViewableFileKeyedName);
+				if (string.IsNullOrEmpty(viewableMSOReferenceId))
+				{
+					// In Office Connector Settings / Office File Types, if Viewable File = 1 then Viewable File Type must be filled out
+					Item msoCommonSettingsItem = this.dataAccessLayer.CreateNewItem("MSO_CommonSettings", "get");
+					msoCommonSettingsItem.setAttribute("levels", "2");
+					msoCommonSettingsItem = this.dataAccessLayer.ApplyItem(msoCommonSettingsItem);
+					if (msoCommonSettingsItem.getItemCount() > 1)
+					{
+						msoCommonSettingsItem = msoCommonSettingsItem.getItemByIndex(0);
+					}
+
+					List<string> supportedOfficeApplications = documentType.SupportedOfficeApplications;
+					Item msoDefaultFileTypesItem = msoCommonSettingsItem.getItemsByXPath("Relationships/Item[@type='MSO_DefaultFileTypes' and viewable_file='1']");
+
+					int msoDefaultFileTypesItemCount = msoDefaultFileTypesItem.getItemCount();
+					for (int i = 0; i < msoDefaultFileTypesItemCount; i++)
+					{
+						Item msoDefaultFileTypeItem = msoDefaultFileTypesItem.getItemByIndex(i);
+						string officeApplication = msoDefaultFileTypeItem.getProperty("office_application", string.Empty);
+						if (supportedOfficeApplications.Contains(officeApplication, StringComparer.InvariantCultureIgnoreCase))
+						{
+							this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_OneOrMoreOfficeFileTypesRequiredAViewableFile"));
+							break;
+						}
+					}
+				}
+			}
+		}
+		
+		//[PartialPath("Partials/Rules/DocumentTypeRule/NativeFilePropertyRule")]
+		public class NativeFilePropertyRule : Rule<BaseDocumentType>
+		{
+			public NativeFilePropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// Native File field is required
+				string nativeMSOReferenceId = documentType.GetProperty("native_file_link");
+				if (string.IsNullOrEmpty(nativeMSOReferenceId))
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_ReferenceIsNotSelected", documentType.NativeFileLabel));
+					return;
+				}
+
+				Item nativeMSOReferenceItem = this.dataAccessLayer.CreateNewItem("MSO_Reference", "get");
+				nativeMSOReferenceItem.setID(nativeMSOReferenceId);
+				nativeMSOReferenceItem = this.dataAccessLayer.ApplyItem(nativeMSOReferenceItem);
+
+				string referenceItemTypeId = nativeMSOReferenceItem.getProperty("reference_item_type");
+				string referencePropertyId = nativeMSOReferenceItem.getProperty("reference_property");
+
+				Item itemTypeItem = this.dataAccessLayer.CreateNewItem("itemType", "get");
+				itemTypeItem.setID(referenceItemTypeId);
+				itemTypeItem.setAttribute("levels", "2");
+				itemTypeItem = this.dataAccessLayer.ApplyItem(itemTypeItem);
+
+				// For Native File the selected relationship should have type of source_id same as selected (master)Item type
+				if (documentType.MasterItemTypeItem != null)
+				{
+					string referenceSourceId;
+					string isRelationship = itemTypeItem.getProperty("is_relationship", "0");
+					if (isRelationship == "1")
+					{
+						Item sourceIdPropertyItem = itemTypeItem.getItemsByXPath("Relationships/Item[@type='Property' and keyed_name='source_id']");
+						referenceSourceId = sourceIdPropertyItem.getProperty("data_source");
+					}
+					else
+					{
+						referenceSourceId = itemTypeItem.getID();
+					}
+
+					if (!string.Equals(documentType.MasterItemTypeItem.getID(), referenceSourceId, StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedReferenceMustHaveSelectedItemTypeSameAsMasterItemType", documentType.NativeFileLabel));
+					}
+				}
+
+				// For Native File the selected relationship should have type of related_id = File
+				Item propertyItem = itemTypeItem.getItemsByXPath(string.Format(
+					"Relationships/Item[@type='Property' and id='{0}' and source_id='{1}']",
+					referencePropertyId,
+					referenceItemTypeId));
+
+				if (propertyItem.getItemCount() != 1)
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedReferenceHasAnIncorrectPropertyItem", documentType.NativeFileLabel));
+				}
+
+				string dataSource = propertyItem.getPropertyAttribute("data_source", "keyed_name", string.Empty);
+				if (!string.Equals(dataSource, "File", StringComparison.InvariantCultureIgnoreCase))
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedReferencePropertyItemMustHaveAFileAsDataSourceType", documentType.NativeFileLabel));
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/ViewableFilePropertyRule")]
+		public class ViewableFilePropertyRule : Rule<BaseDocumentType>
+		{
+			public ViewableFilePropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				string viewableMSOReferenceId = documentType.GetProperty(documentType.ViewableFileKeyedName);
+				if (string.IsNullOrEmpty(viewableMSOReferenceId))
+				{
+					return;
+				}
+
+				Item viewableMSOReferenceItem = this.dataAccessLayer.CreateNewItem("MSO_Reference", "get");
+				viewableMSOReferenceItem.setID(viewableMSOReferenceId);
+				viewableMSOReferenceItem = this.dataAccessLayer.ApplyItem(viewableMSOReferenceItem);
+
+				string referenceItemTypeId = viewableMSOReferenceItem.getProperty("reference_item_type");
+				string referencePropertyId = viewableMSOReferenceItem.getProperty("reference_property");
+
+				Item itemTypeItem = this.dataAccessLayer.CreateNewItem("itemType", "get");
+				itemTypeItem.setID(referenceItemTypeId);
+				itemTypeItem.setAttribute("levels", "2");
+				itemTypeItem = this.dataAccessLayer.ApplyItem(itemTypeItem);
+
+				// For Viewable File the selected relationship should have type of source_id same as selected (master)Item type
+				if (documentType.MasterItemTypeItem != null)
+				{
+					string referenceSourceId;
+					string isRelationship = itemTypeItem.getProperty("is_relationship", "0");
+					if (isRelationship == "1")
+					{
+						Item sourceIdPropertyItem = itemTypeItem.getItemsByXPath("Relationships/Item[@type='Property' and keyed_name='source_id']");
+						referenceSourceId = sourceIdPropertyItem.getProperty("data_source");
+					}
+					else
+					{
+						referenceSourceId = itemTypeItem.getID();
+					}
+
+					if (!string.Equals(documentType.MasterItemTypeItem.getID(), referenceSourceId, StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedViewableFileMustHaveSelectedItemTypeSameAsMasterItemType"));
+					}
+				}
+
+				// For Viewable File the selected relationship should have type of related_id = File
+				Item propertyItem = itemTypeItem.getItemsByXPath(string.Format(
+					"Relationships/Item[@type='Property' and id='{0}' and source_id='{1}']",
+					referencePropertyId,
+					referenceItemTypeId));
+
+				if (propertyItem.getItemCount() != 1)
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedViewableFileHasAnIncorrectPropertyItem"));
+				}
+				else
+				{
+					string dataSource = propertyItem.getPropertyAttribute("data_source", "keyed_name", string.Empty);
+					if (!string.Equals(dataSource, "File", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedViewableFilePropertyItemMustHaveAFileAsDataSourceType"));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/AttachmentFilePropertyRule")]
+		public class AttachmentFilePropertyRule : Rule<BaseDocumentType>
+		{
+			public AttachmentFilePropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				string viewableMSOReferenceId = documentType.GetProperty("viewable_file_link");
+				if (string.IsNullOrEmpty(viewableMSOReferenceId))
+				{
+					return;
+				}
+
+				Item viewableMSOReferenceItem = this.dataAccessLayer.CreateNewItem("MSO_Reference", "get");
+				viewableMSOReferenceItem.setID(viewableMSOReferenceId);
+				viewableMSOReferenceItem = this.dataAccessLayer.ApplyItem(viewableMSOReferenceItem);
+
+				string referenceItemTypeId = viewableMSOReferenceItem.getProperty("reference_item_type");
+				string referencePropertyId = viewableMSOReferenceItem.getProperty("reference_property");
+
+				Item itemTypeItem = this.dataAccessLayer.CreateNewItem("itemType", "get");
+				itemTypeItem.setID(referenceItemTypeId);
+				itemTypeItem.setAttribute("levels", "2");
+				itemTypeItem = this.dataAccessLayer.ApplyItem(itemTypeItem);
+
+				if (documentType.MasterItemTypeItem != null)
+				{
+					// For Attachment Files the selected relationship should have type of source_id same as selected (master)Item type
+					string isRelationship = itemTypeItem.getProperty("is_relationship", "0");
+					if (isRelationship == "0")
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedAttachmentFilesItemTypeMustBeARelationship"));
+					}
+					else
+					{
+						Item sourceIdPropertyItem = itemTypeItem.getItemsByXPath("Relationships/Item[@type='Property' and keyed_name='source_id']");
+						string referenceSourceId = sourceIdPropertyItem.getProperty("data_source");
+
+						if (!string.Equals(documentType.MasterItemTypeItem.getID(), referenceSourceId, StringComparison.InvariantCultureIgnoreCase))
+						{
+							this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedAttachmentFilesMustHaveSelectedItemTypeSameAsMasterItemType"));
+						}
+					}
+				}
+
+				// For Attachment Files the selected relationship should have type of related_id = File
+				Item propertyItem = itemTypeItem.getItemsByXPath(string.Format(
+					"Relationships/Item[@type='Property' and id='{0}' and source_id='{1}']",
+					referencePropertyId,
+					referenceItemTypeId));
+
+				if (propertyItem.getItemCount() != 1)
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedAttachmentFilesHasIncorrectPropertyItem"));
+				}
+
+				string dataSource = propertyItem.getPropertyAttribute("data_source", "keyed_name", string.Empty);
+				if (!string.Equals(dataSource, "File", StringComparison.InvariantCultureIgnoreCase))
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedAttachmentFilesPropertyItemMustHaveAFileAsDataSourceType"));
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/ValidLinkedItemPropertyInLinkedItemTypeRule")]
+		public class ValidLinkedItemPropertyInLinkedItemTypeRule : Rule<BaseDocumentType>
+		{
+			public ValidLinkedItemPropertyInLinkedItemTypeRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// Check that valid linked item property exists in selected valid linked ItemType
+				foreach (Item documentTypeReferenceItem in documentType.ValidLinkedItemCollection)
+				{
+					Item referenceItem = documentTypeReferenceItem.getPropertyItem("related_id");
+					string referenceItemTypeId = referenceItem.getProperty("reference_item_type");
+					string referencePropertyId = referenceItem.getProperty("reference_property");
+
+					Item propertyItem = this.dataAccessLayer.CreateNewItem("Property", "get");
+					propertyItem.setProperty("id", referencePropertyId);
+					propertyItem.setProperty("source_id", referenceItemTypeId);
+					propertyItem = this.dataAccessLayer.ApplyItem(propertyItem);
+
+					if (propertyItem.isError())
+					{
+						string referenceItemTypeKeyedName = referenceItem.getPropertyAttribute("reference_item_type", "keyed_name");
+						string referencePropertyKeyedName = referenceItem.getPropertyAttribute("reference_property", "keyed_name");
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyIsNotFoundInValidLinkedItemType",
+							referencePropertyKeyedName,
+							referenceItemTypeKeyedName));
+					}
+				}
+			}
+		}
+		
+		//[PartialPath("Partials/Rules/DocumentTypeRule/ValidLinkedItemPropertyDataTypeAsMasterItemTypeRule")]
+		public class ValidLinkedItemPropertyDataTypeAsMasterItemTypeRule : Rule<BaseDocumentType>
+		{
+			public ValidLinkedItemPropertyDataTypeAsMasterItemTypeRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				string masterId = documentType.MasterItemTypeItem.getID();
+
+				// Check that valid linked item property have data source or poly source same as Master ItemType
+				foreach (Item documentTypeReferenceItem in documentType.ValidLinkedItemCollection)
+				{
+					Item referenceItem = documentTypeReferenceItem.getPropertyItem("related_id");
+					string referenceItemTypeId = referenceItem.getProperty("reference_item_type");
+					string referencePropertyId = referenceItem.getProperty("reference_property");
+
+					Item propertyItem = this.dataAccessLayer.CreateNewItem("Property", "get");
+					propertyItem.setProperty("id", referencePropertyId);
+					propertyItem.setProperty("source_id", referenceItemTypeId);
+					propertyItem.setAttribute("select", "data_source, data_type");
+					propertyItem = this.dataAccessLayer.ApplyItem(propertyItem);
+					if (propertyItem.isError())
+					{
+						continue;
+					}
+
+					string referenceItemTypeKeyedName = referenceItem.getPropertyAttribute("reference_item_type", "keyed_name");
+					string referencePropertyKeyedName = referenceItem.getPropertyAttribute("reference_property", "keyed_name");
+
+					string propertyDataType = propertyItem.getProperty("data_type", string.Empty);
+					if (!string.Equals(propertyDataType, "item", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyInTheValidLinkedItemTypeMustBeAnItem",
+							referencePropertyKeyedName,
+							referenceItemTypeKeyedName));
+
+						continue;
+					}
+
+					string dataSourceId = propertyItem.getProperty("data_source", string.Empty);
+					if (!string.Equals(dataSourceId, masterId, StringComparison.InvariantCultureIgnoreCase))
+					{
+						// property data source ItemType can use poly source
+						Item polySourcesItem = this.dataAccessLayer.CreateNewItem("Morphae", "get");
+						polySourcesItem.setProperty("related_id", masterId);
+						polySourcesItem.setProperty("source_id", dataSourceId);
+						polySourcesItem = this.dataAccessLayer.ApplyItem(polySourcesItem);
+						if (polySourcesItem.isError())
+						{
+							this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyInTheValidLinkedItemTypeShouldHaveDataSourceOrPolySourceSameAsMasterItemType",
+								referencePropertyKeyedName,
+								referenceItemTypeKeyedName));
+						}
+					}
+				}
+			}
+		}
+		
+		//[PartialPath("Partials/Rules/DocumentTypeRule/ValidLinkedItemsDuplicateRule")]
+		public class ValidLinkedItemsDuplicateRule : Rule<BaseDocumentType>
+		{
+			public ValidLinkedItemsDuplicateRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// Check only one Valid Linked Item exists with some ItemType and Property name
+				int referenceItemsCollectionCount = documentType.ValidLinkedItemCollection.Count;
+				for (int i = 0; i < referenceItemsCollectionCount - 1; i++)
+				{
+					Item referenceItem = documentType.ValidLinkedItemCollection[i].getPropertyItem("related_id");
+					string referenceItemType = referenceItem.getProperty("reference_item_type");
+					string referenceProperty = referenceItem.getProperty("reference_property");
+
+					for (int j = i + 1; j < referenceItemsCollectionCount; j++)
+					{
+						Item nextReferenceItem = documentType.ValidLinkedItemCollection[j].getPropertyItem("related_id");
+						if (string.Equals(referenceItemType, nextReferenceItem.getProperty("reference_item_type"), StringComparison.InvariantCultureIgnoreCase) &&
+							string.Equals(referenceProperty, nextReferenceItem.getProperty("reference_property"), StringComparison.InvariantCultureIgnoreCase))
+						{
+							this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_OneOrMoreValidLinkedItemsAreWithTheSameItemTypeAndProperty"));
+							// break
+							referenceItemsCollectionCount = -1;
+						}
+					}
+				}
+			}
+		}
+
+		//[PartialPath("Partials/Rules/DocumentTypeRule/TemplateRequiredRule")]
+		public class TemplateRequiredRule : Rule<BaseDocumentType>
+		{
+			public TemplateRequiredRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				// In Office Document Type / Property Mapping, if Use Template = 1 for any property listed then Template Required must = 1
+				string isTemplateRequired = documentType.GetProperty("template_required");
+				if (isTemplateRequired != "1")
+				{
+					bool mappingsUseTemplate = documentType.PropertyMappingCollection.Any(x => x.getProperty("use_template", "0") == "1");
+					if (mappingsUseTemplate)
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_OneOrMorePropertyMappingsUseATemplateTemplateRequiredMustBeSelected"));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/SpecialMSOStringPropertyRule")]
+		public class SpecialMSOStringPropertyRule : Rule<BaseDocumentType>
+		{
+			private const string pattern = @"$mso_string";
+
+			public SpecialMSOStringPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				// Allowed direction is From Office To Aras
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property", string.Empty);
+					if (!officePropertyName.StartsWith(pattern + "(", StringComparison.InvariantCultureIgnoreCase) || !officePropertyName.EndsWith(")"))
+					{
+						continue;
+					}
+
+					string direction = propertyMappingItem.getProperty("direction");
+					if (!string.IsNullOrEmpty(direction) &&
+						!string.Equals(direction, "Office to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Email to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Word to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel cell to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "PowerPoint to Aras", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_String_DirectionMustBeFromOfficeToAras"));
+						break;
+					}
+				}
+
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property", string.Empty);
+					if (!officePropertyName.StartsWith(pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					if (!officePropertyName.StartsWith(pattern + "(", StringComparison.InvariantCultureIgnoreCase) || !officePropertyName.EndsWith(")"))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_String_PropertyFormatIsWrong"));
+						continue;
+					}
+
+					string arasPropertyName = propertyMappingItem.getProperty("aras_property");
+					Item propertyItem = documentType.MasterItemTypeItem.getItemsByXPath(string.Format(
+							"Relationships/Item[@type='Property' and keyed_name='{0}']",
+							arasPropertyName));
+
+					if (propertyItem.getItemCount() != 1)
+					{
+						continue;
+					}
+
+					string dataType = propertyItem.getProperty("data_type");
+					if (!string.Equals(dataType, "string", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_String_PropertyDataTypeMustBeAString", arasPropertyName));
+						continue;
+					}
+
+					string predefinedValue = officePropertyName.Substring(pattern.Length + 1, officePropertyName.Length - pattern.Length - 2);
+					string storedLength = propertyItem.getProperty("stored_length", "0");
+					if (predefinedValue.Length > int.Parse(storedLength))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_String_PredefinedTextLengthForPropertyMustBeLessThen",
+							arasPropertyName,
+							storedLength));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/SpecialMSOItemPropertyRule")]
+		public class SpecialMSOItemPropertyRule : Rule<BaseDocumentType>
+		{
+			private const string pattern = @"$mso_item";
+
+			public SpecialMSOItemPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				// Allowed direction is From Office To Aras
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property", string.Empty);
+					if (!officePropertyName.StartsWith(pattern + "(", StringComparison.InvariantCultureIgnoreCase) || !officePropertyName.EndsWith(")"))
+					{
+						continue;
+					}
+
+					string direction = propertyMappingItem.getProperty("direction");
+					if (!string.IsNullOrEmpty(direction) &&
+						!string.Equals(direction, "Office to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Email to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Word to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel cell to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "PowerPoint to Aras", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_Item_DirectionMustBeFromOfficeToAras"));
+						break;
+					}
+				}
+
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property", string.Empty);
+					if (!officePropertyName.StartsWith(pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					if (!officePropertyName.StartsWith(pattern + "(", StringComparison.InvariantCultureIgnoreCase) || !officePropertyName.EndsWith(")"))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_Item_PropertyFormatIsWrong"));
+						continue;
+					}
+
+					string arasPropertyName = propertyMappingItem.getProperty("aras_property");
+					Item propertyItem = documentType.MasterItemTypeItem.getItemsByXPath(string.Format(
+							"Relationships/Item[@type='Property' and keyed_name='{0}']",
+							arasPropertyName));
+
+					if (propertyItem.getItemCount() != 1)
+					{
+						continue;
+					}
+
+					string dataType = propertyItem.getProperty("data_type");
+					if (!string.Equals(dataType, "item", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_Item_PropertyDataTypeMustBeAnItem", arasPropertyName));
+					}
+
+					string text = officePropertyName.Substring(pattern.Length + 1, officePropertyName.Length - pattern.Length - 2);
+					string[] content = text.Split(new[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+					if (content.Length != 2)
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_Item_PropertyContentIsWrong", arasPropertyName));
+						continue;
+					}
+
+					string type = content[0];
+					string id = content[1];
+
+					string dataSourceKeyedName = propertyItem.getPropertyAttribute("data_source", "keyed_name");
+					if (!string.Equals(type, dataSourceKeyedName, StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_Item_PropertyDataSourceIs",
+							arasPropertyName,
+							dataSourceKeyedName));
+
+						continue;
+					}
+
+					Item item = this.dataAccessLayer.CreateNewItem(content[0], "get");
+					item.setProperty("keyed_name", content[1]);
+					item = this.dataAccessLayer.ApplyItem(item);
+
+					if (item.getItemCount() != 1)
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_MSO_Item_TypeKeyedNameIsNotFound", content[0], content[1]));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/SpecialMSOEmailDescriptionPropertyRule")]
+		public class SpecialMSOEmailDescriptionPropertyRule : Rule<BaseDocumentType>
+		{
+			private const string pattern = @"$MSO_EmailDescription";
+
+			public SpecialMSOEmailDescriptionPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				// Allowed direction is From Office To Aras
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string direction = propertyMappingItem.getProperty("direction");
+					if (!string.IsNullOrEmpty(direction) &&
+						!string.Equals(direction, "Office to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Email to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Word to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel cell to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "PowerPoint to Aras", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_EmailDescription_ItemDirectionMustBeFromOfficeToAras"));
+						break;
+					}
+				}
+
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string arasPropertyName = propertyMappingItem.getProperty("aras_property");
+					Item propertyItem = documentType.MasterItemTypeItem.getItemsByXPath(string.Format(
+							"Relationships/Item[@type='Property' and keyed_name='{0}']",
+							arasPropertyName));
+
+					if (propertyItem.getItemCount() != 1)
+					{
+						continue;
+					}
+
+					string dataType = propertyItem.getProperty("data_type");
+					if (!string.Equals(dataType, "string", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_EmailDescription_PropertyDataTypeMustBeAString", arasPropertyName));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/SpecialMSOFileNamePropertyRule")]
+		public class SpecialMSOFileNamePropertyRule : Rule<BaseDocumentType>
+		{
+			private const string pattern = @"$MSO_Filename";
+
+			public SpecialMSOFileNamePropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				// Allowed direction is From Office To Aras
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string direction = propertyMappingItem.getProperty("direction");
+					if (!string.IsNullOrEmpty(direction) &&
+						!string.Equals(direction, "Office to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Email to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Word to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel cell to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "PowerPoint to Aras", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_Filename_DirectionMustBeFromOfficeToAras"));
+						break;
+					}
+				}
+
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string arasPropertyName = propertyMappingItem.getProperty("aras_property");
+					Item propertyItem = documentType.MasterItemTypeItem.getItemsByXPath(string.Format(
+							"Relationships/Item[@type='Property' and keyed_name='{0}']",
+							arasPropertyName));
+
+					if (propertyItem.getItemCount() != 1)
+					{
+						continue;
+					}
+
+					string dataType = propertyItem.getProperty("data_type");
+					if (!string.Equals(dataType, "string", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_Filename_PropertyDataTypeMustBeAString", arasPropertyName));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/SpecialMSOHasChangesPropertyRule")]
+		public class SpecialMSOHasChangesPropertyRule : Rule<BaseDocumentType>
+		{
+			private const string pattern = @"$MSO_HasChanges";
+
+			public SpecialMSOHasChangesPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				// Allowed direction is From Office To Aras
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string direction = propertyMappingItem.getProperty("direction");
+					if (!string.IsNullOrEmpty(direction) &&
+						!string.Equals(direction, "Office to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Email to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Word to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel cell to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "PowerPoint to Aras", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_HasChanges_DirectionMustBeFromOfficeToAras"));
+						break;
+					}
+				}
+
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string arasPropertyName = propertyMappingItem.getProperty("aras_property");
+					Item propertyItem = documentType.MasterItemTypeItem.getItemsByXPath(string.Format(
+							"Relationships/Item[@type='Property' and keyed_name='{0}']",
+							arasPropertyName));
+
+					if (propertyItem.getItemCount() != 1)
+					{
+						continue;
+					}
+
+					string dataType = propertyItem.getProperty("data_type");
+					if (!string.Equals(dataType, "boolean", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_HasChanges_PropertyDataTypeMustBeBoolean", arasPropertyName));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/SpecialMSOHasCommentsPropertyRule")]
+		public class SpecialMSOHasCommentsPropertyRule : Rule<BaseDocumentType>
+		{
+			private const string pattern = @"$MSO_HasComments";
+
+			public SpecialMSOHasCommentsPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				// Allowed direction is From Office To Aras
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string direction = propertyMappingItem.getProperty("direction");
+					if (!string.IsNullOrEmpty(direction) &&
+						!string.Equals(direction, "Office to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Email to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Word to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel cell to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "PowerPoint to Aras", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_HasComments_DirectionMustBeFromOfficeToAras"));
+						break;
+					}
+				}
+
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string arasPropertyName = propertyMappingItem.getProperty("aras_property");
+					Item propertyItem = documentType.MasterItemTypeItem.getItemsByXPath(string.Format(
+							"Relationships/Item[@type='Property' and keyed_name='{0}']",
+							arasPropertyName));
+
+					if (propertyItem.getItemCount() != 1)
+					{
+						continue;
+					}
+
+					string dataType = propertyItem.getProperty("data_type");
+					if (!string.Equals(dataType, "boolean", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_HasComments_PropertyDataTypeMustBeBoolean", arasPropertyName));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/SpecialMSOTemplateVersionPropertyRule")]
+		public class SpecialMSOTemplateVersionPropertyRule : Rule<BaseDocumentType>
+		{
+			private const string pattern = @"$MSO_TemplateVersion";
+
+			public SpecialMSOTemplateVersionPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				// Allowed direction is From Office To Aras
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string direction = propertyMappingItem.getProperty("direction");
+					if (!string.IsNullOrEmpty(direction) &&
+						!string.Equals(direction, "Office to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Email to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Word to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel cell to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "PowerPoint to Aras", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_TemplateVersion_DirectionMustBeFromOfficeToAras"));
+						break;
+					}
+				}
+
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string arasPropertyName = propertyMappingItem.getProperty("aras_property");
+					Item propertyItem = documentType.MasterItemTypeItem.getItemsByXPath(string.Format(
+							"Relationships/Item[@type='Property' and keyed_name='{0}']",
+							arasPropertyName));
+
+					if (propertyItem.getItemCount() != 1)
+					{
+						continue;
+					}
+
+					string dataType = propertyItem.getProperty("data_type");
+					if (!string.Equals(dataType, "string", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(dataType, "integer", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_TemplateVersion_PropertyDataTypeMustBeAStringOrInteger", arasPropertyName));
+					}
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/SpecialMSOUserPropertyRule")]
+		public class SpecialMSOUserPropertyRule : Rule<BaseDocumentType>
+		{
+			private const string pattern = "$MSO_User";
+
+			public SpecialMSOUserPropertyRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				if (documentType.MasterItemTypeItem == null)
+				{
+					return;
+				}
+
+				// Allowed direction is From Office To Aras
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string direction = propertyMappingItem.getProperty("direction");
+					if (!string.IsNullOrEmpty(direction) &&
+						!string.Equals(direction, "Office to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Email to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Word to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "Excel cell to Aras", StringComparison.InvariantCultureIgnoreCase) &&
+						!string.Equals(direction, "PowerPoint to Aras", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_User_DirectionMustBeFromOfficeToAras"));
+						break;
+					}
+				}
+
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property");
+					if (!string.Equals(officePropertyName, pattern, StringComparison.InvariantCultureIgnoreCase))
+					{
+						continue;
+					}
+
+					string arasPropertyName = propertyMappingItem.getProperty("aras_property");
+					Item propertyItem = documentType.MasterItemTypeItem.getItemsByXPath(string.Format(
+							"Relationships/Item[@type='Property' and keyed_name='{0}']",
+							arasPropertyName));
+
+					if (propertyItem.getItemCount() != 1)
+					{
+						continue;
+					}
+
+					string dataType = propertyItem.getProperty("data_type");
+					if (!string.Equals(dataType, "item", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_User_PropertyDataTypeMustBeAnItem", arasPropertyName));
+						continue;
+					}
+
+					string dataSourceKeyedName = propertyItem.getPropertyAttribute("data_source", "keyed_name");
+					if (!string.Equals(dataSourceKeyedName, "Identity", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_PropertyMapping_MSO_User_PropertyDataSourceMustBeAnIdentity", arasPropertyName));
+					}
+				}
+			}
+}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/SupportedSpecialMSOPropertiesRule")]
+		public class SupportedSpecialMSOPropertiesRule : Rule<BaseDocumentType>
+		{
+			public SupportedSpecialMSOPropertiesRule(IDataAccessLayer dataAccessLayer) : base (dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				List<string> supportedSpecialMSOProperties = documentType.SupportedSpecialMSOProperties;
+				foreach (Item propertyMappingItem in documentType.PropertyMappingCollection)
+				{
+					string officePropertyName = propertyMappingItem.getProperty("office_property", string.Empty);
+					if (!officePropertyName.StartsWith("$"))
+					{
+						continue;
+					}
+
+					if (supportedSpecialMSOProperties.Any(x => officePropertyName.StartsWith(x, StringComparison.InvariantCultureIgnoreCase)))
+					{
+						continue;
+					}
+
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SpecialPropertyMappingOfficePropertyDoesNotSupported", officePropertyName));
+				}
+			}
+		
+}
+
+//[PartialPath("Partials/IDataAccessLayer")]
+		public interface IDataAccessLayer
+		{
+			Item CreateNewItem(string type, string action);
+			Item ApplyItem(Item itemToApply);
+
+			string GetLocalizedUserMessage(string name);
+			string GetLocalizedUserMessage(string name, string par1);
+			string GetLocalizedUserMessage(string name, string par1, string par2);
+			string GetLocalizedUserMessage(string name, object par1, string par2, string par3);
+			string GetLocalizedUserMessage(string name, object[] parameters);
+		}
+
+//[PartialPath("Partials/DataAccessLayer")]
+		internal class DataAccessLayer : IDataAccessLayer
+		{
+			private Innovator innovatorInctanse;
+			private Aras.Server.Core.CallContext CCO;
+
+			internal DataAccessLayer(Innovator innovatorInctanse, Aras.Server.Core.CallContext CCO)
+			{
+				this.innovatorInctanse = innovatorInctanse;
+				this.CCO = CCO;
+			}
+
+			public Item CreateNewItem(string type, string action)
+			{
+				return this.innovatorInctanse.newItem(type, action);
+			}
+
+			public Item ApplyItem(Item itemToApply)
+			{
+				return itemToApply.apply();
+			}
+
+			public string GetLocalizedUserMessage(string name)
+			{
+				return this.CCO.ErrorLookup.Lookup(name);
+			}
+
+			public string GetLocalizedUserMessage(string name, string par1)
+			{
+				return this.CCO.ErrorLookup.Lookup(name, par1);
+			}
+
+			public string GetLocalizedUserMessage(string name, string par1, string par2)
+			{
+				return this.CCO.ErrorLookup.Lookup(name, par1, par2);
+			}
+
+			public string GetLocalizedUserMessage(string name, object par1, string par2, string par3)
+			{
+				return this.CCO.ErrorLookup.Lookup(name, par1, par2, par3);
+			}
+
+			public string GetLocalizedUserMessage(string name, object[] parameters)
+			{
+				return this.CCO.ErrorLookup.Lookup(name, parameters);
+			}
+		}
+
+//[PartialPath("Partials/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private IDataAccessLayer dataAccessLayer;
+			internal BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				this.dataAccessLayer = dataAccessLayer;
+			}
+
+			internal Item Run(Item contextItem)
+			{
+				IValidator validator = null;
+				int maxErrors = 15;
+				ValidatorFactory validatorFactory = new ValidatorFactory(contextItem, dataAccessLayer, maxErrors);
+
+				string currentType = contextItem.getType();
+				if (string.Equals(currentType, "MSO_DocumentType", StringComparison.InvariantCultureIgnoreCase))
+				{
+					validator = validatorFactory.CreateDocumentTypeValidator();
+				}
+				else if (string.Equals(currentType, "MSO_EmailDocumentType", StringComparison.InvariantCultureIgnoreCase))
+				{
+					validator = validatorFactory.CreateEmailDocumentTypeValidator();
+				}
+				else if (string.Equals(currentType, "MSO_DefaultFileTypes", StringComparison.InvariantCultureIgnoreCase))
+				{
+					validator = validatorFactory.CreateFileTypeValidator();
+				}
+
+				validator.Run();
+				return contextItem;
+			}
+		
+}
+
+//[PartialPath("Partials/Validator/ValidatorFactory")]
+		internal class ValidatorFactory
+		{
+			private readonly Item contextItem;
+			private readonly IDataAccessLayer dataAccessLayer;
+			private readonly int maxErrors;
+
+			public ValidatorFactory(Item contextItem, IDataAccessLayer dataAccessLayer, int maxErrors)
+			{
+				this.contextItem = contextItem;
+				this.dataAccessLayer = dataAccessLayer;
+				this.maxErrors = maxErrors;
+			}
+
+			public IValidator CreateDocumentTypeValidator()
+			{
+				var rules = new List<Rule<BaseDocumentType>>
+				{
+					new MasterItemTypePropertyRule(dataAccessLayer),
+					new DocumentNumberingPropertyRule(dataAccessLayer),
+					new RenameFilePropertyRule(dataAccessLayer),
+					new BaseDocumentTypePropertyRule(dataAccessLayer),
+					new LinkedItemRequiredPropertyRule(dataAccessLayer),
+					new OfficeFileTypesRequiredViewableFilePropertyRule(dataAccessLayer),
+					new NativeFilePropertyRule(dataAccessLayer),
+					new ViewableFilePropertyRule(dataAccessLayer),
+					new PropertyMappingArasPropertyDataTypeRule(dataAccessLayer),
+					new PropertyMappingDuplicateRule(dataAccessLayer),
+					new PropertyMappingOppositeDirectionRule(dataAccessLayer),
+					new PropertyMappingRequiredPropertiesRule(dataAccessLayer),
+					new PropertyMappingMasterRequiredPropertyRule(dataAccessLayer),
+					new ValidLinkedItemPropertyInLinkedItemTypeRule(dataAccessLayer),
+					new ValidLinkedItemPropertyDataTypeAsMasterItemTypeRule(dataAccessLayer),
+					new ValidLinkedItemsDuplicateRule(dataAccessLayer),
+					new ForeignDataSourceRule(dataAccessLayer),
+					new TemplateRequiredRule(dataAccessLayer),
+					new SupportedSpecialMSOPropertiesRule(dataAccessLayer),
+					new SpecialMSOStringPropertyRule(dataAccessLayer),
+					new SpecialMSOItemPropertyRule(dataAccessLayer),
+					new SpecialMSOFileNamePropertyRule(dataAccessLayer),
+					new SpecialMSOHasChangesPropertyRule(dataAccessLayer),
+					new SpecialMSOHasCommentsPropertyRule(dataAccessLayer),
+					new SpecialMSOTemplateVersionPropertyRule(dataAccessLayer),
+					new SpecialMSOUserPropertyRule(dataAccessLayer),
+					new MasterItemTypeSupportThumbnailRule(dataAccessLayer),
+					new ThumbnailFilePropertyRule(dataAccessLayer)
+				};
+
+				var msoDocumentType = new MSO_DocumentType(contextItem);
+				var validator = new Validator<BaseDocumentType>(msoDocumentType, maxErrors);
+				validator.AddRules(rules);
+				return validator;
+			}
+
+			public IValidator CreateEmailDocumentTypeValidator()
+			{
+				var rules = new List<Rule<BaseDocumentType>>
+				{
+					new MasterItemTypePropertyRule(dataAccessLayer),
+					new DocumentNumberingPropertyRule(dataAccessLayer),
+					new BaseDocumentTypePropertyRule(dataAccessLayer),
+					new LinkedItemRequiredPropertyRule(dataAccessLayer),
+					new NativeFilePropertyRule(dataAccessLayer),
+					new ViewableFilePropertyRule(dataAccessLayer),
+					new AttachmentFilePropertyRule(dataAccessLayer),
+					new OfficeFileTypesRequiredViewableFilePropertyRule(dataAccessLayer),
+					new PropertyMappingArasPropertyDataTypeRule(dataAccessLayer),
+					new PropertyMappingDuplicateRule(dataAccessLayer),
+					new PropertyMappingOppositeDirectionRule(dataAccessLayer),
+					new PropertyMappingRequiredPropertiesRule(dataAccessLayer),
+					new PropertyMappingMasterRequiredPropertyRule(dataAccessLayer),
+					new ValidLinkedItemPropertyInLinkedItemTypeRule(dataAccessLayer),
+					new ValidLinkedItemPropertyDataTypeAsMasterItemTypeRule(dataAccessLayer),
+					new ValidLinkedItemsDuplicateRule(dataAccessLayer),
+					new ForeignDataSourceRule(dataAccessLayer),
+					new SupportedSpecialMSOPropertiesRule(dataAccessLayer),
+					new SpecialMSOEmailDescriptionPropertyRule(dataAccessLayer),
+					new SpecialMSOItemPropertyRule(dataAccessLayer),
+					new SpecialMSOStringPropertyRule(dataAccessLayer),
+					new SpecialMSOUserPropertyRule(dataAccessLayer),
+					new EmailPropertyMappingDirectionRule(dataAccessLayer)
+				};
+
+				var msoEmailDocumentType = new MSO_EmailDocumentType(contextItem);
+				var validator = new Validator<BaseDocumentType>(msoEmailDocumentType, maxErrors);
+				validator.AddRules(rules);
+				return validator;
+			}
+
+			public IValidator CreateFileTypeValidator()
+			{
+				var rules = new List<Rule<FileType>>
+				{
+					new FileTypeViewableFileRule(this.dataAccessLayer),
+					new RequiredViewableFileTypeRule(this.dataAccessLayer)
+				};
+
+				var fileType = new FileType(contextItem);
+				var validator = new Validator<FileType>(fileType, maxErrors);
+				validator.AddRules(rules);
+				return validator;
+			}
+		}
+
+//[PartialPath("Partials/FileType")]
+		public class FileType
+		{
+			private Item fileTypeItem;
+
+			public FileType(Item fileTypeItem)
+			{
+				this.fileTypeItem = fileTypeItem;
+			}
+
+			public bool ViewableFileIsRequired
+			{
+				get
+				{
+					return this.fileTypeItem.getProperty("viewable_file", string.Empty) == "1" ? true : false;
+				}
+			}
+
+			public string officeApplication
+			{
+				get
+				{
+					return this.fileTypeItem.getProperty("office_application");
+				}
+			}
+
+			public string ViewableFileType
+			{
+				get
+				{
+					return this.fileTypeItem.getProperty("viewable_file_type", string.Empty);
+				}
+			}
+		}
+
+//[PartialPath("Partials/Rules/FileTypeRule/FileTypeViewableFileRule")]
+		public class FileTypeViewableFileRule : Rule<FileType>
+		{
+			public FileTypeViewableFileRule(IDataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+			}
+
+			public override void Check(FileType fileType)
+			{
+				if (fileType.ViewableFileIsRequired)
+				{
+					string typeApplication = fileType.officeApplication;
+					Item msoTypes = null;
+					if (typeApplication == "Outlook")
+					{
+						msoTypes = this.dataAccessLayer.CreateNewItem("MSO_EmailDocumentType", "get");
+    					msoTypes.setPropertyCondition("viewable_message_file_link", "is null");
+					}
+					else
+					{
+						msoTypes = this.dataAccessLayer.CreateNewItem("MSO_DocumentType", "get");
+						msoTypes.setPropertyCondition("viewable_file_link", "is null");
+					}
+					
+					msoTypes = msoTypes.apply();
+					
+					int countTypes = msoTypes.getItemCount();
+					for (int i = 0; i < countTypes; i++)
+					{
+						Item msoTypeItem = msoTypes.getItemByIndex(i);
+						string message = string.Format(this.dataAccessLayer.GetLocalizedUserMessage("MSO_ItemDoesNotHaveViewableFile"), msoTypeItem.getType(), msoTypeItem.getID()); 
+						this.errors.Add(message);
+					}
+				}
+			}
+		}
+		
+//[PartialPath("Partials/Rules/FileTypeRule/RequiredViewableFileTypeRule")]
+		class RequiredViewableFileTypeRule : Rule<FileType>
+		{
+			public RequiredViewableFileTypeRule(IDataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+			}
+
+			public override void Check(FileType fileType)
+			{
+				if (fileType.ViewableFileIsRequired && string.IsNullOrEmpty(fileType.ViewableFileType))
+				{
+					string message = string.Format(this.dataAccessLayer.GetLocalizedUserMessage("MSO_ViewableFileTypeShouldBeFilledForOfficeFileType"), fileType.officeApplication); 
+					this.errors.Add(message);
+				}
+			}
+
+		}
+
+//[PartialPath("Partials/Rules/DocumentTypeRule/EmailDirectionPropertyRule/EmailPropertyMappingDirectionRule")]
+		internal class EmailPropertyMappingDirectionRule : Rule<BaseDocumentType>
+		{
+			private const string supportedDirection = "Email to Aras";
+
+			public EmailPropertyMappingDirectionRule(IDataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				Dictionary<string, List<Item>> propertyMappingGroups = documentType.GetPropertyMappingGroups();
+				foreach (var properties in propertyMappingGroups)
+				{
+					foreach (var propertyItem in properties.Value)
+					{
+						string propertyDirection = propertyItem.getProperty("direction", string.Empty);
+						if (!string.Equals(propertyDirection, supportedDirection))
+						{
+							this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_EmailDocumentTypeMappingPropHasWrongDirection"));
+							return;
+						}
+					}
+				}
+			}
+		}
+
+		//[PartialPath("Partials/Rules/DocumentTypeRule/MasterItemTypeSupportThumbnailRule")]
+		internal class MasterItemTypeSupportThumbnailRule : Rule<BaseDocumentType>
+		{
+			public MasterItemTypeSupportThumbnailRule(IDataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				string thumbnailReferenceId = documentType.GetProperty("thumbnail_file_link");
+				if (string.IsNullOrEmpty(thumbnailReferenceId))
+				{
+					return;
+				}
+
+				Item thumbnailProperty = documentType.MasterItemTypeItem.getItemsByXPath("//Result/Item/Relationships/Item[@type='Property' and name='thumbnail' and data_type='image']");
+				if (thumbnailProperty.getItemCount() != 1)
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedItemTypeMustHaveThumbnailProperty"));
+				}
+			}
+		}
+
+		//[PartialPath("Partials/Rules/DocumentTypeRule/ThumbnailFilePropertyRule")]
+		internal class ThumbnailFilePropertyRule : Rule<BaseDocumentType>
+		{
+			public ThumbnailFilePropertyRule(IDataAccessLayer dataAccessLayer) : base(dataAccessLayer)
+			{
+
+			}
+
+			public override void Check(BaseDocumentType documentType)
+			{
+				string thumnailMSOReferenceId = documentType.GetProperty("thumbnail_file_link");
+				if (string.IsNullOrEmpty(thumnailMSOReferenceId))
+				{
+					return;
+				}
+
+				Item thumnailMSOReferenceItem = this.dataAccessLayer.CreateNewItem("MSO_Reference", "get");
+				thumnailMSOReferenceItem.setID(thumnailMSOReferenceId);
+				thumnailMSOReferenceItem = this.dataAccessLayer.ApplyItem(thumnailMSOReferenceItem);
+
+				string referenceItemTypeId = thumnailMSOReferenceItem.getProperty("reference_item_type");
+				string referencePropertyId = thumnailMSOReferenceItem.getProperty("reference_property");
+
+				Item itemTypeItem = this.dataAccessLayer.CreateNewItem("itemType", "get");
+				itemTypeItem.setID(referenceItemTypeId);
+				itemTypeItem.setAttribute("levels", "2");
+				itemTypeItem = this.dataAccessLayer.ApplyItem(itemTypeItem);
+
+				// For Thumnail File the selected relationship should have type of source_id same as selected (master)Item type
+				if (documentType.MasterItemTypeItem != null)
+				{
+					string referenceSourceId;
+					string isRelationship = itemTypeItem.getProperty("is_relationship", "0");
+					if (isRelationship == "1")
+					{
+						Item sourceIdPropertyItem = itemTypeItem.getItemsByXPath("Relationships/Item[@type='Property' and keyed_name='source_id']");
+						referenceSourceId = sourceIdPropertyItem.getProperty("data_source");
+					}
+					else
+					{
+						referenceSourceId = itemTypeItem.getID();
+					}
+
+					if (!string.Equals(documentType.MasterItemTypeItem.getID(), referenceSourceId, StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedThumbnailFileMustHaveSelectedItemTypeSameAsMasterItemType"));
+					}
+				}
+
+				// For Thumnail File the selected relationship should have type of related_id = File
+				Item propertyItem = itemTypeItem.getItemsByXPath(string.Format(
+					"Relationships/Item[@type='Property' and id='{0}' and source_id='{1}']",
+					referencePropertyId,
+					referenceItemTypeId));
+
+				if (propertyItem.getItemCount() != 1)
+				{
+					this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedThumbnailFileHasAnIncorrectPropertyItem"));
+				}
+				else
+				{
+					string dataSource = propertyItem.getPropertyAttribute("data_source", "keyed_name", string.Empty);
+					if (!string.Equals(dataSource, "File", StringComparison.InvariantCultureIgnoreCase))
+					{
+						this.errors.Add(this.dataAccessLayer.GetLocalizedUserMessage("MSO_SelectedThumbnailFilePropertyItemMustHaveAFileAsDataSourceType"));
+					}
+				}
+			}
+		}
+
+		//[PartialPath("Partials/CommonValidation")]
+		internal class CommonValidation
+		{
+			public bool IsCorrectEventsForMapping(Item basePropertyMapItem, Item comparedPropertyMapItem)
+			{
+				const string falseValue = "0";
+				string baseMappingOnCreate = basePropertyMapItem.getProperty("on_create", falseValue);
+				string baseMappingOnUpdate = basePropertyMapItem.getProperty("on_update", falseValue);
+
+				string comparedMappingOnCreate = comparedPropertyMapItem.getProperty("on_create", falseValue);
+				string comparedMappingOnUpdate = comparedPropertyMapItem.getProperty("on_update", falseValue);
+
+				bool baseEventsDisabled = string.Equals(baseMappingOnCreate, falseValue, StringComparison.InvariantCultureIgnoreCase) &&
+											string.Equals(baseMappingOnUpdate, falseValue, StringComparison.InvariantCultureIgnoreCase);
+
+				bool comparedEventsDisabled = string.Equals(comparedMappingOnCreate, falseValue, StringComparison.InvariantCultureIgnoreCase) &&
+											string.Equals(comparedMappingOnUpdate, falseValue, StringComparison.InvariantCultureIgnoreCase);
+
+				bool isDuplicatedEvent = string.Equals(baseMappingOnCreate, comparedMappingOnCreate, StringComparison.InvariantCultureIgnoreCase) ||
+					string.Equals(baseMappingOnUpdate, comparedMappingOnUpdate, StringComparison.InvariantCultureIgnoreCase);
+
+				bool isCorrectMappingEvent = false;
+				if ((baseEventsDisabled ^ comparedEventsDisabled) || !isDuplicatedEvent)
+				{
+					isCorrectMappingEvent = true;
+				}
+
+				return isCorrectMappingEvent;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_OnBeforeUpdateDocumentType</name>
+ </Item>
+</AML>

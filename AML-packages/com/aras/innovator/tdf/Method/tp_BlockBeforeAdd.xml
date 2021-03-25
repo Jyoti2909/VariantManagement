@@ -1,0 +1,176 @@
+﻿<AML>
+ <Item type="Method" id="9E634E89F11B49A883CB138FEFA3D9C6" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[			string name = "name";
+			string type = this.getAttribute("type");
+			#pragma warning disable 0618
+			XmlElement itemType = CCO.Cache.GetItemTypeFromCache(ref type,ref name);
+			#pragma warning restore 0618
+			string itemTypeTableName = itemType.GetAttribute("instance_data");
+			ResizeFieldsInDB(CCO.Context, CCO.Cache, CCO.DB, itemTypeTableName);
+			return Execute(this, this.getInnovator());
+		}
+
+		public static void ResizeFieldsInDB(HttpContext context, Aras.Server.Core.ICachePublicAPI cache, Aras.Server.Core.DB db, String tableName)
+		{
+			// Compiler Error CS0103: The name 'identifier' does not exist in the current context
+			if (context == null)
+			{
+				throw new System.ArgumentException("context cannot be null", "context");
+			}
+			if (cache == null)
+			{
+				throw new System.ArgumentException("cache cannot be null", "cache");
+			}
+			if (db == null)
+			{
+				throw new System.ArgumentException("db cannot be null", "db");
+			}
+			string key = tableName + "_LanguageCount";
+			object objValue = context.Application[key];
+
+			#pragma warning disable 618
+			int currentNumberOfLanguages = cache.GetLanguagesFromCache().Count;
+			#pragma warning restore 618
+
+			bool needResize = false;
+			if (objValue is int numberOfLanguages)
+			{
+				needResize = numberOfLanguages != currentNumberOfLanguages;
+			}
+			else
+			{
+				needResize = true;
+			}
+
+			if (needResize)
+			{
+				Aras.Server.Core.InnovatorDatabase conn = db.InnDatabase;
+				string sqlQueryFormat = "exec tp_SetNvarcharMaxToBlockMLProps '" + conn.QuoteValue(tableName) + "'";
+
+				conn.ExecuteSQL(sqlQueryFormat);
+				context.Application.Lock();
+				context.Application[key] = currentNumberOfLanguages;
+				context.Application.UnLock();
+			}
+		}
+
+		public static Item Execute(Item self, Innovator innovator)
+		{
+if (self == null)
+{
+	return null;
+}
+string classification = self.getProperty("classification");
+string schemaId = self.getProperty("xml_schema");
+string contentBuilderMethod = self.getProperty("publishing_content_builder_method");
+
+Item methodItem = self.getInnovator().newItem("Method", "tp_GetDefaultLanguageCode");
+methodItem = methodItem.apply();
+List<string> langCodeList = new List<String>() { methodItem.getResult() };
+string content = self.getProperty("content", null, langCodeList.FirstOrDefault());
+
+if (!String.IsNullOrEmpty(schemaId) && !String.IsNullOrEmpty(classification) && String.IsNullOrEmpty(content))
+{
+	Item schemaElementItem = self.getInnovator().newItem("tp_XmlSchemaElement", "get");
+	schemaElementItem.setAttribute("select", "id, name");
+	schemaElementItem.setProperty("source_id", schemaId);
+	schemaElementItem.setProperty("default_classification", classification);
+	schemaElementItem = schemaElementItem.apply();
+
+	Aras.TDF.Base.SchemaElementFactory factory = CreateFactory(self, innovator, schemaId, contentBuilderMethod);
+	factory.CustomContentEnabled = true;
+	StringBuilder initialContent = new StringBuilder();
+	int count = schemaElementItem.getItemCount();
+
+	for (int i = 0; i < count; i++)
+	{
+		Item schemaElement = schemaElementItem.getItemByIndex(i);
+		String elementName = schemaElement.getProperty("name");
+		Aras.TDF.Base.DocumentSchemaNode newElement = factory.NewElement(elementName);
+
+		// if new element can have references, then we should cleanup reference properties
+		Aras.TDF.Base.ExternalDocumentElement externalElement = newElement as Aras.TDF.Base.ExternalDocumentElement;
+		if (externalElement != null)
+		{
+			externalElement.RemoveReference();
+		}
+
+		initialContent.Append(newElement.Origin.OuterXml);
+	}
+	self.setProperty("content", initialContent.ToString());
+
+	if (count == 1)
+	{
+		self.setProperty("root_element_type", "Single");
+		self.setProperty("root_element_name", schemaElementItem.getProperty("name"));
+	}
+	else if (count > 1)
+	{
+		self.setProperty("root_element_type", "Multiple");
+	}
+}
+
+if (!String.IsNullOrEmpty(content)) {
+	Aras.TDF.Base.SchemaElementFactory factory = CreateFactory(self, innovator, schemaId, contentBuilderMethod);
+	Aras.TDF.Base.DocumentSchemaNode node = factory.ParseElement("<root>" + content + "</root>");
+	List<string> nodeNameList = (from child in node.Childs select child.NodeName).ToList();
+	List<string> uniqueNodeNameList = nodeNameList.Distinct().ToList();
+
+	if (nodeNameList.Count == uniqueNodeNameList.Count)
+	{
+		Item schemaElementItem = self.getInnovator().newItem("tp_XmlSchemaElement", "get");
+		schemaElementItem.setAttribute("select", "name, default_classification");
+		schemaElementItem.setProperty("source_id", schemaId);
+		Item itemOr = schemaElementItem.newOR();
+		itemOr.setProperty("name", string.Join<string>(", ", uniqueNodeNameList));
+		schemaElementItem = schemaElementItem.apply();
+		int count = schemaElementItem.getItemCount();
+
+		if (count == uniqueNodeNameList.Count)
+		{
+			List<string> classificationList = new List<string>();
+			for (int i = 0; i < count; i++)
+			{
+				Item schemaElement = schemaElementItem.getItemByIndex(i);
+				string strClassification = schemaElement.getProperty("default_classification");
+				if (!String.IsNullOrEmpty(strClassification))
+				{
+					classificationList.Add(strClassification);
+				}
+				else
+				{
+					classificationList = null;
+					break;
+				}
+			}
+			if (classificationList != null && classificationList.Count > 0)
+			{
+				List<string> uniqueClassificationList = classificationList.Distinct().ToList();
+				if (uniqueClassificationList.Count == 1)
+				{
+					self.setProperty("classification", uniqueClassificationList.FirstOrDefault());
+				}
+			}
+		}
+	}
+}
+
+return self;
+}
+
+public static Aras.TDF.Base.SchemaElementFactory CreateFactory(Item thisItem, Innovator innovatorInstance, string schemaId, string contentBuilderMethod)
+{
+	if (thisItem == null)
+	{
+		throw new ArgumentException("thisItem should be not null");
+	}
+
+	var executionContext = new Aras.TDF.Base.SchemaElementExecutionContext(thisItem.getID(), thisItem.getType(), contentBuilderMethod);
+	var factory = new Aras.TDF.Base.SchemaElementFactory(innovatorInstance, schemaId, executionContext);
+	return factory;
+	]]></method_code>
+  <method_type>C#</method_type>
+  <name>tp_BlockBeforeAdd</name>
+ </Item>
+</AML>

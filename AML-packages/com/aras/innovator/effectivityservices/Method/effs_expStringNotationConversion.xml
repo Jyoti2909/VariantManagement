@@ -1,0 +1,280 @@
+﻿<AML>
+ <Item type="Method" id="74BB1EECB04749708167ED23036EAADF" action="add">
+  <comments />
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	Dictionary<string, Item> expressionItemToProcessHashedById = new Dictionary<string, Item>();
+	Dictionary<string, string> effectivityScopeIdHashedByExpressionItemId = new Dictionary<string, string>();
+	Dictionary<string, string> definitionHashedByExpressionItemId = new Dictionary<string, string>();
+
+	HashSet<string> idsOfExpressionItemsWhereEffectivityScopeIdPropertyMissed = new HashSet<string>();
+	HashSet<string> idsOfExpressionItemsWhereDefinitionPropertyMissed = new HashSet<string>();
+
+	for (int i = 0, expressionItemCount = this.getItemCount(); i < expressionItemCount; i++)
+	{
+		Item singleIncomingExpressionItem = this.getItemByIndex(i);
+		string singleIncomingExpressionItemId = singleIncomingExpressionItem.getID();
+		string singleIncomingExpressionItemEffectivityScopeId = singleIncomingExpressionItem.getProperty(effectivityScopeIdPropertyName);
+		string singleIncomingExpressionItemDefinition = singleIncomingExpressionItem.getProperty(definitionPropertyName);
+
+		bool isEffectivityScopeIdPropertyPresent = !string.IsNullOrEmpty(singleIncomingExpressionItemEffectivityScopeId);
+		bool isDefinitionPropertyPresent = !string.IsNullOrEmpty(singleIncomingExpressionItemDefinition);
+
+		//Only changes in 'effs_scope_id' or 'definition' properties may lead to a necessity to regenerate expression string notation
+		//Pay attention, 'effs_scope_id' and 'definition' are required properties, if at least one of them is absent during adding an
+		//item, the item processing should be skipped here as an error will be raised by the Aras Innovator Core
+		if (!isEffectivityScopeIdPropertyPresent && !isDefinitionPropertyPresent
+			|| (addItemActionName.Equals(singleIncomingExpressionItem.getAction(), StringComparison.Ordinal)
+				&& (!isEffectivityScopeIdPropertyPresent || !isDefinitionPropertyPresent)))
+		{
+			continue;
+		}
+
+		expressionItemToProcessHashedById.Add(singleIncomingExpressionItemId, singleIncomingExpressionItem);
+
+		if (!isEffectivityScopeIdPropertyPresent)
+		{
+			idsOfExpressionItemsWhereEffectivityScopeIdPropertyMissed.Add(singleIncomingExpressionItemId);
+		}
+		else
+		{
+			effectivityScopeIdHashedByExpressionItemId.Add(singleIncomingExpressionItemId, singleIncomingExpressionItemEffectivityScopeId);
+		}
+
+		if (!isDefinitionPropertyPresent)
+		{
+			idsOfExpressionItemsWhereDefinitionPropertyMissed.Add(singleIncomingExpressionItemId);
+		}
+		else
+		{
+			definitionHashedByExpressionItemId.Add(singleIncomingExpressionItemId, singleIncomingExpressionItemDefinition);
+		}
+	}
+
+	if (!expressionItemToProcessHashedById.Any())
+	{
+		return this;
+	}
+
+	if (idsOfExpressionItemsWhereEffectivityScopeIdPropertyMissed.Any())
+	{
+		effectivityScopeIdHashedByExpressionItemId = ResolveMissedExpressionItemPropertyAndUnionWithExistingValues(
+			effectivityScopeIdHashedByExpressionItemId,
+			idsOfExpressionItemsWhereEffectivityScopeIdPropertyMissed,
+			effectivityScopeIdPropertyName);
+	}
+
+	if (idsOfExpressionItemsWhereDefinitionPropertyMissed.Any())
+	{
+		definitionHashedByExpressionItemId = ResolveMissedExpressionItemPropertyAndUnionWithExistingValues(
+			definitionHashedByExpressionItemId,
+			idsOfExpressionItemsWhereDefinitionPropertyMissed,
+			definitionPropertyName);
+	}
+
+	Dictionary<string, Aras.Server.Core.Configurator.Scope> scopeObjectHashedByEffectivityScopeId =
+		ResolveEffectivityScope(effectivityScopeIdHashedByExpressionItemId.Values);
+
+	foreach (KeyValuePair<string, string> kvp in definitionHashedByExpressionItemId)
+	{
+		string expressionItemId = kvp.Key;
+		string definition = kvp.Value;
+		string effectivityScopeId = effectivityScopeIdHashedByExpressionItemId[expressionItemId];
+
+		Aras.Server.Core.Configurator.Scope scope = scopeObjectHashedByEffectivityScopeId[effectivityScopeId];
+		Aras.Server.Core.Configurator.IStringNotationConverter stringNotationConverter = GetCachedStringNotationConverterOrCreateNew(scope);
+
+		Aras.Server.Core.Configurator.ExpressionBase expression = ConvertExpressionXmlDefinitionToExpressionObject(definition);
+		string expressionStringNotation = stringNotationConverter.ConvertExpressionToStringNotation(expression);
+		expressionStringNotation = NormalizeDateFormat(expressionStringNotation);
+
+		Item expressionItem = expressionItemToProcessHashedById[expressionItemId];
+		expressionItem.setProperty(stringNotationPropertyName, expressionStringNotation);
+	}
+
+	return this;
+}
+
+private I18NSessionContext i18NSessionContext;
+private readonly System.Text.RegularExpressions.Regex neutralDateTimeFormat = new System.Text.RegularExpressions.Regex(@"\d{4}-\d{2}-\d{2}T00:00:00");
+private readonly Dictionary<string, Aras.Server.Core.Configurator.IStringNotationConverter> stringNotationConverterHashedByScopeId =
+	new Dictionary<string, Aras.Server.Core.Configurator.IStringNotationConverter>();
+
+private readonly string addItemActionName = "add";
+private readonly string effectivityScopeIdPropertyName = "effs_scope_id";
+private readonly string definitionPropertyName = "definition";
+private readonly string stringNotationPropertyName = "string_notation";
+
+internal virtual Dictionary<string, string> ResolveMissedExpressionItemProperty(IEnumerable<string> expressionItemIdList, string missedPropertyName)
+{
+	Item expressionItems = this.newItem("effs_expression", "get");
+	expressionItems.setAttribute("idlist", string.Join(",", expressionItemIdList));
+	expressionItems.setAttribute("select", missedPropertyName);
+	expressionItems = expressionItems.apply();
+
+	if (expressionItems.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(expressionItems.dom);
+	}
+
+	Dictionary<string, string> resolvedPropertyValueByExpressionItemId = new Dictionary<string, string>();
+	for (int i = 0, expressionItemCount = expressionItems.getItemCount(); i < expressionItemCount; i++)
+	{
+		Item singleExpressionItem = expressionItems.getItemByIndex(i);
+		resolvedPropertyValueByExpressionItemId.Add(singleExpressionItem.getID(), singleExpressionItem.getProperty(missedPropertyName));
+	}
+
+	return resolvedPropertyValueByExpressionItemId;
+}
+
+internal virtual Dictionary<string, Aras.Server.Core.Configurator.Scope> ResolveEffectivityScope(IEnumerable<string> effectivityScopeIdList)
+{
+	Dictionary<string, string> builderMethodNameHashedByEffectivityScopeId = ResolveEffectivityScopeBuilderMethodName(effectivityScopeIdList);
+
+	Dictionary<string, Aras.Server.Core.Configurator.Scope> scopeObjectHashedByEffectivityScopeId =
+		builderMethodNameHashedByEffectivityScopeId.ToDictionary(
+			src => src.Key,
+			src => BuildScope(src.Key, src.Value));
+
+	return scopeObjectHashedByEffectivityScopeId;
+}
+
+internal virtual Dictionary<string, string> ResolveEffectivityScopeBuilderMethodName(IEnumerable<string> effectivityScopeIdList)
+{
+	Item effsScopeItems = this.newItem("effs_scope", "get");
+	effsScopeItems.setAttribute("idlist", string.Join(",", effectivityScopeIdList));
+	effsScopeItems.setAttribute("select", "builder_method(name)");
+	effsScopeItems = effsScopeItems.apply();
+
+	if (effsScopeItems.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(effsScopeItems.dom);
+	}
+
+	Dictionary<string, string> resolvedBuilderMethodNameByEffectivityScopeId = new Dictionary<string, string>();
+	for (int i = 0, effsScopeItemCount = effsScopeItems.getItemCount(); i < effsScopeItemCount; i++)
+	{
+		Item singleEffsScopeItem = effsScopeItems.getItemByIndex(i);
+		resolvedBuilderMethodNameByEffectivityScopeId.Add(
+			singleEffsScopeItem.getID(),
+			singleEffsScopeItem.getPropertyItem("builder_method").getProperty("name"));
+	}
+
+	return resolvedBuilderMethodNameByEffectivityScopeId;
+}
+
+internal virtual Aras.Server.Core.Configurator.Scope BuildScope(string scopeId, string scopeBuilderMethodName)
+{
+	Item targetScopeItem = this.newItem();
+	targetScopeItem.setID(scopeId);
+	targetScopeItem.setAction(scopeBuilderMethodName);
+
+	Item scopeStructureItem = this.newItem("Method", "cfg_GetScopeStructure");
+	scopeStructureItem.setPropertyItem("targetScope", targetScopeItem);
+	scopeStructureItem = scopeStructureItem.apply();
+
+	if (scopeStructureItem.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(scopeStructureItem.dom);
+	}
+
+	return ParseScopeStructureItemToScopeObject(scopeStructureItem);
+}
+
+internal virtual Aras.Server.Core.Configurator.Scope ParseScopeStructureItemToScopeObject(Item scopeStructureItem)
+{
+	Aras.Server.Core.Configurator.Scope scope = new Aras.Server.Core.Configurator.Scope()
+	{
+		Id = scopeStructureItem.getID(),
+		Name = scopeStructureItem.getProperty("name")
+	};
+
+	Item variableRelationshipItems = scopeStructureItem.getRelationships("Variable");
+	for (int i = 0, variableRelationshipItemCount = variableRelationshipItems.getItemCount(); i < variableRelationshipItemCount; i++)
+	{
+		Item singleVariableRelationshipItem = variableRelationshipItems.getItemByIndex(i);
+
+		Aras.Server.Core.Configurator.Variable variable = new Aras.Server.Core.Configurator.Variable(null)
+		{
+			Id = singleVariableRelationshipItem.getID(),
+			Name = singleVariableRelationshipItem.getProperty("name")
+		};
+
+		Item namedConstantRelationshipItems = singleVariableRelationshipItem.getRelationships("NamedConstant");
+		int namedConstantRelationshipItemsCount = namedConstantRelationshipItems.getItemCount();
+		if (namedConstantRelationshipItemsCount > 0)
+		{
+			Aras.Server.Core.Configurator.Enum @enum = new Aras.Server.Core.Configurator.Enum(null);
+
+			for (int j = 0; j < namedConstantRelationshipItemsCount; j++)
+			{
+				Item singleNamedConstantRelationshipItem = namedConstantRelationshipItems.getItemByIndex(j);
+				@enum.AddNamedConstant(singleNamedConstantRelationshipItem.getID(), singleNamedConstantRelationshipItem.getProperty("name"), (string)null);
+			}
+
+			variable.Enum = @enum;
+		}
+
+		scope.VariableList.Add(variable);
+	}
+
+	return scope;
+}
+
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Aras.Rules", "ArasRule2:DoNotCreateXmlDocument")]
+internal virtual Aras.Server.Core.Configurator.ExpressionBase ConvertExpressionXmlDefinitionToExpressionObject(string expressionXmlDefinition)
+{
+	XmlDocument xmlDocument = new XmlDocument();
+	xmlDocument.PreserveWhitespace = false;
+	xmlDocument.LoadXml(expressionXmlDefinition);
+
+	return Aras.Server.Core.Configurator.ExpressionConverter.Instance.FromXml(xmlDocument.DocumentElement);
+}
+
+internal virtual Aras.Server.Core.Configurator.IStringNotationConverter GetCachedStringNotationConverterOrCreateNew(
+	Aras.Server.Core.Configurator.Scope scope)
+{
+	Aras.Server.Core.Configurator.IStringNotationConverter stringNotationConverter;
+
+	string scopeId = scope.Id;
+	if (!stringNotationConverterHashedByScopeId.TryGetValue(scopeId, out stringNotationConverter))
+	{
+		stringNotationConverter = CreateNewStringNotationConverter(scope.VariableList);
+		stringNotationConverterHashedByScopeId.Add(scopeId, stringNotationConverter);
+	}
+
+	return stringNotationConverter;
+}
+
+internal virtual Aras.Server.Core.Configurator.IStringNotationConverter CreateNewStringNotationConverter(
+	IEnumerable<Aras.Server.Core.Configurator.Variable> variableContainer)
+{
+	return new Aras.Server.Core.Configurator.ExpressionToStringNotationConverter(variableContainer);
+}
+
+internal virtual Dictionary<string, string> ResolveMissedExpressionItemPropertyAndUnionWithExistingValues(
+	Dictionary<string, string> existingPropertyValuesToUnionWith,
+	IEnumerable<string> idsOfExpressionItemsWithMissedProperty,
+	string missedPropertyName)
+{
+	return existingPropertyValuesToUnionWith
+			.Union(ResolveMissedExpressionItemProperty(idsOfExpressionItemsWithMissedProperty, missedPropertyName))
+			.ToDictionary(src => src.Key, src => src.Value);
+}
+
+internal virtual string NormalizeDateFormat(string input)
+{
+	return neutralDateTimeFormat.Replace(input, match => GetI18NSessionContext().ConvertFromNeutral(match.Value, "date", "short_date"));
+}
+
+internal virtual I18NSessionContext GetI18NSessionContext()
+{
+	if (i18NSessionContext == null)
+	{
+		i18NSessionContext = this.getInnovator().getI18NSessionContext();
+	}
+
+	return i18NSessionContext;]]></method_code>
+  <method_type>C#</method_type>
+  <name>effs_expStringNotationConversion</name>
+ </Item>
+</AML>

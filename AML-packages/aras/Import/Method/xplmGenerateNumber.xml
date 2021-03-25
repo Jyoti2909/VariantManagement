@@ -1,0 +1,117 @@
+﻿<AML>
+ <Item type="Method" id="74D8E48878614118998E90AE17AE6256" action="add">
+  <classification>/*</classification>
+  <method_code><![CDATA[' server-side Method (VB): xPLM Generate Number
+' XPLM: Added Case for Document item type by KNT
+' called OnBeforeAdd and OnBeforeUpdate 
+' based on Ars Generate CAD_Document Number method
+'
+'MethodTemplateName=VBMain;
+
+Dim thisErr As Aras.IOM.Item
+Dim innovator As Aras.IOM.Innovator = Me.getInnovator()
+  
+Function Main() As Item
+  'System.Diagnostics.Debugger.Break()
+  Dim thisType As String = Me.getAttribute("type","")
+  Dim thisAction As String = Me.getAttribute("action","")
+  Dim classPath As String = Me.getProperty("classification","")
+  Dim docNumber As String = Me.getProperty("item_number","")
+  Dim docGeneration As String = Me.getProperty("generation","")
+  Dim generate_item_number As Boolean = False
+  Dim copyMode As Boolean = False
+  Dim typeCode As String =""
+
+  ' default values on Item Type Document:  item_number="Server Assigned"  classification="/Document/Undefined"
+
+  If (thisAction = "add") Then
+   If (docNumber.IndexOf("Copy") >=0) Then copyMode=True
+   If docNumber = "" Or docNumber = "Server Assigned" Or Left(docNumber,4) = "TMP-"  Then
+    If (docNumber.IndexOf("Copy") >=0) Then copyMode=True
+    If classPath = "" Then
+      If docGeneration = "" Then
+        ' document got created by external Integration (Office ...)
+        '  or is a working copy of the new revision
+        ' Do nothing
+        Return Me  
+      Else
+        thisErr = innovator.newError("You have to set Type(classification) first !!!")
+        Return thisErr
+      End If 
+    ' Generate the Doc Number now
+    Else
+      generate_item_number=True
+    End If
+    End If
+  Else
+    ' process other actions here ..update .. etc.
+     If (docNumber.IndexOf("Copy") >=0 Or thisAction.IndexOf("copy") >=0) Then copyMode=True
+  End If
+
+  ' this is to cover the "Save As.." action -  and new versions of the item  
+  If (copyMode) Then
+     If (docNumber<>"") Then
+     typeCode="TMP"
+       ' preserve the old type code - if found - else keep it a temp number
+      Dim pos1 As Integer = docNumber.IndexOf("of ")
+      docNumber = docNumber.SubString(pos1+3)
+      pos1 = docNumber.IndexOf("-")
+      If (pos1 >=0) Then typeCode = docNumber.SubString(0,pos1)
+    End If
+    ' generate a new number
+    generate_item_number=True
+  End If
+  
+  If (generate_item_number) Then
+    docNumber = generateNewNumber(thisType, classPath, typeCode)
+    Me.setProperty("item_number",docNumber) 
+  End If
+
+  Return Me
+End Function
+
+'=================================
+Private Function generateNewNumber(thisType As String, classPath As String, prevTypeCode As String) As String
+  Dim typeCode As String
+  'find last element in class path 
+  Dim caseStr As String
+  Dim docNumber As String = ""
+
+  ' Strip the item type component from path
+  caseStr = classPath.Replace("/" & thisType & "/", "/")
+
+  ' set type code to "" to use generated number without adding a type specific prefix
+  Select Case caseStr
+        Case "/Part" 
+           typeCode="PRT" 
+        Case "/Drawing" 
+           typeCode="DRW" 
+        Case "/Assembly" 
+           typeCode="ASY" 
+        Case Else
+           typeCode="" 
+  End Select
+    
+  ' generate a new number only, if prevTypeCode is not TMP
+  If (Left(prevTypeCode,Len("TMP")) <> "TMP") Then
+    If (thisType ="Document") Then
+      docNumber=innovator.getNextSequence("Default Document") ' get new number count
+    Else
+    
+      ' 2020-10-12, FIH, BEGIN 
+      ' docNumber=innovator.getNextSequence("CAD Document") ' get new number count
+      docNumber=innovator.getNextSequence("GAG_DocumentSequence") ' get new number count
+      ' 2020-10-12, FIH, END
+      
+    End If
+    ' add type code as suffix
+    If (typeCode <>"") Then  docNumber = docNumber & "-" & typeCode
+    '## old## If (typeCode <>"") Then  docNumber = Replace(docNumber, "CAD-", typeCode & "-")
+  End If
+  Return docNumber
+End Function
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>xPLM Generate Number</name>
+ </Item>
+</AML>

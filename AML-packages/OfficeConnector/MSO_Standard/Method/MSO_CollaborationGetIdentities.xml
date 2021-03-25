@@ -1,0 +1,31 @@
+﻿<AML>
+ <Item type="Method" id="8061A25562594B6F869CA86790B7F345" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string aliasIdentityId = this.getProperty("aliasIdentityId");
+
+Item request = this.newItem();
+request.loadAML(string.Format(
+@"
+ <AML>
+  <Item type=""Identity"" action=""get"" select=""name,is_alias,id"">
+  <id condition=""ne"">{0}</id>
+  <id condition=""in"">
+   SELECT [identity].id
+   FROM innovator.[identity]
+   LEFT JOIN innovator.[ALIAS] ON [ALIAS].related_id = [identity].id
+   LEFT JOIN innovator.[USER] ON [ALIAS].source_id = [USER].id
+   WHERE [identity].is_alias = '0' OR [USER].logon_enabled = '1'
+  </id>
+  <or>
+   <classification condition=""not in"">'System','Team'</classification>
+   <classification condition=""is null""></classification>
+  </or>
+  </Item>
+ </AML>
+", aliasIdentityId));
+
+return request.apply();]]></method_code>
+  <method_type>C#</method_type>
+  <name>MSO_CollaborationGetIdentities</name>
+ </Item>
+</AML>

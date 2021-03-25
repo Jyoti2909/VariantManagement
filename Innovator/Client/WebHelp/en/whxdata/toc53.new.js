@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Client Display Mode","type":"item","url":"Client_Display_Mode.htm"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

@@ -1,0 +1,271 @@
+﻿<AML>
+ <Item type="Method" id="9EF2B2B66A6C4460B4C10D2C5DD48A79" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+
+			return businessLogic.Run(this);
+}
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dal)
+			{
+				_dal = dal;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string folderPath = GetFolderPath();
+				string ipAddress = _dal.ClientIpAddress;
+
+				BaseCsvParser parser;
+				switch (contextItem.getProperty("properties_type"))
+				{
+					case "Names":
+						parser = new SapCsvParser(folderPath, ipAddress);
+						break;
+
+					case "Material":
+						parser = new MatCsvParser(folderPath, ipAddress);
+						break;
+
+					case "Tolerance":
+						parser = new ToleranzCsvParser(folderPath, ipAddress);
+						break;
+
+					default:
+						return _dal.NewError("Incorrect properties_type value.");
+				}
+
+				Dictionary<string, string> properties = parser.GetPropertiesNamesAndValues();
+				Item part = ComposePartWithNewProperties(properties);
+
+				return part;
+			}
+
+			private string GetFolderPath()
+			{
+				const string pathVariableId = "FA8CD27CF889444681E293EAD76CF603";
+				Item pathVariable = _dal.NewItem("Variable", "get");
+				pathVariable.setAttribute("select", "value");
+				pathVariable.setID(pathVariableId);
+				pathVariable = _dal.ApplyItem(pathVariable);
+
+				if (pathVariable.isError())
+				{
+					throw new ItemException(pathVariable);
+				}
+
+				string folderPath = pathVariable.getProperty("value", string.Empty);
+
+				if (string.IsNullOrEmpty(folderPath))
+				{
+					throw new ItemException("Value of the GAG_ExportedPropFilesFolderPath variable is not set.");
+				}
+
+				return folderPath;
+			}
+
+			private Item ComposePartWithNewProperties(Dictionary<string, string> properties)
+			{
+				Item part = _dal.NewItem("Part");
+
+				foreach (KeyValuePair<string, string> property in properties)
+				{
+					part.setProperty(property.Key, property.Value);
+				}
+
+				return part;
+			}
+		}
+
+		//[PartialPath("CsvParsers/BaseCsvParser")]
+		internal abstract class BaseCsvParser
+		{
+			protected string FilePath { get; }
+			protected string Error { get; set; } = string.Empty;
+			protected abstract string FileNamePostfix { get; }
+			protected abstract List<string> OrderedPropertyNames { get; }
+			protected abstract int MinimalLinesCount { get; }
+			protected abstract int PropertiesLineNumber { get; }
+			protected abstract int PropertiesCount { get; }
+
+			public BaseCsvParser(string folderPath, string ipAddress)
+			{
+				FilePath = GetFilePath(folderPath, ipAddress);
+
+				if (string.IsNullOrEmpty(FilePath))
+				{
+					throw new CsvParsingException("Csv file is not found.");
+				}
+			}
+
+			public Dictionary<string, string> GetPropertiesNamesAndValues()
+			{
+				string[] parsedPropertiesValues = ParsePropertiesValuesFromFile(FilePath);
+
+				Dictionary<string, string> properties = new Dictionary<string, string>();
+
+				for (int i = 0; i < parsedPropertiesValues.Length; i++)
+				{
+					if (!string.IsNullOrEmpty(OrderedPropertyNames[i]))
+					{
+						properties.Add(OrderedPropertyNames[i], parsedPropertiesValues[i]);
+					}
+				}
+
+				return properties;
+			}
+
+			private string GetFilePath(string folderPath, string ipAddress)
+			{
+				string filePath = Path.Combine(folderPath, ipAddress + $"-{FileNamePostfix}.csv");
+
+				return File.Exists(filePath) ? filePath : string.Empty;
+			}
+
+			private string[] ParsePropertiesValuesFromFile(string filePath)
+			{
+				string[] fileContentLines = File.ReadAllLines(filePath);
+
+				if (fileContentLines.Length < MinimalLinesCount)
+				{
+					throw new CsvParsingException($"csv file format error: file should contain at least {MinimalLinesCount} lines.");
+				}
+
+				string[] parsedPropertiesValues = ParsePropertiesValuesFromFileContent(fileContentLines);
+
+				if (!string.IsNullOrEmpty(Error))
+				{
+					throw new CsvParsingException(Error);
+				}
+
+				return parsedPropertiesValues;
+			}
+
+			protected virtual string[] ParsePropertiesValuesFromFileContent(string[] fileContentLines)
+			{
+				return ParsePropertyValuesFromString(fileContentLines[PropertiesLineNumber]);
+			}
+
+			private string[] ParsePropertyValuesFromString(string propertiesLine)
+			{
+				string[] propertyValues = propertiesLine.Replace("\"", string.Empty).Split(';');
+				Array.Resize(ref propertyValues, propertyValues.Length - 1);
+
+				if (propertyValues.Length != PropertiesCount)
+				{
+					Error =
+						$"csv file format error: file contains information for {propertyValues.Length} properties instead of required {PropertiesCount}.";
+				}
+
+				return propertyValues;
+			}
+		}
+
+		//[PartialPath("CsvParsers/SapCsvParser")]
+		internal class SapCsvParser : BaseCsvParser
+		{
+			protected override string FileNamePostfix => "sap";
+			protected override List<string> OrderedPropertyNames =>
+				new List<string> { "gag_name_ge", "name", "gag_name_fr", "gag_name_tr", "gag_name_it", "gag_name_pt", "gag_name_es", "gag_name_nl", "gag_sap_flag" };
+			protected override int MinimalLinesCount => 6;
+			protected override int PropertiesLineNumber => 4;
+			protected override int PropertiesCount => 8;
+
+
+			public SapCsvParser(string folderPath, string ipAddress) : base(folderPath, ipAddress)
+			{
+			}
+
+			protected override string[] ParsePropertiesValuesFromFileContent(string[] fileContentLines)
+			{
+				int sapFlagLineNumber = 5;
+				string[] properties = base.ParsePropertiesValuesFromFileContent(fileContentLines);
+				string sapFlag = fileContentLines[sapFlagLineNumber].Replace("\"", string.Empty);
+
+				if (sapFlag != "SAPYES" && sapFlag != "SAPNO")
+				{
+					if (!string.IsNullOrEmpty(Error))
+					{
+						Error += Environment.NewLine;
+					}
+
+					Error += "csv file format error: SAPYES/SAPNO information missing.";
+				}
+
+				return properties.Concat(new[] { sapFlag }).ToArray();
+			}
+		}
+
+		//[PartialPath("CsvParsers/MatCsvParser")]
+		internal class MatCsvParser : BaseCsvParser
+		{
+			protected override string FileNamePostfix => "mat";
+			protected override List<string> OrderedPropertyNames =>
+				new List<string> { "gag_material", "gag_standard_designation", "gag_dimension_standard", string.Empty, "gag_density" };
+			protected override int MinimalLinesCount => 5;
+			protected override int PropertiesLineNumber => 4;
+			protected override int PropertiesCount => 5;
+
+			public MatCsvParser(string folderPath, string ipAddress) : base(folderPath, ipAddress)
+			{
+			}
+
+			protected override string[] ParsePropertiesValuesFromFileContent(string[] fileContentLines)
+			{
+				string[] properties = base.ParsePropertiesValuesFromFileContent(fileContentLines);
+
+				if (string.IsNullOrEmpty(Error))
+				{
+					int decimalPropertyIndex = 4;
+					string decimalProperty = properties[decimalPropertyIndex];
+
+					if (string.IsNullOrEmpty(decimalProperty))
+					{
+						return properties;
+					}
+
+					var formatInfo = new NumberFormatInfo {NumberDecimalSeparator = "."};
+
+					try
+					{
+						properties[decimalPropertyIndex] = decimal.Parse(decimalProperty.Replace(",", "."), formatInfo).ToString(formatInfo);
+					}
+					catch (FormatException)
+					{
+						Error += "csv file format error: value for gag_density is not in decimal format.";
+					}
+				}
+
+				return properties;
+			}
+		}
+
+		//[PartialPath("CsvParsers/ToleranzCsvParser")]
+		internal class ToleranzCsvParser : BaseCsvParser
+		{
+			protected override string FileNamePostfix => "toleranz";
+			protected override List<string> OrderedPropertyNames =>
+				new List<string> { "gag_tolerance" };
+			protected override int MinimalLinesCount => 5;
+			protected override int PropertiesLineNumber => 4;
+			protected override int PropertiesCount => 1;
+
+			public ToleranzCsvParser(string folderPath, string ipAddress) : base(folderPath, ipAddress)
+			{
+			}
+
+			protected override string[] ParsePropertiesValuesFromFileContent(string[] fileContentLines)
+			{
+				string tolerance = fileContentLines[PropertiesLineNumber].Replace("\"", string.Empty);
+
+				return new[] { tolerance };
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_ImportPartPropsFromCsv</name>
+ </Item>
+</AML>

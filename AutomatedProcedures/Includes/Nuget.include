@@ -1,0 +1,15 @@
+<project name="Nuget">
+	<property name="Path.To.Tools.Dir" value="${path::get-full-path('tools')}" />
+	<property name="Path.To.Nuget.Dir" value="${path::combine(Path.To.Tools.Dir, '.nuget')}" />
+	<property name="Path.To.Nuget.Packages.Config" value="${path::combine(Path.To.Tools.Dir, 'packages.config')}" />
+	<move
+		if="${not file::exists(Path.To.Nuget.Packages.Config)}"
+		file="${path::combine(Path.To.Tools.Dir, 'deployment.packages.config')}"
+		tofile="${Path.To.Nuget.Packages.Config}" />
+	<property name="Path.To.Nuget.Config" value="${path::combine(Path.To.Tools.Dir, '.nuget\NuGet.config')}" />
+
+	<exec program="${Path.To.Nuget}"
+		  commandline='install "${Path.To.Nuget.Packages.Config}" -OutputDirectory "${Path.To.Tools.Dir}" -ExcludeVersion'
+		  workingdir="${Path.To.Nuget.Dir}"
+		  failonerror="true" />
+</project>

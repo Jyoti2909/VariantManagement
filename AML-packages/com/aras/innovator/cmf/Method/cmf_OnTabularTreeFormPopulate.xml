@@ -1,0 +1,130 @@
+﻿<AML>
+ <Item type="Method" id="CF6100AD19A24F7E97E5381AC0C5DAA4" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[require([
+	'dijit/form/Select',
+	'dojo/dom', 'dojo/_base/window', 'dojo/domReady!'
+], function(Select, dom, win) {
+	var sel = dom.byId('element-type-select');
+	if (parent.isEditMode) {
+		runSelect(false, sel);
+	} else {
+		runSelect(true, sel);
+	}
+
+	function reDrawSelect(select) {
+		if (dijit.byId) {
+			var alreadyExist = dijit.byId('element-type-select');
+			if (alreadyExist) {
+				var parentNode = alreadyExist.domNode.parentNode;
+				alreadyExist.destroy();
+				select = parentNode.ownerDocument.createElement('select');
+				select.id = 'element-type-select';
+				parentNode.appendChild(select);
+			}
+		}
+		return select;
+	}
+
+	function generateElementsDictionary() {
+		var elementDictionary = {};
+		var allElements = parent.item.selectNodes('Relationships/Item[@type=\'cmf_ElementType\' and not(@action=\'delete\') and not(@action=\'add\')]');
+		for (var i = 0; i < allElements.length; i++) {
+			var nameNodes = allElements[i].getElementsByTagName('name');
+			if (nameNodes && nameNodes.length > 0) {
+				if (nameNodes[0].text) {
+					elementDictionary[allElements[i].getAttribute('id')] = nameNodes[0].text;
+				}
+			}
+		}
+		return elementDictionary;
+	}
+
+	function fillSelect(elementDictionary, select) {
+		if (Object.keys(elementDictionary).length > 0) {
+			var emptyOption = win.doc.createElement('option');
+			emptyOption.innerHTML = '';
+			emptyOption.value = 'empty';
+			select.appendChild(emptyOption);
+
+			for (var id in elementDictionary) {
+				var option = win.doc.createElement('option');
+				option.innerHTML = elementDictionary[id];
+				option.value = id;
+				select.appendChild(option);
+			}
+		}
+	}
+
+	function getElementId() {
+		var elementId = '';
+		var elementType = document.item.selectSingleNode('element_type');
+		if (elementType) {
+			elementId = elementType.text;
+		}
+		return elementId;
+	}
+
+	function setStyles(comboBox) {
+		if (comboBox.domNode) {
+			var cells;
+			if (comboBox.domNode.cells) {
+				cells = comboBox.domNode.cells;
+			} else {
+				cells = comboBox.domNode.selectNodes('tbody/tr/td');
+			}
+			if (cells.length === 2) {
+				cells[0].style.width = '150px';
+				cells[1].style.background = 'url(\'../images/dropdown-arrow.svg\') no-repeat scroll right ' + 'top' + ' / 16px 16px #fff';
+				cells[1].style.width = '15px';
+				cells[1].style.height = '16px';
+				cells[1].style.border = '1px solid #505050';
+			}
+		}
+	}
+
+	function runSelect(readOnly, selectNode) {
+		var elementId = getElementId();
+		selectNode = reDrawSelect(selectNode);
+		var elements = generateElementsDictionary();
+		fillSelect(elements, selectNode, elementId);
+
+		var comboBox = new Select({
+			name: 'element-type-select',
+			onChange: onTabularTreeElementTypeChanged,
+			disabled: readOnly,
+			maxHeight: 150,
+			value: elementId
+		}, selectNode);
+
+		comboBox.startup();
+
+		setStyles(comboBox);
+
+	}
+
+	function onTabularTreeElementTypeChanged(result) {
+		var context = document.item;
+		var elementType = context.selectSingleNode('element_type');
+		if (elementType) {
+			elementType.text = result;
+			elementType.removeAttribute('keyed_name');
+			elementType.removeAttribute('is_null');
+		} else {
+			var elementTypeNode = context.ownerDocument.createElement('element_type');
+			elementTypeNode.setAttribute('type', 'cmf_cmf_ElementType');
+			elementTypeNode.text = result;
+			context.appendChild(elementTypeNode);
+		}
+
+		var currentAction = context.getAttribute('action');
+		if (currentAction !== 'add' && currentAction !== 'edit') {
+			context.setAttribute('action', 'update');
+		}
+	}
+});
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cmf_OnTabularTreeFormPopulate</name>
+ </Item>
+</AML>

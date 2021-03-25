@@ -1,0 +1,66 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2016. -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<style type="text/css">
+			html, body
+			{
+				height: 100%;
+				margin: 0;
+			}
+		</style>
+		<style type="text/css">
+			@import "../../../javascript/include.aspx?classes=arasClaro.css";
+			@import "../../../styles/default.css";
+			@import "../../../javascript/include.aspx?classes=common.css";
+		</style>
+		<script>
+			var aras = parent.aras;
+		</script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../../../../javascript/dojo'"></script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=XmlDocument"></script>
+		<script type="text/javascript">
+
+			var args = parent.frameElement ? parent.frameElement.dialogArguments : parent.dialogArguments;
+		
+			var toolbar;
+			function loadToolbar() {
+				var toolbarStr =
+					'<toolbarapplet buttonsize="26,25">' +
+					'<toolbar id="toolbar1">' +
+						'<button disabled="false" image="../images/Checkmark.svg" id="save" tooltip="Save" />' +
+						'<button disabled="false" image="../images/Delete.svg" id="cancel" tooltip="Cancel" />' +
+					'</toolbar>' + 
+					'</toolbarapplet>';
+				toolbar.loadToolbarFromStr(toolbarStr);
+				toolbar.show();
+			}
+
+			function onToolbarButtonClick(btn) {
+				var btnId = btn.getId();
+				
+				if (btnId === 'save') {
+					args.dialog.close({applyChanges: true});
+				}
+				else if (btnId === 'cancel') {
+					args.dialog.close({applyChanges: false});
+				}
+			}
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", {id: "makeExternal_toolbar", connectId: "toolbarContainer" }, function(control) {
+				toolbar = control;
+
+				clientControlsFactory.on(toolbar, {
+					"onClick": function(tbItem){
+						onToolbarButtonClick(tbItem);
+					}
+				});
+				loadToolbar();
+			});
+		</script>
+	</head>
+	<body class="claro" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" style="overflow: hidden;">
+		<div id="toolbarContainer"></div>
+	</body>
+</html>

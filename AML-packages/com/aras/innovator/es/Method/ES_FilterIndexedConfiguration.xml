@@ -1,0 +1,48 @@
+﻿<AML>
+ <Item type="Method" id="49D360852A4B40889D2E2946048BD24F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[for (var j = 0; j < parent.frames.length; j++) {
+	var curFrame = parent.frames[j];
+	if (!isNullOrUndefined(curFrame.searchbar)) {
+		var newSearchTBI = curFrame.searchbar.getItem('newsearch');
+		if (!isNullOrUndefined(newSearchTBI)) {
+			newSearchTBI.disable();
+		}
+		curFrame.grid.ShowInputRow(false);
+		break;
+	}
+}
+var filter = [];
+var root_id = parent.thisItem.getProperty('root_type');
+if (!isNullOrUndefined(root_id) && root_id !== '') {
+	filter.push(root_id);
+	var rootItem = aras.newIOMItem('ItemType', 'get');
+	rootItem.setID(root_id);
+	var relatedItems = aras.newIOMItem('RelationshipType', 'get');
+	rootItem.addRelationship(relatedItems);
+	rootItem = rootItem.apply();
+	if (!rootItem.isError()) {
+		var relationshipItems = rootItem.getItemsByXPath('Relationships/Item[@type=\'RelationshipType\']');
+		for (var i = 0, itemsCount = relationshipItems.getItemCount(); i < itemsCount; i++) {
+			var tmpItem = relationshipItems.getItemByIndex(i);
+			filter.push(tmpItem.getProperty('relationship_id'));
+			tmpItem = tmpItem.getItemsByXPath('related_id/Item[@type=\'ItemType\']');
+			if (tmpItem.getItemCount() === 1) {
+				filter.push(tmpItem.getID());
+			}
+		}
+	}
+}
+var indexed_type = inArgs.QryItem.dom.createElement('indexed_type');
+indexed_type.setAttribute('condition', 'in');
+indexed_type.text = '\'' + filter.join('\',\'') + '\'';
+inArgs.QryItem.item.appendChild(indexed_type);
+
+function isNullOrUndefined(obj) {
+	return ((typeof(obj) === 'undefined') || (obj === null));
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>ES_FilterIndexedConfiguration</name>
+ </Item>
+</AML>

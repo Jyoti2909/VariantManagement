@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+	<head>
+		<title></title>
+		<style type="text/css">
+			@import "../../javascript/dojo/resources/dojo.css";
+			@import "../../javascript/dijit/themes/claro/claro.css";
+			@import "../../javascript/include.aspx?classes=common.css";
+			html, body {
+				overflow: hidden;
+				width: 100%;
+				height: 100%;
+				margin: 0px;
+				padding: 0px;
+			}
+		</style>
+		<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../javascript/dojo'"></script>
+		<script type="text/javascript" src="../../javascript/include.aspx?classes=XmlDocument"></script>
+		<script type="text/javascript" src="../../javascript/lifecycleEditor.js"></script>
+	</head>
+	<script type="text/javascript">
+		var aras = parent.aras;
+
+		initializeLifeCycleEditor(window);
+
+		clientControlsFactory.createControl(
+			'Aras.Client.Controls.Experimental.Workflow',
+			'workflow',
+			window.workflowControlLoaded
+		);
+
+		window.addEventListener('resize', () => {
+			window.resizeHandler();
+		});
+	</script>
+	<body class="claro">
+		<div id="workflow" style="position:absolute; left:0px; top:0px; right:0px; bottom:0px; overflow:auto;" "></div>
+	</body>
+</html>

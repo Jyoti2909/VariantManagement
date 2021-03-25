@@ -1,0 +1,1 @@
+(function() {    var toc =  [{"name":"Discussion Panel","type":"item","url":"Discussion_Panel.htm"},{"name":"Bookmarks Panel","type":"book","url":"Bookmarks_User_Interface.htm","key":"toc18"}];    window.rh.model.publish(rh.consts('KEY_TEMP_DATA'), toc, { sync:true });    })();

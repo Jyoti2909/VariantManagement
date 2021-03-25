@@ -1,0 +1,282 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2013. -->
+<html>
+<head>
+	<title></title>
+	<script type="text/javascript">
+		var aras = window.frameElement.dialogArguments.aras;
+		document.title = aras.getResource("", "deleteprefdlg.title");
+	</script>
+	<style type="text/css">
+		@import "../../javascript/dojo/resources/dojo.css";
+		@import "../../javascript/dijit/themes/claro/claro.css";
+		@import "../../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../../javascript/include.aspx?classes=common.css";
+		@import "../../styles/default.css";
+
+		html,body {
+			overflow: hidden;
+			width: 100%;
+			height: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=polyfillsBundle,XmlDocument"></script>
+	<script type="text/javascript" src="../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: true, baseUrl:'../../javascript/dojo'"></script>
+	<script type="text/javascript">
+		var grid,
+			toolbar,
+			statusbar,
+			activeToolbar,
+			allChecked = false,
+			delim = "|",
+			checked = {},
+			page = 1,
+			pagemax;
+
+		onload = function onload_handler() {
+			var resourceUrl = aras.getI18NXMLResource("tabview_statusbar.xml", aras.getBaseURL()),
+				statusbarCtrl;
+			clientControlsFactory.createControl("Aras.Client.Controls.Experimental.StatusBar", {id: "bottom_statusBar", aras: aras, resourceUrl: resourceUrl, imageBase: "../../cbin/"}, function(control) {
+				statusbarCtrl = control;
+				var bottomNode = document.getElementById("bottom");
+				bottomNode.appendChild(statusbarCtrl.domNode);
+				statusbarCtrl.startup();
+				clientControlsFactory.createControl("Aras.Client.Frames.StatusBar", { aras: aras, statusbar: statusbarCtrl }, function (control) {
+					statusbar = control;
+				});
+			});
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.ToolBar", { id: "search_toolbar", connectId: "top" }, function (control) {
+				toolbar = control;
+				clientControlsFactory.on(control, {
+					"onClick": onTbItemClick
+				});
+				loadToolbar();
+			});
+
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", undefined, function(control) {
+				grid = control;
+				clientControlsFactory.on(grid, {
+					"onStartSearch_Experimental": cleanAndSearch,
+					"onApplyEdit_Experimental": function (id, field, value) {
+						checkItem(id, value);
+					},
+					"canSort": function () {
+						return true;
+					}
+				});
+				grid.setMultiselect(false);
+				grid.setLayout_Experimental([
+										{
+											field: "userPref",
+											name: aras.getResource("", "common.user_preference"),
+											width: "75%",
+											styles: "text-align: left;",
+											headerStyles: "text-align: center;"
+										},
+										{
+											field: "del",
+											name: aras.getResource("", "common.delete"),
+											width: "25%",
+											styles: "text-align: center;",
+											headerStyles: "text-align: center;",
+											editable: true
+										}
+									]);
+				grid.setArrayData_Experimental([]);
+				grid.ShowInputRow(true);
+				doSearch();
+			});
+		}
+
+		function onTbItemClick(tbItem) {
+			var tbItemId = tbItem.getId();
+			switch (tbItemId) {
+				case "search":
+					cleanAndSearch();
+					break;
+				case "next_page":
+					allChecked = false;
+					page++;
+					cleanAndSearch();
+					break;
+				case "prev_page":
+					allChecked = false;
+					page--;
+					cleanAndSearch();
+					break;
+				case "select_all":
+					checkAll();
+					break;
+				case "delete":
+					deletePrefs();
+					cleanAndSearch();
+					break;
+			}
+		}
+
+		function loadToolbar() {
+			document.toolbar = toolbar;
+			toolbar.loadXml(aras.getI18NXMLResource("deletePreferences_toolbar.xml", aras.getScriptsURL() + "SitePreference/"));
+			toolbar.show();
+			activeToolbar = toolbar.getActiveToolbar();
+		}
+
+		function cleanAndSearch() {
+			grid.removeAllRows();
+			checked = {};
+			doSearch();
+		}
+
+		function doSearch() {
+			var statusId = statusbar.setStatus("status", aras.getResource("", "deleteprefdlg.searching")),
+				pagesize = activeToolbar.getItem("page_size").getText(),
+				searchVal = grid.inputRow.get("userPref", "value"),
+				userType = aras.getUserType(),
+				res;
+			if (searchVal == "") {
+				searchVal = "%";
+			}
+
+			if (userType == "admin") {
+				var prefDom = aras.createXMLDocument();
+
+				var xml = "" +
+					"<Item type='Preference'>" +
+					"	 <identity_id>" +
+					"		<Item type='Identity' select='id'>" +
+					"			<and>" +
+					"				<keyed_name condition='like'/>" +
+					"				<keyed_name condition='ne'>World</keyed_name>" +
+					"			</and>" +
+					"		</Item>" +
+					"	 </identity_id>" +
+					"</Item>";
+				prefDom.loadXML(xml);
+				var prefDocumentElement = prefDom.documentElement;
+				prefDocumentElement.setAttribute("page", page);
+				prefDocumentElement.setAttribute("pagesize", pagesize);
+				prefDom.selectSingleNode("Item/identity_id/Item/and/keyed_name[@condition = 'like']").text = searchVal;
+
+				var resSOAP = aras.soapSend("getItem", prefDom.xml);
+				if (parseInt(resSOAP.getFaultCode()) != 0) {
+					return false;
+				}
+				res = resSOAP.results;
+			}
+			else {
+				const identityId = aras.getIsAliasIdentityIDForLoggedUser();
+				var q = aras.newIOMItem('Preference', "get");
+				q.setAttribute("page", page);
+				q.setAttribute("pagesize", pagesize);
+				q.setAttribute("select", "identity_id");
+				q.setProperty("identity_id", identityId);
+				var r = q.apply();
+				if (r.isError()) {
+					return false;
+				}
+				res = r.dom;
+				if (!res) {
+					return false;
+				}
+			}
+
+			var prefs = res.selectNodes("//Item[@type='Preference'][identity_id/@keyed_name!='World']");
+			for (var i = 0; i < prefs.length; i++) {
+				var pref = prefs[i];
+				if (i == 0) {
+					pagemax = pref.getAttribute("pagemax");
+				}
+				grid.items_Experimental.add({
+					uniqueId: aras.getItemProperty(pref, "id"),
+					userPref: pref.selectSingleNode("identity_id").getAttribute("keyed_name"),
+					del: false
+				});
+			}
+			updateToolbarState();
+			statusbar.clearStatus(statusId);
+			statusbar.setStatus("status", "");
+		}
+
+		function deletePrefs() {
+			var idsArray = [];
+			for (var idx in checked) {
+				if (checked[idx]) {
+					if (!aras.isTempID(idx)) {
+						idsArray.push(idx);
+					}
+				}
+			}
+			aras.deletePreferences(idsArray);
+		}
+
+		function updateToolbarState() {
+			var flg = {
+				"prev_page": false,
+				"next_page": false,
+				"select_all": true,
+				"delete": false
+			};
+
+			flg["next_page"] = parseInt(pagemax) > page;
+			flg["prev_page"] = page > 1;
+
+			for (var idx in checked) {
+				if (checked[idx]) {
+					flg["delete"] = true;
+					break;
+				}
+			}
+
+			for (var btnName in flg) {
+				setControlEnabled(btnName, flg[btnName] ? true : false);
+			}
+		}
+
+		function setControlEnabled(ctrlName, b) {
+			if (typeof (b) != "boolean") {
+				b = true;
+			}
+			var tbi = activeToolbar.getItem(ctrlName);
+			if (tbi) {
+				tbi.setEnabled(b);
+			}
+		}
+
+		function checkAll() {
+			allChecked = !allChecked;
+			var rowIds = grid.items_Experimental.getAllId();
+
+			for (var i = 0; i < rowIds.length; i++) {
+				var rowId = rowIds[i];
+				grid.items_Experimental.set(rowId, "value", "del", allChecked);
+				checkItem(rowId, allChecked);
+			}
+		}
+
+		function getValueForCheckBox(bFlg) {
+			if (typeof (bFlg) != "boolean") {
+				bFlg = false;
+			}
+			return "<checkbox state='" + (bFlg ? "1" : "0") + "'>";
+		}
+
+		function checkItem(rowId, bFlg) {
+			if (typeof (bFlg) != "boolean") {
+				bFlg = true;
+			}
+			checked[rowId] = bFlg;
+			updateToolbarState();
+		}
+	</script>
+</head>
+<body class="claro">
+	<div style="width: 100%; height: 100%;" id="BorderContainer">
+		<div id="top" style="height: 30px; width: 100%;"></div>
+		<div id="gridTD" style="width: 100%; position: fixed; top: 30px; bottom: 20px"></div>
+		<div id="bottom" style="width: 100%; height: 20px; bottom: 0px; position: fixed;"></div>
+	</div>
+</body>
+</html>

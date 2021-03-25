@@ -1,0 +1,227 @@
+﻿<TestCase author="vsmirnov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>
+		This test checks the work of the GAG_ImportPartPropsFromCsv method with mat.csv file
+	</Description>
+
+	<Request position="1">
+		<Comments>
+			<![CDATA[
+			Given:
+				GAG_ExportedPropFilesFolderPath Variable and path to the folder with csv from the cs file.
+			When:
+				Set this path to the variable value.
+			Then:
+				Variable should be saved.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Path.To.Csv.Folder" action="apply" xpath="Query/AML/Item/default_value/text()" />
+			<Variable id="Path.To.Csv.Folder" action="apply" xpath="Query/AML/Item/value/text()" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Variable" id="FA8CD27CF889444681E293EAD76CF603" action="edit" doGetItem="0">
+					<default_value>variable</default_value>
+					<value>variable</value>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Variable" id="FA8CD27CF889444681E293EAD76CF603" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="FA8CD27CF889444681E293EAD76CF603" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request position="2">
+		<Comments>
+			<![CDATA[
+			Given:
+				GAG_ExportedPropFilesFolderPath Variable has the path to the valid file folder.
+			When:
+				GAG_ImportPartPropsFromCsv is invoked with Material parameter.
+			Then:
+				All properties from the file are returned.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="Method" action="GAG_ImportPartPropsFromCsv">
+					<properties_type>Material</properties_type>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item isNew="1" isTemp="1" type="Part">
+							<gag_material>ABS+PC</gag_material>
+							<gag_standard_designation> Novodur H801</gag_standard_designation>
+							<gag_dimension_standard>/</gag_dimension_standard>
+							<gag_density>1.07</gag_density>
+						</Item>
+					</Result>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+
+	<Request position="3">
+		<Comments>
+			<![CDATA[
+			Given:
+				GAG_ExportedPropFilesFolderPath Variable and path to the folder with csv from the cs file.
+			When:
+				Set this path to the variable value.
+			Then:
+				Variable should be saved.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Path.To.Csv.Folder" action="apply" xpath="Query/AML/Item/default_value/text()" />
+			<Variable id="Path.To.Csv.Folder" action="apply" xpath="Query/AML/Item/value/text()" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Variable" id="FA8CD27CF889444681E293EAD76CF603" action="edit" doGetItem="0">
+					<default_value>variable</default_value>
+					<value>variable</value>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Variable" id="FA8CD27CF889444681E293EAD76CF603" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="FA8CD27CF889444681E293EAD76CF603" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request position="4">
+		<Comments>
+			<![CDATA[
+			Given:
+				GAG_ExportedPropFilesFolderPath Variable has the path to the invalid file folder.
+			When:
+				GAG_ImportPartPropsFromCsv is invoked with Material parameter.
+			Then:
+				Error is returned.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="Method" action="GAG_ImportPartPropsFromCsv">
+					<properties_type>Material</properties_type>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring><![CDATA[csv file format error: file should contain at least 5 lines.]]></faultstring>
+						<detail>
+							<af:legacy_detail><![CDATA[csv file format error: file should contain at least 5 lines.]]></af:legacy_detail>
+							<af:exception message="csv file format error: file should contain at least 5 lines." type="Aras.Common.CsvParsingException" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+
+	<Request position="5">
+		<Comments>
+			<![CDATA[
+			Given:
+				GAG_ExportedPropFilesFolderPath Variable and path to the folder with csv from the cs file.
+			When:
+				Set this path to the variable value.
+			Then:
+				Variable should be saved.
+			]]>
+		</Comments>
+		<Variables>
+			<Variable id="Path.To.Csv.Folder" action="apply" xpath="Query/AML/Item/default_value/text()" />
+			<Variable id="Path.To.Csv.Folder" action="apply" xpath="Query/AML/Item/value/text()" />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="Variable" id="FA8CD27CF889444681E293EAD76CF603" action="edit" doGetItem="0">
+					<default_value>variable</default_value>
+					<value>variable</value>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="Variable" id="FA8CD27CF889444681E293EAD76CF603" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="FA8CD27CF889444681E293EAD76CF603" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+		</Comparison>
+	</Request>
+
+	<Request position="6">
+		<Comments>
+			<![CDATA[
+			Given:
+				GAG_ExportedPropFilesFolderPath Variable has the path to the invalid file folder.
+			When:
+				GAG_ImportPartPropsFromCsv is invoked with Material parameter.
+			Then:
+				Error is returned.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="Method" action="GAG_ImportPartPropsFromCsv">
+					<properties_type>Material</properties_type>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<SOAP-ENV:Fault xmlns:af="http://www.aras.com/InnovatorFault">
+						<faultcode>SOAP-ENV:Server</faultcode>
+						<faultstring><![CDATA[csv file format error: file contains information for 2 properties instead of required 5.]]></faultstring>
+						<detail>
+							<af:legacy_detail><![CDATA[csv file format error: file contains information for 2 properties instead of required 5.]]></af:legacy_detail>
+							<af:exception message="csv file format error: file contains information for 2 properties instead of required 5." type="Aras.Common.CsvParsingException" />
+						</detail>
+					</SOAP-ENV:Fault>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+	</Request>
+</TestCase>

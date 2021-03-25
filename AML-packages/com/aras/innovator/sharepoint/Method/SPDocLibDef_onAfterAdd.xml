@@ -1,0 +1,273 @@
+﻿<AML>
+ <Item type="Method" id="4114767940454C19AD4FC3041091FF2E" action="add">
+  <comments>Generates federated ItemType that represents a document from the SP library</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharpInOut;
+
+  if (InnovatorServerASP == null)
+    throw new ArgumentNullException("InnovatorServerASP");
+
+  Innovator inn = new Innovator(InnovatorServerASP);
+  SPDocLibAfterProcessor ap = new SPDocLibAfterProcessor(inn, inDom);
+  
+  try
+  {
+  	ap.CreateDocumentType();
+  }
+  catch (Exception exc)
+  {
+  	outDom.LoadXml(inn.newError(exc.Message).dom.OuterXml);
+  }
+}
+
+internal class SPDocLibAfterProcessor
+{
+	private Innovator _inn;
+	private XmlDocument _inDom;
+	
+	private const string PROP_TEMPLATE =
+"<Item type=\"Property\" id=\"__PROP_ID_PLACEHOLDER__\" action=\"add\">" +
+  "<column_alignment>left</column_alignment>" +
+  "<data_type>__DATA_TYPE_PLACEHOLDER__</data_type>" +
+  "<is_hidden>__HIDDEN_PLACEHOLDER__</is_hidden>" +
+  "<is_hidden2>__HIDDEN2_PLACEHOLDER__</is_hidden2>" +
+  "<keyed_name_order>__KEYED_NAME_ORDER_PLACEHOLDER__</keyed_name_order>" +
+  "<label>__LABEL_PLACEHOLDER__</label>" +
+  "<name>__NAME_PLACEHOLDER__</name>" +
+  "<source_id keyed_name=\"__TYPE_NAME_PLACEHOLDER__\" type=\"ItemType\" name=\"__TYPE_NAME_PLACEHOLDER__\">__TYPE_ID_PLACEHOLDER__</source_id>" +
+  "<stored_length>__LENGTH_PLACEHOLDER__</stored_length>" +
+"</Item>";
+
+	private const string IT_TEMPLATE = 
+"<AML>" + 
+ "<Item type=\"ItemType\" id=\"__TYPE_ID_PLACEHOLDER__\" action=\"add\">" +
+  "<allow_private_permission>1</allow_private_permission>" +
+  "<auto_search>0</auto_search>" +
+  "<default_lifecycle keyed_name=\"Default\" type=\"Life Cycle Map\">" +
+    "<Item type=\"Life Cycle Map\" action=\"get\" select=\"id\">" +
+      "<name>Default</name>" +
+    "</Item>" +
+  "</default_lifecycle>" +
+  "<hide_where_used>0</hide_where_used>" +
+  "<implementation_type>federated</implementation_type>" +
+  "<instance_data>__INSTANCE_DATA_PLACEHOLDER__</instance_data>" +
+  "<is_dependent>0</is_dependent>" +
+  "<is_relationship>0</is_relationship>" +
+  "<is_versionable>0</is_versionable>" +
+  "<label>__LABEL_PLACEHOLDER__</label>" +
+  "<label_plural>__LABEL_PLURAL_PLACEHOLDER__</label_plural>" +
+  "<name>__NAME_PLACEHOLDER__</name>" +
+  "<revisions keyed_name=\"Default\" type=\"Revision\">" +
+    "<Item type=\"Revision\" action=\"get\" select=\"id\">" +
+      "<name>Default</name>" +
+    "</Item>" +
+  "</revisions>" +
+  "<show_parameters_tab>1</show_parameters_tab>" +
+  "<unlock_on_logout>0</unlock_on_logout>" +
+  "<use_src_access>0</use_src_access>" +
+  "<Relationships>" +
+   "<Item type=\"TOC Access\" id=\"__TOC_ACCESS_ID_PLACEHOLDER__\" action=\"add\">" +
+    "<category>SPDocuments</category>" +
+    "<related_id keyed_name=\"__TOC_ACCESS_IDENTITY_PLACEHOLDER__\" type=\"Identity\">" +
+     "<Item type=\"Identity\" action=\"get\" select=\"id\">" +
+      "<name>__TOC_ACCESS_IDENTITY_PLACEHOLDER__</name>" +
+     "</Item>" +
+    "</related_id>" +
+    "<sort_order>128</sort_order>" +
+    "<source_id keyed_name=\"__NAME_PLACEHOLDER__\" type=\"ItemType\" name=\"__NAME_PLACEHOLDER__\">__TYPE_ID_PLACEHOLDER__</source_id>" +
+   "</Item>" +
+   "<Item type=\"TOC View\" id=\"__TOC_VIEW_ID_PLACEHOLDER__\" action=\"add\">" +
+    "<related_id keyed_name=\"__TOC_VIEW_IDENTITY_PLACEHOLDER__\" type=\"Identity\">" +
+     "<Item type=\"Identity\" action=\"get\" select=\"id\">" +
+      "<name>__TOC_VIEW_IDENTITY_PLACEHOLDER__</name>" +
+     "</Item>" +
+    "</related_id>" +
+    "<sort_order>128</sort_order>" +
+    "<source_id keyed_name=\"__NAME_PLACEHOLDER__\" type=\"ItemType\" name=\"__NAME_PLACEHOLDER__\">__TYPE_ID_PLACEHOLDER__</source_id>" +
+   "</Item>" +
+   "<Item type=\"Server Event\" id=\"__SERVER_EVENT_ONGET_ID_PLACEHOLDER__\" action=\"add\">" +
+    "<related_id keyed_name=\"SPDocument_onGet\" type=\"Method\">" +
+     "<Item type=\"Method\" action=\"get\" select=\"id\">" +
+      "<name>SPDocument_onGet</name>" +
+     "</Item>" +
+    "</related_id>" +
+    "<server_event>onGet</server_event>" +
+    "<sort_order>128</sort_order>" +
+    "<source_id keyed_name=\"__NAME_PLACEHOLDER__\" type=\"ItemType\" name=\"__NAME_PLACEHOLDER__\">__TYPE_ID_PLACEHOLDER__</source_id>" +
+   "</Item>" +
+   "<Item type=\"Server Event\" id=\"__SERVER_EVENT_ONDELETE_ID_PLACEHOLDER__\" action=\"add\">" +
+    "<related_id keyed_name=\"SPDocument_onDelete\" type=\"Method\">" +
+     "<Item type=\"Method\" action=\"get\" select=\"id\">" +
+      "<name>SPDocument_onDelete</name>" +
+     "</Item>" +
+    "</related_id>" +
+    "<server_event>onDelete</server_event>" +
+    "<sort_order>129</sort_order>" +
+    "<source_id keyed_name=\"__NAME_PLACEHOLDER__\" type=\"ItemType\" name=\"__NAME_PLACEHOLDER__\">__TYPE_ID_PLACEHOLDER__</source_id>" +
+   "</Item>" +
+   "<Item type=\"Server Event\" id=\"__SERVER_EVENT_ONADD_ID_PLACEHOLDER__\" action=\"add\">" +
+    "<related_id keyed_name=\"SPDocument_onAdd\" type=\"Method\">" +
+     "<Item type=\"Method\" action=\"get\" select=\"id\">" +
+      "<name>SPDocument_onAdd</name>" +
+     "</Item>" +
+    "</related_id>" +
+    "<server_event>onAdd</server_event>" +
+    "<sort_order>130</sort_order>" +
+    "<source_id keyed_name=\"__NAME_PLACEHOLDER__\" type=\"ItemType\" name=\"__NAME_PLACEHOLDER__\">__TYPE_ID_PLACEHOLDER__</source_id>" +
+   "</Item>" +
+   "<Item type=\"Server Event\" id=\"__SERVER_EVENT_ONLOCK_ID_PLACEHOLDER__\" action=\"add\">" +
+    "<related_id keyed_name=\"SPDocument_onLock\" type=\"Method\">" +
+     "<Item type=\"Method\" action=\"get\" select=\"id\">" +
+      "<name>SPDocument_onLock</name>" +
+     "</Item>" +
+    "</related_id>" +
+    "<server_event>onLock</server_event>" +
+    "<sort_order>131</sort_order>" +
+    "<source_id keyed_name=\"__NAME_PLACEHOLDER__\" type=\"ItemType\" name=\"__NAME_PLACEHOLDER__\">__TYPE_ID_PLACEHOLDER__</source_id>" +
+   "</Item>" +
+   "<Item type=\"Item Action\" id=\"__DOWNLOAD_ACTION_ID_PLACEHOLDER__\" action=\"add\">" +
+    "<related_id keyed_name=\"SPDownload\" type=\"Action\">" +
+     "<Item type=\"Action\" action=\"get\" select=\"id\">" +
+      "<name>SPDownload</name>" +
+     "</Item>" +
+    "</related_id>" +
+    "<sort_order>128</sort_order>" +
+    "<source_id keyed_name=\"__NAME_PLACEHOLDER__\" type=\"ItemType\" name=\"__NAME_PLACEHOLDER__\">__TYPE_ID_PLACEHOLDER__</source_id>" +
+   "</Item>" +
+   "<Item type=\"Item Action\" id=\"__UPLOAD_ACTION_ID_PLACEHOLDER__\" action=\"add\">" +
+    "<related_id keyed_name=\"SPUpload\" type=\"Action\">" +
+     "<Item type=\"Action\" action=\"get\" select=\"id\">" +
+      "<name>SPUpload</name>" +
+     "</Item>" +
+    "</related_id>" +
+    "<sort_order>256</sort_order>" +
+    "<source_id keyed_name=\"__NAME_PLACEHOLDER__\" type=\"ItemType\" name=\"__NAME_PLACEHOLDER__\">__TYPE_ID_PLACEHOLDER__</source_id>" +
+   "</Item>" +
+  "</Relationships>" +
+ "</Item>" +
+"</AML>";
+	
+	internal SPDocLibAfterProcessor(Innovator inn, XmlDocument inDom)
+	{
+		_inn = inn;
+		_inDom = inDom;
+	}
+	
+	internal void CreateDocumentType()
+	{
+		StringBuilder sb = new StringBuilder(IT_TEMPLATE);
+		
+		// New ID for the ItemType
+		string type_id = _inn.getNewID();
+		sb.Replace("__TYPE_ID_PLACEHOLDER__", System.Security.SecurityElement.Escape(type_id));
+		
+		// ItemType name
+		string tname = _inDom.DocumentElement.SelectSingleNode("doc_type_name").InnerText;
+		sb.Replace("__NAME_PLACEHOLDER__", System.Security.SecurityElement.Escape(tname));
+		
+		// ItemType label
+		string tlabel = HttpUtility.HtmlEncode(_inDom.DocumentElement.SelectSingleNode("doc_type_label").InnerText);
+		sb.Replace("__LABEL_PLACEHOLDER__", System.Security.SecurityElement.Escape(tlabel));
+		
+		// ItemType label plural
+		string tplabel = HttpUtility.HtmlEncode(_inDom.DocumentElement.SelectSingleNode("doc_type_label_plural").InnerText);
+		sb.Replace( "__LABEL_PLURAL_PLACEHOLDER__", System.Security.SecurityElement.Escape(tplabel));
+
+		// Instance data (db table name)
+		sb.Replace("__INSTANCE_DATA_PLACEHOLDER__", System.Security.SecurityElement.Escape(tname.ToUpper()));
+		
+		// TOC Access
+		string toc_access_identity = "World";   // This one probably should be a property on SPDocumentLibraryDefinition
+		sb.Replace("__TOC_ACCESS_IDENTITY_PLACEHOLDER__", System.Security.SecurityElement.Escape(toc_access_identity));
+		sb.Replace("__TOC_ACCESS_ID_PLACEHOLDER__", _inn.getNewID() );
+
+		// TOC View
+		string toc_view_identity = "World";   // This one probably should be a property on SPDocumentLibraryDefinition
+		sb.Replace("__TOC_VIEW_IDENTITY_PLACEHOLDER__", toc_view_identity);
+		sb.Replace("__TOC_VIEW_ID_PLACEHOLDER__", _inn.getNewID());
+		
+		// Server events
+		sb.Replace("__SERVER_EVENT_ONGET_ID_PLACEHOLDER__", _inn.getNewID());
+		sb.Replace("__SERVER_EVENT_ONADD_ID_PLACEHOLDER__", _inn.getNewID());
+		sb.Replace("__SERVER_EVENT_ONDELETE_ID_PLACEHOLDER__", _inn.getNewID());
+		sb.Replace("__SERVER_EVENT_ONLOCK_ID_PLACEHOLDER__", _inn.getNewID());
+
+        // Actions
+        sb.Replace("__DOWNLOAD_ACTION_ID_PLACEHOLDER__", _inn.getNewID());
+        sb.Replace("__UPLOAD_ACTION_ID_PLACEHOLDER__", _inn.getNewID());
+        
+		XmlDocument doc = new XmlDocument();
+		doc.LoadXml(sb.ToString());
+		
+		// Create ItemType
+		XmlNode itnode = doc.DocumentElement.SelectSingleNode("//AML/Item[@type='ItemType']");
+		
+		Item create_request = _inn.newItem();
+		create_request.loadAML(itnode.OuterXml);
+		
+		// Add properties
+		string lib_def_id = _inDom.DocumentElement.Attributes["id"].Value;
+		string spf_request = string.Format( "<Item type=\"SPField\" action=\"get\"><source_id>{0}</source_id></Item>", System.Security.SecurityElement.Escape(lib_def_id));
+		Item spfr_item = _inn.newItem();
+		spfr_item.loadAML(spf_request);
+		Item spfields = spfr_item.apply();
+		
+		int spf_count = spfields.getItemCount();
+		for (int i = 0; i < spf_count; i++)
+		{
+			_addProperty(create_request, spfields.getItemByIndex(i), tname, type_id);
+		}
+		
+		Item create_response = create_request.apply();
+		if (create_response.isError())
+		  throw new Exception(string.Format( "Failed to create ItemType '{0}': original error - {1}", 
+		                       tname, create_response.getErrorDetail()));
+	}
+	
+	private void _addProperty(Item item, Item prop, string type_name, string type_id)
+	{
+		StringBuilder sb = new StringBuilder(PROP_TEMPLATE);
+		
+		// ID
+		sb.Replace("__PROP_ID_PLACEHOLDER__", _inn.getNewID());
+		
+		// fix 'source_id'
+		sb.Replace("__TYPE_NAME_PLACEHOLDER__", System.Security.SecurityElement.Escape(type_name));
+		sb.Replace("__TYPE_ID_PLACEHOLDER__", System.Security.SecurityElement.Escape(type_id));
+		
+		// Data type
+		string dtype = prop.getProperty("property_type");
+		sb.Replace("__DATA_TYPE_PLACEHOLDER__", System.Security.SecurityElement.Escape(dtype));
+		
+		// Hidden
+		string hidden = prop.getProperty("property_hidden");
+		sb.Replace("__HIDDEN_PLACEHOLDER__", System.Security.SecurityElement.Escape(hidden));
+		
+		string hidden2 = prop.getProperty("property_hidden2");
+		sb.Replace("__HIDDEN2_PLACEHOLDER__", System.Security.SecurityElement.Escape(hidden2));
+		
+		// Keyed name order
+		string kno = prop.getProperty( "property_keyed_order");
+		sb.Replace("__KEYED_NAME_ORDER_PLACEHOLDER__", System.Security.SecurityElement.Escape(kno));
+		
+		// Label
+		string label = prop.getProperty("property_label");
+		sb.Replace("__LABEL_PLACEHOLDER__", System.Security.SecurityElement.Escape(label));
+		
+		// Name
+		string name = prop.getProperty("property_name");
+		sb.Replace("__NAME_PLACEHOLDER__", System.Security.SecurityElement.Escape(name));
+		
+		// Length
+ 		string length = prop.getProperty("property_length");
+		sb.Replace("__LENGTH_PLACEHOLDER__", System.Security.SecurityElement.Escape(length));
+		
+		Item fitem = _inn.newItem();
+		fitem.loadAML(sb.ToString());
+		
+		item.addRelationship(fitem);
+	}]]></method_code>
+  <method_type>C#</method_type>
+  <name>SPDocLibDef_onAfterAdd</name>
+ </Item>
+</AML>

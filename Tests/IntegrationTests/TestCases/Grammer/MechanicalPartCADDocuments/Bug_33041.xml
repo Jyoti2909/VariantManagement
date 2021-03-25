@@ -1,0 +1,93 @@
+﻿<TestCase author="pponkrashov@aras.com" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../libraries/Aras.IntegrationTests.Framework/TestCase.xsd">
+	<Description>Master CAD is updated without Part</Description>
+	<Request runAs="cadMPUser1:1">
+		<Variables>
+			<Variable id="CAD.Id" action="set" xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item[@type='CAD'][1]/@id" />
+		</Variables>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer and CAD-Designer identity
+			When:
+				The user tries to create
+					a cad with Mechanical/Assembly classification and MASTER subclassification.
+			Then:
+				The user should create the cad.
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="CAD" action="add" doGetItem="0">
+					<classification>Mechanical/Assembly</classification>
+					<gag_classification>MASTER</gag_classification>
+					<name>Bug</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<Request runAs="cadMPUser1:1">
+		<Variables>
+			<Variable id="CAD.Id" action="apply" xpath="Query/AML/Item[@type='CAD'][1]/@id" />
+		</Variables>
+		<Comments>
+			<![CDATA[
+			Given:
+				An user with Product Engineer and CAD-Designer identity
+			When:
+				The user tries to edit
+					a cad with Mechanical/Assembly classification and MASTER subclassification.
+			Then:
+				CAD item should be updated successfully
+			]]>
+		</Comments>
+		<Query>
+			<AML>
+				<Item type="CAD" action="edit" id ="{CAD.Id}" doGetItem="0">
+					<name>Bug edited</name>
+				</Item>
+			</AML>
+		</Query>
+		<Baseline>
+			<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/">
+				<SOAP-ENV:Body>
+					<Result>
+						<Item type="CAD" id="" />
+					</Result>
+					<Message>
+						<event name="ids_modified" value="" />
+					</Message>
+				</SOAP-ENV:Body>
+			</SOAP-ENV:Envelope>
+		</Baseline>
+		<Comparison>
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Message/event/@value" />
+			<Ignore xpath="Baseline/SOAP-ENV:Envelope/SOAP-ENV:Body/Result/Item/@id" />
+		</Comparison>
+	</Request>
+	<TestCaseCleanUp runAs="root:innovator">
+		<Variables>
+			<Variable id='CAD.Id' action='apply' xpath='Query/AML/Item/@id' />
+		</Variables>
+		<Query>
+			<AML>
+				<Item type="CAD" id="{CAD.Id}" action="delete" />
+			</AML>
+		</Query>
+	</TestCaseCleanUp>
+</TestCase>

@@ -1,0 +1,32 @@
+﻿<AML>
+ <Item type="Method" id="A92E33B2D7124F3DB49D25C65DAEE58F" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var imageSrc = "../images/Message.svg";
+var query = aras.newIOMItem("tmp", "tmp");
+	query.loadAML(document.item.xml);
+	query.setAttribute("action", "PE_EditAML");
+	query = query.apply();
+	if (query.isError()) {
+		aras.AlertError(query.getErrorDetail(), query.getErrorString(), query.getErrorSource());
+		return;
+	}
+
+	var nds = document.item.selectNodes("Relationships/Item[@type='Part AML' and (string(@action)!='' or related_id/Item[string(@action)!=''])]")
+	for (var i = 0; i < nds.length; i++) {
+		nds[i].parentNode.removeChild(nds[i]);
+	}
+	var fr = document.getElementById("relationshipsGrid").contentWindow;
+	var ids = fr.gridApplet.getSelectedItemIds(";").split(";");
+	var selectedID = (ids.length == 1 && ids[0] ? ids[0] : "");
+	if (selectedID) {
+		fr.gridApplet.setSelectedRow(selectedID, false, true);
+	}
+
+	if (!aras.getMostTopWindowWithAras(window).window.PopupNotification && statusbar) {
+		ArasModules.notify(aras.getResource("plm", "launch_aml_editor.saved_successfully"));
+	}
+parent.args.dialog.close();]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>PE_AmlEditorSaveClick</name>
+ </Item>
+</AML>

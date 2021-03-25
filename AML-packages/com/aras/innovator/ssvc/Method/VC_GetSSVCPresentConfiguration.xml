@@ -1,0 +1,135 @@
+﻿<AML>
+ <Item type="Method" id="D2F820FB6C114968A9440B7795978C2C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	var type = "DiscussionDefinition";
+	var typeId = this.getProperty("item_type_id");
+	if (string.IsNullOrEmpty(typeId))
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_ItemIdEmpty"));
+
+	var client = this.getProperty("client");
+	var configId = this.getProperty("item_config_id");
+	if (string.IsNullOrEmpty(configId))
+	{
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_ItemConfigIdEmpty"));
+	}
+	Item SSVCPresentationConfiguration = GetSSVCPresentationConfiguration(type, configId, client);
+	if (SSVCPresentationConfiguration.isError())
+	{
+		type = "DiscussionTemplate";
+		SSVCPresentationConfiguration = GetSSVCPresentationConfiguration(type, typeId, client);
+	}
+
+	var formTooltipTemplate = SSVCPresentationConfiguration.getProperty("form_tooltip_template");
+	if (!string.IsNullOrEmpty(formTooltipTemplate))
+	{
+		var itemId = this.getID();
+		if (string.IsNullOrEmpty(itemId))
+			return this.getInnovator().newError("Item Id cannot be empty.");
+
+		var tooltip = this.newItem("Method", "VC_GetTooltipFromTooltipTemplate");
+		tooltip.setProperty("tooltip_container_id", SSVCPresentationConfiguration.getAttribute("id"));
+		tooltip.setProperty("tooltip_container_name", "SSVCPresentationConfiguration");
+		tooltip.setProperty("tooltip_property_name", "form_tooltip_template");
+
+		tooltip.setProperty("item_type_name", this.getProperty("item_type_name"));
+		tooltip.setProperty("required_items", string.Format("ItemType:{0},Item:{1}", typeId,itemId));
+		tooltip = tooltip.apply();
+		if (tooltip.isError())
+		{
+			return this.getInnovator().newError(tooltip.getErrorString());
+		}
+
+		SSVCPresentationConfiguration.setProperty("form_tooltip_template", tooltip.getResult());
+	}
+
+	var pcNode = SSVCPresentationConfiguration.dom.SelectSingleNode(string.Format("//Item[@type='{0}']/Relationships/Item[@type='{0}View']/related_id/Item[@type='SSVCPresentationConfiguration']", type));
+	if (pcNode == null)
+	{
+		return this.getInnovator().newError(CCO.ErrorLookup.Lookup("SSVC_NoSSVCPresentationConfigurationFound"));
+	}
+	var xmlDoc = Aras.Server.Core.XML.CreateNewXMLDocument(pcNode.OuterXml);
+	return this.getInnovator().getItemInDom(xmlDoc);
+}
+
+private Item GetSSVCPresentationConfiguration(string type, string id, string client)
+{
+	List<string> classPathes = null;
+	string propName = type == "DiscussionDefinition" ? "item_config_id" : "source_id";
+	string classification = String.Empty;
+
+	Item discussionItem = this.newItem(type, "get");
+	discussionItem.setAttribute("select", "id, class_path");
+	discussionItem.setProperty(propName, id);
+	if (!string.Equals(type, "DiscussionDefinition"))
+	{
+		Item openedItem = this.newItem(this.getProperty("item_type_name"), "get");
+		openedItem.setAttribute("id", this.getID());
+		openedItem = openedItem.apply();
+		classification = openedItem.getProperty("classification");
+		if (!string.IsNullOrEmpty(classification))
+		{
+			string[] classes = classification.Split('/');
+			classPathes = new List<string>();
+			for (int i = 0; i < classes.Length; i++)
+			{
+				if (i > 0)
+				{
+					classPathes.Add(classes[i - 1] + "/" + classes[i]);
+				}
+				else
+				{
+					classPathes.Add(classes[i]);
+				}
+			}
+			Item logicOr = discussionItem.newOR();
+			logicOr.setProperty("class_path", "'" + String.Join("','", classPathes) + "'");
+			logicOr.setPropertyCondition("class_path", "in");
+			logicOr = logicOr.newOR();
+			logicOr.setPropertyCondition("class_path", "is null");
+		}
+		else
+		{
+			discussionItem.setPropertyCondition("class_path", "is null");
+		}
+	}
+	Item viewItem = this.newItem(type + "View", "get");
+	viewItem.setAttribute("select", "related_id");
+	if (string.IsNullOrEmpty(client))
+	{
+		viewItem.setAttribute("where", "client is null");
+	}
+	else
+	{
+		viewItem.setProperty("client", client);
+	}
+	Item SSVCPresentationConfiguration = this.newItem("SSVCPresentationConfiguration", "get");
+	discussionItem.addRelationship(viewItem);
+	viewItem.setRelatedItem(SSVCPresentationConfiguration);
+	discussionItem = discussionItem.apply();
+	if (discussionItem.isError())
+	{
+		return this.getInnovator().newError(discussionItem.getErrorString());
+	}
+
+	if (!string.IsNullOrEmpty(classification))
+	{
+		Item classSpecificDiscussion = null;
+		int i = classPathes.Count - 1;
+		while ((classSpecificDiscussion == null || classSpecificDiscussion.node == null) && i >= 0)
+		{
+			classSpecificDiscussion = discussionItem.getItemsByXPath("//Result/Item[@type='" + type + "' and class_path='" + classPathes[i] + "']");
+			i--;
+		}
+		if (classSpecificDiscussion.node == null)
+		{
+			classSpecificDiscussion = discussionItem.getItemsByXPath("//Result/Item[@type='" + type + "' and class_path/@is_null='1']");
+		}
+		discussionItem.dom.RemoveAll();
+		discussionItem.dom.AppendChild(discussionItem.dom.ImportNode(classSpecificDiscussion.node, true));
+		discussionItem.node = discussionItem.dom.SelectSingleNode("//Item") as XmlElement;
+	}
+	return discussionItem.getItemsByXPath(string.Format("//Item[@type='{0}']/Relationships/Item[@type='{0}View']/related_id/Item[@type='SSVCPresentationConfiguration']", type));]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_GetSSVCPresentConfiguration</name>
+ </Item>
+</AML>

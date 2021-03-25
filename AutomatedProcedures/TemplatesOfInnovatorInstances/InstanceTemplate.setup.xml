@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Instance configVersion="1.0">
+  <components>
+    <database id="Database" depends="Innovator SelfServiceReporting Vault Conversion Agent OAuth">
+      <SqlServer>${MSSQL.Server}</SqlServer>
+      <DatabaseName>${MSSQL.Database.Name}</DatabaseName>
+      <SaLogin>${MSSQL.SA.User}</SaLogin>
+      <SaPassword type="EnvironmentVariable">MSSQL.SA.Password</SaPassword>
+      <InnovatorLogin>${MSSQL.Innovator.User}</InnovatorLogin>
+      <InnovatorPassword type="EnvironmentVariable">MSSQL.Innovator.Password</InnovatorPassword>
+      <InnovatorRegularLogin>${MSSQL.Innovator.Regular.User}</InnovatorRegularLogin>
+      <InnovatorRegularPassword type="EnvironmentVariable">MSSQL.Innovator.Regular.Password</InnovatorRegularPassword>
+      <InnovatorUrl>http://${Deployment.Server.Name}/${Name.Of.Innovator.Instance}</InnovatorUrl>
+    </database>
+    <innovator id="Innovator">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\Innovator</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-Innovator</ApplicationPoolName>
+      <LicenseString type="EnvironmentVariable">Innovator.License.String</LicenseString>
+      <LicenseKey>${Innovator.License.Key}</LicenseKey>
+      <LicenseActivationKey>${Innovator.Activation.Key}</LicenseActivationKey>
+      <SmtpServer>${SMTP.Server}</SmtpServer>
+    </innovator>
+    <ssr id="SelfServiceReporting">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\SelfServiceReporting</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/SelfServiceReporting</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-SelfServiceReporting</ApplicationPoolName>
+    </ssr>
+    <vault id="Vault">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\VaultServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/Vault</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-Vault</ApplicationPoolName>
+      <PathToVaultFolder>${Path.To.Installed.Innovator}\VaultFolder</PathToVaultFolder>
+    </vault>
+    <conversion id="Conversion">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\ConversionServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/ConversionServer</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-Conversion</ApplicationPoolName>
+      <OAuthCertificateName>ConversionServer</OAuthCertificateName>
+      <OAuthCertificatesTemplateDir>ConversionServer\App_Data\Certificates</OAuthCertificatesTemplateDir>
+      <OAuthConfigTemplateFile>ConversionServer\OAuth.config</OAuthConfigTemplateFile>
+      <OAuthConfigCertificatePasswordXpath>/oauth/client/secret/certificate/@password</OAuthConfigCertificatePasswordXpath>
+      <IsOAuthPublicCertificateRequired>true</IsOAuthPublicCertificateRequired>
+      <CodeTreeTemplatesDir>ConversionServer</CodeTreeTemplatesDir>
+    </conversion>
+    <agent id="Agent">
+      <ServerName>${Deployment.Server.Name}</ServerName>
+      <InstallationPath>${Path.To.Installed.Innovator}\AgentService</InstallationPath>
+      <ServiceName>${Agent.Service.Name}</ServiceName>
+      <Url>http://${Deployment.Server.Name}</Url>
+    </agent>
+    <oauth id="OAuth">
+      <InstallationPath>${Path.To.Installed.Innovator}\OAuthServer</InstallationPath>
+      <VirtualDirectoryPath>/${Name.Of.Innovator.Instance}/OAuthServer</VirtualDirectoryPath>
+      <ApplicationPoolName>${Name.Of.Innovator.Instance}-OAuth</ApplicationPoolName>
+      <InnovatorUrl>http://localhost/${Name.Of.Innovator.Instance}</InnovatorUrl>
+    </oauth>
+  </components>
+  <setup components="Database, Innovator, SelfServiceReporting, Vault, Conversion, Agent, OAuth" />
+  <link>
+    <oauth2innovator oauth="OAuth" innovator="Innovator" />
+    <database2innovator database="Database" innovator="Innovator" />
+    <database2ssr database="Database" ssr="SelfServiceReporting" />
+    <agent2innovator agent="Agent" innovator="Innovator" />
+    <vault2database vault="Vault" database="Database" />
+    <database2agent database="Database" agent="Agent" />
+    <conversion2database conversion="Conversion" database="Database" />
+  </link>
+</Instance>

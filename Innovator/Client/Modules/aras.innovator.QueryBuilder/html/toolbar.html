@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2016. -->
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<style type="text/css">
+			html, body
+			{
+				height: 100%;
+				margin: 0;
+			}
+		</style>
+		<style type="text/css">
+			@import "../../../javascript/include.aspx?classes=arasClaro.css";
+			@import "../../../styles/default.css";
+			@import "../../../javascript/include.aspx?classes=common.css";
+		</style>
+		<script>
+			var aras = parent.aras;
+		</script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../../../javascript/dojo'"></script>
+		<script type="text/javascript" src="../../../javascript/include.aspx?classes=XmlDocument"></script>
+		<script type="text/javascript">
+
+			var toolbar;
+			function loadToolbar() {
+				var toolbarStr =
+					'<toolbarapplet buttonsize="26,25">' +
+					'<toolbar id="toolbar1">' +
+						'<button image="../images/NewRow.svg" id="new" tooltip="New" />' +
+						'<button image="../images/DeleteRow.svg" id="delete" tooltip="Delete" />' +
+						'<separator />' +
+						'<button image="../images/ExportToExcel.svg" id="export2Excel" tooltip="Export to Excel" />' +
+						'<button image="../images/ExportToWord.svg" id="export2Word" tooltip="Export to Word" />' +
+					'</toolbar>' + 
+					'</toolbarapplet>';
+				toolbar.loadToolbarFromStr(toolbarStr);
+				toolbar.show();
+			}
+
+			function onToolbarButtonClick(btn) {
+				var btnId = btn.getId();
+				window.parent.processCommand(btnId);
+			}
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", {id: "makeExternal_toolbar", connectId: "toolbarContainer" }, function(control) {
+				toolbar = control;
+
+				clientControlsFactory.on(toolbar, {
+					"onClick": function(tbItem){
+						onToolbarButtonClick(tbItem);
+					}
+				});
+				loadToolbar();
+			});
+		</script>
+	</head>
+	<body class="claro" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0" style="overflow: hidden;">
+		<div id="toolbarContainer"></div>
+	</body>
+</html>

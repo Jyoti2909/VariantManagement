@@ -1,0 +1,96 @@
+﻿<AML>
+ <Item type="Method" id="A2C881F12CC246B286A96634A5777ECE" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA['Use input AML body in the following format
+' For add date
+'  <mode>add</mode>
+'  <date>2007-07-07T00:00:00</date> - date in neutral format is supposed
+'  <days2add>-3</days2add> - use negative value to dec date
+' For diff dates
+'  <mode>diff</mode>
+'  <date>2007-07-07T00:00:00</date> - start date, date in neutral format is supposed
+'  <date2>2007-08-07T00:00:00</date2> - finish date.
+'NOTE : the result will be contained in <r> tag for the corresponding Item node.
+
+
+Dim conn As Aras.Server.Core.InnovatorDatabase = CCO.Variables.InnDatabase
+Dim rs As Aras.Server.Core.InnovatorDataSet
+Dim sql As String
+
+Dim tmpInn As Innovator = Me.getInnovator()
+Dim dtPtrn As String = "yyyy-MM-ddTHH:mm:ss"
+Dim resultStr As String = ""
+
+Dim tzName As String = CCO.Utilities.GetVarValue("CorporateTimeZone", "")
+If String.IsNullOrEmpty(tzName) OrElse String.Equals(tzName, "UNDEFINED_TIMEZONE_NAME", StringComparison.Ordinal) Then
+
+	Return tmpInn.newError("CorporateTimeZone Variable is not set.")
+End If
+
+Dim mode As String = Me.getProperty("mode")
+If String.IsNullOrEmpty(mode) Then
+
+	Throw New ArgumentNullException("mode")
+End If
+
+Dim dtStr As String = Me.getProperty("date")
+If String.IsNullOrEmpty(dtStr) Then
+
+	Throw New ArgumentNullException("date")
+End If
+
+dtStr = DateTime.Parse(dtStr, DateTimeFormatInfo.InvariantInfo).ToString(dtPtrn, DateTimeFormatInfo.InvariantInfo)
+Select Case mode
+	Case "add"
+		Dim days2Add As String = Me.getProperty("days2add")
+		If String.IsNullOrEmpty(days2Add) Then
+
+			Throw New ArgumentNullException("days2add")
+		End If
+
+		sql = "" + _
+		"SELECT CONVERT(NVARCHAR(19), (SELECT value" + _
+		"                          FROM   [innovator].[ConvertToLocal_Table] ((SELECT value" + _
+		"                                                                FROM   [innovator].[Business_dateadd] ((SELECT value" + _
+		"                                                                                                        FROM   [innovator].[ConvertFromLocal_Table]('{0}', '{2}')), {1}, '{2}')), '{2}')), 126) r "
+		dtStr = If(string.IsNullOrEmpty(dtStr), dtStr, dtStr.Replace("'", "''"))
+		days2Add = If(string.IsNullOrEmpty(days2Add), days2Add, days2Add.Replace("'", "''"))
+		tzName = If(string.IsNullOrEmpty(tzName), tzName, tzName.Replace("'", "''"))
+		sql = String.Format(sql, dtStr, days2Add, tzName)
+		rs = conn.ExecuteSelect(sql)
+		dtStr = CStr(rs.Value("r", ""))
+		resultStr = dtStr
+	Case "diff"
+
+		Dim dt2Str As String = Me.getProperty("date2")
+		If String.IsNullOrEmpty(dt2Str) Then
+
+			Throw New ArgumentNullException("date2")
+		End If
+
+		dt2Str = DateTime.Parse(dt2Str, DateTimeFormatInfo.InvariantInfo).ToString(dtPtrn, DateTimeFormatInfo.InvariantInfo)
+		sql = "" _
+		& "SELECT VALUE " & vbCrLf _
+		& "FROM   [innovator].[Business_datediff]((SELECT VALUE " & vbCrLf _
+		& "                                        FROM   [innovator].[ConvertFromLocal_Table]('{0}', '{2}')), (SELECT VALUE " & vbCrLf _
+		& "                                                                                                                                 FROM   [innovator].[ConvertFromLocal_Table]('{1}', '{2}')), '{2}')"
+
+		dtStr = If(string.IsNullOrEmpty(dtStr), dtStr, dtStr.Replace("'", "''"))
+		dt2Str = If(string.IsNullOrEmpty(dt2Str), dt2Str, dt2Str.Replace("'", "''"))
+		tzName = If(string.IsNullOrEmpty(tzName), tzName, tzName.Replace("'", "''"))
+		sql = String.Format(sql, dtStr, dt2Str, tzName)
+		rs = conn.ExecuteSelect(sql)
+		resultStr = CStr(rs.Value("value", ""))
+	Case Else
+
+		Return tmpInn.newError(mode + " mode is not supported by the method.")
+End Select
+
+Dim r As Item = tmpInn.newItem("tmp", "tmp")
+r.loadAML(String.Format("<Item><r>{0}</r></Item>", System.Security.SecurityElement.Escape(resultStr)))
+Return r
+]]></method_code>
+  <method_type>VB</method_type>
+  <name>PM_handleWorkDays</name>
+ </Item>
+</AML>

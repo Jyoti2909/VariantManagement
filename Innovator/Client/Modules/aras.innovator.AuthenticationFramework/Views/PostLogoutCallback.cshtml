@@ -1,0 +1,19 @@
+﻿@{ 
+	Layout = "Shared/_CallbackLayout.cshtml";
+}
+@section callback
+{
+	const storage = new WebStorageStateStore({
+		store: Global.sessionStorage
+	});
+	new UserManager({
+		loadUserInfo: false,
+		userStore: storage,
+		monitorSession: false
+	}).signoutRedirectCallback()
+		.then(function (response) {
+			let returnUrl = response && response.state && response.state.returnUrl;
+			returnUrl = returnUrl || '../default.aspx';
+			window.location = returnUrl;
+		});
+}

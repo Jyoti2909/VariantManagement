@@ -1,0 +1,71 @@
+﻿<AML>
+ <Item type="Method" id="95C541B219E7421DB420BAE02D5F6BA9" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var methodName = this.getProperty('name');
+var result = aras.applyMethod(methodName, '');
+if (result === null || result === false) {
+	result = '<Error />';
+}
+
+result = formatXml(result);
+result = htmlEscape(result);
+result = '<PRE>Method name = ' + methodName + '\n<HR />\n' + result + '<HR />\n</PRE>\n';
+return result;
+
+function formatXml(xml) {
+	var formatted = '';
+	var reg = new RegExp('(>)(<)(\/*)', 'g');
+	xml = xml.replace(reg, '$1\r\n$2$3');
+	var pad = 0;
+	each(xml.split('\r\n'), function(index, node) {
+		var indent = 0;
+		if (node.match(/.+<\/\w[^>]*>$/)) {
+			indent = 0;
+		} else if (node.match(/^<\/\w/)) {
+			if (pad !== 0) {
+				pad -= 1;
+			}
+		} else if (node.match(/^<\w[^>]*[^\/]>.*$/)) {
+			indent = 1;
+		} else {
+			indent = 0;
+		}
+
+		var padding = '';
+		for (var i = 0; i < pad; i++) {
+			padding += '\t';
+		}
+
+		formatted += padding + node + '\r\n';
+		pad += indent;
+	});
+
+	return formatted;
+}
+
+function htmlEscape(str) {
+	return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function each(object, callback) {
+	var name;
+	var i = 0;
+	var length = object.length;
+
+	if (length === undefined) {
+		for (name in object) {
+			if (callback.call(object[name], name, object[name]) === false) {
+				break;
+			}
+		}
+	} else {
+		for (var value = object[0]; i < length && callback.call(value, i, value) !== false; value = object[++i]) {}
+	}
+
+	return object;
+}
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>Run Server Method</name>
+ </Item>
+</AML>

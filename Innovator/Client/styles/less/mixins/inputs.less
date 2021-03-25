@@ -1,0 +1,99 @@
+.input-with-right-icon(@icon) {
+	display: inline-block;
+	font-size: 0;
+
+	input {
+		font-size: 1rem;
+
+		& ~ span:last-of-type {
+			display: inline-block;
+			vertical-align: top;
+			margin-left: -1px;
+			cursor: pointer;
+		}
+
+		& ~ span:last-of-type::before {
+			content: '';
+			display: inline-block;
+			width: @form-input-size;
+			height: @form-input-size;
+			border: none;
+			.background-svg(@icon, @blue);
+		}
+
+		& ~ span:last-of-type:hover::before {
+			.background-svg(@icon, @blue-hover);
+		}
+
+		&[readonly] ~ span:last-of-type,
+		&:disabled ~ span:last-of-type {
+			cursor: default;
+			&::before {
+				.background-svg(@icon, @gray-disable);
+			}
+		}
+
+		&:not([readonly]):focus {
+			& ~ span {
+				border-color: @blue;
+			}
+		}
+
+		& ~ span.aras-icon-error {
+			display: none;
+		}
+	}
+}
+
+.input-with-left-icon (@icon) {
+	position: relative;
+
+	& input,
+	select {
+		padding-left: 1.75rem;
+
+		& ~ span:last-of-type {
+			display: block;
+			width: 4/3rem;
+			height: 4/3rem;
+			left: 1/4rem;
+			top: 1/4rem;
+			position: absolute;
+		}
+
+		&:required {
+			background-color: @controls-bg;
+		}
+
+		&:invalid {
+			box-shadow: none;
+
+			& ~ span:last-of-type {
+				.background-svg(@icon, @gray-disable);
+			}
+		}
+
+		&:valid,
+		&:focus {
+			& ~ span:last-of-type {
+				.background-svg(@icon, @blue);
+			}
+		}
+
+		&[type='text']:disabled {
+			background: none;
+			border: none;
+			color: @font-color;
+
+			& ~ span:last-of-type {
+				.background-svg(@icon, @blue);
+			}
+		}
+
+		&:not([readonly]):focus {
+			& ~ span {
+				border-color: @blue;
+			}
+		}
+	}
+}

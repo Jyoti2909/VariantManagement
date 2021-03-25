@@ -1,0 +1,82 @@
+﻿<AML>
+ <Item type="Method" id="D0F234831A914137B8AB3745B2E67F73" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[	var itemTypeId = this.getProperty("item_type_id");
+	Item template = this.newItem("DiscussionTemplate", "get");
+	template.setProperty("source_id", itemTypeId);
+	template = template.apply();
+	// IR-025986: If DiscussionTemplate with source_id = itemTypeId doesn't exist, it should be created.
+	if (template.isError()) 
+	{
+		template = createDefaultDiscussionTemplate(itemTypeId);
+	}
+	return template;
+}
+
+private Item createDefaultDiscussionTemplate(string itemTypeId)
+{
+	Item relship = this.newItem("FeedTemplate", "add");
+	relship.setProperty("feed_type", "Board");
+	relship.setProperty("reference", "this");
+	relship.setProperty("history_events", null);
+
+	Item query = this.newItem("DiscussionTemplate", "add");
+	query.setAttribute("doGetItem", "0");
+	query.setProperty("source_id", itemTypeId);
+	query.addRelationship(relship);
+	relship = this.newItem("DiscussionTemplateView", "add");
+	var relatedItemId = this.getNewID();
+	Item relatedItem = this.newItem("SSVCPresentationConfiguration", "add");
+	relatedItem.setID(relatedItemId);
+	relatedItem.setProperty("name", relatedItemId);
+	relatedItem.setProperty("form_tooltip_template", "Form of ${ItemType:keyed_name}");
+	relatedItem.setProperty("sm_template", "F1E9620C1AB3408588708B68E18D51DE");
+	relship.setPropertyItem("related_id", relatedItem);
+	query.addRelationship(relship);
+	query = query.apply();
+	if (query.isError())
+	{
+		return this.getInnovator().newError(query.getErrorString());
+	}
+	
+	Item itemType = this.newItem("ItemType", "get");
+	itemType.setID(itemTypeId);
+	itemType.setAttribute("select", "locked_by_id");
+	itemType = itemType.apply();
+	if (itemType.isError())
+	{
+		return this.getInnovator().newError(itemType.getErrorString());
+	}
+
+	bool isItemLocked = !string.IsNullOrEmpty(itemType.getProperty("locked_by_id"));
+
+	itemType = this.newItem("ItemType", "edit");
+	itemType.setID(itemTypeId);
+	Item relItem = this.newItem("View", "edit");
+	relItem.setAttribute("where", "[VIEW].TYPE='default'");
+	relItem.setProperty("show_ssvc", "1");
+	itemType.addRelationship(relItem);
+	itemType = itemType.apply();
+	if (itemType.isError())
+	{
+		return this.getInnovator().newError(itemType.getErrorString());
+	}
+
+	if (isItemLocked)
+	{
+		Item lockItemType = this.newItem("ItemType", "lock");
+		lockItemType.setID(itemTypeId);
+		lockItemType.setAttribute("doGetItem", "0");
+		lockItemType = lockItemType.apply();
+		if (lockItemType.isError())
+		{
+			return this.getInnovator().newError(lockItemType.getErrorString());
+		}
+	}
+	
+	return query;
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>VC_CreateDefaultTemplate</name>
+ </Item>
+</AML>

@@ -1,0 +1,60 @@
+﻿<AML>
+ <Item type="Method" id="BF9BCB9683AE4B7DB80CC7E9682300BF" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[	Innovator inn = this.getInnovator();
+	return Validate(inn, CCO.ErrorLookup);
+}
+
+internal Item Validate(Innovator innovator, Aras.Server.Core.ErrorLookup errorLookup)
+{
+	var relationshipFamilyid = this.getProperty("source_id");
+	var relationshipFamily = this.newItem("dr_RelationshipFamily", "get");
+	relationshipFamily.setAttribute("select", "query_definition_id");
+	relationshipFamily.setID(relationshipFamilyid);
+	relationshipFamily = relationshipFamily.apply();
+	if (relationshipFamily.isError())
+	{
+		return relationshipFamily;
+	}
+
+	var queryDefinitionId = relationshipFamily.getProperty("query_definition_id");
+	var queryDefinition = this.newItem();
+	var queryAml = @"<AML>
+<Item action='get' id='{0}' select='id' type='qry_QueryDefinition'>
+<Relationships>
+	<Item type='qry_QueryItem' action='get' select='id,ref_id,item_type' />
+	<Item type='qry_QueryReference' action='get' select='id,ref_id,parent_ref_id,child_ref_id' />
+</Relationships>
+</Item>
+</AML>";
+	queryDefinition.loadAML(string.Format(CultureInfo.InvariantCulture, queryAml, System.Security.SecurityElement.Escape(queryDefinitionId)));
+	queryDefinition = queryDefinition.apply();
+	if (queryDefinition.isError())
+	{
+		return queryDefinition;
+	}
+
+	var rootQueryReference = queryDefinition.getItemsByXPath("//Relationships/Item[@type=\"qry_QueryReference\" and parent_ref_id[@is_null='1']]");
+
+	var rootQueryItem = queryDefinition.getItemsByXPath("Relationships/Item[ref_id=\"" + rootQueryReference.getProperty("child_ref_id") + "\"]");
+
+	var derivedRelationshipId = this.getProperty("dr_relationship_id");
+	var derivedRelationship = this.newItem("dr_Relationship", "get");
+	derivedRelationship.setAttribute("select", "departure_itemtype_id");
+	derivedRelationship.setID(derivedRelationshipId);
+	derivedRelationship = derivedRelationship.apply();
+	if (derivedRelationship.isError())
+	{
+		return derivedRelationship;
+	}
+
+	if (derivedRelationship.getProperty("departure_itemtype_id") != rootQueryItem.getProperty("item_type"))
+	{
+		string message = string.Format(CultureInfo.InvariantCulture, errorLookup.Lookup("dr_WrongDepartureItemtypeId"));
+		return innovator.newError(message);
+	}
+	return this;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_validateDepartureIT</name>
+ </Item>
+</AML>

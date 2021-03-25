@@ -1,0 +1,167 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.Diagnostics</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.Diagnostics.UnhandledErrorHandler">
+            <summary>
+            Class allows to log information about unhandled exceptions in application.
+            To use it in a project you should:
+            1) Add reference to the assembly;
+            2) Call static AttachThreadExceptionHandler() in constructor or entry point.
+            3) Use global try catch blocks in all COM-Visible methods with calling Aras.Diagnostics.UnhandledErrorHandler.HandleException
+            for logging and rethrow an error.
+            </summary>
+        </member>
+        <member name="T:Aras.Diagnostics.UnhandledErrorHandler.ExceptionType">
+            <summary>
+            Exception types. Different types are catched with different ways.
+            </summary>
+        </member>
+        <member name="F:Aras.Diagnostics.UnhandledErrorHandler.ExceptionType.ThreadEx">
+            <summary>
+            ThreadException, catched with Application.ThreadException
+            </summary>
+        </member>
+        <member name="F:Aras.Diagnostics.UnhandledErrorHandler.ExceptionType.UnhandledEx">
+            <summary>
+            Unhandled exception, catched qith AppDomain.CurrentDomain.UnhandledException
+            </summary>
+        </member>
+        <member name="F:Aras.Diagnostics.UnhandledErrorHandler.ExceptionType.COMEx">
+            <summary>
+            Exception in methods called from COM, catched qith special try catch blocks
+            </summary>
+        </member>
+        <member name="F:Aras.Diagnostics.UnhandledErrorHandler.ScreenFileNameFormat">
+            <summary>
+            Screenshot file name format.
+            </summary>
+        </member>
+        <member name="F:Aras.Diagnostics.UnhandledErrorHandler.LogFileNameFormat">
+            <summary>
+            Log file name format.
+            </summary>
+        </member>
+        <member name="F:Aras.Diagnostics.UnhandledErrorHandler.Path">
+            <summary>
+            Path to store logs.
+            </summary>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.#cctor">
+            <summary>
+            Attaches UnhandledException handler to current AppDomain. Should be one handler per one domain.
+            </summary>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.AttachThreadExceptionHandler">
+            <summary>
+            Attaches ThreadException handler to the aplication. For one running thread should be one handler for this event.
+            </summary>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.CurrentDomain_UnhandledException(System.Object,System.UnhandledExceptionEventArgs)">
+            <summary>
+            Handler for AppDomain.CurrentDomain.UnhandledException event.
+            </summary>
+            <param name="sender">object</param>
+            <param name="e">UnhandledExceptionEventArgs</param>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.Application_ThreadException(System.Object,System.Threading.ThreadExceptionEventArgs)">
+            <summary>
+            Handler for Application.ThreadException event.
+            </summary>
+            <param name="sender">object</param>
+            <param name="e">ThreadExceptionEventArgs</param>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.LogException(System.Exception,Aras.Diagnostics.UnhandledErrorHandler.ExceptionType)">
+            <summary>
+            Make log actions for specified exception.
+            </summary>
+            <param name="e">Exception to log.</param>
+            <param name="type">Exception type.</param>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.HandleException(System.Exception)">
+            <summary>
+            Make log actions for an exception, which was thrown in the method called from COM (i.e. from javascript).
+            Need this special behavior, because .NET doesn't fire Application.ThreadException or AppDomain.CurrentDomain.UnhandledException
+            events, if method was called from COM.
+            </summary>
+            <param name="ex">Exception to handle.</param>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.CaptureScreenToFile(System.String)">
+            <summary>
+            Captures screenshot to file in png format.
+            </summary>
+            <param name="filePath">Path to file.</param>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.WriteLogToFile(System.String,System.String)">
+            <summary>
+            Write message in file with UTF-8 encoding.
+            </summary>
+            <param name="filePath">Path to file.</param>
+            <param name="logMsg">Message.</param>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.WriteToEventLog(System.String)">
+            <summary>
+            Write message to Windows Events Log.
+            </summary>
+            <param name="message">Message</param>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.GetErrorMessage(System.Exception)">
+            <summary>
+            Get error message, that contains general information about system, application and exceptions occured.
+            </summary>
+            <param name="e">Exception</param>
+            <returns>Error description.</returns>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.GetExceptionInfo(System.Exception)">
+            <summary>
+            Get specific for exception info.
+            </summary>
+            <param name="e">Exception</param>
+            <returns>Exception description.</returns>
+        </member>
+        <member name="M:Aras.Diagnostics.UnhandledErrorHandler.IsLogDirValid(System.String)">
+            <summary>
+            Check if directory path exists and valid
+            </summary>
+            <param name="path">Directory path</param>
+            <returns>True if directory exists and user have Write permissions on it, otherwise - false.</returns>
+        </member>
+        <member name="T:Aras.Diagnostics.WebUnhandledErrorHandler">
+            <summary>
+            Catch errors on server side.
+            To handle all unhandled exceptions in HttpApplication you must
+            1) Call Init("PathToSaveLogFiles") to catch all ThreadExceptions
+            2) Add Application_Error(object sender, EventArgs e) method 
+               and delegate an action to the WebUnhandledErrorHandler.GlobalHandler 
+               method to catch exceptions in main tread
+            </summary>
+        </member>
+        <member name="M:Aras.Diagnostics.WebUnhandledErrorHandler.Init(System.String,System.Int32)">
+            <summary>
+             Initialize handler for background threads.
+            </summary>
+            <param name="path">Path for log files</param>
+            <param name="maxLogDaysCount"></param>
+        </member>
+        <member name="M:Aras.Diagnostics.WebUnhandledErrorHandler.CleanupOldLogFiles(System.Int32)">
+            <summary>
+            Clean up old log files
+            </summary>
+        </member>
+        <member name="M:Aras.Diagnostics.WebUnhandledErrorHandler.LogException(System.Exception)">
+            <summary>
+            Writes exception details to log file.
+            </summary>
+            <param name="ex"></param>
+        </member>
+        <member name="M:Aras.Diagnostics.WebUnhandledErrorHandler.GlobalHandler(System.Object,System.EventArgs)">
+            <summary>
+            Delegate Application_Error call to this method.
+            </summary>
+            <param name="sender">Sender</param>
+            <param name="e">Event arguments</param>
+        </member>
+    </members>
+</doc>

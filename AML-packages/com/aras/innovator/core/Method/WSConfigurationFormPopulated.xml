@@ -1,0 +1,91 @@
+﻿<AML>
+ <Item type="Method" id="EB2A12865AB5420B8185F5C1CCCF7BF8" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[function IsNew() {
+	var t = window.parent.frames['tearoff_menu'].toolbar;
+	var lock = t.IsButtonEnabled('lock');
+	var unlock = t.IsButtonEnabled('unlock');
+	return !(lock || unlock);
+}
+
+function EnableButtons(e) {
+	var t = window.parent.frames['tearoff_menu'].toolbar;
+	var i = t.GetItem('refresh');
+	i.SetEnabled(e);
+	i = t.GetItem('publish');
+	i.SetEnabled(e);
+}
+
+function custToolbar() {
+	var t = window.parent.frames['tearoff_menu'].toolbar;
+	if (t === null) {
+		window.setTimeout(custToolbar, 30);
+		return;
+	} else {
+		try {
+			// somehow during loading process call to GetButtonLabelById trow exception "method don't exists"
+			t.GetButtonLabelById('publish');
+		} catch (e) {
+			window.setTimeout(custToolbar, 30);
+			return;
+		}
+
+		if (t.GetButtonLabelById('publish') === '' || t.GetButtonLabelById('publish') === null) {
+			window.setTimeout(custToolbar, 30);
+			return;
+		}
+	}
+
+	var enableButtons = !IsNew();
+	EnableButtons(enableButtons);
+}
+
+custToolbar();
+var connector = new aras.getMostTopWindowWithAras(window).InnovatorServerConnector(aras);
+var wsitem = window.document.item;
+
+var wsceditor = window.document.WscEditor;
+var wscinit = true;
+wsceditorInit();
+
+function wsceditorInit() {
+	if (wsceditor.readyState != 4) {
+		setTimeout(wsceditorInit, 30);
+		return;
+	}
+
+	// The problem that we try to solve here is the following:
+	// WscEditor has certain events (e.g. onAfterCheck; etc.) that
+	// are called both during initial rendering of not modified yet
+	// configuration and when user clicked on a check-box in UI and
+	// modified the configuration. Processing of those event must be
+	// done differently: when user changes the configuration the
+	// control must update the 'wsitem' that references the node in
+	// 'aras.dom' so on 'save' the configuration is stored on server;
+	// at the same time when this events are called during the initialization
+	// the node should not be modified as the configuration was not
+	// changed yet. So, what we do is the following:
+	//    a) set initialization flag here (from outside of the control)
+	//    b) give the control some time to process all event raised
+	//       during the initial rendering before set the initialization
+	//       flag to false.
+	// NOTE: probably the better approach would be not to have inside the
+	//       control the direct reference to the node from 'aras.dom'
+	//       but it means that the modified configuration has to be read
+	//       from the control before 'save' operation on form and Innovator
+	//       currently (Aug 2009) does not have 'onBeforeSave' event on form.
+	if (wscinit === true) {
+		wsceditor.SetInit(true);
+		wsceditor.Init(connector, wsitem);
+		wscinit = false;
+		setTimeout(wsceditorInit, 200);
+	} else {
+		wsceditor.SetInit(false);
+	}
+}
+return true;
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>WSConfigurationFormPopulated</name>
+ </Item>
+</AML>

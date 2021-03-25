@@ -1,0 +1,406 @@
+@using System
+@using System.Text
+@using Models.AML.Enums
+@using Models.Helpers
+@model Models.FieldRenderModel
+
+@functions {
+	string ReplaceIncorrectCharacters(string str)
+	{
+		var result = str;
+		result = result.Replace("amp;", "");
+		return result;
+	}
+}
+
+@{
+	var fieldId = Model.FieldNode.Id;
+	var fieldNm = Model.FieldNode.Name;
+
+	var propNm = String.Empty;
+	if (!Model.PropertyNode.IsNull)
+	{
+		propNm = Model.PropertyNode.Name;
+	}
+
+	StringBuilder expressionFunctionCode = new StringBuilder();
+
+	var dsName = String.Empty;
+
+	if (!Model.PropertyNode.IsNull)
+	{
+		var ds = Model.PropertyNode.DataSource;
+		if (ds != null)
+		{
+			dsName = ds.Name;
+		}
+	}
+
+	var onF2DownCode = String.Empty;
+	var userOnBlurCode = String.Empty;
+	var userOnChangeCode = String.Empty;
+	var userOnClickCode = String.Empty;
+	var userOnKeyDownCode = String.Empty;
+
+	// Generated field attributes
+	var tabIndex = Model.FieldNode.TabStop ? Model.FieldNode.TabIndex.Value : "-1";
+	var componentTabIndex = String.IsNullOrEmpty(tabIndex) ? "" : tabIndex;
+	tabIndex = String.IsNullOrEmpty(tabIndex) ? "" : "tabindex=\"" + tabIndex + "\"";
+	var fieldSizeInfo = MethodsExUtils.UiGetFieldSizeInfo(Model.FieldNode);
+	var readOnlyProp = MethodsExUtils.UiIsFieldReadOnly(Model.FieldNode, Model.PropertyNode);
+	var isDisabled = (readOnlyProp && Model.Mode != "search" && !Model.PropertyNode.IsNull) ? true : false;
+	var maxLength = (Model.PropertyNode.IsNull || Model.PropertyNode.StoredLength.IsNull) ? String.Empty : "maxlength=\"" + Model.PropertyNode.StoredLength.Value + "\" ";
+	var assignedFieldEvents = String.Empty;
+
+	var hasDataSource = false;
+
+	// Span events for !print mode
+	var onClickSpanEvent = String.Empty;
+	var onChangeSpanEvent = String.Empty;
+	var onBlurSpanEvent = String.Empty;
+
+	// Input text events for !print mode
+	var onKeyDownInputEvent = String.Empty;
+	var onChangeInputEvent = String.Empty;
+	var onSelectInputEvent = String.Empty;
+
+	// hanlder function names
+	var spanClickFunc = String.Empty;
+	var spanChangeFunc = String.Empty;
+	var spanBlurFunc = String.Empty;
+	var inputKeyDownFunc = String.Empty;
+
+	var inputSizeInfo = MethodsExUtils.UiGetFieldSizeInfo(Model.FieldNode);;
+	var componentWidth = String.Empty;
+	if (!String.IsNullOrEmpty(inputSizeInfo.Style))
+	{
+		componentWidth = inputSizeInfo.Style.Substring(6, inputSizeInfo.Style.Length - 7);
+	}
+
+	if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		var onF2DownFunc = "system$" + fieldId + "$OnF2Down";
+
+		if (Model.Mode != "search")
+		{
+			assignedFieldEvents = MethodsExUtils.AssignFieldEventExForComponent(Model.FieldNode, "onclick,onkeydown,onchange,onblur");
+		}
+
+		var userOnClickFunc = "user$" + fieldId + "$onclick";
+		userOnClickCode =
+		@"<script type=""text/javascript"">
+			function " + userOnClickFunc + @"(event)
+			{
+				" + MethodsExUtils.GetEventHandlerCode(Model.FieldNode, "onclick", false, "return true;") + @"
+			}
+		</script>";
+
+		spanClickFunc = "system$" + fieldId + "$spanClick";
+
+		onClickSpanEvent = @"var ures=" + userOnClickFunc + @"(event);
+							if (ures)
+							{
+							";
+
+		if (!Model.PropertyNode.IsNull && !String.IsNullOrEmpty(propNm) && !String.IsNullOrEmpty(dsName))
+		{
+			onClickSpanEvent += @"if (!event) event = window.event;
+							  if (!event.srcElement) event.srcElement = event.target;
+							  var tgName=event.srcElement.tagName;
+							  var srcElem = event.srcElement;
+							  var propNd=window.document.item.selectSingleNode('" + propNm + @"');
+							  if (tgName=='SPAN' && (!window.document.isEditMode || ((srcElem.style.visibility != 'hidden') && (srcElem.style.display == 'inline'))) && propNd && propNd.getAttribute('discover_only')!='1')
+							  {
+								var itm = aras.getItemById('" + dsName + "',observersHash.getElementById('" + propNm + @"_system').value,0);
+								if (itm) aras.uiShowItemEx(itm,undefined);
+							   }
+							  ";
+			if (!readOnlyProp || Model.Mode == "search")
+			{
+				hasDataSource = true;
+			}
+		}
+		onClickSpanEvent += @"}";
+
+		var userOnKeyDownFunc = "user$" + fieldId + "$onkeydown";
+		userOnKeyDownCode =
+			@"<script type=""text/javascript"">
+				function " + userOnKeyDownFunc + @"(event)
+				{
+					" + MethodsExUtils.GetEventHandlerCode(Model.FieldNode, "onkeydown", false, "return true;") + @"
+				}
+			  </script>";
+
+		var doAddOnkeydown = false;
+
+		if (hasDataSource)
+		{
+			doAddOnkeydown = true;
+			onF2DownCode = @"<script type=""text/javascript"">
+				function " + onF2DownFunc + @"()
+				{
+				  var input = document.getElementById('" + fieldId + @"_input');" +
+				  @"var valueSpan = document.getElementById('" + fieldId + @"_span');" +
+				  @"
+				  input.dialogIsShown = true;
+				  var params = {aras:window.aras,itemtypeName:'" + dsName + @"', itemContext:document.item, sourceItemTypeName:document.item.getAttribute('type'), sourcePropertyName:'" + propNm + @"'};
+				  var callback = function(dlgRes) {
+				   input.dialogIsShown = false;
+				   if (dlgRes == undefined) {
+					input.focus();
+					return true;
+				   }
+				   bFromSearch = true;
+				   var prevVal = valueSpan.value;
+				   if (dlgRes.itemID) {
+					if (window.handleItemChange) handleItemChange('" + propNm + @"', dlgRes." + (Model.Mode == "search" ? "keyed_name" : "item") + @");
+					if (prevVal != dlgRes.itemID) {
+					  input.dispatchEvent(new CustomEvent('change', {bubbles: true}));
+					}
+				   }
+				   else
+				   {
+					if (window.handleItemChange) handleItemChange('" + propNm + @"','');
+					if (prevVal != '') {
+					  input.dispatchEvent(new CustomEvent('change', {bubbles: true}));
+					}
+					input.focus();
+				   }
+				  };
+					var topWnd = aras.getMostTopWindowWithAras(window);
+					params.type = 'SearchDialog';
+					topWnd.ArasModules.MaximazableDialog.show('iframe', params).promise.then(callback);
+				}
+				</script>";
+		}
+
+		// +++ generate onchange and onblur event handlers
+		var onchangeCode = MethodsExUtils.GenerateOnChangeHandler(FieldType.Item, Model.FieldNode, Model.PropertyNode, Model.Mode);
+		onChangeSpanEvent = ReplaceIncorrectCharacters(onchangeCode.OnChangeCode);
+		spanChangeFunc = "system$" + fieldId + "$spanChange";
+		onBlurSpanEvent = ReplaceIncorrectCharacters(onchangeCode.OnBlurCode);
+		spanBlurFunc = "system$" + fieldId + "$spanBlur";
+
+		userOnBlurCode = onchangeCode.UserOnBlurCode;
+		userOnChangeCode = onchangeCode.UserOnChangeCode;
+		// --- generate onchange and onblur event handlers
+
+		inputKeyDownFunc = "system$" + fieldId + "$inputKeyDown";
+
+		if (doAddOnkeydown)
+		{
+			onKeyDownInputEvent = @"if(event.keyCode == 113) {
+										if (!event.srcElement) event.srcElement = event.target;
+										event.cancelBubble = true;
+										event.preventDefault();
+										" + onF2DownFunc + @"();return false;}else if (event.keyCode == 13) {event.preventDefault();}";
+		}
+		else
+		{
+			onKeyDownInputEvent = @"if (event.keyCode == 13) event.preventDefault();";
+		}
+
+		if (Model.Mode != "search" && !readOnlyProp)
+		{
+			expressionFunctionCode.AppendLine("var field = document.getElementById('" + fieldId + @"_input-wrapper');");
+			expressionFunctionCode.AppendLine("if (field) field.style['display'] = isEditMode ? 'inline-block' : 'none';");
+		}
+	}
+}
+
+@{
+	if (Model.Mode == "edit_form" || Model.Mode == "view_form")
+	{
+		var cls = BrowserHelper.GetClassForInputImage(Model.BrowserType, false);
+		@:<span id="@(fieldId)" name="@(fieldNm)" class="@(fieldNm)"><input type="text" @Html.Raw(fieldSizeInfo.Attribute) style="@(fieldSizeInfo.Style)" READONLY disabled=@Html.Raw(isDisabled) @Html.Raw(maxLength) @Html.Raw(tabIndex) /><input class="sys_f_input_image @Html.Raw(cls)" type="image" id="@(fieldId)_img" align="absmiddle" border="0" unselectable="on" src="../images/Ellipsis.svg"/>
+	}
+	else
+	{
+		@:<div id="@(fieldId)_input-wrapper" style="display: inline-block"></div>
+	}
+
+	if (!String.IsNullOrEmpty(assignedFieldEvents))
+	{
+		assignedFieldEvents += ",";
+	}
+	assignedFieldEvents += "blur:" + spanBlurFunc;
+	assignedFieldEvents += ",keydown:" + inputKeyDownFunc;
+	assignedFieldEvents += ",change:" + spanChangeFunc;
+	assignedFieldEvents += ",click:" + spanClickFunc;
+
+	if (!readOnlyProp || Model.Mode == "search")
+	{
+
+		if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+		{
+
+			expressionFunctionCode.AppendLine(@"var field = document.getElementById('" + fieldId + @"_img');");
+			expressionFunctionCode.AppendLine("if (field) field.style['display'] = isEditMode ? '' : 'none';");
+
+		}
+	}
+	if (Model.Mode != "search")
+	{
+		var linkStyle = "style=\"\"";
+		string linkClass;
+		if (!readOnlyProp)
+		{
+			expressionFunctionCode.AppendLine("var field = document.getElementById('" + fieldId + @"_span');");
+			expressionFunctionCode.AppendLine("if (field) field.style['display'] = isEditMode ? 'none' : 'inline';");
+		}
+		else
+		{
+			linkStyle = "style=\"display:inline;\"";
+		}
+
+		linkClass = " class=\"sys_item_link " + fieldNm + "\"";
+
+		<span id='@(fieldId)_span' @Html.Raw(linkStyle) @Html.Raw(linkClass)></span>
+	}
+
+	if (Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+			@Html.Raw(onF2DownCode)
+			@:
+			@Html.Raw(userOnClickCode)
+			@:
+			@Html.Raw(userOnKeyDownCode)
+			@:
+			@Html.Raw(userOnChangeCode)
+			@:
+			@Html.Raw(userOnBlurCode)
+	}
+	if (!String.IsNullOrEmpty(propNm) && Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		string funcName = "system_" + fieldId + "_value";
+		<script type="text/javascript">
+			function @(funcName)(event)
+			{
+				try {
+					if (!event) event = window.event;
+
+					if (!event.srcElement) event.srcElement = event.target;
+
+					if (event.propertyName != "value")  return true;
+
+					var ctrlElem = event.srcElement;
+					if (!ctrlElem) return true;
+
+					var valueSpan = document.getElementById("@(fieldId)_span");
+					if (!valueSpan) return true;
+
+					if (valueSpan.value == ctrlElem.value)  return true;
+
+					var val = ctrlElem.value;
+					valueSpan.value = val;
+
+					@if (Model.Mode != "search")
+					{
+						<text>
+						var keyedName;
+						var keyedNameAttribute = document.item.selectSingleNode("@propNm/@@keyed_name");
+						if (keyedNameAttribute) {
+							keyedName = keyedNameAttribute.value;
+						}
+						if (!keyedName && val) {
+							val = aras.getKeyedName(val, "@dsName");
+						} else if (keyedName) {
+							val = keyedName;
+						}
+						</text>
+					}
+					@{
+						<text>
+							if (field@(fieldId)Component) {
+								field@(fieldId)Component.setValue(val);
+							}
+						</text>
+					}
+
+					var discoverOnly = document.item.selectSingleNode('@(propNm)');
+					discoverOnly = (discoverOnly && discoverOnly.getAttribute('discover_only') == '1');
+					valueSpan.style.textDecoration = (discoverOnly ? 'none' : 'underline');
+					valueSpan.style.cursor = (discoverOnly ? 'auto' : 'pointer');
+					valueSpan.innerHTML = aras.preserveTags(val);
+					return true;
+				} catch (excep) {}}
+
+			if (observersHash.getElementById("@(propNm)_system"))
+				observersHash.getElementById("@(propNm)_system").attachEvent("onpropertychange", @(funcName));
+		</script>
+	}
+
+	if (!String.IsNullOrEmpty(propNm) && Model.Mode != "edit_form" && Model.Mode != "view_form")
+	{
+		<script type="text/javascript">
+			window.@(spanClickFunc) = function(event) {
+				@Html.Raw(onClickSpanEvent)
+			};
+			window.@(spanChangeFunc) = function(event) {
+				@Html.Raw(onChangeSpanEvent)
+			};
+			window.@(spanBlurFunc) = function(event) {
+				@Html.Raw(onBlurSpanEvent)
+			};
+			window.@(inputKeyDownFunc) = function(event) {
+				@Html.Raw(onKeyDownInputEvent)
+			};
+
+			var field@(fieldId)Component;
+
+			var itemProperty = document.createElement('aras-item-property');
+			itemProperty.setAttribute('aria-labelledby', '@(fieldId)_label');
+			itemProperty.setState({
+				itemType: '@(dsName)'
+			});
+			itemProperty.format = function(template) {
+				var input = template.children[0];
+				var button = template.children[2];
+
+				input.className += ' @(fieldNm)',
+				input.attrs = Object.assign(input.attrs || {}, {
+					id: '@(fieldId)_input',
+					maxLength: '@Html.Raw(maxLength)',
+					tabIndex: '@Html.Raw(componentTabIndex)',
+					name: '@(fieldNm)',
+					'aria-labelledby': '@(fieldId)_label'
+				});
+
+				button.attrs = Object.assign(button.attrs || {}, {
+					id: '@(fieldId)_img'
+				});
+
+				button.events = Object.assign(button.events || {}, {
+					onclick: function(event) {
+						if (event.target.classList.contains('aras-filter-list__button')) {
+							@Html.Raw("system$" + fieldId + "$OnF2Down()");
+							event.preventDefault();
+						}
+					}
+				});
+				template.style = Object.assign(input.style || {}, {width: 'calc(' + '@(componentWidth)' + ' + 23px)'});
+
+				@if (readOnlyProp) {
+				@:template.style.display = 'none';
+				}
+
+				return template;
+			};
+			@if (isDisabled) {
+			@:itemProperty.state.disabled = true;
+			}
+
+			var container = document.getElementById('@(fieldId)_input-wrapper');
+			container.appendChild(itemProperty);
+
+			field@(fieldId)Component = new Field(document.getElementById('@(fieldId)span').querySelector('.aras-field__value'), itemProperty, '@(assignedFieldEvents)');
+		</script>
+	}
+	<script type="text/javascript">
+		function expression_@(fieldId)_setExpression(isEditMode)
+		{
+			@Html.Raw(expressionFunctionCode.ToString())
+		}
+		setTimeout('expression_@(fieldId)_setExpression(document.isEditMode);', 0);
+	</script>
+}

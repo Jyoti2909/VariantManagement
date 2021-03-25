@@ -1,0 +1,26 @@
+﻿<AML>
+ <Item type="Method" id="176A7CA23A034D86A2E995859F9BAB5B" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[var _mv_chb_id = document.fieldsTab && document.fieldsTab['versioning_discipline'] && document.fieldsTab['versioning_discipline'].slice(0, -4);
+var _usaChb_id = document.fieldsTab && document.fieldsTab['use_src_access'] && document.fieldsTab['use_src_access'].slice(0, -4);
+
+window['expression_' + _mv_chb_id + '_setExpression'] = function(isEditMode) {
+	var _mv_chb = window['field' + _mv_chb_id + 'Component'];
+	var _isVers = (aras.getItemProperty(document.item, 'is_versionable') === '1');
+	_mv_chb.setReadOnly(!isEditMode || !_isVers);
+};
+
+window['expression_' + _usaChb_id + '_setExpression'] = function(isEditMode) {
+	var _usa_chb = document.getElementById(_usaChb_id);
+	var _isRel = (aras.getItemProperty(document.item, 'is_relationship') === '1');
+	_usa_chb.disabled = (!isEditMode || !_isRel);
+};
+
+window['expression_' + _mv_chb_id + '_setExpression'](document.isEditMode);
+window['expression_' + _usaChb_id + '_setExpression'](document.isEditMode);
+]]></method_code>
+  <method_type>JavaScript</method_type>
+  <permission_id keyed_name="7F9ED38DB0064522BF99E1008E76D09F" type="Permission">7F9ED38DB0064522BF99E1008E76D09F</permission_id>
+  <name>OnLoad ItemType</name>
+ </Item>
+</AML>

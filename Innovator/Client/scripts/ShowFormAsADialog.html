@@ -1,0 +1,94 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2005-2013. -->
+<html>
+	<head>
+		<style type="text/css">
+			@import "../javascript/dojo/resources/dojo.css";
+			@import "../javascript/dijit/themes/claro/claro.css";
+			@import "../javascript/include.aspx?classes=common.css";
+			@import "../styles/common.min.css";
+
+			html,body{
+				overflow: hidden;
+				width   : 100%;
+				height  : 100%;
+				margin  : 0px;
+				padding : 0px;
+			}
+		</style>
+		<script>
+			var args = window.frameElement ? window.frameElement.dialogArguments : window.dialogArguments,
+				aras = (args && args.aras) ? args.aras : parent.aras;
+			window.dialogArguments = args;
+		</script>
+		<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules,ScriptSet2"></script>
+		<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="baseUrl:'../javascript/dojo'"></script>
+		<script type="text/javascript" src="../javascript/dialog.js"></script>
+		<script type="text/javascript">
+		var title = (args && args.title) ? args.title : "";
+		var relationshipsGridInfoProvider = {
+			getInstance: function(relshipsGridId){ return this; },
+			getMenu: function(){return null;},
+			waitForMenu: false
+		};
+		document.writeln("<base HREF=\"" + aras.getScriptsURL() + "\" />");
+		document.writeln("<title>" + title + "</title>");
+		var itemKey2RegisterWnd;
+		var item;
+		if (args.dialog) {
+			var close = function () {
+				var win = document.getElementById("formFrame").contentWindow;
+				args.dialog.close(win && win.returnValue ? win.returnValue : window.returnValue)
+			};
+		}
+		onload = function onload_handler() {
+			if (args && typeof(args.beforeOnload) === "function") {
+				args.beforeOnload(window);
+			}
+
+			if (!args || (!args.formId && !args.formNd)) {
+				var win = document.getElementById("formFrame").contentWindow;
+				document.body.setAttribute("bgcolor", "white");
+				var doc = win.document.open();
+				doc.write('<html><body><center>' + args.aras.getResource("", "ui_methods_ex.form_not_specified_for_you", 'edit') + '</center></body></html>');
+				doc.close();
+				return;
+			}
+
+			var formNd;
+			if (args.formId) {
+				formNd = aras.getFormForDisplay(args.formId);
+				if (!formNd) {
+					return;
+				}
+				formNd = formNd.node;
+			} else {
+				formNd = args.formNd;
+			}
+
+			item = args.item;
+
+			if (item && item.node && item.getAttribute("id"))
+			{
+				itemKey2RegisterWnd = item.getAttribute("id")+"_ShowFormAsADialog_"+aras.generateNewGUID();
+				aras.uiRegWindowEx(itemKey2RegisterWnd, window);
+			}
+
+			var win = document.getElementById("formFrame").contentWindow;
+			var formType = args.editType || "edit";
+			var itemNd = (item && item.node ? item.node : undefined);
+			aras.uiShowItemInFrameEx(win, itemNd, formType, 0, formNd, args.itemTypeNd);
+		};
+
+		window.addEventListener("unload", function () {
+			if (itemKey2RegisterWnd) {
+				aras.uiUnregWindowEx(itemKey2RegisterWnd, window);
+			}
+		});
+		</script>
+	</head>
+	<body class="claro">
+		<iframe id="dimmer_spinner" src="../scripts/spinner.html" style="display: none"></iframe>
+		<iframe height="100%" width="100%" id="formFrame" frameborder="0" scrolling="auto" src="blank.html"></iframe>
+	</body>
+</html>

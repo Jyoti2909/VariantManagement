@@ -1,0 +1,212 @@
+﻿<AML>
+ <Item type="Method" id="A41F1438A79643FD87C0D6D17333316C" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[Dim tmpInn As Innovator = Me.getInnovator()
+Dim actItm As Item
+Dim tmpNd As XmlNode
+Dim tmpNd2 As XmlElement
+Dim i As Integer
+Dim stepNum As Integer
+Dim ndsList As XmlNodeList
+Dim acts As Item = Me.getItemsByXPath("Item[@type='Activity2']")
+For i=0 To acts.getItemCount()-1
+  actItm = acts.getItemByIndex(i)
+  '+++ Activity2 Assignment and Activity2 Task may only use the update action
+  tmpNd = actItm.node.selectSingleNode("Relationships/Item[@type='Activity2 Assignment' or @type='Activity2 Task'][@action and @action!='update' and @action!='edit']")
+  If Not IsNothing(tmpNd) Then Return tmpInn.newError("Activity validation: Activity2 Assignment and Activity2 Task may only use the update action.")
+  '--- Activity2 Assignment and Activity2 Task may only use the update action
+  
+  '+++ Activity2 Deliverable and Activity2 Comments may use add, update and delete
+  tmpNd = actItm.node.selectSingleNode("Relationships/Item[@type='Activity2 Deliverable' or @type='Activity2 Comments'][@action and @action!='add' and @action!='update' and @action!='edit' and @action!='delete']")
+  If Not IsNothing(tmpNd) Then Return tmpInn.newError("Activity validation: Activity2 Deliverable and Activity2 Comments may only use add, update and delete.")
+  '--- Activity2 Deliverable and Activity2 Comments may use add, update and delete
+  
+  '+++ Percent complete must be an integer between 0 and 100 inclusive
+  Dim wrongValue As String
+  Dim j As Integer
+  Dim intRegEx As New System.Text.RegularExpressions.Regex("^[+-]?\d+$")
+  For stepNum=1 To 2
+  	'stepNum = 1 to check activity
+  	'stepNum = 2 to check assignments
+  	If stepNum=1 Then
+  	  ndsList = actItm.node.SelectNodes("percent_compl[string(node())!='']")
+  	Else
+  	  ndsList = actItm.node.SelectNodes("Relationships/Item[@type='Activity2 Assignment' and @action and string(percent_compl)!='']/percent_compl")
+  	End If
+  	wrongValue = Nothing
+    For Each tmpNd2 In ndsList
+      If Not intRegEx.isMatch(tmpNd2.InnerText) Then wrongValue = tmpNd2.InnerText
+      Try
+        j = CInt(tmpNd2.InnerText)
+      Catch e As Exception
+        wrongValue = tmpNd2.InnerText
+      End Try
+      If wrongValue<>"" Then Exit For
+      If j<0 OrElse j>100 Then
+        wrongValue = CStr(j)
+        Exit For
+      End If
+    Next tmpNd2
+    If Not IsNothing(wrongValue) Then Return tmpInn.newError("Activity validation: Percent complete must be an integer between 0 and 100 inclusive. Incorrect value: "+wrongValue)
+  Next stepNum
+  '--- Percent complete must be an integer between 0 and 100 inclusive
+  
+  '+++ Actual Start Date must be less than or equal to today
+  Dim dt As DateTime
+  Dim dt2 As DateTime
+  Dim sCntxt As I18NSessionContext = tmpInn.getI18NSessionContext()
+  Dim s As String
+  Dim ptrn As String = "yyyy-MM-ddTHH:mm:ss"
+  For stepNum=1 To 2
+  	If stepNum=1 Then
+  	  ndsList = actItm.node.SelectNodes("date_start_act[string(node())!='']")
+  	Else
+  	  ndsList = actItm.node.SelectNodes("Relationships/Item[@type='Activity2 Assignment' and @action and string(date_start_act)!='']/date_start_act")
+    End If
+    For Each tmpNd2 In ndsList
+      s = sCntxt.ConvertFromNeutral(tmpNd2.innerText, "date", ptrn)
+      Dim tzname As String = sCntxt.GetTimeZone()
+      dt2 = DateTime.UtcNow
+      Dim localTime As String = Aras.I18NUtils.DateTimeConverter.ToLocalString(tzname, dt2)
+      dt = DateTime.ParseExact(s, ptrn, DateTimeFormatInfo.InvariantInfo)
+      dt2 = DateTime.ParseExact(localTime, ptrn, DateTimeFormatInfo.InvariantInfo)
+      If dt.Year>dt2.Year OrElse (dt.Year=dt2.Year AndAlso dt.DayOfYear>dt2.DayOfYear) Then Return tmpInn.newError("Activity validation: Actual Start Date must be less than or equal to today. Incorrect value: "+sCntxt.ConvertFromNeutral(tmpNd2.innerText, "date", ""))
+    Next tmpNd2
+  Next stepNum
+  '--- Actual Start Date must be less than or equal to today
+  
+  '+++ Date To in related Time Records must be not less then Date From
+  Dim timeRecordItems As Item = actItm.getItemsByXPath("Relationships/Item[@type='Time Record'][string(date_from)!='' and string(date_to)!='']")
+  Dim timeRecordItm As Item
+  Dim recordIndex As Integer
+  'check properties of Time Records received from client
+  For recordIndex = 0 To timeRecordItems.getItemCount() - 1
+    timeRecordItm = timeRecordItems.getItemByIndex(recordIndex)
+    s = timeRecordItm.getProperty("date_from", "")
+    Dim date_from As Datetime = DateTime.Parse(s, System.Globalization.DateTimeFormatInfo.InvariantInfo)
+    s = timeRecordItm.getProperty("date_to", "")
+    Dim date_to As Datetime = DateTime.Parse(s, System.Globalization.DateTimeFormatInfo.InvariantInfo)
+    If date_from > date_to
+	  Return tmpInn.newError("Activity validation: Date To cannot be less than Date From in Time Records.")
+    End If
+  Next recordIndex
+  '--- Date To in related Time Records must be not less then Date From
+  
+  
+  Dim actStartDtPropNm As String = "date_start_act"
+  Dim act As String = actItm.getAttribute("action")
+  If IsNothing(act) Then act = ""
+  act = act.ToLower()
+  
+  '+++ If complete +++
+  If act="completeactivity" Then
+    'Actual Start Date must be specified    
+    If actItm.getProperty(actStartDtPropNm, "") = "" Then
+      Dim ndList As XmlNodeList = actItm.node.selectNodes("Relationships/Item[@type='Activity2 Assignment' and string(date_start_act)!='']")
+      If ndList.Count = 0 Then
+        Dim q3 As Item = tmpInn.newItem("tmp", "tmp")
+        q3.loadAML(String.Format("<Item type='Activity2 Assignment' action='get' select='id'><source_id>{0}</source_id><date_start_act condition='is not null'/></Item>", System.Security.SecurityElement.Escape(actItm.getAttribute("id"))))
+        q3 = q3.apply()
+        If q3.getItemCount() = 0 Then Return tmpInn.newError("Activity validation: Actual Start Date is not specified.")
+      End If
+    End If
+    
+    '+++ If Activity has Time Records related to then check Who, Date From, Date To, Hours props of these Time Records
+    Dim timeRecordItms As Item = actItm.getItemsByXPath("Relationships/Item[@type='Time Record']")
+    Dim checkedIds As New System.Collections.Specialized.StringCollection()
+    Dim chkProps() As [String] = {"work_identity", "date_from", "date_to", "work_hours"}
+
+    timeRecordItm = tmpInn.newItem("", "")
+    'check properties of Time Records received from client
+    For recordIndex = 0 To timeRecordItms.getItemCount() - 1
+      timeRecordItm = timeRecordItms.getItemByIndex(recordIndex)
+      checkedIds.Add(timeRecordItm.getID())
+      For Each propName As String In chkProps
+       If timeRecordItm.getProperty(propName, "") = ""
+         Return tmpInn.newError("Activity validation: Activity cannot be completed while Who, Date From, Date To, Hours properties of Time Records are empty .")
+       End If
+      Next propName
+    Next recordIndex
+    '+++ check Time Records stored in DB
+    Dim qItm As Item = tmpInn.newItem("", "")
+    'addition 'where' condition which will exclude Time Records received from client    
+    Dim addCondition As String = ""   
+    If (checkedIds.Count > 0) Then addCondition &= " AND [TIME_RECORD].id NOT IN("
+    For index As Integer = 0 To checkedIds.Count - 1
+      If (index > 0) Then addCondition &= ","
+      Dim checkedId As String = checkedIds(index)
+      checkedId = If(string.IsNullOrEmpty(checkedId), checkedId, checkedId.Replace("'", "''"))
+      checkedId = System.Security.SecurityElement.Escape(checkedId)
+      addCondition &= "'" & checkedId & "'"
+    Next index
+    If (checkedIds.Count > 0) Then addCondition &= ")"
+    Dim actItmId As String = actItm.getID()
+    actItmId = If(string.IsNullOrEmpty(actItmId), actItmId, actItmId.Replace("'", "''"))
+    actItmId = System.Security.SecurityElement.Escape(actItmId)
+    qItm.loadAML("<Item type=""Time Record"" action=""get"" where=""[TIME_RECORD].source_id='" & System.Security.SecurityElement.Escape(actItmId) & "'" & System.Security.SecurityElement.Escape(addCondition) & """ select=""" & System.Security.SecurityElement.Escape(Join(chkProps,",")) & """ />")
+    Dim resultItm As Item = qItm.apply()
+    For index As Integer = 0 To resultItm.getItemCount() - 1
+      For Each propName As String In chkProps
+       If resultItm.getItemByIndex(index).getProperty(propName, "") = ""
+         Return tmpInn.newError("Activity validation: Activity cannot be completed while Who, Date Trom, Date To, Hours properties of Time Records is empty .")
+       End If
+      Next propName
+    Next index        
+    '--- check Time Records stored in DB
+    '--- If Activity has Time Records related to then check Who, Date From, Date To, Hours props of these Time Records
+
+    '+++ If deliverable is required then check: does a deliverable exist +++
+    If actItm.getProperty("deliv_required", "") = "1" Then
+    tmpNd = actItm.node.SelectSingleNode("Relationships/Item[@type='Activity2 Deliverable' and @action!='delete']")
+    If IsNothing(tmpNd) Then
+      Dim delivs2DeleteNds As XmlNodeList = actItm.node.SelectNodes("Relationships/Item[@type='Activity2 Deliverable' and @action='delete']")
+      Dim delivs2DeleteIds As New ArrayList
+      For Each tmpNd2 In delivs2DeleteNds
+        delivs2DeleteIds.Add(tmpNd2.getAttribute("id"))
+      Next tmpNd2
+      
+      Dim q As Item = tmpInn.newItem("tmp", "tmp")
+      q.loadAML(String.Format("<Item type='Activity2 Deliverable' action='get' select='id'><source_id>{0}</source_id></Item>", System.Security.SecurityElement.Escape(actItm.getAttribute("id"))))
+      q = q.apply()
+      
+      Dim isError As Boolean = True
+      For j=0 To q.getItemCount()-1
+        If Not delivs2DeleteIds.Contains(q.getItemByIndex(j).getAttribute("id")) Then
+          isError = False
+          Exit For
+        End If
+      Next j
+      If (isError) Then Return tmpInn.newError("Activity validation: Required Deliverable does not exist for the activity.")
+    End If
+  End If
+    '--- If deliverable is required then check: does a deliverable exist ---
+  
+    '+++ If a task is required then check: is the task complete +++
+    Dim tmpNds As XmlNodeList = actItm.node.SelectNodes("Relationships/Item[@type='Activity2 Task']")
+    Dim startPointNd As XmlElement = Nothing
+    If tmpNds.Count<1 Then
+      Dim q As Item = tmpInn.newItem("tmp", "tmp")
+      q.loadAML(String.Format("<Item type='Activity2 Task' action='get' select='percent_compl,is_required'><source_id>{0}</source_id></Item>", System.Security.SecurityElement.Escape(actItm.getAttribute("id"))))
+      q = q.apply()
+      If q.getItemCount()>0 Then
+        startPointNd = CType(q.getItemByIndex(0).node.ParentNode, XmlElement)
+      End If
+    Else
+      startPointNd = CType(tmpNds.Item(0).ParentNode, XmlElement)
+    End If
+    If Not IsNothing(startPointNd) Then 
+      tmpNd = startPointNd.selectSingleNode("Item[@type='Activity2 Task'][string(is_required)='1'][string(percent_compl)!='100']")
+    Else
+      tmpNd = Nothing
+    End If
+    If Not IsNothing(tmpNd) Then Return tmpInn.newError("Activity validation: Required Task is not complete.")
+    '--- If a task is required then check: is the task complete ---    
+  End If
+  '--- If complete ---
+Next i
+
+Return tmpInn.newResult("ok")    ]]></method_code>
+  <method_type>VB</method_type>
+  <name>Activity2Update Validation</name>
+ </Item>
+</AML>

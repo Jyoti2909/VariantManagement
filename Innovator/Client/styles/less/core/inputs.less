@@ -1,0 +1,68 @@
+﻿@input-padding: 0.5833rem;
+@input-size: 2.667rem;
+
+.aras-input {
+	display: inline-block;
+	height: @input-size;
+	padding: @input-padding;
+	border: 1px solid @neutral-a;
+	background-color: @neutral-fb;
+	box-sizing: border-box;
+	box-shadow: @shadow-a-i;
+	font-size: 1.1667rem;
+	color: @neutral-3;
+	border-radius: 0.1667rem;
+
+	&::placeholder {
+		color: @neutral-7;
+	}
+
+	&:not(:disabled) {
+		&[readonly] {
+			border-color: fade(@neutral-a, 40);
+			background-color: fade(@neutral-fb, 40);
+			box-shadow: none;
+		}
+
+		&:hover {
+			background-color: @white;
+			border-color: @neutral-9;
+			box-shadow: @shadow-a-i;
+		}
+
+		&:focus {
+			outline: 0;
+			background-color: @white;
+			border-color: @color-14;
+			box-shadow: @shadow-b-i;
+		}
+
+		&.aras-input_invalid {
+			border-color: @red-700;
+		}
+	}
+
+	&:disabled {
+		background-color: @neutral-fb;
+		border-color: @neutral-a;
+		box-shadow: none;
+		opacity: 0.4;
+		cursor: default;
+	}
+
+	&-icon-wrapper {
+		position: relative;
+		.aras-input {
+			padding-left: 2.667rem;
+			&-icon {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 1.667rem;
+				height: 1.667rem;
+				margin: 0.5rem;
+				pointer-events: none;
+			}
+		}
+	}
+}

@@ -1,0 +1,51 @@
+﻿<AML>
+ <Item type="Method" id="698F82D31FF04C5AB9549229275561A2" action="add">
+  <comments>Update package after action 'Assign Team To Package'</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[string packageId = this.getPropertyAttribute("body", "packageId");
+string teamId = this.getPropertyAttribute("body", "teamId");
+
+Item package = this.newItem("FileExchangePackage", "get");
+package.setID(packageId);
+package.setProperty("select", "created_by_id");
+package = package.apply();
+if (package.isError())
+{
+	return package;	
+}
+string createdById = package.getProperty("created_by_id");
+
+string aml = "<Item type='Alias' action='get' select='related_id, from_date, end_date'>" +
+					"	<source_id>" + System.Security.SecurityElement.Escape(createdById) + "</source_id>" +
+					"	<related_id condition='is not null'></related_id>" +
+					"</Item>";
+Item query = this.newItem();
+query.loadAML(aml);
+query = query.apply();
+createdById = query.getRelatedItemID();
+if (!CCO.Permissions.UserHasRootOrAdminIdentity())
+{
+	string currentUserIdentities = Aras.Server.Security.Permissions.Current.IdentitiesList;
+	if (!CCO.Permissions.IdentityListHasId(currentUserIdentities, createdById))
+	{
+		throw new ArgumentException("Only administrators and creator can assign team to the package.");
+	}
+}
+
+package = this.newItem("FileExchangePackage", "edit");
+package.setID(packageId);
+package.setProperty("team_id", teamId);
+
+Aras.Server.Security.Identity identity = Aras.Server.Security.Identity.GetByName("Super User");
+bool permsWasSet = Aras.Server.Security.Permissions.GrantIdentity(identity);
+
+package = package.apply();
+
+if (permsWasSet)
+	Aras.Server.Security.Permissions.RevokeIdentity(identity);
+
+return package;]]></method_code>
+  <method_type>C#</method_type>
+  <name>FE_UpdatePackageAfterAssignTeam</name>
+ </Item>
+</AML>

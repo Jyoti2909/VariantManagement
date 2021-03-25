@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><script type="text/javascript" language="JavaScript">
+  //<![CDATA[
+  function reDo() {
+    if (innerWidth != origWidth || innerHeight != origHeight)
+      location.reload();
+  }
+  if ((parseInt(navigator.appVersion) == 4) && (navigator.appName == "Netscape")) {
+    origWidth = innerWidth;
+    origHeight = innerHeight;
+    onresize = reDo;
+  }
+  onerror = null;
+  //]]>
+</script>
+<style type="text/css">/*<![CDATA[*/
+
+  <!-- div.WebHelpPopupMenu {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    z-index: 4;
+    visibility: hidden;
+  }
+
+  p.WebHelpNavBar {
+    text-align: right;
+  }
+
+  -->
+
+/*]]>*/</style>
+
+<script type="text/javascript">//<![CDATA[
+
+  gRootRelPath = ".";
+  gCommonRootRelPath = ".";
+  gTopicId = "2";
+
+//]]></script>
+
+<script type="text/javascript" src="./template/scripts/rh.min.js"></script>
+<script type="text/javascript" src="./template/scripts/common.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topic.min.js"></script>
+<script type="text/javascript" src="./template/scripts/topicwidgets.min.js"></script>
+<link rel="stylesheet" type="text/css" href="./template/styles/topic.min.css"/>
+<link rel="stylesheet" type="text/css" href="assets/css/default.css"/>
+  <meta name="template" content="assets/masterpages/JAI_masterpage.htt"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <meta name="topic-check-list" content="Ran Smart Index"/>
+  <meta name="generator" content="Adobe RoboHelp 2019"/>
+  <title>Parts</title>
+  
+</head>
+<body>
+  <div>
+  <h1>Parts</h1>
+  <p class="Content_body">Parts are the basic item of any BOM management application, and can be one of the following classification types: Component, Assembly, Material, or Software. The classification can be extended, as needed, by your Aras Innovator system administrator. A part can be bought, or made in-house. It can have alternates and substitutes. It can have a Bill of Materials (<a class="glossterm" data-rhwidget="ExpandSpot" data-target="glossary">BOM</a><span class="expanding-content" data-targetname="glossary"> </span>) associated with it, a list of manufacturers (<a class="glossterm" data-rhwidget="ExpandSpot" data-target="glossary1">AML</a><span class="expanding-content" data-targetname="glossary1"> </span>) approved for making this part, a list of vendors (<a class="glossterm" data-rhwidget="ExpandSpot" data-target="glossary2">AVL</a><span class="expanding-content" data-targetname="glossary2"> </span>) approved for purchasing this part, a list of documents (such as drawings or specs) associated with the part, and many other options.</p>
+  <p class="Content_body">The following is the underlying Data Model for a Part. Each of the relationships shown in the figure is described in detail in other topics.</p>
+  <p class="Content_body_indented"><img alt="" class="Image" src="assets/images/images/PartDataModel.jpg" style="width: 100%; max-width: 477px;"/></p>
+  <p class="Figure_indented"> </p>
+  <p class="Content_body">The Part is the central item in the diagram above. Going up the tree, you see that a part, usually a top level assembly, will be associated with a Model. A <a href="plm_products.htm">Product</a> can contain more than one Model. If we take the Ford Motor Company for an example, a product could be anything that is bought by the customer, such as a Ford Mustang. One of the models would be GT, and that, in turn, would be associated with a specific Part that is internal to the company.</p>
+  <p class="Content_body">Parts that represent a combination of components have a BOM (Bill of Materials) relationship with other parts. For example, in the Mustang GT parent part, the BOM might contain child parts like engine, body, tires, etc. For each child part listed in the BOM relationship, you can define a Substitute part to be used for that specific assembly. If the parent part is an electrical component, such as a circuit board, and its BOM child parts contain say resistors, you can define the specific instances and their reference designators in the Instance parts.</p>
+  <p class="Content_body">Each Part can have an alternate part or parts, which acts like a substitute part, except that the alternate applies to all assemblies where the part is used.</p>
+  <p class="Content_body">Each Part can have a list of documents associated with it, such as specifications, drawings, diagrams, and anything else. Each document is stored in a specific File, which is also attached to the parent Part.</p>
+  <p class="Content_body">If the Part is bought, the AML stores the corresponding manufactured part, as well as the manufacturer who produces it and the vendor who sells it. Of course there may be more than one manufacturer or vendor for any given Part.</p>
+  <p class="Content_body">Each Part can have a cost and weight goals associated with it. The actual cost/weight can then be tracked and compared to the goals. Goals may also be &quot;rolled up&quot; from a BOM.</p>
+  <p class="Content_body">Here is a basic path of part creation:</p>
+  <ol class="Decimal">
+    <li><a href="Create_a_part.htm" title="How to create a basic part">Create a part</a></li>
+    <li>
+      <p class="Content_body">Create a <a href="Create_a_BOM.htm" style="background-color: transparent;">BOM</a> for a part</p>
+    </li>
+    <li>
+      <p class="Content_body">Create <a href="Allternates.htm">Alternates</a> list for a part</p>
+    </li>
+    <li>
+      <p class="Content_body">Create an <a href="AML.htm" style="background-color: transparent;">AML</a> for a part</p>
+    </li>
+    <li>
+      <p class="Content_body">Create a <a href="Create_document_from_Part.htm">Documents</a> list for a part.</p>
+    </li>
+    <li>
+      <p class="Content_body">Update design and manufacturing <a href="Goals.htm">Goals</a> for a part.</p>
+    </li>
+  </ol>
+  <p class="Content_body">Each part also has a life cycle associated with it, as shown here.</p>
+  <p class="Content_body_indented"><img src="assets/images/Arasplm.jpg" style="width: 100%; max-width: 859px;"/></p>
+  <p class="Figure_indented"> </p>
+  <p class="Content_body">For a Part, the life cycle is controlled automatically by the workflow of an <a class="glossterm" data-rhwidget="ExpandSpot" data-target="glossary3">ECN</a><span class="expanding-content" data-targetname="glossary3"> </span> where this part appears on the affected items list.  When a part is first created, it is automatically given the Preliminary state. To release a Part, see <a href="plm_the_ecn.htm">The ECN</a> in the Change Management book.</p>
+
+</div>
+  <div>
+    <p class="Bulleted_list"> </p>
+    <p class="Bulleted_list" style="font-size: 8pt; font-weight: bold;">©2020 Aras Corporation - All Rights Reserved</p>
+  </div>
+
+</body></html>

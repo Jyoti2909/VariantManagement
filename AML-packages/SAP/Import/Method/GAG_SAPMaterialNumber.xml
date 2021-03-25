@@ -1,0 +1,93 @@
+﻿<AML>
+ <Item type="Method" id="EB2CAB3D9032482FA2399227BF0446A9" action="add">
+  <comments>Method to fetch Material number</comments>
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+			return businessLogic.Run(this);
+}
+
+		//[PartialPath("BusinessLogic/BusinessLogic")]
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dataAccessLayer)
+			{
+				_dal = dataAccessLayer;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				string userName = contextItem.getProperty("user_name");
+				string password = contextItem.getProperty("user_password");
+				string materialType = contextItem.getProperty("material_type");
+
+				Item queryPart = _dal.NewItem("GAG_SAPInterfaceSettings", "get");
+				queryPart.setProperty("gag_active", "Yes");
+				Item queryResult = queryPart.apply();
+				if (queryResult.isEmpty())
+				{
+					return _dal.NewError("No SAP Connection Found. Contact Admin.");
+				}
+				else
+				{
+					Item result = GetSAPNumber(userName, password, materialType, queryResult);
+					return result;
+				}
+			}
+
+			private Item GetSAPNumber(string userName, string password, string materialType, Item interfaceResult)
+			{
+				try
+				{
+					using (RfcConfigParameters parameters = new RfcConfigParameters())
+					{
+						Item sapConnectionResult = interfaceResult.getItemByIndex(0);
+						parameters[RfcConfigParameters.Name] = sapConnectionResult.getProperty("gag_name");
+						parameters[RfcConfigParameters.User] = userName;
+						parameters[RfcConfigParameters.Password] = password;
+						parameters[RfcConfigParameters.PeakConnectionsLimit] = sapConnectionResult.getProperty("gag_peak_connection_limit");
+						parameters[RfcConfigParameters.ConnectionIdleTimeout] = sapConnectionResult.getProperty("gag_connection_idle_time_out");
+						parameters[RfcConfigParameters.Language] = sapConnectionResult.getProperty("gag_language");
+						parameters[RfcConfigParameters.AppServerHost] = sapConnectionResult.getProperty("gag_app_server_host");
+						parameters[RfcConfigParameters.SystemNumber] = sapConnectionResult.getProperty("gag_system_number");
+						parameters[RfcConfigParameters.Client] = sapConnectionResult.getProperty("gag_client");
+
+						RfcDestination destination = RfcDestinationManager.GetDestination(parameters);
+						RfcSessionManager.BeginContext(destination);
+						destination.Ping();
+
+						IRfcFunction materialNumber = destination.Repository.CreateFunction("BAPI_STDMATERIAL_GETINTNUMBER");
+						materialNumber.SetValue("MATERIAL_TYPE", materialType);
+						materialNumber.Invoke(destination);
+
+						IRfcTable exportTable = materialNumber.GetTable("MATERIAL_NUMBER");
+						string sapNumber = (string)exportTable.GetValue("MATERIAL");
+
+						Item result = _dal.NewResult("Connection Successful" + " " + sapNumber);
+						return result;
+					}
+				}
+				catch (RfcCommunicationException)
+				{
+					return _dal.NewError("Server communication error.");
+				}
+				catch (RfcLogonException)
+				{
+					return _dal.NewError("SAP Username or Password is incorrect.");
+				}
+				catch (RfcAbapRuntimeException)
+				{
+					return _dal.NewError("SAP ABAP Runtime error.");
+				}
+				catch (RfcAbapBaseException)
+				{
+					return _dal.NewError("SAP Authorisation Error.");
+				}
+			}
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_SAPMaterialNumber</name>
+ </Item>
+</AML>

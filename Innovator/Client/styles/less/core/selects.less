@@ -1,0 +1,129 @@
+﻿@select-size: 1.667rem;
+@select-padding: 0 @select-size + 1/3rem 0 1/3rem;
+@select-bg: @controls-bg;
+
+.aras-form select:not([multiple='']) {
+	display: inline-block;
+	padding: @select-padding;
+	border-radius: 0;
+	border: 1px solid @border-color;
+	height: @select-size;
+	appearance: none;
+	.background-svg('dropdown-arrow', @blue);
+	background-color: @select-bg;
+
+	&:required option:disabled {
+		display: none;
+	}
+	&:hover {
+		.background-svg('dropdown-arrow', @blue-hover);
+		background-color: @select-bg;
+	}
+
+	&:focus {
+		border: 1px dotted @border-color;
+		outline: none;
+	}
+
+	&:disabled {
+		color: @font-color-disable;
+		border-color: @gray-disable;
+		.background-svg('dropdown-arrow', @gray-disable);
+		background-color: @select-bg;
+	}
+
+	&:invalid {
+		color: @font-color-disable;
+		font-style: italic;
+
+		& option {
+			color: @font-color;
+			font-style: normal;
+		}
+	}
+
+	&::-ms-expand {
+		display: none;
+	}
+}
+
+.aras-select {
+	position: relative;
+	font: @font-12-med;
+
+	&__text {
+		padding: 0 4px;
+		color: @neutral-3;
+		pointer-events: none;
+	}
+
+	&__container {
+		position: relative;
+		display: inline-block;
+		border: 1px solid @neutral-a;
+		border-radius: 2px;
+		box-shadow: @shadow-a-i;
+		outline: none;
+		background-color: @neutral-fb;
+
+		select {
+			appearance: none;
+			border: none;
+			outline: none;
+			background: transparent;
+			height: 2.5rem;
+			padding: 8px 32px 6px 8px;
+			font: @font-14-med;
+			color: @neutral-3;
+		}
+		select::-ms-expand {
+			display: none;
+		}
+		select::-ms-value {
+			background: none;
+			color: @neutral-3;
+		}
+		.aras-select__button:extend(.aras-button-select all) {
+			pointer-events: none;
+		}
+	}
+
+	&_disabled {
+		opacity: 0.4;
+
+		.aras-select__container {
+			select {
+				box-shadow: none;
+				color: @neutral-a;
+			}
+
+			.aras-select__button {
+				background: none;
+				box-shadow: none;
+			}
+		}
+	}
+
+	&:not(&_disabled) {
+		.aras-select__container {
+			&:hover {
+				border-color: @neutral-9;
+				background-color: @white;
+
+				.aras-select__button {
+					background-color: @color-2;
+				}
+			}
+
+			&:active {
+				border-color: @color-14;
+				background-color: @white;
+				box-shadow: @shadow-b-i;
+
+				.aras-select__button {
+					border: 1px solid @indigo-900;
+				}
+			}
+		}
+	}
+}

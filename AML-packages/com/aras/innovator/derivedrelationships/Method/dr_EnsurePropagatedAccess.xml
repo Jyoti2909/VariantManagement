@@ -1,0 +1,154 @@
+﻿<AML>
+ <Item type="Method" id="4621FA5EF79A47F8A6367298F141623E" action="add">
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[//MethodTemplateName=CSharp:Aras.Public.Events.EventHandler<Aras.DerivedRelationships.Api.PersistRelationshipsEventArgs>;
+if (eventArgs.NewRelationships == null || !eventArgs.NewRelationships.Any())
+{
+	// No new relationships, no need to verify access propagation.
+	return;
+}
+
+if (eventArgs.PersistenceKind != Aras.DerivedRelationships.Api.PersistenceKind.Regular)
+{
+	return; // No need to verify access in cases like Remediation or SystemTemporary where new relationships will be removed later in the request.
+}
+
+if (!IsDacOverDrfActive(eventArgs.DerivedRelationshipFamilyInfo.DerivedRelationshipFamilyId))
+{
+	return;
+}
+
+var eventDataDocument = Innovator.newXMLDocument();
+eventDataDocument.LoadXml(eventArgs.EventData);
+
+string[] accessTypes = eventDataDocument.SelectSingleNode("/data/access_types").InnerText.Split(',');
+string drsString = eventDataDocument.SelectSingleNode("/data/derived_relationship_ids")?.InnerText;
+string[] derivedRelationshipIds = string.IsNullOrEmpty(drsString) ? new string[0] : drsString.Split(',');
+
+var itemChangesIdsByItemTypeName =
+	eventArgs.ItemChanges.GroupBy(gr => gr.ItemTypeName).ToDictionary(gr => gr.Key, gr => gr.Select(g => g.ItemId));
+
+var idsToCheckAccessByDRId = eventArgs.NewRelationships
+			.Where(rel => !derivedRelationshipIds.Any() || derivedRelationshipIds.Contains(rel.DerivedRelationshipId))
+			.GroupBy(gr => gr.DerivedRelationshipId)
+			.ToDictionary(gr => gr.Key, gr => gr.Select(g => g.DestinationId));
+
+if (!idsToCheckAccessByDRId.Any())
+{
+	return; // Further processing does not make sense. Exit for performance reasons
+}
+
+var allItemChanges = idsToCheckAccessByDRId.Values.SelectMany(v => v).ToHashSet();
+// filter out changes to avoid redundant identity grants
+var itemChangesFiltered = eventArgs.ItemChanges
+	   .Where(change => allItemChanges.Contains(change.ItemId)).ToArray();
+
+// to mitigate access check failure in use cases like “Part Item is promoted under Aras PLM Identity”
+var grantedIdentityIdsIntersection = GetGrantedIdentityIdsIntersection(itemChangesFiltered);
+GrantIdentitiesIntersection(grantedIdentityIdsIntersection);
+
+foreach (KeyValuePair<string, IEnumerable<string>> keyValue in idsToCheckAccessByDRId)
+{
+	var derivedRelationshipId = keyValue.Key;
+	var derivedRelationshipInfo = eventArgs.DerivedRelationshipFamilyInfo.DerivedRelationshipInfos.First(info => info.DerivedRelationshipId == derivedRelationshipId);
+	IEnumerable<string> itemIdsToCheckAccess = keyValue.Value;
+	// we treat changed items as "already have access". So, filter out them:
+	if (itemChangesIdsByItemTypeName.TryGetValue(derivedRelationshipInfo.DestinationItemTypeName, out var itemChanges))
+	{
+		itemIdsToCheckAccess = itemIdsToCheckAccess.Except(itemChanges);
+	}
+
+	if (!itemIdsToCheckAccess.Any())
+	{
+		// Further processing does not make sense. Continue
+		continue;
+	}
+
+	Item query = Innovator.newItem(derivedRelationshipInfo.DestinationItemTypeName, "getPermissions");
+	var accessTypesToCheck = accessTypes.ToList();
+	const string canDiscoverAccessType = "can_discover";
+	// replace can_discover to can_get if ItemType.enforce_discovery==0 because can_discover does not make sense in this case
+	if (!derivedRelationshipInfo.DestinationItemTypeEnforceDiscovery && accessTypesToCheck.Contains(canDiscoverAccessType))
+	{
+		accessTypesToCheck.Remove(canDiscoverAccessType);
+		accessTypesToCheck.Add("can_get");
+	}
+
+	query.setAttribute("access_type", string.Join("|", accessTypesToCheck));
+	query.setAttribute("idlist", string.Join(",", itemIdsToCheckAccess));
+	Item result = query.apply();
+	if (result.isError())
+	{
+		throw new Aras.Server.Core.InnovatorServerException(result.getErrorString());
+	}
+
+	int count = result.getItemCount();
+	for (int i = 0; i < count; i++)
+	{
+		var targetItem = result.getItemByIndex(i);
+		string noAccess = accessTypesToCheck.FirstOrDefault(accessType => targetItem.getProperty(accessType) != "1");
+		if (!string.IsNullOrEmpty(noAccess))
+		{
+			string faultString = CCO.ErrorLookup.Lookup("dr_InsufficientPermissionsException", noAccess);
+			throw new Aras.Server.Core.InnovatorServerException(faultString);
+		}
+	}
+}
+
+RevokeIdentitiesIntersection(grantedIdentityIdsIntersection);
+}
+
+private HashSet<string> GetGrantedIdentityIdsIntersection(IEnumerable<Aras.DerivedRelationships.Api.ItemChange> itemChanges)
+{
+	HashSet<string> grantedIdentityIdsIntersection = null;
+	foreach (var itemChange in itemChanges)
+	{
+		var ids = itemChange
+			.UserIdentitiesGrantedId
+			.Where(kv => kv.Value == Aras.DerivedRelationships.Api.Enums.IdentityGrant.Granted)
+			.Select(kv => kv.Key);
+		if (grantedIdentityIdsIntersection == null)
+		{
+            grantedIdentityIdsIntersection = new HashSet<string>(ids);
+		}
+		else
+		{
+            grantedIdentityIdsIntersection.IntersectWith(ids);
+		}
+	}
+	return grantedIdentityIdsIntersection ?? new HashSet<string>();
+}
+
+private void GrantIdentitiesIntersection(IEnumerable<string> idsToGrantAccess)
+{
+	foreach (string id in idsToGrantAccess)
+	{
+		var identity = Aras.Server.Security.Identity.GetById(id);
+		Aras.Server.Security.Permissions.GrantIdentity(identity);
+	}
+}
+
+private void RevokeIdentitiesIntersection(IEnumerable<string> idsToRevokeAccess)
+{
+	foreach (string id in idsToRevokeAccess)
+	{
+		var identity = Aras.Server.Security.Identity.GetById(id);
+		Aras.Server.Security.Permissions.RevokeIdentity(identity);
+	}
+}
+
+private const string FindActiveDacByDrfQuery = @"
+SELECT ID
+FROM innovator.DAC_DOMAINDEFINITION
+WHERE [STATE] = 'Active'
+	AND DR_RELATIONSHIPFAMILY_ID = '{0}'";
+	
+private bool IsDacOverDrfActive(string drfId)
+{
+	string query = string.Format(FindActiveDacByDrfQuery, CCO.DB.InnDatabase.QuoteValue(drfId));
+	Aras.Server.Core.InnovatorDataSet rs = CCO.DB.InnDatabase.ExecuteSelectCommand(query);
+	return rs.HasRows;]]></method_code>
+  <method_type>C#</method_type>
+  <name>dr_EnsurePropagatedAccess</name>
+ </Item>
+</AML>

@@ -1,0 +1,135 @@
+﻿<xs:schema xmlns="http://www.aras.com/TechDocExample" targetNamespace="http://www.aras.com/TechDocExample" xmlns:aras="http://aras.com/ArasTechDoc" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+	<xs:import namespace="http://www.w3.org/XML/1998/namespace"/>
+	<xs:import namespace="http://aras.com/ArasTechDoc"/>
+
+	<xs:element name="Standard-Doc">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="Title"/>
+				<xs:element ref="Subtitle" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="Section"  minOccurs="0" maxOccurs="unbounded"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Section">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="Title" minOccurs="1" maxOccurs="1"/>
+				<xs:choice maxOccurs="unbounded">
+					<xs:element ref="Text"/>
+					<xs:element ref="List"/>
+					<xs:element ref="Table"/>
+					<xs:element ref="Graphic-Block"/>
+				</xs:choice>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Graphic-Block">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element ref="Graphic" minOccurs="0" maxOccurs="1"/>
+				<xs:element ref="Label" minOccurs="0" maxOccurs="1"/>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Label">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="aras:text">
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Graphic">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="aras:imageType">
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Title">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="aras:text">
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Subtitle">
+		<xs:complexType mixed="true"/>
+	</xs:element>
+
+	<xs:element name="Text">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="aras:text">
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="List">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="aras:list">
+					<xs:choice maxOccurs="unbounded">
+						<xs:element ref="List-Item" minOccurs="1" maxOccurs="unbounded"/>
+					</xs:choice>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="List-Item">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="aras:listitemType">
+					<xs:choice maxOccurs="unbounded">
+						<xs:element ref="Text" />
+						<xs:element ref="Graphic"/>
+						<xs:element ref="List"/>
+					</xs:choice>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Table">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="aras:table">
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Row" substitutionGroup="aras:tablerow">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="aras:tr"></xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Entry" substitutionGroup="aras:tablecell">
+		<xs:complexType>
+			<xs:complexContent>
+				<xs:extension base="aras:td">
+					<xs:choice minOccurs="0" maxOccurs="unbounded">
+						<xs:element ref="Text" minOccurs="0" maxOccurs="unbounded"/>
+						<xs:element ref="List"/>
+						<xs:element ref="Graphic"/>
+					</xs:choice>
+				</xs:extension>
+			</xs:complexContent>
+		</xs:complexType>
+	</xs:element>
+
+</xs:schema>

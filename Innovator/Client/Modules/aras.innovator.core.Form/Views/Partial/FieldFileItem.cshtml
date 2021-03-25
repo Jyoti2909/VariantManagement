@@ -1,0 +1,316 @@
+﻿@using System
+@using Models.Helpers
+@using Aras.Client.Core
+@model Models.FieldRenderModel
+
+@{
+	var fieldId = Model.FieldNode.Id;
+	var fieldName = Model.FieldNode.Name;
+	var propertyName = !Model.PropertyNode.IsNull ? Model.PropertyNode.Name : null;
+	var fieldSizeInfo = MethodsExUtils.UiGetFieldSizeInfo(Model.FieldNode);
+	var tabIndex = Model.FieldNode.TabStop ? Model.FieldNode.TabIndex.Value : "-1";
+	var isFormEditorField = (Model.Mode == "edit_form" || Model.Mode == "view_form");
+	var isForeign = !Model.PropertyNode.IsNull && !Model.PropertyNode.ForeignProperty.IsNull;
+	var userOnClick = String.Empty;
+	var refreshFunctionName = "system_" + fieldId + "_refreshField";
+	var selectFileString = MethodsExUtils.GetResource(Model.ResourceNode, "file_management.select_and_upload_file");
+	var manageFileString = MethodsExUtils.GetResource(Model.ResourceNode, "file_management.manage_file_property");
+	var funcName = String.Empty;
+	var methodCode = String.Empty;
+	var spanOnclick = String.Empty;
+	var assignedFieldEvents = String.Empty;
+	var isDisabled = Model.FieldNode.IsDisabled;
+	var isReadonly = Model.PropertyNode.ReadOnly;
+	var selectFileButtonClass = "imageButton selectButton";
+	var selectFileLinkClass = "sys_item_link";
+
+	selectFileButtonClass += isDisabled ? " selectButtonDisabled" : "";
+	selectFileLinkClass += isDisabled ? " selectButtonDisabled" : "";
+	selectFileButtonClass += isReadonly ? " selectButtonReadonly" : "";
+	selectFileLinkClass += isReadonly ? " selectButtonReadonly" : "";
+
+	if (!isFormEditorField)
+	{
+		if (Model.Mode != "search")
+		{
+			assignedFieldEvents = MethodsExUtils.AssignFieldEventEx(Model.FieldNode, "onclick", null);
+		}
+
+		spanOnclick += Environment.NewLine + "onclick = '" + Environment.NewLine;
+		methodCode = MethodsExUtils.GetEventHandlerCode(Model.FieldNode, "onclick", true, "return true;");
+
+
+		if (methodCode != "return true;")
+		{
+			funcName = "user_" + fieldId + "_onclick";
+			userOnClick = "<script type=\"text/javascript\">" + Environment.NewLine +
+			"function " + funcName + " (event) {" + Environment.NewLine
+				+ methodCode + "/*Fix for mistakes with missed closing comments brackets*/ }" + Environment.NewLine +
+			"</script>" + Environment.NewLine;
+			spanOnclick += "var ures = " + funcName + "(event);" + Environment.NewLine +
+			"if (ures) {" + Environment.NewLine;
+		}
+
+		if (!Model.PropertyNode.IsNull && !String.IsNullOrEmpty(propertyName))
+		{
+			var dataSource = Model.PropertyNode.DataSource;
+			var dataSourceName = dataSource != null ? dataSource.Name : "";
+
+			if (!String.IsNullOrEmpty(dataSourceName))
+			{
+				spanOnclick += @"
+					var elem = event.srcElement || event.target,
+						isAltPress = event.altKey,
+						isForeign = " + (isForeign ? "true" : "false") + @",
+						fieldPropertyName = """ + propertyName + @""",
+						propertyValue = observersHash.getElementById(fieldPropertyName + ""_system"").value,
+						controlName = elem.id.replace(""" + fieldId + @"_"", """"),
+						isFieldDisabled = " + (isDisabled ? "true" : "false") + @",
+						isFieldReadonly = " + (isReadonly ? "true" : "false") + @";
+
+					if (controlName == ""ViewFileLink"") {
+						var itemNode = aras.getItemById(""" + dataSourceName + @""", propertyValue, 0);
+						if (itemNode && !aras.isTempEx(itemNode)) {
+							aras.uiShowItemEx(itemNode, undefined);
+						}
+					}
+					else if (controlName == ""SelectFile"" || controlName == ""SelectFileLink"") {
+						function processAddingFile(file) {
+							var selectedFile = isAltPress ? aras.SelectFileFromPackage(""FE_SelectFileFromPackage"", false) : aras.newItem(""File"", file);
+							if (selectedFile) {
+								aras.itemsCache.addItem(selectedFile);
+								if (window.handleItemChange) handleItemChange(fieldPropertyName, selectedFile);
+								var topWnd = aras.getMostTopWindowWithAras(window);
+								if (topWnd.updateMenuState) topWnd.updateMenuState();
+								var el = window.document.getElementById(""" + fieldId + @""");
+								if (el.fireEvent) {
+									el.fireEvent(""onchange"");
+								}
+								else {
+									var eventObj = window.document.createEvent(""Event"");
+									eventObj.initEvent(""change"", true, true);
+									el.dispatchEvent(eventObj);
+								}
+							}
+						}
+						if (isFieldDisabled || isFieldReadonly) {
+							return;
+						}
+						aras.vault.selectFile().then(processAddingFile);
+					}
+					else if (controlName == ""ManageFile"") {
+						var self = window, selfDoc = window.document;
+						var onChangeHandler = function (newValue) {
+							if (self.handleItemChange) self.handleItemChange(fieldPropertyName, newValue);
+							if (self.aras.getMostTopWindowWithAras(window).updateMenuState) self.aras.getMostTopWindowWithAras(window).updateMenuState();
+							var el = selfDoc.getElementById(""" + fieldId + @""");
+							if (el.fireEvent) {
+								el.fireEvent(""onchange"");
+							}
+							else {
+								var eventObj = selfDoc.createEvent(""Event"");
+
+								eventObj.initEvent(""change"", true, true);
+								el.dispatchEvent(eventObj);
+							}
+						}
+
+					var params = {aras: aras, editable: window.document.isEditMode && !isForeign && !isFieldDisabled && !isFieldReadonly, onchange: onChangeHandler};
+					var fileNodeSource = window.document.item.selectSingleNode(""" + propertyName + @"/Item"");
+					if (fileNodeSource && fileNodeSource.getAttribute(""action"") === ""copyAsNew"") {
+						fileItem = aras.newIOMItem(""File"", ""copyAsNew"");
+						fileItem.setID(fileNodeSource.getAttribute(""id""));
+						fileItem.removeAttribute(""isTemp"");
+						fileItem.removeAttribute(""isNew"");
+						fileItem.setProperty(""file_size"", aras.getItemProperty(fileNodeSource, ""file_size""));
+						fileItem.setProperty(""file_type"", aras.getItemProperty(fileNodeSource, ""file_type""));
+						fileItem.setProperty(""filename"", aras.getItemProperty(fileNodeSource, ""filename""));
+						fileItem.setAttribute(""source_filename"", aras.getItemProperty(aras.getItemById(""File"", propertyValue, 0), ""filename""));
+						params.fileNode = fileItem.node;
+					} else {
+						params.fileId = propertyValue;
+					}
+
+						params.type = ""ManageFileProperty"";
+						aras.getMostTopWindowWithAras(window).ArasModules.Dialog.show(""iframe"", params).promise.then(function (res) {
+							if (res) {
+								onChangeHandler(res);
+							} else {
+								self.focus();
+							}
+							window.filename = res;
+						});
+					}
+				";
+			}
+		}
+
+		if (methodCode != "return true;")
+		{
+			spanOnclick += "}";
+		}
+		spanOnclick += "'";
+	}
+    
+	<span id="@fieldId" name="@fieldName" class="filePropertyContainer @fieldName" 
+		@Html.Raw(assignedFieldEvents)
+		@Html.Raw((!isFormEditorField) ? " building=\"true\" " : "") @fieldSizeInfo.Attribute 
+		style="@((!@isFormEditorField ? "visibility:hidden;" : "") + fieldSizeInfo.Style)" @Html.Raw(spanOnclick)>
+	@if (!isFormEditorField)
+	{
+
+			<div id="@Html.Raw(fieldId)_SelectFile" class="@selectFileButtonClass" title="@selectFileString"></div>
+			<div id="@Html.Raw(fieldId)_ManageFile" class="imageButton manageButton" title="@manageFileString"></div>
+			<span class="@selectFileLinkClass" id="@Html.Raw(fieldId)_SelectFileLink" style="margin-left:2px;" @Html.Raw(!string.IsNullOrEmpty(tabIndex) ? " tabindex=\"" + tabIndex + "\"" : "") title="@selectFileString">@selectFileString</span>
+			<span class="sys_item_link" id="@Html.Raw(fieldId)_ViewFileLink" style="margin-left:2px;" @Html.Raw(!string.IsNullOrEmpty(tabIndex) ? " tabindex=\"" + tabIndex + "\"" : "") ></span>
+	}
+	else
+	{
+			<span>
+				<div id="@Html.Raw(fieldId)_SelectFile" class="imageButton selectButton" title="@selectFileString" ></div>
+				<div id="@Html.Raw(fieldId)_ManageFile" class="imageButton manageButton" title="@manageFileString" ></div>
+				<span class="sys_item_link" style="margin-left:2px;" @Html.Raw(!string.IsNullOrEmpty(tabIndex) ? " tabindex=\"" + tabIndex + "\"" : "") title="@selectFileString">@selectFileString</span>
+			</span>
+	}
+	</span>
+	if (!isFormEditorField)
+	{
+		var zIndex = Model.FieldNode.ZIndex.IsNull ? 100 : (Int32.Parse(Model.FieldNode.ZIndex.Value) + 1);
+		<div id="@Html.Raw(fieldId)_dropbox" class="dropbox" style="display: none; position: absolute; right: 0; bottom: 0; top: 0; left: 0; z-index: @(zIndex); background-color: rgba(255, 255, 255, 0.9); border: 1px dashed rgb(179, 179, 179);"></div>
+		<script>
+			document.addEventListener("DOMContentLoaded", function () {
+				var dropbox = document.getElementById("@Html.Raw(fieldId)_dropbox");
+				var dropboxHandlers = {
+					onDragBrowserEnter: function (e) {
+						var isFilesDragged = e.dataTransfer && (!e.dataTransfer.types || (e.dataTransfer.types.contains ? e.dataTransfer.types.contains("Files") : e.dataTransfer.types.indexOf("Files") >= 0));
+						var isFieldDisabled = @(isDisabled ? "true" : "false");
+						var isFieldReadonly = @(isReadonly ? "true" : "false");
+						if (!isFieldDisabled && !isFieldReadonly && isFilesDragged && document.isEditMode) {
+							dropbox.style.display = "block";
+						}
+					},
+					onDragBrowserLeave: function () { dropbox.style.display = "none"; },
+					dropPriority: 5
+				};
+				dragManager.addDropbox(dropboxHandlers);
+				dropbox.addEventListener('dragover', function (e) {
+					e.dataTransfer.dropEffect = 'copy';
+					e.preventDefault();
+					e.stopPropagation();
+				});
+				function processFile(filePath){
+					var fieldPropertyName = "@Html.Raw(propertyName)";
+					var selectedFile = aras.newItem("File", filePath);
+					if (selectedFile) {
+						aras.itemsCache.addItem(selectedFile);
+						if (window.handleItemChange) {
+							window.handleItemChange(fieldPropertyName, selectedFile);
+						}
+						if (aras.getMostTopWindowWithAras(window).updateMenuState) {
+							aras.getMostTopWindowWithAras(window).updateMenuState();
+						}
+						var el = window.document.getElementById("@Html.Raw(fieldId)");
+						if (el.fireEvent) {
+							el.fireEvent("onchange");
+						} else {
+							var eventObj = window.document.createEvent("Event");
+							eventObj.initEvent("change", true, true);
+							el.dispatchEvent(eventObj);
+						}
+					}
+				}
+				dropbox.addEventListener('drop', function (e) {
+					var file = e.dataTransfer.files[0];
+					processFile(file);
+				});
+			});
+		</script>
+	}
+
+	if (!isFormEditorField)
+	{
+		@Html.Raw(userOnClick)
+	}
+
+	if (propertyName != null && !isFormEditorField)
+	{
+		funcName = "system_" + fieldId + "_value";
+		<script type="text/javascript">
+			function @(refreshFunctionName)(isEditMode, isTempItem) {
+				var fieldId = "@fieldId",
+						itemSpan = window.document.getElementById(fieldId),
+						selectFileButton = window.document.getElementById(fieldId + "_SelectFile"),
+						selectFileLink = window.document.getElementById(fieldId + "_SelectFileLink"),
+						manageFileButton = window.document.getElementById(fieldId + "_ManageFile"),
+						fileViewLink = window.document.getElementById(fieldId + "_ViewFileLink"),
+			 			isForeign = @(isForeign ? "true" : "false"),
+						propertyValue = observersHash.getElementById("@Html.Raw(propertyName)_system").value,
+						isTemp = false;
+
+				var fileItem = window.document.item.selectSingleNode("@(propertyName)/Item");
+				if(fileItem){
+					isTemp = aras.isTempEx(fileItem);
+				}
+
+				if (itemSpan && itemSpan.attributes["building"]) {
+					itemSpan.style.visibility = "";
+					itemSpan.removeAttribute("building");
+				}
+				if (selectFileButton) {
+					selectFileButton.style.display = (isEditMode && !isForeign && !propertyValue) ? "inline-block" : "none";
+				}
+				if (selectFileLink) {
+					selectFileLink.style.display = (isEditMode && !isForeign && !propertyValue) ? "inline" : "none";
+				}
+				if (manageFileButton) {
+					manageFileButton.style.display = propertyValue ? "inline-block" : "none";
+					if(propertyValue){
+						if(isTemp){
+							manageFileButton.classList.remove("manageButton");
+							manageFileButton.classList.add("manageButtonUnsaved");
+						} else {
+							manageFileButton.classList.add("manageButton");
+							manageFileButton.classList.remove("manageButtonUnsaved");
+						}
+					}
+				}
+				if (fileViewLink) {
+					var fileKeyedName = "", fileNode;
+					if (propertyValue) {
+						var documentFileNode = window.document.item.selectSingleNode("@(propertyName)/Item");
+						if (documentFileNode && documentFileNode.getAttribute("action") === "copyAsNew") {
+							fileKeyedName = aras.getKeyedNameEx(documentFileNode);
+						} else {
+							fileKeyedName = window.document.item.selectSingleNode("@Html.Raw(propertyName)/@@keyed_name").value;
+						}
+						fileViewLink.classList.toggle("sys_item_link", !isTemp);
+						fileViewLink.innerHTML = aras.preserveTags(fileKeyedName);
+						fileViewLink.title = fileKeyedName;
+					}
+					fileViewLink.style.display = propertyValue ? "inline" : "none";
+				}
+			}
+
+			function @(funcName)(event) {
+				if (event.propertyName != "value") return true;
+				var ctrlElem = event.srcElement;
+				if (!ctrlElem) return true;
+				var fieldId = "@fieldId";
+				var itemSpan = window.document.getElementById(fieldId);
+				if (!itemSpan || itemSpan.value == ctrlElem.value) return true;
+				itemSpan.value = ctrlElem.value;
+
+				@(refreshFunctionName)(window.document.isEditMode, window.document.isTemp);
+				return true;
+			}
+
+			if (observersHash.getElementById("@Html.Raw(propertyName)_system")) {
+				observersHash.getElementById("@Html.Raw(propertyName)_system").attachEvent("onpropertychange", @funcName);
+			}
+			function @("expression_" + fieldId + "_setExpression")(isEditMode, isTemp) {
+				@(refreshFunctionName)(isEditMode, isTemp);
+			}
+			setTimeout("@(refreshFunctionName)(window.document.isEditMode, window.document.isTemp)", 100);
+		</script>
+	}
+}

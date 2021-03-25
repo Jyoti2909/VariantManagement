@@ -1,0 +1,216 @@
+﻿<!DOCTYPE html>
+<!-- (c) Copyright by Aras Corporation, 2004-2014. -->
+<html>
+	<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<style type="text/css">
+		@import "../javascript/dojo/resources/dojo.css";
+		@import "../javascript/dijit/themes/claro/claro.css";
+		@import "../javascript/dojox/grid/resources/claroGrid.css";
+		@import "../javascript/include.aspx?classes=common.css";
+		@import "../styles/default.css";
+
+		html, body{
+			padding: 0px;
+			margin: 0px;
+			height: 100%;
+			width: 100%;
+			overflow: hidden;
+		}
+	</style>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=ArasModules,ScriptSet2,ScriptSet6"></script>
+	<script type="text/javascript" src="../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../javascript/dojo'"></script>
+	<script type="text/javascript">
+		//==global variables==
+		var grid;
+		var toolbar;
+		var topWnd = parent;
+		var itemID = QueryString("itemID").toString();
+		var itemTypeName = QueryString("ITName").toString();
+		var itemTypeId = topWnd.aras.getItemTypeId(itemTypeName);
+ 		var serverEventITName = "Server Event";
+		var serverEventITId = topWnd.aras.getItemTypeId(serverEventITName);
+		var serverEventRTId = topWnd.aras.getRelationshipTypeId(serverEventITName);
+		var serverEventRT_Nd = topWnd.aras.getRelationshipType(serverEventRTId).node;
+		var methodITName = "Method";
+		var methodITId = topWnd.aras.getItemTypeId(methodITName)
+		var item = parent.item;
+		//==end of global variables==
+
+		var gridInitialized = false;
+		var serverEventCount;
+
+		window.onload = onload_handler;
+
+		function onload_handler() {
+			toolbarLoad_handler();
+			gridLoad_handler();
+		}
+
+		window.addEventListener("resize", function () {
+			refreshGridSize();
+		});
+
+		function refreshGridSize() {
+			var gridRequiredHeight = dojo.window.getBox().h - toolbar.getCurrentToolBarDomNode_Experimental().offsetHeight,
+			newGridHeight = gridRequiredHeight > 0 ? gridRequiredHeight : 0;
+			if (grid && grid.grid_Experimental) {
+				grid.grid_Experimental.resize({ h: newGridHeight });
+			}
+		}
+
+		function updateStatusBar() {
+			var statusMsg = topWnd.aras.getResource("", "search.n_items_found", serverEventCount);
+			topWnd.aras.showStatusMessage("page_status", statusMsg);
+		}
+
+		function onGridXmlLoaded(isSuccess) {
+			refreshGridSize();
+			setTimeout("updateStatusBar()", 10);
+		}
+
+		function gridLoad_handler() {
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.GridContainer", {canEdit_Experimental: function () { return false; }, connectId: "gridContainer"}, function(control) {
+				grid = control;
+				grid.setMultiselect(false);
+				clientControlsFactory.on(grid, {
+					"gridLinkClick": function(linkVal){
+											if (linkVal.length){
+												linkVal = linkVal.replace(/'/g, "");
+												var typeName = linkVal.split(",")[0];
+												var id = linkVal.split(",")[1];
+												onLink(typeName, id);
+											}
+										},
+					"gridXmlLoaded": onGridXmlLoaded
+				});
+				InitGridByInheritedServerEvents();
+			});
+		}
+
+		var xpath = "Relationships/Item[@type='Property' and (not(is_hidden2) or is_hidden2='0' or name='source_id')]";
+		var DescByItemType_Nd = topWnd.aras.getItemTypeDictionary(serverEventITName).node;
+		var RelatedItemType_Nd = topWnd.aras.getItemTypeDictionary(methodITName).node;
+		var DescByVisibleProps = DescByItemType_Nd ? DescByItemType_Nd.selectNodes(xpath) : null;
+		var RelatedVisibleProps = RelatedItemType_Nd ? RelatedItemType_Nd.selectNodes(xpath) : null;
+		DescByVisibleProps = topWnd.aras.sortProperties(DescByVisibleProps);
+		RelatedVisibleProps = topWnd.aras.sortProperties(RelatedVisibleProps);
+		var grid_view = topWnd.aras.getItemProperty(serverEventRT_Nd, "grid_view");
+
+		function onLink(typeName, id) {
+			var itemType = topWnd.aras.getItemTypeDictionary(typeName, "name");
+			if (itemType && !itemType.isError() && topWnd.aras.isPolymorphic(itemType.node)) {
+				var item = topWnd.aras.getItemById(typeName, id, 0);
+				if (item.getAttribute("type") === typeName) {
+					var polyTypeId = topWnd.aras.getItemProperty(item, "itemtype");
+					typeName = topWnd.aras.getItemTypeName(polyTypeId);
+					topWnd.aras.removeFromCache(item);
+				}
+			}
+			topWnd.aras.uiShowItem(typeName, id);
+		}
+
+		function toolbarLoad_handler() {
+			clientControlsFactory.createControl("Aras.Client.Controls.Public.Toolbar", { id: "InheritedServerEvents_toolbar", connectId: "toolbarContainer" }, function(control) {
+				toolbar = control;
+				clientControlsFactory.on(toolbar, {
+					"onClick": toolbarClick_handler
+				});
+
+				document.toolbar = toolbar;
+				toolbar.loadXml(topWnd.aras.getI18NXMLResource("ImplementsGrid_toolbar.xml", ""));
+				toolbar.show();
+			});
+		}
+
+		function toolbarClick_handler(item) {
+			if (item.getId() == "reload") {
+				gridReload_handler();
+			}
+		}
+
+		function gridReload_handler() {
+			modifiedItems = [];
+			InitGridByInheritedServerEvents();
+			enableToolbar();
+		}
+
+		function enableToolbar() {
+			var val = (topWnd.aras.getVariable('ShowLabels') == 'true');
+			toolbar.showLabels(val);
+		}
+
+		function setToolbarItemEnabled(tbItem, doEnable)
+		{
+			if (doEnable === undefined)
+				doEnable = true;
+			else 
+				doEnable = Boolean(doEnable);
+			try
+			{
+				var tbi = toolbar.getElement(tbItem);
+				if (tbi)
+					tbi.setEnabled(doEnable);
+			}
+			catch (excep)
+			{
+				alert('exception during setToolbarItemEnabled()');
+			}
+		}
+
+		function GetInheritedServerEvents() {
+			var request = "" +
+				"<AML>\n" +
+					"<Item type='" + itemTypeName + "' id='" + itemID + "' action='GetInheritedServerEvents' />\n" +
+				"</AML>";
+			var requestDOM = topWnd.aras.createXMLDocument();
+			requestDOM.loadXML(request);
+
+				var result = topWnd.aras.soapSend('ApplyAML', requestDOM.xml);
+
+				if (result.getFaultCode() != 0) {
+					topWnd.aras.AlertError(result.getFaultString(), result.getFaultDetails(), result.getFaultActor());
+					return;
+				}
+
+				return result.getResult().ownerDocument;
+		}
+
+		function getGenerateRelationshipsGridXML(dom, columnObjects) {
+			var params = topWnd.aras.newObject();
+			params["enable_links"] = true;
+			params["enableFileLinks"] = true;
+			params["bgInvert"] = true;
+			params[methodITId] = "";
+			params["columnObjects"] = columnObjects;
+
+			return topWnd.aras.uiGenerateRelationshipsGridXML(dom, DescByVisibleProps, RelatedVisibleProps, serverEventITId, params, true);
+		}
+
+		function InitGridByInheritedServerEvents() {
+			var resDom = null;
+			resDom = GetInheritedServerEvents();
+			if (!resDom) {
+				return;
+			}
+
+			serverEventCount = resDom.selectNodes("//Item[@type='" + serverEventITName + "']").length;
+			if (!gridInitialized) {
+				topWnd.aras.uiInitRelationshipsGridSetups(serverEventRTId, DescByVisibleProps, RelatedVisibleProps, grid_view);
+				gridInitialized = true;
+			}
+
+			const columnObjects = topWnd.aras.uiPrepareDOM4XSLT(resDom, serverEventRTId, "RT_");
+			var grid_xml = getGenerateRelationshipsGridXML(resDom, columnObjects);
+			grid.InitXML(grid_xml);
+		}
+	</script>
+	</head>
+	<body ondragenter="return false;" ondragover="return false;" ondrop="return false;" class="claro">
+		<div id="main_table" style="width: 100%; height: 100%;" >
+			<div id="toolbarContainer"></div>
+			<div id="gridContainer" style="width:100%; height: 100%;"></div>
+		</div>
+	</body>>
+</body>
+</html>

@@ -1,0 +1,30 @@
+﻿<AML>
+ <Item type="Method" id="FA9A14FE1FE14E5AAD923A556A2B8066" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[const selectedRows = options.selectedRowsIds.map(rowId => {
+	const row = options.rows.get(rowId);
+	const itemTypeId = row.itemtype || options.itemTypeId;
+	const itemTypeName = options.itemTypeName;
+	const itemType = options.itemTypes[itemTypeName];
+
+	return {
+		isLocked: !!row.locked_by_id,
+		isVersionable: itemType.is_versionable === '1'
+	};
+});
+
+const hidden = selectedRows.every(row => !row.isVersionable);
+if (hidden) {
+	return { hidden };
+}
+
+const disabled = selectedRows.every(row => row.isLocked);
+
+return {
+	disabled,
+	hidden: false
+};]]></method_code>
+  <method_type>JavaScript</method_type>
+  <name>cui_default_pmig_deleteMenu_init</name>
+ </Item>
+</AML>

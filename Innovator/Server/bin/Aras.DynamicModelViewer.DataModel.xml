@@ -1,0 +1,783 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Aras.DynamicModelViewer.DataModel</name>
+    </assembly>
+    <members>
+        <member name="T:Aras.DynamicModelViewer.DataModel.DataProcessorArgs">
+            <summary>
+            Contains set of arguments for applying during Query Definition processing.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.DataProcessorArgs.QueryDefinitionId">
+            <summary>
+            ID of Query Definition item for applying.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.DataProcessorArgs.ItemId">
+            <summary>
+            ID of item from Aras Innovator for which Query Definition will be applied.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.DataProcessorArgs.QueryDefinitionParams">
+            <summary>
+            Parameters using for filtering in Query Definition. Should be in JSON format.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.DataProcessorArgs.ProcessingResult">
+            <summary>
+            Contains Query processing result.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.DataProcessorArgs.SetQueryProcessingResult(Aras.DynamicModelViewer.DataModel.QueryProcesingResult)">
+            <summary>
+            Sets Query processing result to the local property.
+            </summary>
+            <param name="queryProcesingResult"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.DataProcessorArgs.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.DataModel.DataProcessorArgs"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.DataProcessorArgs.IsValid">
+            <summary>
+            Checks if the DataProcessorArgs instance is valid.
+            QueryDefinitionId should be not null nor empty, ItemId should be not null nor empty.
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Extensions.InnovatorItemExtension">
+            <summary>
+            Provides extensions for the <see cref="T:Aras.IOM.Item"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Extensions.InnovatorItemExtension.GetSingleRelationshipItem(Aras.IOM.Item,System.String,Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap)">
+            <summary>
+            Extends <see cref="T:Aras.IOM.Item"/> to select its related item by query definition alias name.
+            </summary>
+            <param name="item">Source <see cref="T:Aras.IOM.Item"/>.</param>
+            <param name="relName">Relationship item alias.</param>
+            <param name="map">Item types to aliases map.</param>
+            <returns>Related item with specified alias or null.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Extensions.InnovatorItemExtension.GetRelationshipItems(Aras.IOM.Item,System.String,Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap)">
+            <summary>
+            Extends <see cref="T:Aras.IOM.Item"/> to select items collection related to it by query definition alias name.
+            </summary>
+            <param name="item">Source <see cref="T:Aras.IOM.Item"/>.</param>
+            <param name="relName">Relationship item alias.</param>
+            <param name="map">Item types to aliases map.</param>
+            <returns>Collection of related item with specified alias.</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Extensions.StringConst">
+            <summary>
+            Product occurrence attributes names map.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Extensions.StringConst.QueryItemRefId">
+            <summary>
+            Name for query item reference ID attribute.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Extensions.StringConst.ItemId">
+            <summary>
+            Name for query item ID attribute.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Extensions.StringConst.LifecycleState">
+            <summary>
+            Name for query item lifecycle state attribute.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Extensions.StringConst.ItemSyncPath">
+            <summary>
+            Name for item synchronization path.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Extensions.StringConst.DefaultTransform">
+            <summary>
+            Default transformation matrix.
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Extensions.StringExtension">
+            <summary>
+            Provides extensions for the <see cref="T:System.String"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Extensions.StringExtension.GetModelTypeFromExtension(System.String)">
+            <summary>
+            Returns source model type by string extension
+            </summary>
+            <param name="extensionWithDot">File extension with dot (e.g. '.scs').</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Extensions.StringExtension.ConvertTo``1(System.String)">
+            <summary>
+            Converts string value to a value of type specified.
+            </summary>
+            <typeparam name="T"></typeparam>
+            <param name="source"></param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Extensions.XmlNodeExtension">
+            <summary>
+            Provides extensions for the <see cref="T:System.Xml.XmlNode"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Extensions.XmlNodeExtension.SelectChildrenByInvariantAttrValue(System.Xml.XmlNode,System.String,System.String,System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Extends <see cref="T:System.Xml.XmlNode"/> to select its children by specific node name and set of specific attribute values.
+            </summary>
+            <param name="source">Source <see cref="T:System.Xml.XmlNode"/>.</param>
+            <param name="nodeName">Name of requested node.</param>
+            <param name="attrName">Attriute name of requested node.</param>
+            <param name="attrValues">List of possible values for the specified attribute.</param>
+            <returns>List of child nodes where specific attribute value contains in the attrValues parameter.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Extensions.XmlNodeExtension.GetAttributeByName(System.Xml.XmlNode,System.String)">
+            <summary>
+            Extends <see cref="T:System.Xml.XmlNode"/> to return specific attribute value by its name.
+            </summary>
+            <param name="source">Source <see cref="T:System.Xml.XmlNode"/>.</param>
+            <param name="attrName">Attribute name.</param>
+            <returns>Attribute value, or null if such attribute doesn't exist in the node.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Extensions.XmlNodeExtension.SelectChildByInvariantAttrValue(System.Xml.XmlNode,System.String,System.String,System.Collections.Generic.IEnumerable{System.String})">
+            <summary>
+            Extends <see cref="T:System.Xml.XmlNode"/> to select its child by specific node name and set of specific attribute values.
+            </summary>
+            <param name="source">Source <see cref="T:System.Xml.XmlNode"/>.</param>
+            <param name="nodeName">Name of requested node.</param>
+            <param name="attrName">Attriute name of requested node.</param>
+            <param name="attrValues">List of possible values for the specified attribute.</param>
+            <returns>Single <see cref="T:System.Xml.XmlNode"/> where specific attribute value contains in the attrValues parameter.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Extensions.XmlNodeExtension.SelectChild(System.Xml.XmlNode,System.String,System.String,System.String,System.String)">
+            <summary>
+            Extends <see cref="T:System.Xml.XmlNode"/> to select its child by specific node and attribute name and value.
+            </summary>
+            <param name="source">Source <see cref="T:System.Xml.XmlNode"/>.</param>
+            <param name="nodeName">Requested node name.</param>
+            <param name="attrName">Requested node attribute name (optional).</param>
+            <param name="attrValue">Requested node attribute value (optional).</param>
+            <param name="nodeValue">Requested node name (optional).</param>
+            <returns><see cref="T:System.Xml.XmlNode"/> node suitable by parameters conditions.</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Helpers.DynamicViewDefinitionHelper">
+            <summary>
+            Provides functionality to get information from Dynamic View Definition item (DVD).
+            Dynamic View Definition item type is used to create a link between TreeGridView definition
+            and Item type that is Secure Social enabled.
+            DVD also has an ability to define the custom Innovator server method which is entry point
+            for Custom Query Processor library.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.Helpers.DynamicViewDefinitionHelper.Instance">
+            <summary>
+            Instance of the DynamicViewDefinitionHelper.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.DynamicViewDefinitionHelper.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.DynamicViewDefinitionHelper.Initialize(Aras.IOM.Innovator,Aras.Server.Core.ErrorLookup)">
+            <summary>
+            Initializes the helper instance.
+            </summary>
+            <param name="innovator">Class for connecting to Aras Innovator Server.</param>
+            <param name="errorLookup"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.DynamicViewDefinitionHelper.GetDvdItem(System.String)">
+            <summary>
+            Requests Dynamic View Definition item from Aras Innovator by ID and stores
+            it inside class instance.
+            </summary>
+            <param name="dvdId">ID of Dynamic View Definition item.</param>
+            <returns>Dynamic View Definition item.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.DynamicViewDefinitionHelper.GetMethodName(Aras.IOM.Item)">
+            <summary>
+            Returns custom Innovator server method name that is stored in DynamicViewDefinition
+            item from Aras Innovator.
+            </summary>
+            <param name="dvdItem">Dynamic View Definition item.</param>
+            <returns>Server method name.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.DynamicViewDefinitionHelper.GetMethodId(Aras.IOM.Item)">
+            <summary>
+            Returns custom Innovator server method ID that is stored in DynamicViewDefinition
+            item from Aras Innovator.
+            </summary>
+            <param name="dvdItem">Dynamic View Definition item.</param>
+            <returns>Server method ID.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.DynamicViewDefinitionHelper.GetQueryDefinitionId(Aras.IOM.Item)">
+            <summary>
+            Returns Query Definition ID from TreeGridView Definition assigned to currently
+            requested DynamicViewDefinition item from Aras Innovator.
+            </summary>
+            <param name="dvdItem">Dynamic View Definition item.</param>
+            <returns>Query Definition ID.</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataCacheHelper">
+            <summary>
+            Provides functionality to create <see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance"/> using caching.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataCacheHelper.Instance">
+            <summary>
+            Instance of the ModelDataCacheHelper.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataCacheHelper.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataCacheHelper.CreateInstanceFromCache(System.String,System.String)">
+            <summary>
+            Creates instance of <see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance"/> with specified transformation matrix by specified item ID from cache.
+            </summary>
+            <param name="itemId">Item ID.</param>
+            <param name="transform">Transformation matrx in string representation (1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1).</param>
+            <returns><see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance"/> or null if item wit specified ID was not found in cache.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataCacheHelper.CreateAndCacheInstance(Aras.DynamicModelViewer.DataModel.Helpers.ModelPropertiesList,System.String,Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap,System.Collections.Generic.IEnumerable{Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase})">
+            <summary>
+            Creates instance of <see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance"/> with specified transformation matrix by specified properties and puts it to cache.
+            </summary>
+            <param name="data">List of required properties.</param>
+            <param name="transform">Transformation matrx in string representation (1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1).</param>
+            <param name="map">Item types to aliases map.</param>
+            <param name="children">List of children. Should be null or empty for component.</param>
+            <returns>Instance of <see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance"/> or null.</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty">
+            <summary>
+            Required data model properties.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.ItemId">
+            <summary>
+            Item ID.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.ItemAlias">
+            <summary>
+            Item alias.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.Name">
+            <summary>
+            Item name.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.Xmax">
+            <summary>
+            Item bounding box maximal X value.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.Xmin">
+            <summary>
+            Item bounding box minimal X value.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.Ymax">
+            <summary>
+            Item bounding box maximal Y value.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.Ymin">
+            <summary>
+            Item bounding box minimal Y value.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.Zmax">
+            <summary>
+            Item bounding box maximal Z value.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.Zmin">
+            <summary>
+            Item bounding box minimal Z value.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.ScsFileId">
+            <summary>
+            ID of Scs File Item.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.ScsFileName">
+            <summary>
+            Name of Scs file.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.SczFileId">
+            <summary>
+            ID of Scz File Item.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.SczFileName">
+            <summary>
+            Name of Scz file.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty.DynamicEnabled">
+            <summary>
+            Dynamically enabled flag.
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Helpers.ModelPropertiesList">
+            <summary>
+            Structure for gathering data reqired for creation of <see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceModelData"/> instance.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.ModelPropertiesList.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.Helpers.ModelPropertiesList._optionalProps">
+            <summary>
+            Optional properties list.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.ModelPropertiesList.IsFullFilled">
+            <summary>
+            Checks list consistency.
+            </summary>
+            <returns>True if all required values are set, otherwise false.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.ModelPropertiesList.GetPropertyAsString(Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty)">
+            <summary>
+            Returns specific property as string.
+            </summary>
+            <param name="key">Property key.</param>
+            <returns>String value of the property or null.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.ModelPropertiesList.GetProperty``1(Aras.DynamicModelViewer.DataModel.Helpers.ModelDataProperty)">
+            <summary>
+            Returns specific property as T.
+            </summary>
+            <param name="key">Property key.</param>
+            <returns>Instance of T or default.</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper">
+            <summary>
+            Provides functionality to get information from Query Definition item in Aras Innovator.
+            Query Definition defines structure for retrieving data from Aras Innovator.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper.Instance">
+            <summary>
+            Instance of the QueryDefinitionHelper.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper.Initialize(Aras.IOM.Innovator,Aras.Server.Core.ErrorLookup,Aras.Server.Core.QueryBuilder.IQueryBuilder,Aras.Logging.ILogger)">
+            <summary>
+            Initializes the helper instance.
+            </summary>
+            <param name="innovator"></param>
+            <param name="errorLookup"></param>
+            <param name="queryBuilder"></param>
+            <param name="logger"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper.GetQueryDefinitionItem(System.String)">
+            <summary>
+            Requests Query Definition item by ID from Aras Innovator and stores
+            it inside class instance.
+            </summary>
+            <param name="queryDefId">Query Definition ID</param>
+            <returns>Query Definition item.</returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper.GetQueryDefinitionResultItem(Aras.IOM.Item,System.String,System.String)">
+            <summary>
+            Returns query definition execution result as a generic Aras Innovator Item
+            by ItemId and Query Definition Parameters.
+            </summary>
+            <param name="qdItem"></param>
+            <param name="itemId"></param>
+            <param name="queryDefParams">Query Definition parameters</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Helpers.QueryDefinitionHelper.GetAliasToItemTypeMap(Aras.IOM.Item)">
+            <summary>
+            Returns map that contains mapping between Item Types and their aliases.
+            </summary>
+            <returns>Map of Item Types with their aliases</returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap">
+            <summary>
+            Represents interface for data mapping based on Query Definition and its result.
+            Result of Query Definition execution contains aliases instead of
+            Item Types in Aras Innovator.
+            Purpose of this interface is to store a link between alias and Item Type.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap.GetQueryItemRefIdByAlias(System.String)">
+            <summary>
+            Returns internal referenceId of Query Definition by alias.
+            </summary>
+            <param name="itemAlias">Alias of the Item in Query Definition execution.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap.GetQueryItemAliasesForItemType(System.String)">
+            <summary>
+            Returns collection of aliases for specific item type defined as string.
+            Single Alias can contain 'or' binary operation inside it. Ex: 'Alias1 or Alias2'.
+            </summary>
+            <param name="itemType">Item type name.</param>
+            <returns></returns>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMap.GetItemTypeNameByQueryItemAlias(System.String)">
+            <summary>
+            Returns Aras Innovator item type name by alias specified.
+            </summary>
+            <param name="typeAlias">Alias of the Item in Query Definition execution.</param>
+            <returns></returns>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMapSetter">
+            <summary>
+             Represents data dictionaries based on Query Definition and its result.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMapSetter.AddAliasToItemTypeRelationship(System.String,System.String)">
+            <summary>
+            Adds alias to item type relationship.
+            </summary>
+            <param name="itemType">Item type name.</param>
+            <param name="itemAlias">Alias of the Item in Query Definition execution.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.IItemTypeToAliasesMapSetter.AddAliasToRefIdRelationship(System.String,System.String)">
+            <summary>
+            Adds item alias to reference ID relationship.
+            </summary>
+            <param name="itemAlias">Alias of the Item in Query Definition execution.</param>
+            <param name="itemRefId">Internal referenceId of Query Definition.</param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Mapping.ItemTypeToAliasesMap">
+            <summary>
+             Represents data dictionaties based on Query Definition and its result
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.ItemTypeToAliasesMap.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.DataModel.Mapping.ItemTypeToAliasesMap"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.ItemTypeToAliasesMap.GetQueryItemRefIdByAlias(System.String)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.ItemTypeToAliasesMap.AddAliasToItemTypeRelationship(System.String,System.String)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.ItemTypeToAliasesMap.GetQueryItemAliasesForItemType(System.String)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.ItemTypeToAliasesMap.AddAliasToRefIdRelationship(System.String,System.String)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Mapping.ItemTypeToAliasesMap.GetItemTypeNameByQueryItemAlias(System.String)">
+            <summary>
+            <inheritdoc/>
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.BoundingBox">
+            <summary>
+            Represents class for storing bounding box model.
+            Bounding box is represented by 2 points in 3D space : Minimum and Maximum.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.BoundingBox.Max">
+            <summary>
+            Maximum bounding box point.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.BoundingBox.Min">
+            <summary>
+            Minimum bounding box point.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.BoundingBox.#ctor">
+            <summary>
+            BoundingBox default constructor. Initializes Min and Max points with default values.
+            Each Point class will be initialized with x,y,z = 0.0d .
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.SourceModelType">
+            <summary>
+            Enumeration with the possible internal formats of CAD files
+            which are result of a CAD conversion via HOOPS Communicator conversion tools.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.SourceModelType.Scs">
+            <summary>
+            SCS files which are specifically designed to be directly readable
+            by HOOPS Web Viewer in the browser without a server connection.
+            </summary>
+        </member>
+        <member name="F:Aras.DynamicModelViewer.DataModel.SourceModelType.Scz">
+            <summary>
+            SCZ files which are designed to support server-side streaming.
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.Point">
+            <summary>
+            Represents a point in 3D Space.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.Point.X">
+            <summary>
+            Point X coordinate.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.Point.Y">
+            <summary>
+            Point Y coordinate.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.Point.Z">
+            <summary>
+            Point Z coordinate.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.Point.#ctor">
+            <summary>
+            Default constructor.
+            All coordinates will be initialized with default value of double 0.0d .
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceAttr">
+            <summary>
+            Represents single named attribute of Product Occurrence.
+            Product Occurrence is representation of a single usage of 3D model in 3D scene.
+            Product Occurrence can contain multiple attributes for visualization purposes.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceAttr.Name">
+            <summary>
+            Attribute name.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceAttr.Value">
+            <summary>
+            Attribute value.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceAttr.#ctor(System.String,System.String)">
+            <summary>
+            Default constructor.
+            </summary>
+            <param name="name">Attribute name.</param>
+            <param name="value">Attribute value.</param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase">
+            <summary>
+            Represents Base class for Product Occurrence.
+            Product Occurrence is representation of a single usage of 3D model in 3D scene.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase.Name">
+            <summary>
+            Product occurrence name.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase.Attributes">
+            <summary>
+            List of named attributes.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance">
+            <summary>
+            Represents Product Occurrence instance.
+            Product Occurrence instance is representation of 3D model instance
+            with Transformation Matrix in 3D scene.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.IsRoot">
+            <summary>
+            Indicates if the assembly is a root assembly.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.TransformationMatrix">
+            <summary>
+            String representation of transformation matrix for Product Occurrence.
+            Format is 16 numbers with a space character delimiter.
+            Example of identity matrix : 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.RenderingConfigurations">
+            <summary>
+            Collection of rendering configurations used for ProductOccurrence visualization.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.ModelData">
+            <summary>
+            Reference to common CAD data.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.SetModelData(Aras.DynamicModelViewer.DataModel.ProductOccurrenceModelData)">
+            <summary>
+            Model data setter.
+            </summary>
+            <param name="modelData"></param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.SetAsRoot">
+            <summary>
+            Sets the assembly as root assembly.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance"/> class.
+            Transformation matrix will be initialized as identity matrix.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.Attributes">
+            <summary>
+            List of named attributes.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.Children">
+            <summary>
+            Collection of Product Occurrence children.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceInstance.ProductOccurrenceSource">
+            <summary>
+            Collection of Product Occurrence children.
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceModelData">
+            <summary>
+            
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceModelData.ItemId">
+            <summary>
+            Item (e.g. CAD, Part etc.) ID.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceModelData.ProductOccurrenceSource">
+            <summary>
+            Reference to Product Occurrence with external 3D model.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceModelData.Children">
+            <summary>
+            Collection of Product Occurrence children.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceModelData.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceModelData"/> class.
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceRenderingConfiguration">
+            <summary>
+            Represents Product Occurrence (PO) rendering configuration.
+            PO rendering configuration represents additional attributes
+            that can be used for changing visual appearance of PO in 3D scene.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceRenderingConfiguration.Name">
+            <summary>
+            'Name' is referring to the individual rendering configs.
+            Configuration name is used as a key for each rendering configuration for
+            the assembly and will be displayed in dropdown on toolbar of 3D Viewer.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceRenderingConfiguration.Color">
+            <summary>
+            Product Occurrence color value in RGB format.
+            Alpha channel is not used here, please use Opacity property.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceRenderingConfiguration.Opacity">
+            <summary>
+            Product Occurrence opacity value in decimal format from 0.0d to 1.0d .
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceRenderingConfiguration.#ctor(System.Drawing.Color,System.Double)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceRenderingConfiguration"/> class.
+            </summary>
+            <param name="color">Color in RGB format.</param>
+            <param name="opacity">Opacity in decimal format from 0.0d to 1.0d.</param>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceRenderingConfiguration.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceRenderingConfiguration"/> class.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceRenderingConfiguration.SetColor(System.Drawing.Color)">
+            <summary>
+            Sets Product Occurrence color value in RGB format.
+            Alpha channel is not used here, please use Opacity property.
+            </summary>
+            <param name="color">Color in RGB format.</param>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.ProductOccurrenceSource">
+            <summary>
+            Represents Product Occurrence (PO) with reference to external model (CAD model).
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceSource.BoundingBox">
+            <summary>
+            Bounding box of the model defined by 2 points - minimum and maximum.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.ProductOccurrenceSource.FileReferenceByTypeMap">
+            <summary>
+            Dictionary(Map) that stores model file references by SourceModelType.
+            Each Product Occurrence can store multiple file references.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.ProductOccurrenceSource.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="T:Aras.DynamicModelViewer.DataModel.QueryProcesingResult">
+            <summary>
+            Represents result of Query Definition execution.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.QueryProcesingResult.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="P:Aras.DynamicModelViewer.DataModel.QueryProcesingResult.ProductOccurenceList">
+            <summary>
+            List of generated Product Occurrences during Query processing.
+            </summary>
+        </member>
+        <member name="M:Aras.DynamicModelViewer.DataModel.QueryProcesingResult.SetProductOccurrenceList(System.Collections.Generic.ICollection{Aras.DynamicModelViewer.DataModel.ProductOccurrenceBase})">
+            <summary>
+            Setter for ProductOccurenceList.
+            </summary>
+            <param name="occList"></param>
+        </member>
+    </members>
+</doc>

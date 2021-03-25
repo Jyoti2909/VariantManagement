@@ -1,0 +1,145 @@
+﻿<AML>
+ <Item type="Method" id="979B20237E6643EC93C4D16A488D918C" action="add">
+  <comments>XPLM getRelatedChanges</comments>
+  <execution_allowed_to keyed_name="Administrators" type="Identity">2618D6F5A90949BAA7E920D1B04C7EE1</execution_allowed_to>
+  <method_code><![CDATA[Innovator inn = this.getInnovator(); 
+    string item_id = this.getID();
+    string docType = this.getType();
+
+
+// everything is done within businessLogic
+businessLogic bl = new businessLogic(inn);
+
+return bl.execute(docType, item_id);
+
+
+} // this bracket is somehow required to tell aras compiler that the method stops here.
+
+
+// this class is just easier to manage in c# since we can define our functions etc.
+
+internal class businessLogic {
+    
+    private Innovator myInn = null;
+
+    internal businessLogic(Innovator inn) {
+        this.myInn = inn;
+    }
+
+
+
+
+    
+    internal Item execute(string docType, string item_id) {
+            System.Diagnostics.Debugger.Break();
+        try {
+            Item currentCad = myInn.newItem(docType);
+            currentCad.setID(item_id);
+            currentCad.setAction("get");
+            currentCad.setAttribute("select", "config_id");
+            currentCad = currentCad.apply();
+            
+            
+        
+            string configId = currentCad.getProperty("config_id");
+            
+            // now we do a query with outer join on simple ECO. if ECO exists, then it will be fetched. otherwise legacy data from CAD will be used.
+            
+            StringBuilder sqlBuilder = new StringBuilder();
+            sqlBuilder = sqlBuilder.Append(" select tmp.* from ( ");
+            sqlBuilder = sqlBuilder.Append("select top 11 c1.item_number, c1.major_rev, c1.description, u.LOGIN_NAME, CONVERT(varchar, c1.MODIFIED_ON, 4) AS modified_on, CONVERT(varchar, c1.RELEASE_DATE, 4) AS RELEASE_DATE, c1.gag_section, c1.gag_change_text, c1.gag_change_number, c1.modified_by_id, (SELECT FIRST_NAME FROM [USER] WHERE id = c1.modified_by_id) AS FIRST_NAME");
+            sqlBuilder = sqlBuilder.Append(" from innovator.CAD  c1");
+            sqlBuilder = sqlBuilder.Append(" inner join innovator.[USER] u");
+            sqlBuilder = sqlBuilder.Append(" on c1.MODIFIED_BY_ID = u.id ");
+            sqlBuilder = sqlBuilder.Append(" where c1.config_id = '" + configId + "' ");
+            sqlBuilder = sqlBuilder.Append(" and c1.GENERATION = (select max(GENERATION) from innovator.CAD c2");
+            sqlBuilder = sqlBuilder.Append(" where c1.CONFIG_ID = c2.CONFIG_ID and c1.MAJOR_REV = c2.MAJOR_REV )");
+            sqlBuilder = sqlBuilder.Append(" Order by c1.major_rev desc");
+            //sqlBuilder = sqlBuilder.Append(" OFFSET (SELECT COUNT(DISTINCT MAJOR_REV) FROM innovator.CAD ");
+            //sqlBuilder = sqlBuilder.Append(" WHERE config_id = '" + configId + "' " + ") - 11 ROWS ");
+            //sqlBuilder = sqlBuilder.Append(" FETCH NEXT 11 ROWS ONLY ");
+            sqlBuilder = sqlBuilder.Append(" ) tmp order by tmp.major_rev ");
+
+
+        
+            // get the change information
+            Item res = myInn.applySQL(sqlBuilder.ToString());
+            
+            // split in each item
+            var changes = res.dom.SelectNodes("//Item");
+            string rev = "";
+            string eco_num = "";
+            string eco_desc = "";
+            string eco_date = "";
+            string eco_user = "";
+            string section = "";
+            string change_text = "";
+            string change_num = "";
+            string modified_by_name = "";
+            string modified_on = "";
+            // now we reformat the results to a simple table for easier evaluation on the title block.
+            Item result = myInn.newItem();
+            // loop through all results (revisions), and return a list to be put in the titleblock
+        foreach (XmlElement  chg in changes)
+        {
+           // first we check if a related change exists. otherwise we will check the legacy attributes
+                eco_num = getSingleNode(chg, "item_number");
+                eco_date = getSingleNode(chg, "release_date");
+                eco_desc = getSingleNode(chg, "description");
+                eco_user = getSingleNode(chg, "login_name");
+                rev = getSingleNode(chg, "major_rev");
+                section = getSingleNode(chg, "gag_section");
+                change_text = getSingleNode(chg, "gag_change_text");
+                change_num = getSingleNode(chg, "gag_change_number");
+                modified_by_name = getSingleNode(chg, "FIRST_NAME");
+                modified_on = getSingleNode(chg, "modified_on");
+                Item line = myInn.newItem();
+                line.setProperty("rev", rev);
+                if (eco_num is null) {
+                    // we skip this line...
+                } else {
+                    // everthing from ECO:
+                    line.setProperty("eco_number", eco_num);
+                    line.setProperty("eco_desc", eco_desc);
+                    line.setProperty("release_date", eco_date);
+                    line.setProperty("eco_user", eco_user);
+                    line.setProperty("section", section);
+                    line.setProperty("change_text", change_text);
+                    line.setProperty("change_num", change_num);
+                    line.setProperty("modified_by_name", modified_by_name);
+                    line.setProperty("modified_on", modified_on);
+                    
+                    result.appendItem(line);
+                }
+
+        }    
+            
+        
+            
+            
+            
+            return result;
+        }
+        catch (Exception e) {
+            throw e;
+        }
+        finally {
+                // do required stuff
+        }
+
+    }
+
+    private string getSingleNode(XmlElement node, string nodeName) {
+        if (node.SelectSingleNode(nodeName) is  null ) {
+            return null;
+        } else {
+            return node.SelectSingleNode(nodeName).InnerXml;
+        }
+    }
+
+// here should be a closing bracket for the class. for some reason, aras compile does not require this, he seems to add this himself.
+]]></method_code>
+  <method_type>C#</method_type>
+  <name>xplm_GetRelatedChanges</name>
+ </Item>
+</AML>

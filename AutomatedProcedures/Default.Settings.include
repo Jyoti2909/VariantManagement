@@ -1,0 +1,293 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<!-- ******* DEFAULT SETTINGS, WHICH *DO NOT* OVERWRITE SETTINGS PASSED FROM OUTSIDE ******* -->
+
+<project name="Default.Settings">
+
+	<!--
+		Do.Setup.Innovator.Application
+		Do.Setup.Innovator.Database
+		Do.Setup.Agent.Service
+		Do.Setup.Conversion.Server
+		Do.Setup.OAuth.Server
+		Do.Setup.Self.Service.Report
+		Do.Setup.Vault.Server
+
+		List of Innovator components to setup. If value is false - according component wont be installed
+	-->
+	<property name="Do.Setup.Innovator.Application" value="true" />
+	<property name="Do.Setup.Innovator.Database" value="true" />
+	<property name="Do.Setup.Agent.Service" value="true" />
+	<property name="Do.Setup.Conversion.Server" value="true" />
+	<property name="Do.Setup.OAuth.Server" value="true" />
+	<property name="Do.Setup.Self.Service.Report" value="true" />
+	<property name="Do.Setup.Vault.Server" value="true" />
+
+	<!--
+		Login and password of user from whom app pool can be running.
+	-->
+	<property name="App.Pool.Identity.User" overwrite="false" value="" />
+	<property name="App.Pool.Identity.Password" overwrite="false" value="" />
+
+	<!--
+		Password.Of.Root.Innovator.User - password of root user of Innovator.
+		root login and password are used for deploying modifications in AML packages to target server.
+	-->
+	<property name="Password.Of.Root.Innovator.User" overwrite="false" value="innovator" />
+
+	<!--
+		Path.To.CodeTree.Zip - absolute path to the CodeTree.zip with production code tree backup.
+
+		Comments for the default value:
+		prod-backups-server - a server, where production backups are put published.
+		prod-backups - shared folder name, where the backups are published.
+		last-release - expected folder inside the network share. It is required to ditinguish releases.
+		latest - expected folder (or symbolic link to the folder) with the latest production CodeTree.zip and DB.bak backups.
+		CodeTree.zip - expected zip archive name. The archive is expected to contain folder Innovator with folders Client and Server inside that.
+
+		DEBUG NOTES
+		If you want to make this parameter work as is on a *local machine* without real access to machine prod-backups-server then
+		follow instructions in Readme.txt.
+	-->
+	<property name="Path.To.CodeTree.Zip" overwrite="false" value="\\prod-backups-server\prod-backups\last-release\latest\CodeTree.zip" />
+
+	<!--
+		Path.To.Partial.CodeTree.Zip - absolute path to a partial production code tree backup.
+
+		It's used when CodeTree.zip contains only a part of a code tree (e. g. only Innovator folder). To handle such situations we
+		unzip Path.To.CodeTree.Zip at first and Path.To.Partial.CodeTree.Zip over it to get full code tree content
+		with roduction portion of the code tree.
+	-->
+	<property name="Path.To.Partial.CodeTree.Zip" overwrite="false" value="" />
+
+	<!--
+		Path.To.DB.Bak - absolute path to the DB.bak with production DB backup.
+
+		Comments for the default value:
+		prod-backups-server - a server, where production backups are put published.
+		prod-backups - shared folder name, where the backups are published.
+		last-release - expected folder inside the network share. It is required to ditinguish releases.
+		latest - expected folder (or symbolic link to the folder) with the latest production CodeTree.zip and DB.bak backups.
+		DB.bak - expected DB backup name. The backup is expected to contain scrabbed production DB.
+
+		DEBUG NOTES
+		If you want to make this parameter work as is on a *local machine* without real access to machine prod-backups-server then
+		follow instructions in Readme.txt.
+	-->
+	<property name="Path.To.DB.Bak" overwrite="false" value="\\prod-backups-server\prod-backups\last-release\latest\DB.bak" />
+
+	<!--
+		Innovator.License.Type - license type that should be obtained from http://www.aras.com/support/LicenseKeyService/ :
+		Innovator.License.Company - company name specified at http://www.aras.com/support/LicenseKeyService/ : (required for Verified licenses)
+		Innovator.License.Key - license key that should be obtained from http://www.aras.com/support/LicenseKeyService/ :
+		Innovator.Activation.Key - activation key that should be obtained from http://www.aras.com/support/LicenseKeyService/ :
+		The License Key Seervice will send email, which will contain license element like the next one:
+		...
+		<License  lic_type="Unlimited" company="your_company" lic_key="license_key_to_specify_below" act_key="activation_key_to_specify_below"/>
+
+		- value from the 'lic_type' attribute should be specified in the property 'Innovator.License.Type';
+		- value from the 'company' attribute should be specified in the property 'Innovator.License.Company'; (Ommit if there is no such attribute)
+		- value from the 'lic_key' attribute should be specified in the property 'Innovator.License.Key';
+		- value from the 'act_key' attribute should be specified in the property 'Innovator.Activation.Key'.
+	-->
+	<property name="Innovator.License.Type" overwrite="false" value="Unlimited" />
+	<property name="Innovator.License.Company" overwrite="false" value="" />
+	<property name="Innovator.License.Key" overwrite="false" value="" />
+	<property name="Innovator.Activation.Key" overwrite="false" value="" />
+
+	<!--
+		Path.To.Installed.Innovator - absolute path to the installed Innovator.
+		By default on x64 machine installer puts Innovator into "C:\Program Files (x86)\Aras\Innovator", which by default contains subfolders:
+		DB
+		Innovator
+		SelfServiceReporting
+		Tools
+		VaultServer
+
+		Comments for the default value:
+		"T:" is a network or subst-ed drive with the target - installed Innovator. "T" stands for "target".
+
+		For Innovator installed into the default destination folder on local machine that can be command
+		subst T: "C:\Program Files (x86)\Aras\Innovator"
+		to create subst-ed drive T: pointing the installed Innovator.
+
+		If "T:" is a network drive, then the user that executes the script should have full control over network share aswell as full NTFS permissions.
+		The steps to set those permissions for the exsecuting user follows:
+			1) Open properties of shared directory go to 'Sharing' tab -> 'Advanced Sharing' -> 'Permissions' -> check 'Full control' for the user
+			2) Open properties of shared directory go to 'Security' tab -> 'Edit' -> check 'Full control' for the user
+		-->
+	<property name="Path.To.Installed.Innovator" overwrite="false" value="T:\" />
+
+	<!--
+		MSSQL.Server - MS SQL server name. Correct value is required for cases when DB is restored from backup.
+		It may be a remote machine.
+	-->
+	<property name="MSSQL.Server" overwrite="false" value="(local)" />
+
+	<!--
+		MSSQL.Server.Data.Folder.Path - semicolon separated paths to a folders that will store restored database data and log files
+		required for cases when default MSSQL path should not be used, for example it there is not enough space.
+		Considering you have 4 separated drives for data files and 1 separated drive for log file the value will look like:
+		value="D:\MSSQL_DATA_FOLDER;E:\MSSQL_DATA_FOLDER;F:\MSSQL_DATA_FOLDER;G:\MSSQL_DATA_FOLDER;L:\MSSQL_LOG_FOLDER"
+	-->
+	<property name="MSSQL.Server.Data.Folder.Path" overwrite="false" value="" />
+
+	<!--
+		MSSQL.Database.Name - MS SQL database name. Is required for cases when DB is restored from backup.
+	-->
+	<property name="MSSQL.Database.Name" overwrite="false" value="ARAS_PLM_PROD" />
+
+	<!--
+		MSSQL.SA.User and MSSQL.SA.Password - login and password for SQL Server with permissions to for cases when DB is restored from backup
+		using SQL Server authentication.
+	-->
+	<property name="MSSQL.SA.User" overwrite="false" value="sa" />
+	<property name="MSSQL.SA.Password" overwrite="false" value="" />
+
+	<!--
+		MSSQL.Innovator.User, MSSQL.Innovator.Password, MSSQL.Innovator.Regular.User, MSSQL.Innovator.Regular.Password:
+
+		logins and passwords for Innovator technical users 'innovator' and 'innovator_regular' on a SQL Server.
+		It is required for deploy of language pack during deploy procedure and for ContinuousIntegration task
+	-->
+	<property name="MSSQL.Innovator.User" overwrite="false" value="innovator" />
+	<property name="MSSQL.Innovator.Password" overwrite="false" value="innovator" />
+	<property name="MSSQL.Innovator.Regular.User" overwrite="false" value="innovator_regular" />
+	<property name="MSSQL.Innovator.Regular.Password" overwrite="false" value="innovator" />
+
+	<!--
+		Url.Of.Installed.Innovator - url of the installed Innovator.
+
+		Comments for the default value:
+		prod-server- name of the production server.
+		InnovatorServer_Prod - IIS application on the production server.
+	-->
+	<property name="Url.Of.Installed.Innovator" overwrite="false" value="http://prod-server/InnovatorServer_Prod" />
+
+	<!--
+		Url.Of.Deployment.Server - base url of a server on which Innovator instance will be deployed.
+		The url is used to evaluate Url.Of.Installed.Innovator for Continuous tasks (integration and deploy)
+
+		Comments for the default value:
+		http://localhost is local machine accessed via http
+	-->
+	<property name="Url.Of.Deployment.Server" overwrite="false" value="http://localhost" />
+
+	<!--
+		Port.Of.Deployment.Server - port number for communication with deployment server.
+		In order to get resulting url to the deployment server, the property is appended to Url.Of.Deployment.Server like so:
+		${Url.Of.Deployment.Server}:${Port.Of.Deployment.Server}
+		If port is not specified the Url.Of.Deployment.Server property is a resulting url
+	-->
+	<property name="Port.Of.Deployment.Server" overwrite="false" value="" />
+
+	<!--
+		IIS.Default.SiteName - Site name which is used by CI & deployment procedures to setup new instances in ISS.
+
+		Comments for the default value:
+		"Default Web Site" is a defaul IIS web site
+	-->
+	<property name="IIS.Default.SiteName" overwrite="false" value="Default Web Site" />
+
+	<!--
+		Agent.Service.Name - name of the Aras Innovator Agent Windows service. Go to 'Computer management' -> 'Services' to obtain the name of the service
+
+		Comments for the default value:
+		ArasInnovatorAgent_ - default name part added during installation.
+		AgentService_innovatorServer - default name provided during installation.
+	-->
+	<property name="Agent.Service.Name" overwrite="false" value="ArasInnovatorAgent_AgentService_innovatorServer" />
+
+	<!--
+		Agent.Service.Host.Name - name of a server which hosts the Aras Innovator Agent.
+
+		Comments for the default value:
+		. - local machine.
+	-->
+	<property name="Agent.Service.Host.Name" overwrite="false" value="." />
+
+	<!--
+		SMTP.Server - Direct URL to your SMTP Server.
+
+		This allows Aras Innovator to send email directly to your SMTP Server for immediate processing
+
+		Comments for the default value:
+		queue - is a default value for msi setup. The default value requires the IIS SMTP Server option be installed and configured
+	-->
+	<property name="SMTP.Server" overwrite="false" value="queue" />
+
+	<!--
+		Version.Of.Installed.Innovator - version of the installed Innovator.
+
+		Comments for the default value:
+		12.0 - major release number.
+		SP12 - service pack.
+	-->
+	<property name="Version.Of.Installed.Innovator" overwrite="false" value="12.0 SP12" />
+
+	<!--
+		Excluded.Tests.Categories.For.Not.Nightly.Build - A comma separated list of Test categories that should be launched only during nightly builds.
+
+		Comments for the default value:
+		Tests with category named 'Nightly' will be skipped during regular build, but will be launched for nightly build.
+		To setup nightly jenkins build - simple add 'nightly' suffix to the job's name.
+
+		Alternatively for NUnit calls instead of using this list you can spesify your own where clause argument using the following property:
+		NUnit.Console.Where.Clause.Argument
+		Details on how to write the clause can be found here: https://github.com/nunit/docs/wiki/Test-Selection-Language
+	-->
+	<property name="Excluded.Tests.Categories.For.Not.Nightly.Build" overwrite="false" value="Nightly" />
+
+	<!--
+		Perform.Import.Of.SampleData - the boolean flag for applying 'Sample Data' folder during deployment
+
+		Comments for the default value:
+		false - do not apply 'Sample Data' during deployment, as the data is useless for production
+	-->
+	<property name="Perform.Import.Of.SampleData" overwrite="false" value="false" />
+
+	<!--
+		Project.Prefix - the name is used as a prefix for generated Innovator instance names,
+		in order to not cause conflict if there are several CustomerRepositoryTemplate based repositories.
+	-->
+	<property name="Project.Prefix" overwrite="false" value="GRAM" />
+
+	<!--
+		Nuget.Publishing.Source - a nuget source where deployment package should be published. It can be either local or remote.
+		Nuget.Uploader.Username - a name of a user who has access to upload packages to Nuget.Publishing.Source. Required only for remote source.
+		Nuget.Uploader.Password - a password of the Nuget.Uploader.Username user. 
+	-->
+	<property name="Nuget.Publishing.Source" overwrite="false" value="${Path.To.Default.Nuget.Source}" />
+	<property name="Nuget.Uploader.Username" overwrite="false" value="dummy" />
+	<property name="Nuget.Uploader.Password" overwrite="false" value="dummy" />
+
+	<!--
+		Last.Commit.Before.Current.Release - ID of last commit before current release. This is commit which is used as a baseline to
+		figure out what files were changed during current release. These files define code tree and AML packages changes, that should
+		be deployed to target server.
+
+		Comments for thwe default value:
+		CleanInnovator12SP12 - a tag in a version control system that points to the 'baseline' commit
+	-->
+	<property name="Last.Commit.Before.Current.Release" overwrite="false" value="CleanInnovator12SP12" />
+
+	<!--
+		Deployment.Package.Id - id of deployment package which will be used for Nuget package creation.
+		Deployment.Package.Build.Number - an incremental counter which defines a build where package was created.
+		Deployment.Package.Version - version of deployment package which will be used for Nuget package creation.
+	-->
+	<property name="Deployment.Package.Id" overwrite="false" value="${Project.Prefix}.${Commit.Pointer}.Deployment.Package" />
+	<property name="Deployment.Package.Build.Number" overwrite="false" value="0" />
+	<property name="Deployment.Package.Version" overwrite="false" value="1.0.${Deployment.Package.Build.Number}" />
+
+	<!--
+		Use.Delta.Extraction.Tool - flag to enable usage of Delta Extraction tool for AML-Packages. See description in Documentation folder.
+	-->
+	<property name="Use.Delta.Extraction.Tool" overwrite="false" value="true" />
+
+	<!--
+		Original.CRT.Version - version of the CustomerRepositoryTemplate which is used. This value helps to understand 
+		what is the state of the current build procedure in the repository.
+	-->
+	<property name="Original.CRT.Version" overwrite="false" value="1.8" />
+</project>

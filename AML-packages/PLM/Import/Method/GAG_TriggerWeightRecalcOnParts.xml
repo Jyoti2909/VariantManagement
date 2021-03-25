@@ -1,0 +1,59 @@
+﻿<AML>
+ <Item type="Method" id="B0AFCFAD2AC040849FD8918E16DD8C59" action="add">
+  <execution_allowed_to keyed_name="World" type="Identity">A73B655731924CD0B027E4F4D5FCC0A9</execution_allowed_to>
+  <method_code><![CDATA[			IDataAccessLayer dataAccessLayer = new DataAccessLayer(this.getInnovator(), CCO);
+			BusinessLogic businessLogic = new BusinessLogic(dataAccessLayer);
+
+			return businessLogic.Run(this);
+		}
+
+		internal class BusinessLogic
+		{
+			private readonly IDataAccessLayer _dal;
+
+			public BusinessLogic(IDataAccessLayer dal)
+			{
+				_dal = dal;
+			}
+
+			public Item Run(Item contextItem)
+			{
+				Item partCads = GetPartCadRelationshipsWithThisCad(contextItem.getID());
+
+				foreach (Item partCad in partCads.Enumerate())
+				{
+					Item part = partCad.getPropertyItem("source_id");
+
+					if (part.getLockStatus() != 0)
+					{
+						continue;
+					}
+
+					Item updatedPart = _dal.NewItem("Part", "GAG_CalculatePartWeight");
+					updatedPart.setID(part.getID());
+					updatedPart = _dal.ApplyItem(updatedPart);
+					Contract.ThrowIfError(updatedPart);
+				}
+
+				return contextItem;
+			}
+
+			protected Item GetPartCadRelationshipsWithThisCad(string cadId)
+			{
+				Item relationships = _dal.NewItem("Part CAD", "get");
+				relationships.setProperty("related_id", cadId);
+				relationships.setAttribute("select", "source_id");
+
+				Item parts = relationships.createPropertyItem("source_id", "Part", "get");
+				parts.setAttribute("select", "gag_density, locked_by_id");
+				parts.setProperty("is_current", "1");
+
+				relationships = _dal.ApplyItem(relationships);
+
+				Contract.ThrowIfError(relationships, false);
+				return relationships;
+			}]]></method_code>
+  <method_type>C#</method_type>
+  <name>GAG_TriggerWeightRecalcOnParts</name>
+ </Item>
+</AML>

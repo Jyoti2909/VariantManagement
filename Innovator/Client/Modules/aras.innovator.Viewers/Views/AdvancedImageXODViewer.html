@@ -1,0 +1,70 @@
+﻿<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html dir="ltr" mozdisallowselectionprint moznomarginboxes>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta name="google" content="notranslate">
+    <title>PDF</title>
+    <link rel="stylesheet" href="../../../javascript/dijit/themes/claro/claro.css" />
+
+    <link rel="stylesheet" href="../styles/svgSettings.css" />
+    <link rel="stylesheet" href="../styles/Viewer.css" />
+    <link rel="stylesheet" href="../styles/ViewerToolbar.css" type="text/css" />
+    <link rel="stylesheet" href="../styles/Dialogs.css" type="text/css" />
+    <link rel="stylesheet" href="../../../styles/controls/toolbar.css" type="text/css" />
+
+    <script type="text/javascript" src="../../../javascript/include.aspx?classes=ArasModules,XmlDocument"></script>
+	<script type="text/javascript" src="../../../javascript/include.aspx?classes=/dojo.js" data-dojo-config="isDebug: false, parseOnLoad: false, baseUrl:'../../../javascript/dojo'"></script>
+    <script type="text/javascript" src="../../../javascript/cookie.js"></script>
+
+	<script src="../Scripts/3rdPartyLibs/pdftronwebviewer-v2.2/lib/core/external/jquery-3.2.1.min.js" type="text/javascript"></script>
+
+    <script type="text/javascript" src="../../../javascript/pageReturnBlocker.js"></script>
+    <script type="text/javascript" src="../Scripts/canvg/canvg.js"></script>
+    <script type="text/javascript" src="../Scripts/canvg/rgbcolor.js"></script>
+    <script type="text/javascript" src="../../../javascript/ClientUrlsUtility.js"></script>
+    <script type="text/javascript" src="../Scripts/Utils.js"></script>
+    <script type="text/javascript" src="../../aras.innovator.SSVC/Scripts/ArasHelper.js"></script>
+</head>
+
+<body tabindex="1" class="claro" style="overflow:hidden;">
+
+	<script type="text/javascript">
+		require(["dojo/ready"], function(ready) {
+			ready(function() {
+				VC.Utils.registerModulePaths();
+				VC.Utils.Page.LoadGeometry();
+				VC.Utils.Page.LoadModules(["AdvancedImageXODViewer", "ViewerAgent"]);
+				VC.Utils.Page.LoadStyles(document, "../styles/PdfTronViewer.css");
+
+				var args = VC.Utils.Page.GetParams();
+				var aras = args.itemWindow ? args.itemWindow.aras : top.aras;
+				args.baseUrlWithoutSalt = VC.Utils.getBaseUrlWithoutSalt(aras);
+				args.top = top;
+				window.aras = args.aras = aras;
+				//should be assigned from another place. These parameters are required only by SM, not by Viewer
+				top.smparams = args;
+				window.SSVCViewer = new VC.AdvancedImageXODViewer(args);
+
+				window.SSVCViewer.onInitTempViewer = VC.ViewerAgent.initTemporaryViewer;
+				window.SSVCViewer.onRecordMeasurmentClick = VC.ViewerAgent.sendMeasurmentMessage;
+				window.SSVCViewer.onSetHighlightText = VC.ViewerAgent.setHighlightText;
+				window.SSVCViewer.onGetDiscussionFeedText = VC.ViewerAgent.getDiscussionFeedText;
+				window.SSVCViewer.onSetDiscussionFeedText = VC.ViewerAgent.setDiscussionFeedText;
+				window.SSVCViewer.onSetComparisonData = VC.ViewerAgent.addComparisonDataToCache;
+				window.SSVCViewer.onRestoreComparisonData = VC.ViewerAgent.restoreData;
+
+				window.SSVCViewer.clearComparisonData = VC.ViewerAgent.comparisonManager.clearCacheData;
+				window.SSVCViewer.updateComparisonData = VC.ViewerAgent.comparisonManager.updateData;
+				window.SSVCViewer.onBindDocumentVersions = VC.ViewerAgent.getDocumentVersionsList;
+				window.SSVCViewer.onHandleScrollStateEvent = VC.ViewerAgent.handleScrollState;
+				if (window.onViewerIsReady) {
+					window.onViewerIsReady();
+				}
+			});
+		});
+
+	</script>
+	<div id="trash" style="z-index: 999;"></div>
+</body>
+</html>
